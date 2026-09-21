@@ -711,8 +711,18 @@ function merge(intervals) {
 }`,
       },
 
-      "On array / index":
-`# O(log n) time · O(1) space — halve the search range each step
+      "On array / index": {
+        pseudo:
+`find x in a SORTED array, or return -1. O(log n), O(1).
+  lo = 0, hi = n-1
+  while lo <= hi
+    mid = (lo + hi) / 2       # integer division
+    if a[mid] == x -> return mid
+    if a[mid] <  x -> lo = mid + 1   # answer is to the right
+    else           -> hi = mid - 1   # answer is to the left
+  return -1`,
+        py:
+`# O(log n) time · O(1) space, halve the search range each step
 def bsearch(a, x):
     lo, hi = 0, len(a)-1
     while lo <= hi:
@@ -721,8 +731,54 @@ def bsearch(a, x):
         if a[mid] < x: lo = mid+1
         else: hi = mid-1
     return -1`,
-      "On answer (min/max feasible)":
-`# O(log(range) · cost of ok) · O(1) — binary search the answer space
+        java:
+`// O(log n) time, O(1) space: halve the search range each step
+int bsearch(int[] a, int x) {
+    int lo = 0, hi = a.length - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] == x) return mid;
+        if (a[mid] < x) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}`,
+        cpp:
+`// O(log n) time, O(1) space: halve the search range each step
+int bsearch(vector<int>& a, int x) {
+    int lo = 0, hi = (int)a.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] == x) return mid;
+        if (a[mid] < x) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}`,
+        js:
+`// O(log n) time, O(1) space: halve the search range each step
+function bsearch(a, x) {
+  let lo = 0, hi = a.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (a[mid] === x) return mid;
+    if (a[mid] < x) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}`,
+      },
+      "On answer (min/max feasible)": {
+        pseudo:
+`smallest x in [lo, hi] where ok(x) is true (no,no,...,yes,yes).
+  while lo < hi
+    mid = (lo + hi) / 2
+    if ok(mid) -> hi = mid          # mid may be the answer, keep it
+    else       -> lo = mid + 1      # mid too small, go right
+  return lo
+# example (Koko): ok(speed) = hours_needed(speed) <= h`,
+        py:
+`# O(log(range) · cost of ok) · O(1), binary search the answer space
 def min_feasible(lo, hi, ok):     # smallest x with ok(x)==True
     while lo < hi:
         mid = (lo+hi)//2
@@ -730,8 +786,48 @@ def min_feasible(lo, hi, ok):     # smallest x with ok(x)==True
         else:       lo = mid+1
     return lo
 # Koko: ok(sp) = sum(ceil(p/sp) for p in piles) <= h`,
-      "Peaks, matrix & special":
-`# O(log n) time · O(1) space — move toward the higher neighbor
+        java:
+`// O(log(range) x cost of ok), O(1): binary search the answer space
+int minFeasible(int lo, int hi, IntPredicate ok) { // smallest x with ok(x)
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (ok.test(mid)) hi = mid;
+        else lo = mid + 1;
+    }
+    return lo;
+}`,
+        cpp:
+`// O(log(range) x cost of ok), O(1): binary search the answer space
+int minFeasible(int lo, int hi, function<bool(int)> ok) {
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (ok(mid)) hi = mid;      // smallest x with ok(x) == true
+        else lo = mid + 1;
+    }
+    return lo;
+}`,
+        js:
+`// O(log(range) x cost of ok), O(1): binary search the answer space
+function minFeasible(lo, hi, ok) {   // smallest x with ok(x) === true
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (ok(mid)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}`,
+      },
+      "Peaks, matrix & special": {
+        pseudo:
+`find any peak (bigger than both neighbors) in O(log n).
+  lo = 0, hi = n-1
+  while lo < hi
+    mid = (lo + hi) / 2
+    if a[mid] < a[mid+1] -> lo = mid + 1   # uphill, peak is right
+    else                 -> hi = mid        # downhill, peak here or left
+  return lo`,
+        py:
+`# O(log n) time · O(1) space, move toward the higher neighbor
 def find_peak(a):
     lo, hi = 0, len(a)-1
     while lo < hi:
@@ -739,14 +835,88 @@ def find_peak(a):
         if a[mid] < a[mid+1]: lo = mid+1   # climb up
         else: hi = mid
     return lo`,
-      "Math via binary search":
-`# O(log b) time · O(1) space — square base, consume exponent bit by bit
+        java:
+`// O(log n) time, O(1) space: always walk toward the higher neighbor
+int findPeak(int[] a) {
+    int lo = 0, hi = a.length - 1;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] < a[mid + 1]) lo = mid + 1;
+        else hi = mid;
+    }
+    return lo;
+}`,
+        cpp:
+`// O(log n) time, O(1) space: always walk toward the higher neighbor
+int findPeak(vector<int>& a) {
+    int lo = 0, hi = (int)a.size() - 1;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] < a[mid + 1]) lo = mid + 1;
+        else hi = mid;
+    }
+    return lo;
+}`,
+        js:
+`// O(log n) time, O(1) space: always walk toward the higher neighbor
+function findPeak(a) {
+  let lo = 0, hi = a.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (a[mid] < a[mid + 1]) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}`,
+      },
+      "Math via binary search": {
+        pseudo:
+`a to the power b in O(log b) multiplies (halve the exponent).
+  res = 1
+  while b > 0
+    if b is odd -> res = res * a
+    a = a * a                  # square the base
+    b = b >> 1                 # drop the lowest bit
+  return res`,
+        py:
+`# O(log b) time · O(1) space, square base, consume exponent bit by bit
 def power(a, b):                # fast exponentiation
     res = 1
     while b:
         if b & 1: res *= a
         a *= a; b >>= 1
     return res`,
+        java:
+`// O(log b) time, O(1) space: square base, consume exponent bit by bit
+long power(long a, long b) {
+    long res = 1;
+    while (b > 0) {
+        if ((b & 1) == 1) res *= a;
+        a *= a; b >>= 1;
+    }
+    return res;
+}`,
+        cpp:
+`// O(log b) time, O(1) space: square base, consume exponent bit by bit
+long long power(long long a, long long b) {
+    long long res = 1;
+    while (b > 0) {
+        if (b & 1) res *= a;
+        a *= a; b >>= 1;
+    }
+    return res;
+}`,
+        js:
+`// O(log b) time, O(1) space: square base, consume exponent bit by bit
+function power(a, b) {
+  let res = 1;
+  while (b > 0) {
+    if (b & 1) res *= a;
+    a *= a; b >>= 1;
+  }
+  return res;
+}`,
+      },
 
       "Two Pointers":
 `# O(n) time · O(1) space — compare ends moving inward
