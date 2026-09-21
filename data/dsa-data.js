@@ -283,7 +283,21 @@ bisect.insort(nums, x)            # insert keeping sorted` },
   /* ===================== BINARY TREE (Striver BT I–III) ===================== */
   { n: "Binary Tree", h: "Everything is recursion: solve for children, combine for the node. Know all 3 DFS orders + BFS by heart.", c: [
     { n: "Build & Represent (from a list)", h: "LeetCode gives trees as a <b>level-order list</b> with <code>null</code> for missing nodes. Build it with a queue. In an <b>array (complete-tree) representation</b>, node at index <code>i</code> has children <code>2i+1</code>, <code>2i+2</code> and parent <code>(i-1)//2</code>.",
-      code:
+      code: {
+        pseudo:
+`build a tree from a level-order list, and index a complete tree.
+  build_tree(vals):
+    root = node(vals[0]); q = queue([root]); i = 1
+    while q and i < len(vals)
+      node = q.pop_front
+      if vals[i] present -> node.left = node(vals[i]); push it
+      i = i + 1
+      if vals[i] present -> node.right = node(vals[i]); push it
+      i = i + 1
+    return root
+  complete-tree array indexing:
+    left(i) = 2i+1, right(i) = 2i+2, parent(i) = (i-1)/2`,
+        py:
 `class TreeNode:
     def __init__(self, val=0, left=None, right=None):
         self.val = val; self.left = left; self.right = right
@@ -311,14 +325,126 @@ def build_tree(vals):
 #   parent        -> arr[(i - 1) // 2]
 def left(i):  return 2*i + 1
 def right(i): return 2*i + 2
-def parent(i): return (i - 1) // 2` },
+def parent(i): return (i - 1) // 2`,
+        java:
+`class TreeNode {
+    int val; TreeNode left, right;
+    TreeNode(int v) { val = v; }
+}
+
+// Build a tree from a level-order list (null = missing node)
+TreeNode buildTree(Integer[] vals) {
+    if (vals.length == 0 || vals[0] == null) return null;
+    TreeNode root = new TreeNode(vals[0]);
+    Queue<TreeNode> q = new LinkedList<>(); q.add(root);
+    int i = 1;
+    while (!q.isEmpty() && i < vals.length) {
+        TreeNode node = q.poll();
+        if (i < vals.length && vals[i] != null) {      // left child
+            node.left = new TreeNode(vals[i]); q.add(node.left);
+        }
+        i++;
+        if (i < vals.length && vals[i] != null) {      // right child
+            node.right = new TreeNode(vals[i]); q.add(node.right);
+        }
+        i++;
+    }
+    return root;
+}
+
+// Array (complete-tree) representation, like a heap:
+//   arr[i] is the node, children 2i+1 and 2i+2, parent (i-1)/2
+int left(int i)   { return 2*i + 1; }
+int right(int i)  { return 2*i + 2; }
+int parent(int i) { return (i - 1) / 2; }`,
+        cpp:
+`struct TreeNode {
+    int val; TreeNode *left = nullptr, *right = nullptr;
+    TreeNode(int v) : val(v) {}
+};
+
+// Build from a level-order list; each entry is {value, present?}
+TreeNode* buildTree(vector<pair<int,bool>>& vals) {
+    if (vals.empty() || !vals[0].second) return nullptr;
+    TreeNode* root = new TreeNode(vals[0].first);
+    queue<TreeNode*> q; q.push(root);
+    int i = 1, n = vals.size();
+    while (!q.empty() && i < n) {
+        TreeNode* node = q.front(); q.pop();
+        if (i < n && vals[i].second) {                 // left child
+            node->left = new TreeNode(vals[i].first); q.push(node->left);
+        }
+        i++;
+        if (i < n && vals[i].second) {                 // right child
+            node->right = new TreeNode(vals[i].first); q.push(node->right);
+        }
+        i++;
+    }
+    return root;
+}
+
+// Array (complete-tree) representation, like a heap:
+//   arr[i] is the node, children 2i+1 and 2i+2, parent (i-1)/2
+int leftIdx(int i)   { return 2*i + 1; }
+int rightIdx(int i)  { return 2*i + 2; }
+int parentIdx(int i) { return (i - 1) / 2; }`,
+        js:
+`class TreeNode {
+  constructor(val = 0, left = null, right = null) {
+    this.val = val; this.left = left; this.right = right;
+  }
+}
+
+// Build a tree from a level-order list (null = missing node)
+function buildTree(vals) {
+  if (!vals.length || vals[0] === null) return null;
+  const root = new TreeNode(vals[0]);
+  const q = [root];
+  let i = 1;
+  while (q.length && i < vals.length) {
+    const node = q.shift();
+    if (i < vals.length && vals[i] !== null) {         // left child
+      node.left = new TreeNode(vals[i]); q.push(node.left);
+    }
+    i++;
+    if (i < vals.length && vals[i] !== null) {         // right child
+      node.right = new TreeNode(vals[i]); q.push(node.right);
+    }
+    i++;
+  }
+  return root;
+}
+
+// Array (complete-tree) representation, like a heap:
+//   arr[i] is the node, children 2i+1 and 2i+2, parent (i-1)/2
+const left = i => 2*i + 1;
+const right = i => 2*i + 2;
+const parent = i => (i - 1) >> 1;` } },
     { n: "Traversals", h: "Pre=Node,L,R · In=L,Node,R · Post=L,R,Node. Do recursive first, then iterative with a stack.", p: [
       [94, "binary-tree-inorder-traversal", "Inorder Traversal", "E"],
       [144, "binary-tree-preorder-traversal", "Preorder Traversal", "E"],
       [145, "binary-tree-postorder-traversal", "Postorder Traversal", "E"],
     ]},
     { n: "Morris, Views & Boundary (Striver)", h: "<b>Morris</b> traversal gives O(1) space using temporary <i>threads</i> (link each node's inorder-predecessor.right back to it). <b>Two types:</b> (1) <b>Inorder</b> — visit when you <i>remove</i> the thread; (2) <b>Preorder</b> — visit when you <i>create</i> the thread. <b>Views</b> (top/bottom) sort by horizontal distance via BFS; <b>Vertical order</b> sorts by (column, row, value). Top/Bottom View &amp; Boundary have no free LeetCode problem — practice on GFG; Vertical Order is LC 987.",
-      code:
+      code: {
+        pseudo:
+`Morris traversal: O(1) space using temporary "threads".
+  thread = link the inorder-predecessor's right back to the node.
+  INORDER  visits when you REMOVE a thread.
+  PREORDER visits when you CREATE a thread.
+  loop with cur = root:
+    if cur has no left -> visit (preorder), then go right
+    else pre = rightmost node of cur.left
+      if pre.right is null -> (preorder: visit cur); pre.right = cur; go left
+      else -> pre.right = null (remove); (inorder: visit cur); go right
+
+Views by horizontal distance (hd), BFS left to right:
+  Top View: first node seen per hd.   Bottom View: last node per hd.
+  Vertical order: group by column, sort each column by (row, value).
+
+Boundary (anti-clockwise): root, then left edge (skip leaves),
+  then all leaves left to right, then right edge bottom-up.`,
+        py:
 `# ---- Morris has TWO types: Inorder & Preorder (both O(1) space) ----
 
 # Type 1: Morris INORDER  (L, Node, R) -> visit when REMOVING the thread
@@ -406,6 +532,306 @@ def boundary(root):
         if not leaf(n): tmp.append(n.val)
         n = n.right or n.left
     return res + tmp[::-1]`,
+        java:
+`// Morris INORDER (L, Node, R): visit when REMOVING the thread. O(1) space.
+List<Integer> morrisInorder(TreeNode root) {
+    List<Integer> out = new ArrayList<>();
+    TreeNode cur = root;
+    while (cur != null) {
+        if (cur.left == null) { out.add(cur.val); cur = cur.right; }
+        else {
+            TreeNode pre = cur.left;
+            while (pre.right != null && pre.right != cur) pre = pre.right;
+            if (pre.right == null) { pre.right = cur; cur = cur.left; }
+            else { pre.right = null; out.add(cur.val); cur = cur.right; }
+        }
+    }
+    return out;
+}
+
+// Morris PREORDER (Node, L, R): visit when CREATING the thread.
+List<Integer> morrisPreorder(TreeNode root) {
+    List<Integer> out = new ArrayList<>();
+    TreeNode cur = root;
+    while (cur != null) {
+        if (cur.left == null) { out.add(cur.val); cur = cur.right; }
+        else {
+            TreeNode pre = cur.left;
+            while (pre.right != null && pre.right != cur) pre = pre.right;
+            if (pre.right == null) { out.add(cur.val); pre.right = cur; cur = cur.left; }
+            else { pre.right = null; cur = cur.right; }
+        }
+    }
+    return out;
+}
+
+// Top View: first node per horizontal distance (BFS). Bottom: last.
+List<Integer> topView(TreeNode root) {
+    Map<Integer,Integer> seen = new TreeMap<>();
+    Queue<TreeNode> nodes = new LinkedList<>(); Queue<Integer> hds = new LinkedList<>();
+    if (root != null) { nodes.add(root); hds.add(0); }
+    while (!nodes.isEmpty()) {
+        TreeNode node = nodes.poll(); int hd = hds.poll();
+        seen.putIfAbsent(hd, node.val);              // first wins = top
+        if (node.left != null)  { nodes.add(node.left);  hds.add(hd - 1); }
+        if (node.right != null) { nodes.add(node.right); hds.add(hd + 1); }
+    }
+    return new ArrayList<>(seen.values());
+}
+List<Integer> bottomView(TreeNode root) {
+    Map<Integer,Integer> seen = new TreeMap<>();
+    Queue<TreeNode> nodes = new LinkedList<>(); Queue<Integer> hds = new LinkedList<>();
+    if (root != null) { nodes.add(root); hds.add(0); }
+    while (!nodes.isEmpty()) {
+        TreeNode node = nodes.poll(); int hd = hds.poll();
+        seen.put(hd, node.val);                      // overwrite = keep last
+        if (node.left != null)  { nodes.add(node.left);  hds.add(hd - 1); }
+        if (node.right != null) { nodes.add(node.right); hds.add(hd + 1); }
+    }
+    return new ArrayList<>(seen.values());
+}
+
+// Vertical order (LC 987): group by column, sort each by (row, value).
+List<List<Integer>> verticalOrder(TreeNode root) {
+    TreeMap<Integer,List<int[]>> cols = new TreeMap<>();
+    Queue<Object[]> q = new LinkedList<>();
+    if (root != null) q.add(new Object[]{root, 0, 0});
+    while (!q.isEmpty()) {
+        Object[] cur = q.poll();
+        TreeNode node = (TreeNode) cur[0]; int r = (int) cur[1], c = (int) cur[2];
+        cols.computeIfAbsent(c, z -> new ArrayList<>()).add(new int[]{r, node.val});
+        if (node.left != null)  q.add(new Object[]{node.left,  r + 1, c - 1});
+        if (node.right != null) q.add(new Object[]{node.right, r + 1, c + 1});
+    }
+    List<List<Integer>> res = new ArrayList<>();
+    for (List<int[]> col : cols.values()) {
+        col.sort((a, b) -> a[0] != b[0] ? a[0] - b[0] : a[1] - b[1]);
+        List<Integer> out = new ArrayList<>();
+        for (int[] rv : col) out.add(rv[1]);
+        res.add(out);
+    }
+    return res;
+}
+
+// Boundary (anti-clockwise): root, left edge, leaves L->R, right edge up.
+boolean isLeaf(TreeNode n) { return n.left == null && n.right == null; }
+void addLeaves(TreeNode n, List<Integer> res) {
+    if (n == null) return;
+    if (isLeaf(n)) { res.add(n.val); return; }
+    addLeaves(n.left, res); addLeaves(n.right, res);
+}
+List<Integer> boundary(TreeNode root) {
+    List<Integer> res = new ArrayList<>();
+    if (root == null) return res;
+    res.add(root.val);
+    for (TreeNode n = root.left; n != null; n = (n.left != null ? n.left : n.right))
+        if (!isLeaf(n)) res.add(n.val);              // left edge, no leaves
+    if (!isLeaf(root)) { addLeaves(root.left, res); addLeaves(root.right, res); }
+    List<Integer> right = new ArrayList<>();
+    for (TreeNode n = root.right; n != null; n = (n.right != null ? n.right : n.left))
+        if (!isLeaf(n)) right.add(n.val);
+    Collections.reverse(right);                      // right edge bottom-up
+    res.addAll(right);
+    return res;
+}`,
+        cpp:
+`// Morris INORDER (L, Node, R): visit when REMOVING the thread. O(1) space.
+vector<int> morrisInorder(TreeNode* root) {
+    vector<int> out; TreeNode* cur = root;
+    while (cur) {
+        if (!cur->left) { out.push_back(cur->val); cur = cur->right; }
+        else {
+            TreeNode* pre = cur->left;
+            while (pre->right && pre->right != cur) pre = pre->right;
+            if (!pre->right) { pre->right = cur; cur = cur->left; }
+            else { pre->right = nullptr; out.push_back(cur->val); cur = cur->right; }
+        }
+    }
+    return out;
+}
+
+// Morris PREORDER (Node, L, R): visit when CREATING the thread.
+vector<int> morrisPreorder(TreeNode* root) {
+    vector<int> out; TreeNode* cur = root;
+    while (cur) {
+        if (!cur->left) { out.push_back(cur->val); cur = cur->right; }
+        else {
+            TreeNode* pre = cur->left;
+            while (pre->right && pre->right != cur) pre = pre->right;
+            if (!pre->right) { out.push_back(cur->val); pre->right = cur; cur = cur->left; }
+            else { pre->right = nullptr; cur = cur->right; }
+        }
+    }
+    return out;
+}
+
+// Top View: first node per horizontal distance (BFS). Bottom: last.
+vector<int> topView(TreeNode* root) {
+    map<int,int> seen;
+    queue<pair<TreeNode*,int>> q;
+    if (root) q.push({root, 0});
+    while (!q.empty()) {
+        auto [node, hd] = q.front(); q.pop();
+        if (!seen.count(hd)) seen[hd] = node->val;   // first wins = top
+        if (node->left)  q.push({node->left,  hd - 1});
+        if (node->right) q.push({node->right, hd + 1});
+    }
+    vector<int> res; for (auto& [k, v] : seen) res.push_back(v);
+    return res;
+}
+vector<int> bottomView(TreeNode* root) {
+    map<int,int> seen;
+    queue<pair<TreeNode*,int>> q;
+    if (root) q.push({root, 0});
+    while (!q.empty()) {
+        auto [node, hd] = q.front(); q.pop();
+        seen[hd] = node->val;                        // overwrite = keep last
+        if (node->left)  q.push({node->left,  hd - 1});
+        if (node->right) q.push({node->right, hd + 1});
+    }
+    vector<int> res; for (auto& [k, v] : seen) res.push_back(v);
+    return res;
+}
+
+// Vertical order (LC 987): group by column, sort each by (row, value).
+vector<vector<int>> verticalOrder(TreeNode* root) {
+    map<int, vector<pair<int,int>>> cols;   // col -> {row, val}
+    queue<tuple<TreeNode*,int,int>> q;
+    if (root) q.push({root, 0, 0});
+    while (!q.empty()) {
+        auto [node, r, c] = q.front(); q.pop();
+        cols[c].push_back({r, node->val});
+        if (node->left)  q.push({node->left,  r + 1, c - 1});
+        if (node->right) q.push({node->right, r + 1, c + 1});
+    }
+    vector<vector<int>> res;
+    for (auto& [c, v] : cols) {
+        sort(v.begin(), v.end());
+        vector<int> out; for (auto& [r, val] : v) out.push_back(val);
+        res.push_back(out);
+    }
+    return res;
+}
+
+// Boundary (anti-clockwise): root, left edge, leaves L->R, right edge up.
+bool isLeaf(TreeNode* n) { return !n->left && !n->right; }
+void addLeaves(TreeNode* n, vector<int>& res) {
+    if (!n) return;
+    if (isLeaf(n)) { res.push_back(n->val); return; }
+    addLeaves(n->left, res); addLeaves(n->right, res);
+}
+vector<int> boundary(TreeNode* root) {
+    vector<int> res;
+    if (!root) return res;
+    res.push_back(root->val);
+    for (TreeNode* n = root->left; n; n = (n->left ? n->left : n->right))
+        if (!isLeaf(n)) res.push_back(n->val);       // left edge, no leaves
+    if (!isLeaf(root)) { addLeaves(root->left, res); addLeaves(root->right, res); }
+    vector<int> right;
+    for (TreeNode* n = root->right; n; n = (n->right ? n->right : n->left))
+        if (!isLeaf(n)) right.push_back(n->val);
+    reverse(right.begin(), right.end());             // right edge bottom-up
+    for (int v : right) res.push_back(v);
+    return res;
+}`,
+        js:
+`// Morris INORDER (L, Node, R): visit when REMOVING the thread. O(1) space.
+function morrisInorder(root) {
+  const out = []; let cur = root;
+  while (cur) {
+    if (!cur.left) { out.push(cur.val); cur = cur.right; }
+    else {
+      let pre = cur.left;
+      while (pre.right && pre.right !== cur) pre = pre.right;
+      if (!pre.right) { pre.right = cur; cur = cur.left; }
+      else { pre.right = null; out.push(cur.val); cur = cur.right; }
+    }
+  }
+  return out;
+}
+
+// Morris PREORDER (Node, L, R): visit when CREATING the thread.
+function morrisPreorder(root) {
+  const out = []; let cur = root;
+  while (cur) {
+    if (!cur.left) { out.push(cur.val); cur = cur.right; }
+    else {
+      let pre = cur.left;
+      while (pre.right && pre.right !== cur) pre = pre.right;
+      if (!pre.right) { out.push(cur.val); pre.right = cur; cur = cur.left; }
+      else { pre.right = null; cur = cur.right; }
+    }
+  }
+  return out;
+}
+
+// Top View: first node per horizontal distance (BFS). Bottom: last.
+function topView(root) {
+  if (!root) return [];
+  const seen = new Map(); let q = [[root, 0]];
+  while (q.length) {
+    const next = [];
+    for (const [node, hd] of q) {
+      if (!seen.has(hd)) seen.set(hd, node.val);     // first wins = top
+      if (node.left)  next.push([node.left,  hd - 1]);
+      if (node.right) next.push([node.right, hd + 1]);
+    }
+    q = next;
+  }
+  return [...seen.keys()].sort((a, b) => a - b).map(k => seen.get(k));
+}
+function bottomView(root) {
+  if (!root) return [];
+  const seen = new Map(); let q = [[root, 0]];
+  while (q.length) {
+    const next = [];
+    for (const [node, hd] of q) {
+      seen.set(hd, node.val);                        // overwrite = keep last
+      if (node.left)  next.push([node.left,  hd - 1]);
+      if (node.right) next.push([node.right, hd + 1]);
+    }
+    q = next;
+  }
+  return [...seen.keys()].sort((a, b) => a - b).map(k => seen.get(k));
+}
+
+// Vertical order (LC 987): group by column, sort each by (row, value).
+function verticalOrder(root) {
+  const cols = new Map();                            // col -> [[row, val], ...]
+  let q = root ? [[root, 0, 0]] : [];
+  while (q.length) {
+    const next = [];
+    for (const [node, r, c] of q) {
+      if (!cols.has(c)) cols.set(c, []);
+      cols.get(c).push([r, node.val]);
+      if (node.left)  next.push([node.left,  r + 1, c - 1]);
+      if (node.right) next.push([node.right, r + 1, c + 1]);
+    }
+    q = next;
+  }
+  return [...cols.keys()].sort((a, b) => a - b).map(c =>
+    cols.get(c).sort((x, y) => x[0] - y[0] || x[1] - y[1]).map(rv => rv[1]));
+}
+
+// Boundary (anti-clockwise): root, left edge, leaves L->R, right edge up.
+function boundary(root) {
+  if (!root) return [];
+  const isLeaf = n => !n.left && !n.right;
+  const res = [root.val];
+  for (let n = root.left; n; n = n.left || n.right)
+    if (!isLeaf(n)) res.push(n.val);                 // left edge, no leaves
+  const addLeaves = n => {
+    if (!n) return;
+    if (isLeaf(n)) { res.push(n.val); return; }
+    addLeaves(n.left); addLeaves(n.right);
+  };
+  if (!isLeaf(root)) { addLeaves(root.left); addLeaves(root.right); }
+  const right = [];
+  for (let n = root.right; n; n = n.right || n.left)
+    if (!isLeaf(n)) right.push(n.val);
+  right.reverse();                                   // right edge bottom-up
+  return res.concat(right);
+}` },
       p: [
         [987, "vertical-order-traversal-of-a-binary-tree", "Vertical Order Traversal", "H"],
         [314, "binary-tree-vertical-order-traversal", "Vertical Order (basic)", "M"],
@@ -441,7 +867,17 @@ def boundary(root):
         "• That split count also tells you how to slice preorder (the next <code>i</code> values after the root belong to the left subtree). <b>Recurse</b> on both halves.<br>" +
         "• The simple version below slices lists and calls <code>index()</code> each time → clean but <b>O(n²)</b>. The optimized version precomputes a <code>value → inorder-index</code> map (O(1) lookup) and walks a single preorder pointer → <b>O(n)</b>.<br>" +
         "• <b>Inorder + Postorder (LC 106):</b> same idea but the root is <code>postorder[-1]</code>, and you must build the <b>right subtree before the left</b> (consume postorder from the back).",
-      code:
+      code: {
+        pseudo:
+`build a tree from preorder + inorder.
+  preorder[0] is the root of the current subtree.
+  find the root in inorder at index i:
+    inorder[..i-1] = left subtree, inorder[i+1..] = right subtree.
+    the i values after the root in preorder are the left subtree.
+  recurse on both halves.
+  fast O(n): precompute value -> inorder index, walk one preorder
+  pointer, and build LEFT before RIGHT (preorder order).`,
+        py:
 `# --- Simple & intuitive (O(n^2): index() scan + slicing copies) ---
 def buildTree(preorder, inorder):
     if not preorder or not inorder:
@@ -466,6 +902,93 @@ def buildTree_fast(preorder, inorder):
         root.right = build(mid + 1, hi)
         return root
     return build(0, len(inorder) - 1)`,
+        java:
+`// Simple O(n^2): scan inorder for the root each time
+TreeNode buildTree(int[] preorder, int[] inorder) {
+    return build(preorder, 0, inorder, 0, inorder.length - 1);
+}
+TreeNode build(int[] pre, int ps, int[] in, int lo, int hi) {
+    if (lo > hi) return null;
+    TreeNode root = new TreeNode(pre[ps]);          // preorder[0] = root
+    int i = lo; while (in[i] != root.val) i++;      // split point in inorder
+    int leftSize = i - lo;
+    root.left  = build(pre, ps + 1, in, lo, i - 1);
+    root.right = build(pre, ps + 1 + leftSize, in, i + 1, hi);
+    return root;
+}
+
+// Optimized O(n): value -> inorder index map, moving preorder pointer
+int preIdx = 0;
+TreeNode buildTreeFast(int[] preorder, int[] inorder) {
+    Map<Integer,Integer> idx = new HashMap<>();
+    for (int i = 0; i < inorder.length; i++) idx.put(inorder[i], i);
+    preIdx = 0;
+    return go(preorder, idx, 0, inorder.length - 1);
+}
+TreeNode go(int[] preorder, Map<Integer,Integer> idx, int lo, int hi) {
+    if (lo > hi) return null;
+    TreeNode root = new TreeNode(preorder[preIdx++]);  // next preorder = root
+    int mid = idx.get(root.val);
+    root.left  = go(preorder, idx, lo, mid - 1);       // build LEFT first
+    root.right = go(preorder, idx, mid + 1, hi);
+    return root;
+}`,
+        cpp:
+`// Simple O(n^2): scan inorder for the root each time
+TreeNode* build(vector<int>& pre, int ps, vector<int>& in, int lo, int hi) {
+    if (lo > hi) return nullptr;
+    TreeNode* root = new TreeNode(pre[ps]);         // preorder[0] = root
+    int i = lo; while (in[i] != root->val) i++;     // split point in inorder
+    int leftSize = i - lo;
+    root->left  = build(pre, ps + 1, in, lo, i - 1);
+    root->right = build(pre, ps + 1 + leftSize, in, i + 1, hi);
+    return root;
+}
+TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {
+    return build(preorder, 0, inorder, 0, (int)inorder.size() - 1);
+}
+
+// Optimized O(n): value -> inorder index map, moving preorder pointer
+TreeNode* go(vector<int>& preorder, unordered_map<int,int>& idx,
+             int& pre, int lo, int hi) {
+    if (lo > hi) return nullptr;
+    TreeNode* root = new TreeNode(preorder[pre++]); // next preorder = root
+    int mid = idx[root->val];
+    root->left  = go(preorder, idx, pre, lo, mid - 1);  // build LEFT first
+    root->right = go(preorder, idx, pre, mid + 1, hi);
+    return root;
+}
+TreeNode* buildTreeFast(vector<int>& preorder, vector<int>& inorder) {
+    unordered_map<int,int> idx;
+    for (int i = 0; i < (int)inorder.size(); i++) idx[inorder[i]] = i;
+    int pre = 0;
+    return go(preorder, idx, pre, 0, (int)inorder.size() - 1);
+}`,
+        js:
+`// Simple O(n^2): slice + indexOf each time (mirrors the Python)
+function buildTree(preorder, inorder) {
+  if (!preorder.length || !inorder.length) return null;
+  const root = new TreeNode(preorder[0]);           // 1st preorder = root
+  const i = inorder.indexOf(root.val);              // split point in inorder
+  root.left  = buildTree(preorder.slice(1, i + 1), inorder.slice(0, i));
+  root.right = buildTree(preorder.slice(i + 1), inorder.slice(i + 1));
+  return root;
+}
+
+// Optimized O(n): value -> inorder index map, moving preorder pointer
+function buildTreeFast(preorder, inorder) {
+  const idx = new Map(inorder.map((v, i) => [v, i]));
+  let pre = 0;
+  const build = (lo, hi) => {
+    if (lo > hi) return null;
+    const root = new TreeNode(preorder[pre++]);     // next preorder = root
+    const mid = idx.get(root.val);
+    root.left  = build(lo, mid - 1);                // build LEFT first
+    root.right = build(mid + 1, hi);
+    return root;
+  };
+  return build(0, inorder.length - 1);
+}` },
       p: [
       [105, "construct-binary-tree-from-preorder-and-inorder-traversal", "Build Tree (Pre+In)", "M"],
       [106, "construct-binary-tree-from-inorder-and-postorder-traversal", "Build Tree (In+Post)", "M"],
@@ -474,7 +997,19 @@ def buildTree_fast(preorder, inorder):
     ]},
     { n: "Misc (distance-K, width, complete count)", h: "Convert tree to graph (parent pointers) for distance-K BFS. Count complete tree nodes in O(log²n).",
       note: "<b>Max Width of Binary Tree (LC 662):</b> Give each node a position index like a <b>heap</b> — root = 0, and a node at index <code>i</code> has children <code>2·i</code> (left) and <code>2·i+1</code> (right). The width of a level = <code>lastIndex − firstIndex + 1</code>; the answer is the max over all levels. Both DFS and BFS work — BFS is the natural fit (process level by level; the first node's index is the level's leftmost, the last dequeued is the rightmost). <br><b>Overflow tip:</b> in fixed-int languages, subtract the level's first index from every index to keep numbers small (Python big-ints don't overflow, so it's optional).",
-      code:
+      code: {
+        pseudo:
+`max width of a binary tree, and counting a complete tree.
+  index nodes like a heap: node i -> left 2i, right 2i+1.
+  level width = last index - first index + 1; answer = max over levels.
+  BFS: per level, first index is the queue front, last is the last dequeued.
+  (normalize indices per level, subtract the first, so ints do not overflow.)
+
+  count a complete tree in O(log^2 n):
+    lh = left height (always go left), rh = right height (always go right)
+    if lh == rh -> perfect subtree, 2^lh - 1 nodes
+    else -> 1 + count(left) + count(right)`,
+        py:
 `from collections import deque
 
 # LC 662 — Maximum Width of Binary Tree
@@ -517,6 +1052,146 @@ def count_nodes(root):
     lh, rh = h(root, True), h(root, False)
     if lh == rh: return (1 << lh) - 1           # perfect subtree
     return 1 + count_nodes(root.left) + count_nodes(root.right)`,
+        java:
+`// LC 662: index nodes like a heap; width = last - first + 1 per level
+int widthBfs(TreeNode root) {
+    if (root == null) return 0;
+    Queue<TreeNode> nodes = new LinkedList<>();
+    Queue<Integer> idxs = new LinkedList<>();
+    nodes.add(root); idxs.add(0);
+    int best = 0;
+    while (!nodes.isEmpty()) {
+        int size = nodes.size(), first = idxs.peek(), last = 0;
+        for (int i = 0; i < size; i++) {
+            TreeNode node = nodes.poll();
+            int idx = idxs.poll() - first;      // normalize to avoid overflow
+            last = idx;
+            if (node.left != null)  { nodes.add(node.left);  idxs.add(2 * idx); }
+            if (node.right != null) { nodes.add(node.right); idxs.add(2 * idx + 1); }
+        }
+        best = Math.max(best, last + 1);
+    }
+    return best;
+}
+
+// DFS: first index seen at each depth is the leftmost node there
+Map<Integer,Integer> firstIdx = new HashMap<>();
+int bestW = 0;
+int widthDfs(TreeNode root) { firstIdx.clear(); bestW = 0; dfs(root, 0, 0); return bestW; }
+void dfs(TreeNode node, int depth, int idx) {
+    if (node == null) return;
+    firstIdx.putIfAbsent(depth, idx);
+    bestW = Math.max(bestW, idx - firstIdx.get(depth) + 1);
+    dfs(node.left,  depth + 1, 2 * idx);
+    dfs(node.right, depth + 1, 2 * idx + 1);
+}
+
+// Count nodes in a COMPLETE tree in O(log^2 n)
+int countNodes(TreeNode root) {
+    if (root == null) return 0;
+    int lh = height(root, true), rh = height(root, false);
+    if (lh == rh) return (1 << lh) - 1;         // perfect subtree
+    return 1 + countNodes(root.left) + countNodes(root.right);
+}
+int height(TreeNode n, boolean left) {
+    int d = 0;
+    while (n != null) { n = left ? n.left : n.right; d++; }
+    return d;
+}`,
+        cpp:
+`// LC 662: index nodes like a heap; width = last - first + 1 per level
+int widthBfs(TreeNode* root) {
+    if (!root) return 0;
+    queue<pair<TreeNode*, long long>> q;
+    q.push({root, 0});
+    long long best = 0;
+    while (!q.empty()) {
+        int size = q.size();
+        long long first = q.front().second, last = 0;
+        for (int i = 0; i < size; i++) {
+            auto [node, idx] = q.front(); q.pop();
+            idx -= first;                       // normalize to avoid overflow
+            last = idx;
+            if (node->left)  q.push({node->left,  2 * idx});
+            if (node->right) q.push({node->right, 2 * idx + 1});
+        }
+        best = max(best, last + 1);
+    }
+    return (int)best;
+}
+
+// DFS: first index seen at each depth is the leftmost node there
+unordered_map<int,long long> firstIdx;
+long long bestW = 0;
+void dfs(TreeNode* node, int depth, long long idx) {
+    if (!node) return;
+    if (!firstIdx.count(depth)) firstIdx[depth] = idx;
+    bestW = max(bestW, idx - firstIdx[depth] + 1);
+    dfs(node->left,  depth + 1, 2 * idx);
+    dfs(node->right, depth + 1, 2 * idx + 1);
+}
+int widthDfs(TreeNode* root) { firstIdx.clear(); bestW = 0; dfs(root, 0, 0); return (int)bestW; }
+
+// Count nodes in a COMPLETE tree in O(log^2 n)
+int height(TreeNode* n, bool left) {
+    int d = 0;
+    while (n) { n = left ? n->left : n->right; d++; }
+    return d;
+}
+int countNodes(TreeNode* root) {
+    if (!root) return 0;
+    int lh = height(root, true), rh = height(root, false);
+    if (lh == rh) return (1 << lh) - 1;         // perfect subtree
+    return 1 + countNodes(root->left) + countNodes(root->right);
+}`,
+        js:
+`// LC 662: index nodes like a heap; width = last - first + 1 per level
+function widthBfs(root) {
+  if (!root) return 0;
+  let q = [[root, 0]], best = 0;
+  while (q.length) {
+    const first = q[0][1];
+    const next = [];
+    let last = 0;
+    for (const [node, rawIdx] of q) {
+      const idx = rawIdx - first;              // normalize to avoid overflow
+      last = idx;
+      if (node.left)  next.push([node.left,  2 * idx]);
+      if (node.right) next.push([node.right, 2 * idx + 1]);
+    }
+    best = Math.max(best, last + 1);
+    q = next;
+  }
+  return best;
+}
+
+// DFS: first index seen at each depth is the leftmost node there
+function widthDfs(root) {
+  const first = new Map();
+  let best = 0;
+  const dfs = (node, depth, idx) => {
+    if (!node) return;
+    if (!first.has(depth)) first.set(depth, idx);
+    best = Math.max(best, idx - first.get(depth) + 1);
+    dfs(node.left,  depth + 1, 2 * idx);
+    dfs(node.right, depth + 1, 2 * idx + 1);
+  };
+  dfs(root, 0, 0);
+  return best;
+}
+
+// Count nodes in a COMPLETE tree in O(log^2 n)
+function countNodes(root) {
+  if (!root) return 0;
+  const height = (n, left) => {
+    let d = 0;
+    while (n) { n = left ? n.left : n.right; d++; }
+    return d;
+  };
+  const lh = height(root, true), rh = height(root, false);
+  if (lh === rh) return (1 << lh) - 1;          // perfect subtree
+  return 1 + countNodes(root.left) + countNodes(root.right);
+}` },
       p: [
       [662, "maximum-width-of-binary-tree", "Maximum Width of Binary Tree", "M"],
       [863, "all-nodes-distance-k-in-binary-tree", "All Nodes Distance K", "M"],
