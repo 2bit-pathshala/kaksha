@@ -3829,22 +3829,87 @@ function robTree(root) {
 }`,
       },
 
-      "XOR tricks":
-`# O(n) time · O(1) space — equal pairs cancel under XOR
+      "XOR tricks": {
+        pseudo:
+`find the one number that appears once (all others twice). O(n), O(1).
+  x = 0
+  for v in nums: x = x XOR v    # equal pairs cancel to 0
+  return x`,
+        py:
+`# O(n) time · O(1) space, equal pairs cancel under XOR
 def single_number(nums):        # every element twice except one
     x = 0
     for v in nums: x ^= v       # pairs cancel
     return x`,
-      "Counting & masks":
-`# O(n) time · O(n) space — dp[i] = dp[i>>1] + (i&1)
+        java:
+`// O(n) time, O(1) space: equal pairs cancel under XOR
+int singleNumber(int[] nums) {
+    int x = 0;
+    for (int v : nums) x ^= v;      // pairs cancel
+    return x;
+}`,
+        cpp:
+`// O(n) time, O(1) space: equal pairs cancel under XOR
+int singleNumber(vector<int>& nums) {
+    int x = 0;
+    for (int v : nums) x ^= v;      // pairs cancel
+    return x;
+}`,
+        js:
+`// O(n) time, O(1) space: equal pairs cancel under XOR
+function singleNumber(nums) {
+  let x = 0;
+  for (const v of nums) x ^= v;     // pairs cancel
+  return x;
+}`,
+      },
+      "Counting & masks": {
+        pseudo:
+`count set bits for every number 0..n. O(n).
+  dp[i] = dp[i >> 1] + (i & 1)
+  (i>>1 drops the lowest bit; i&1 adds it back)`,
+        py:
+`# O(n) time · O(n) space, dp[i] = dp[i>>1] + (i&1)
 def count_bits(n):
     dp = [0]*(n+1)
     for i in range(1, n+1):
         dp[i] = dp[i >> 1] + (i & 1)
     return dp`,
+        java:
+`// O(n) time, O(n) space: dp[i] = dp[i>>1] + (i&1)
+int[] countBits(int n) {
+    int[] dp = new int[n + 1];
+    for (int i = 1; i <= n; i++)
+        dp[i] = dp[i >> 1] + (i & 1);
+    return dp;
+}`,
+        cpp:
+`// O(n) time, O(n) space: dp[i] = dp[i>>1] + (i&1)
+vector<int> countBits(int n) {
+    vector<int> dp(n + 1, 0);
+    for (int i = 1; i <= n; i++)
+        dp[i] = dp[i >> 1] + (i & 1);
+    return dp;
+}`,
+        js:
+`// O(n) time, O(n) space: dp[i] = dp[i>>1] + (i&1)
+function countBits(n) {
+  const dp = new Array(n + 1).fill(0);
+  for (let i = 1; i <= n; i++)
+    dp[i] = dp[i >> 1] + (i & 1);
+  return dp;
+}`,
+      },
 
-      "Merge Sort & inversions":
-`# O(n log n) time · O(n) space — split, sort halves, merge (stable)
+      "Merge Sort & inversions": {
+        pseudo:
+`merge sort. O(n log n), stable. Divide, sort halves, merge.
+  if length <= 1 -> already sorted
+  split in half, sort each half
+  merge: repeatedly take the smaller front element
+  (counting how often a right element jumps ahead gives inversions)`,
+        py:
+`# O(n log n) time · O(n) space, split, sort halves, merge (stable)
 def merge_sort(a):
     if len(a) <= 1: return a
     m = len(a)//2
@@ -3854,8 +3919,59 @@ def merge_sort(a):
         if L[i] <= R[j]: out.append(L[i]); i += 1
         else: out.append(R[j]); j += 1
     return out + L[i:] + R[j:]`,
-      "Quick Select & partition":
-`# O(n) average, O(n^2) worst · O(n) space — partition, recurse one side
+        java:
+`// O(n log n) time, O(n) space: split, sort halves, merge (stable)
+int[] mergeSort(int[] a) {
+    if (a.length <= 1) return a;
+    int m = a.length / 2;
+    int[] L = mergeSort(Arrays.copyOfRange(a, 0, m));
+    int[] R = mergeSort(Arrays.copyOfRange(a, m, a.length));
+    int[] out = new int[a.length];
+    int i = 0, j = 0, k = 0;
+    while (i < L.length && j < R.length)
+        out[k++] = (L[i] <= R[j]) ? L[i++] : R[j++];
+    while (i < L.length) out[k++] = L[i++];
+    while (j < R.length) out[k++] = R[j++];
+    return out;
+}`,
+        cpp:
+`// O(n log n) time, O(n) space: split, sort halves, merge (stable)
+vector<int> mergeSort(vector<int> a) {
+    if (a.size() <= 1) return a;
+    int m = a.size() / 2;
+    vector<int> L = mergeSort(vector<int>(a.begin(), a.begin() + m));
+    vector<int> R = mergeSort(vector<int>(a.begin() + m, a.end()));
+    vector<int> out; size_t i = 0, j = 0;
+    while (i < L.size() && j < R.size())
+        out.push_back(L[i] <= R[j] ? L[i++] : R[j++]);
+    while (i < L.size()) out.push_back(L[i++]);
+    while (j < R.size()) out.push_back(R[j++]);
+    return out;
+}`,
+        js:
+`// O(n log n) time, O(n) space: split, sort halves, merge (stable)
+function mergeSort(a) {
+  if (a.length <= 1) return a;
+  const m = a.length >> 1;
+  const L = mergeSort(a.slice(0, m)), R = mergeSort(a.slice(m));
+  const out = []; let i = 0, j = 0;
+  while (i < L.length && j < R.length)
+    out.push(L[i] <= R[j] ? L[i++] : R[j++]);
+  while (i < L.length) out.push(L[i++]);
+  while (j < R.length) out.push(R[j++]);
+  return out;
+}`,
+      },
+      "Quick Select & partition": {
+        pseudo:
+`kth smallest without a full sort. O(n) average.
+  pick a random pivot.
+  split into lo (< pivot), eq (== pivot), hi (> pivot).
+  if k < len(lo) -> recurse into lo
+  else if k < len(lo)+len(eq) -> the pivot is the answer
+  else -> recurse into hi with k reduced by len(lo)+len(eq)`,
+        py:
+`# O(n) average, O(n^2) worst · O(n) space, partition, recurse one side
 import random
 def quickselect(a, k):          # kth smallest (0-indexed)
     pivot = random.choice(a)
@@ -3865,14 +3981,82 @@ def quickselect(a, k):          # kth smallest (0-indexed)
     if k < len(lo): return quickselect(lo, k)
     if k < len(lo)+len(eq): return pivot
     return quickselect(hi, k-len(lo)-len(eq))`,
-      "Counting / Bucket / Radix":
-`# O(n + k) time · O(k) space — tally counts, then expand (no compares)
+        java:
+`// O(n) average, O(n^2) worst: partition, recurse into one side
+int quickselect(List<Integer> a, int k) {
+    int pivot = a.get(new Random().nextInt(a.size()));
+    List<Integer> lo = new ArrayList<>(), eq = new ArrayList<>(), hi = new ArrayList<>();
+    for (int x : a) (x < pivot ? lo : x == pivot ? eq : hi).add(x);
+    if (k < lo.size()) return quickselect(lo, k);
+    if (k < lo.size() + eq.size()) return pivot;
+    return quickselect(hi, k - lo.size() - eq.size());
+}`,
+        cpp:
+`// O(n) average, O(n^2) worst: partition, recurse into one side
+int quickselect(vector<int> a, int k) {
+    int pivot = a[rand() % a.size()];
+    vector<int> lo, eq, hi;
+    for (int x : a) (x < pivot ? lo : x == pivot ? eq : hi).push_back(x);
+    if (k < (int)lo.size()) return quickselect(lo, k);
+    if (k < (int)(lo.size() + eq.size())) return pivot;
+    return quickselect(hi, k - lo.size() - eq.size());
+}`,
+        js:
+`// O(n) average, O(n^2) worst: partition, recurse into one side
+function quickselect(a, k) {
+  const pivot = a[Math.floor(Math.random() * a.length)];
+  const lo = [], eq = [], hi = [];
+  for (const x of a) (x < pivot ? lo : x === pivot ? eq : hi).push(x);
+  if (k < lo.length) return quickselect(lo, k);
+  if (k < lo.length + eq.length) return pivot;
+  return quickselect(hi, k - lo.length - eq.length);
+}`,
+      },
+      "Counting / Bucket / Radix": {
+        pseudo:
+`counting sort for values in 0..k. O(n + k), no comparisons.
+  cnt[v] = how many times v appears
+  walk values 0..k, output each v that many times`,
+        py:
+`# O(n + k) time · O(k) space, tally counts, then expand (no compares)
 def counting_sort(a, k):        # values in 0..k
     cnt = [0]*(k+1)
     for x in a: cnt[x] += 1
     out = []
     for v, c in enumerate(cnt): out += [v]*c
     return out`,
+        java:
+`// O(n + k) time, O(k) space: tally counts, then expand (no compares)
+int[] countingSort(int[] a, int k) {
+    int[] cnt = new int[k + 1];
+    for (int x : a) cnt[x]++;
+    int[] out = new int[a.length];
+    int idx = 0;
+    for (int v = 0; v <= k; v++)
+        while (cnt[v]-- > 0) out[idx++] = v;
+    return out;
+}`,
+        cpp:
+`// O(n + k) time, O(k) space: tally counts, then expand (no compares)
+vector<int> countingSort(vector<int>& a, int k) {
+    vector<int> cnt(k + 1, 0);
+    for (int x : a) cnt[x]++;
+    vector<int> out;
+    for (int v = 0; v <= k; v++)
+        while (cnt[v]-- > 0) out.push_back(v);
+    return out;
+}`,
+        js:
+`// O(n + k) time, O(k) space: tally counts, then expand (no compares)
+function countingSort(a, k) {
+  const cnt = new Array(k + 1).fill(0);
+  for (const x of a) cnt[x]++;
+  const out = [];
+  for (let v = 0; v <= k; v++)
+    while (cnt[v]-- > 0) out.push(v);
+  return out;
+}`,
+      },
 
       "Fenwick Tree (BIT)":
 `# O(log n) per update/query · O(n) space — i & -i jumps by lowest set bit
