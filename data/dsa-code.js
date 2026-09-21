@@ -1596,23 +1596,118 @@ function windowMax(a, k) {
 }`,
       },
 
-      "Fast-Slow Pointers":
-`# O(n) time · O(1) space — fast moves 2x, slow 1x
+      "Fast-Slow Pointers": {
+        pseudo:
+`one fast pointer (2 steps) and one slow (1 step). O(n), O(1).
+  slow = fast = head
+  while fast and fast.next
+    slow = slow.next
+    fast = fast.next.next
+  # slow is now the middle node
+  # if fast ever meets slow, the list has a cycle
+  # cycle start: reset one pointer to head, then step both by 1`,
+        py:
+`# O(n) time · O(1) space, fast moves 2x, slow 1x
 slow = fast = head
 while fast and fast.next:
     slow = slow.next
     fast = fast.next.next
 # slow = middle. If slow met fast earlier -> cycle.
 # cycle start: reset one ptr to head, advance both +1.`,
-      "Reversal":
-`# O(n) time · O(1) space — flip each next pointer, carry prev along
+        java:
+`// O(n) time, O(1) space: fast moves 2x, slow 1x
+ListNode slow = head, fast = head;
+while (fast != null && fast.next != null) {
+    slow = slow.next;
+    fast = fast.next.next;
+}
+// slow = middle. If fast ever meets slow, there is a cycle.
+// cycle start: reset one pointer to head, advance both by 1.`,
+        cpp:
+`// O(n) time, O(1) space: fast moves 2x, slow 1x
+ListNode *slow = head, *fast = head;
+while (fast && fast->next) {
+    slow = slow->next;
+    fast = fast->next->next;
+}
+// slow = middle. If fast ever meets slow, there is a cycle.
+// cycle start: reset one pointer to head, advance both by 1.`,
+        js:
+`// O(n) time, O(1) space: fast moves 2x, slow 1x
+let slow = head, fast = head;
+while (fast && fast.next) {
+  slow = slow.next;
+  fast = fast.next.next;
+}
+// slow = middle. If fast ever meets slow, there is a cycle.
+// cycle start: reset one pointer to head, advance both by 1.`,
+      },
+      "Reversal": {
+        pseudo:
+`reverse a linked list. O(n), O(1). Flip each next pointer.
+  prev = null
+  while head is not null
+    next = head.next        # remember the rest
+    head.next = prev        # flip this link
+    prev = head             # prev walks forward
+    head = next             # head walks forward
+  return prev               # prev is the new head`,
+        py:
+`# O(n) time · O(1) space, flip each next pointer, carry prev along
 def reverse(head):
     prev = None
     while head:
         head.next, prev, head = prev, head, head.next
     return prev`,
-      "Merge / Add / Reorder":
-`# O(n+m) time · O(1) space — dummy head, splice smaller node each step
+        java:
+`// O(n) time, O(1) space: flip each next pointer, carry prev along
+ListNode reverse(ListNode head) {
+    ListNode prev = null;
+    while (head != null) {
+        ListNode next = head.next;
+        head.next = prev;
+        prev = head;
+        head = next;
+    }
+    return prev;
+}`,
+        cpp:
+`// O(n) time, O(1) space: flip each next pointer, carry prev along
+ListNode* reverse(ListNode* head) {
+    ListNode* prev = nullptr;
+    while (head) {
+        ListNode* next = head->next;
+        head->next = prev;
+        prev = head;
+        head = next;
+    }
+    return prev;
+}`,
+        js:
+`// O(n) time, O(1) space: flip each next pointer, carry prev along
+function reverse(head) {
+  let prev = null;
+  while (head) {
+    const next = head.next;
+    head.next = prev;
+    prev = head;
+    head = next;
+  }
+  return prev;
+}`,
+      },
+      "Merge / Add / Reorder": {
+        pseudo:
+`merge two sorted lists. O(n+m), O(1). Use a dummy head.
+  dummy -> tail = dummy
+  while a and b
+    if a.val <= b.val -> tail.next = a; a = a.next
+    else              -> tail.next = b; b = b.next
+    tail = tail.next
+  tail.next = whichever of a or b still remains
+  return dummy.next`,
+        py:
+`# O(n+m) time · O(1) space, dummy head, splice smaller node each step
 def merge(a, b):
     dummy = tail = ListNode(0)
     while a and b:
@@ -1621,14 +1716,90 @@ def merge(a, b):
         tail = tail.next
     tail.next = a or b
     return dummy.next`,
-      "LL + Arrays / Misc (Striver)":
-`# O(n) time · O(1) space — gap of n between fast & slow, one pass
+        java:
+`// O(n+m) time, O(1) space: dummy head, splice the smaller node
+ListNode merge(ListNode a, ListNode b) {
+    ListNode dummy = new ListNode(0), tail = dummy;
+    while (a != null && b != null) {
+        if (a.val <= b.val) { tail.next = a; a = a.next; }
+        else { tail.next = b; b = b.next; }
+        tail = tail.next;
+    }
+    tail.next = (a != null) ? a : b;
+    return dummy.next;
+}`,
+        cpp:
+`// O(n+m) time, O(1) space: dummy head, splice the smaller node
+ListNode* merge(ListNode* a, ListNode* b) {
+    ListNode dummy(0); ListNode* tail = &dummy;
+    while (a && b) {
+        if (a->val <= b->val) { tail->next = a; a = a->next; }
+        else { tail->next = b; b = b->next; }
+        tail = tail->next;
+    }
+    tail->next = a ? a : b;
+    return dummy.next;
+}`,
+        js:
+`// O(n+m) time, O(1) space: dummy head, splice the smaller node
+function merge(a, b) {
+  const dummy = new ListNode(0);
+  let tail = dummy;
+  while (a && b) {
+    if (a.val <= b.val) { tail.next = a; a = a.next; }
+    else { tail.next = b; b = b.next; }
+    tail = tail.next;
+  }
+  tail.next = a || b;
+  return dummy.next;
+}`,
+      },
+      "LL + Arrays / Misc (Striver)": {
+        pseudo:
+`remove the nth node from the end, in one pass. O(n), O(1).
+  dummy -> head; fast = slow = dummy
+  advance fast by n steps (open a gap of n)
+  while fast.next -> move fast and slow together
+  slow.next = slow.next.next     # skip the target node
+  return dummy.next`,
+        py:
+`# O(n) time · O(1) space, gap of n between fast & slow, one pass
 def remove_nth_from_end(head, n):
     dummy = ListNode(0, head); fast = slow = dummy
     for _ in range(n): fast = fast.next
     while fast.next: fast, slow = fast.next, slow.next
     slow.next = slow.next.next      # skip the node
     return dummy.next`,
+        java:
+`// O(n) time, O(1) space: keep a gap of n between fast and slow
+ListNode removeNthFromEnd(ListNode head, int n) {
+    ListNode dummy = new ListNode(0, head), fast = dummy, slow = dummy;
+    for (int i = 0; i < n; i++) fast = fast.next;
+    while (fast.next != null) { fast = fast.next; slow = slow.next; }
+    slow.next = slow.next.next;
+    return dummy.next;
+}`,
+        cpp:
+`// O(n) time, O(1) space: keep a gap of n between fast and slow
+ListNode* removeNthFromEnd(ListNode* head, int n) {
+    ListNode dummy(0); dummy.next = head;
+    ListNode *fast = &dummy, *slow = &dummy;
+    for (int i = 0; i < n; i++) fast = fast->next;
+    while (fast->next) { fast = fast->next; slow = slow->next; }
+    slow->next = slow->next->next;
+    return dummy.next;
+}`,
+        js:
+`// O(n) time, O(1) space: keep a gap of n between fast and slow
+function removeNthFromEnd(head, n) {
+  const dummy = new ListNode(0, head);
+  let fast = dummy, slow = dummy;
+  for (let i = 0; i < n; i++) fast = fast.next;
+  while (fast.next) { fast = fast.next; slow = slow.next; }
+  slow.next = slow.next.next;
+  return dummy.next;
+}`,
+      },
 
       "Traversals":
 `# O(n) time · O(h) space (recursion stack, h = height)
