@@ -29,28 +29,32 @@ python3 -m http.server 8000
 # then visit http://localhost:8000
 ```
 
-## Pages
+## Layout
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Hub |
-| `concept.html` | Concepts, the deep page for one concept |
-| `revise.html` | Revision, recall lines and questions |
-| `concept-data.js` | All concept content (single source for both pages) |
-| `viz.js` | Step-through SVG visuals, the player and the visuals themselves |
-| `learn.css` | Styles for `concept.html` and `revise.html` |
-| `style.css` | Styles for the hub and the placeholder page |
-| `CONTENT-GUIDE.md` | How to write a new concept |
-| `dsa-notes.html` | DSA notes (topic notes + practice) |
-| `dsa-sheet.html` | DSA one-day sheet |
-| `dsa-patterns.html` | Pattern roadmap + practice questions |
-| `dsa-data.js` | Shared DSA content |
-| `design.html` / `design-data.js` | Design Lab, worked HLD and LLD examples with stepped diagrams |
-| `lld.html` / `lld-data.js` | LLD notes (OOP, concurrency, patterns, machine coding) |
-| `hld.html` / `hld-data.js` | HLD notes (scalability, databases, caching, APIs) |
-| `hr.html` / `hr-data.js` | HR + manager notes (STAR / CAR / HERO, résumé stories, why company / leave, salary) |
-| `ai.html` | AI, not written yet |
-| `study.html`, `dsa-cheatsheet.html`, `dsa.html` | Redirects to the pages above |
+Pages stay in the root so their URLs are stable; everything else is grouped by kind.
+
+```
+/                     the HTML pages, served as-is by GitHub Pages
+  index.html          hub
+  concept.html        the deep page for one concept
+  revise.html         recall lines and questions
+  dsa-notes.html      DSA notes (topic notes + practice)
+  dsa-sheet.html      DSA one-day sheet
+  dsa-patterns.html   pattern roadmap + practice questions
+  lld.html hld.html   system-design notes
+  design.html         Design Lab, systems grown stage by stage
+  hr.html  ai.html    HR notes; AI placeholder
+  study.html dsa.html dsa-cheatsheet.html   redirects to the above
+css/                  learn.css (concept/revise), style.css (hub)
+js/                   viz.js (stepped visuals), script.js (hub)
+data/                 *-data.js, the single source of content per section
+docs/                 CONTENT-GUIDE.md, how to write a new concept
+check.js              build check: run before every commit
+```
+
+Each page loads its matching `data/<name>-data.js`; `concept.html` and `revise.html`
+share `data/concept-data.js`, and `dsa-notes.html` and `dsa-patterns.html` share
+`data/dsa-data.js`.
 
 ## Deploy on GitHub Pages
 

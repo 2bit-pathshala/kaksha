@@ -16,8 +16,8 @@ const test = (name, pass, detail) => (pass ? ok : bad)(name, detail);
 /* ---------- load the data the same way a browser would ---------- */
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(fs.readFileSync(P + "viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
-vm.runInContext(fs.readFileSync(P + "concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", ctx);
+vm.runInContext(fs.readFileSync(P + "js/viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
+vm.runInContext(fs.readFileSync(P + "data/concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", ctx);
 const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 
 /* ---------- 1. every concept has every field, and points at real visuals ---------- */
@@ -71,8 +71,8 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 
 /* ---------- 3. the visuals are painted with variables the stylesheet defines ---------- */
 {
-  const viz = fs.readFileSync(P + "viz.js", "utf8");
-  const css = fs.readFileSync(P + "learn.css", "utf8");
+  const viz = fs.readFileSync(P + "js/viz.js", "utf8");
+  const css = fs.readFileSync(P + "css/learn.css", "utf8");
   const cut = css.indexOf('[data-theme="dark"]');
   const light = css.slice(0, cut), dark = css.slice(cut);
   const wanted = [...new Set([...viz.matchAll(/var\(--([a-z0-9-]+)\)/g)].map(m => m[1]))];
@@ -179,9 +179,9 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 /* ---------- 5. house style: no em-dashes anywhere we author ---------- */
 {
   const DASH = String.fromCharCode(0x2014);   // written this way so this file passes its own test
-  const OURS = ["concept-data.js","viz.js","concept.html","revise.html","learn.css",
-                "CONTENT-GUIDE.md","README.md","index.html","ai.html","check.js",
-                "design.html","design-data.js"];
+  const OURS = ["data/concept-data.js","js/viz.js","concept.html","revise.html","css/learn.css",
+                "docs/CONTENT-GUIDE.md","README.md","index.html","ai.html","check.js",
+                "design.html","data/design-data.js"];
   const guilty = OURS.filter(f => fs.existsSync(P + f) && fs.readFileSync(P + f, "utf8").includes(DASH));
   test("house style", guilty.length === 0,
     "no em-dashes across " + OURS.length + " files" +
@@ -205,7 +205,7 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
    no clever router; there is this test instead. */
 const DESIGN = (() => {
   const d = {}; vm.createContext(d);
-  vm.runInContext(fs.readFileSync(P + "design-data.js", "utf8") + "\n;globalThis.D=DESIGN;", d);
+  vm.runInContext(fs.readFileSync(P + "data/design-data.js", "utf8") + "\n;globalThis.D=DESIGN;", d);
   return d.D;
 })();
 {
