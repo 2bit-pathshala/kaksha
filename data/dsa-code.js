@@ -2093,8 +2093,17 @@ def insert(root, val):
     if val < root.val: root.left = insert(root.left, val)
     else: root.right = insert(root.right, val)
     return root`,
-      "Validate / Kth / Two-Sum":
-`# O(h + k) time · O(h) space — iterative inorder, stop at k-th
+      "Validate / Kth / Two-Sum": {
+        pseudo:
+`kth smallest in a BST: inorder gives sorted order. O(h+k).
+  st = empty stack, node = root
+  loop:
+    push nodes while walking left (node = node.left)
+    node = st.pop; k = k - 1
+    if k == 0 -> return node.val
+    node = node.right`,
+        py:
+`# O(h + k) time · O(h) space, iterative inorder, stop at k-th
 def kth_smallest(root, k):      # inorder of BST is sorted
     st, node = [], root
     while st or node:
@@ -2102,13 +2111,91 @@ def kth_smallest(root, k):      # inorder of BST is sorted
         node = st.pop(); k -= 1
         if k == 0: return node.val
         node = node.right`,
-      "LCA / Successor / Construct":
-`# O(h) time · O(1) space — first node where p, q split = LCA
+        java:
+`// O(h + k) time, O(h) space: iterative inorder, stop at the k-th
+int kthSmallest(TreeNode root, int k) {
+    Deque<TreeNode> st = new ArrayDeque<>();
+    TreeNode node = root;
+    while (!st.isEmpty() || node != null) {
+        while (node != null) { st.push(node); node = node.left; }
+        node = st.pop();
+        if (--k == 0) return node.val;
+        node = node.right;
+    }
+    return -1;
+}`,
+        cpp:
+`// O(h + k) time, O(h) space: iterative inorder, stop at the k-th
+int kthSmallest(TreeNode* root, int k) {
+    stack<TreeNode*> st;
+    TreeNode* node = root;
+    while (!st.empty() || node) {
+        while (node) { st.push(node); node = node->left; }
+        node = st.top(); st.pop();
+        if (--k == 0) return node->val;
+        node = node->right;
+    }
+    return -1;
+}`,
+        js:
+`// O(h + k) time, O(h) space: iterative inorder, stop at the k-th
+function kthSmallest(root, k) {
+  const st = [];
+  let node = root;
+  while (st.length || node) {
+    while (node) { st.push(node); node = node.left; }
+    node = st.pop();
+    if (--k === 0) return node.val;
+    node = node.right;
+  }
+  return -1;
+}`,
+      },
+      "LCA / Successor / Construct": {
+        pseudo:
+`lowest common ancestor in a BST. O(h), O(1).
+  walk from the root:
+    if both p and q < node.val -> go left
+    else if both p and q > node.val -> go right
+    else -> node is the split point = the LCA`,
+        py:
+`# O(h) time · O(1) space, first node where p, q split = LCA
 def lca_bst(root, p, q):
     while root:
         if p < root.val and q < root.val: root = root.left
         elif p > root.val and q > root.val: root = root.right
         else: return root           # split point = LCA`,
+        java:
+`// O(h) time, O(1) space: first node where p and q split is the LCA
+TreeNode lcaBst(TreeNode root, int p, int q) {
+    while (root != null) {
+        if (p < root.val && q < root.val) root = root.left;
+        else if (p > root.val && q > root.val) root = root.right;
+        else return root;           // split point = LCA
+    }
+    return null;
+}`,
+        cpp:
+`// O(h) time, O(1) space: first node where p and q split is the LCA
+TreeNode* lcaBst(TreeNode* root, int p, int q) {
+    while (root) {
+        if (p < root->val && q < root->val) root = root->left;
+        else if (p > root->val && q > root->val) root = root->right;
+        else return root;           // split point = LCA
+    }
+    return nullptr;
+}`,
+        js:
+`// O(h) time, O(1) space: first node where p and q split is the LCA
+function lcaBst(root, p, q) {
+  while (root) {
+    if (p < root.val && q < root.val) root = root.left;
+    else if (p > root.val && q > root.val) root = root.right;
+    else return root;               // split point = LCA
+  }
+  return null;
+}`,
+      },
 
       "Subsets / Power set":
 `# O(n·2^n) time · O(n) space (excl. output) — include/exclude each item

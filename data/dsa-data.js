@@ -1205,7 +1205,18 @@ function countNodes(root) {
       [700, "search-in-a-binary-search-tree", "Search in a BST", "E"],
       [701, "insert-into-a-binary-search-tree", "Insert into a BST", "M"],
       [450, "delete-node-in-a-bst", "Delete Node in a BST", "M"],
-    ], code:
+    ], code: {
+        pseudo:
+`BST search, insert, delete. Each is O(h).
+  search: go left if key < node.val else right, until found.
+  insert: recurse to the correct side, attach a new node at the gap.
+  delete(key):
+    key < val -> recurse left;  key > val -> recurse right
+    else (found the node):
+      0 or 1 child -> return the existing child
+      2 children -> copy the inorder successor (min of right subtree),
+                    then delete that successor from the right subtree`,
+        py:
 `def search(root, key):
     while root and root.val != key:
         root = root.left if key < root.val else root.right
@@ -1232,7 +1243,91 @@ def delete(root, key):
             succ = succ.left
         root.val = succ.val                    # copy successor value up
         root.right = delete(root.right, succ.val)  # delete the successor
-    return root` },
+    return root`,
+        java:
+`TreeNode search(TreeNode root, int key) {
+    while (root != null && root.val != key)
+        root = (key < root.val) ? root.left : root.right;
+    return root;
+}
+
+TreeNode insert(TreeNode root, int val) {
+    if (root == null) return new TreeNode(val);
+    if (val < root.val) root.left = insert(root.left, val);
+    else root.right = insert(root.right, val);
+    return root;
+}
+
+TreeNode deleteNode(TreeNode root, int key) {
+    if (root == null) return null;
+    if (key < root.val) root.left = deleteNode(root.left, key);
+    else if (key > root.val) root.right = deleteNode(root.right, key);
+    else {                                    // found the node
+        if (root.left == null) return root.right;   // 0 or 1 child
+        if (root.right == null) return root.left;   // 1 child
+        TreeNode succ = root.right;                 // inorder successor
+        while (succ.left != null) succ = succ.left;
+        root.val = succ.val;                        // copy value up
+        root.right = deleteNode(root.right, succ.val);
+    }
+    return root;
+}`,
+        cpp:
+`TreeNode* search(TreeNode* root, int key) {
+    while (root && root->val != key)
+        root = (key < root->val) ? root->left : root->right;
+    return root;
+}
+
+TreeNode* insert(TreeNode* root, int val) {
+    if (!root) return new TreeNode(val);
+    if (val < root->val) root->left = insert(root->left, val);
+    else root->right = insert(root->right, val);
+    return root;
+}
+
+TreeNode* deleteNode(TreeNode* root, int key) {
+    if (!root) return nullptr;
+    if (key < root->val) root->left = deleteNode(root->left, key);
+    else if (key > root->val) root->right = deleteNode(root->right, key);
+    else {                                    // found the node
+        if (!root->left) return root->right;  // 0 or 1 child
+        if (!root->right) return root->left;  // 1 child
+        TreeNode* succ = root->right;         // inorder successor
+        while (succ->left) succ = succ->left;
+        root->val = succ->val;                // copy value up
+        root->right = deleteNode(root->right, succ->val);
+    }
+    return root;
+}`,
+        js:
+`function search(root, key) {
+  while (root && root.val !== key)
+    root = (key < root.val) ? root.left : root.right;
+  return root;
+}
+
+function insert(root, val) {
+  if (!root) return new TreeNode(val);
+  if (val < root.val) root.left = insert(root.left, val);
+  else root.right = insert(root.right, val);
+  return root;
+}
+
+function deleteNode(root, key) {
+  if (!root) return null;
+  if (key < root.val) root.left = deleteNode(root.left, key);
+  else if (key > root.val) root.right = deleteNode(root.right, key);
+  else {                                     // found the node
+    if (!root.left) return root.right;       // 0 or 1 child
+    if (!root.right) return root.left;       // 1 child
+    let succ = root.right;                    // inorder successor
+    while (succ.left) succ = succ.left;
+    root.val = succ.val;                       // copy value up
+    root.right = deleteNode(root.right, succ.val);
+  }
+  return root;
+}` } },
     { n: "Validate / Kth / Two-Sum", h: "Validate with (min,max) bounds passed down. Kth smallest = inorder counting. Two-Sum in BST: inorder → two pointers, or set.", p: [
       [98, "validate-binary-search-tree", "Validate BST", "M"],
       [230, "kth-smallest-element-in-a-bst", "Kth Smallest in BST", "M"],
@@ -1255,7 +1350,17 @@ def delete(root, key):
         "AVL is <b>strictly balanced</b> → fastest lookups, but more rotations on insert/delete.<br><br>" +
         "<b>Red-Black tree</b> — nodes are colored red/black with rules: (1) root is black, (2) a red node's children are black (no two reds in a row), (3) every root→null path has the same number of black nodes. This guarantees height ≤ 2·log₂(n+1). <b>Fewer rotations</b> than AVL on insert/delete → better for write-heavy workloads.<br><br>" +
         "<b>AVL vs Red-Black:</b> AVL = more balanced → faster reads; Red-Black = fewer rotations → faster writes. <b>Used in:</b> Java <code>TreeMap</code>/<code>TreeSet</code>, C++ <code>std::map</code>/<code>std::set</code>, and the Linux CFS scheduler (all Red-Black). Database indexes typically use <b>B/B+ trees</b> (a related idea for disk).",
-      code:
+      code: {
+        pseudo:
+`AVL tree: a BST that rotates to keep height ~ log n.
+  each node stores its height; balance factor bf = h(left) - h(right).
+  after inserting, update height and check bf at this node:
+    bf > 1  and key < left.val   -> LL: right_rotate(node)
+    bf < -1 and key > right.val   -> RR: left_rotate(node)
+    bf > 1  and key > left.val    -> LR: left_rotate(left); right_rotate(node)
+    bf < -1 and key < right.val   -> RL: right_rotate(right); left_rotate(node)
+  a rotation relinks 3 nodes and updates 2 heights, all O(1).`,
+        py:
 `# AVL insertion with rotations (Python)
 class AVLNode:
     def __init__(self, val):
@@ -1293,13 +1398,132 @@ def insert(root, key):
         root.left = left_rotate(root.left); return right_rotate(root)
     if balance < -1 and key < root.right.val:          # RL
         root.right = right_rotate(root.right); return left_rotate(root)
-    return root` },
+    return root`,
+        java:
+`class AVLNode {
+    int val, height = 1; AVLNode left, right;
+    AVLNode(int v) { val = v; }
+}
+int h(AVLNode n)   { return n == null ? 0 : n.height; }
+int bf(AVLNode n)  { return n == null ? 0 : h(n.left) - h(n.right); }
+void upd(AVLNode n){ n.height = 1 + Math.max(h(n.left), h(n.right)); }
+
+AVLNode rightRotate(AVLNode y) {      // fixes LL
+    AVLNode x = y.left, T = x.right;
+    x.right = y; y.left = T;
+    upd(y); upd(x);
+    return x;
+}
+AVLNode leftRotate(AVLNode x) {       // fixes RR
+    AVLNode y = x.right, T = y.left;
+    y.left = x; x.right = T;
+    upd(x); upd(y);
+    return y;
+}
+AVLNode insert(AVLNode root, int key) {
+    if (root == null) return new AVLNode(key);
+    if (key < root.val) root.left = insert(root.left, key);
+    else root.right = insert(root.right, key);
+    upd(root);
+    int balance = bf(root);
+    if (balance > 1 && key < root.left.val) return rightRotate(root);    // LL
+    if (balance < -1 && key > root.right.val) return leftRotate(root);   // RR
+    if (balance > 1 && key > root.left.val) {                            // LR
+        root.left = leftRotate(root.left); return rightRotate(root);
+    }
+    if (balance < -1 && key < root.right.val) {                          // RL
+        root.right = rightRotate(root.right); return leftRotate(root);
+    }
+    return root;
+}`,
+        cpp:
+`struct AVLNode {
+    int val, height = 1; AVLNode *left = nullptr, *right = nullptr;
+    AVLNode(int v) : val(v) {}
+};
+int h(AVLNode* n)    { return n ? n->height : 0; }
+int bf(AVLNode* n)   { return n ? h(n->left) - h(n->right) : 0; }
+void upd(AVLNode* n) { n->height = 1 + max(h(n->left), h(n->right)); }
+
+AVLNode* rightRotate(AVLNode* y) {    // fixes LL
+    AVLNode* x = y->left; AVLNode* T = x->right;
+    x->right = y; y->left = T;
+    upd(y); upd(x);
+    return x;
+}
+AVLNode* leftRotate(AVLNode* x) {     // fixes RR
+    AVLNode* y = x->right; AVLNode* T = y->left;
+    y->left = x; x->right = T;
+    upd(x); upd(y);
+    return y;
+}
+AVLNode* insert(AVLNode* root, int key) {
+    if (!root) return new AVLNode(key);
+    if (key < root->val) root->left = insert(root->left, key);
+    else root->right = insert(root->right, key);
+    upd(root);
+    int balance = bf(root);
+    if (balance > 1 && key < root->left->val) return rightRotate(root);  // LL
+    if (balance < -1 && key > root->right->val) return leftRotate(root); // RR
+    if (balance > 1 && key > root->left->val) {                          // LR
+        root->left = leftRotate(root->left); return rightRotate(root);
+    }
+    if (balance < -1 && key < root->right->val) {                        // RL
+        root->right = rightRotate(root->right); return leftRotate(root);
+    }
+    return root;
+}`,
+        js:
+`class AVLNode {
+  constructor(val) { this.val = val; this.left = this.right = null; this.height = 1; }
+}
+const h = n => n ? n.height : 0;
+const bf = n => n ? h(n.left) - h(n.right) : 0;
+const upd = n => { n.height = 1 + Math.max(h(n.left), h(n.right)); };
+
+function rightRotate(y) {              // fixes LL
+  const x = y.left, T = x.right;
+  x.right = y; y.left = T;
+  upd(y); upd(x);
+  return x;
+}
+function leftRotate(x) {               // fixes RR
+  const y = x.right, T = y.left;
+  y.left = x; x.right = T;
+  upd(x); upd(y);
+  return y;
+}
+function insert(root, key) {
+  if (!root) return new AVLNode(key);
+  if (key < root.val) root.left = insert(root.left, key);
+  else root.right = insert(root.right, key);
+  upd(root);
+  const balance = bf(root);
+  if (balance > 1 && key < root.left.val) return rightRotate(root);      // LL
+  if (balance < -1 && key > root.right.val) return leftRotate(root);     // RR
+  if (balance > 1 && key > root.left.val) {                              // LR
+    root.left = leftRotate(root.left); return rightRotate(root);
+  }
+  if (balance < -1 && key < root.right.val) {                            // RL
+    root.right = rightRotate(root.right); return leftRotate(root);
+  }
+  return root;
+}` } },
     { n: "B-Tree / B+ Tree (disk-based)", h: "Balanced trees built for <b>disk/SSD</b>, not RAM. A node holds <b>many keys</b> (= one disk page), so the tree is very <b>shallow</b> → far fewer disk reads than a BST/AVL. This is what powers <b>database indexes</b>.",
       note: "<b>Why not a BST/AVL for a database?</b> A BST stores one key per node, so its height is ~log₂(n) — for a billion rows that's ~30 levels = ~30 disk seeks. A B-tree packs hundreds of keys per node (one disk page), so height is ~log₍ₘ₎(n) — often just <b>3–4 levels</b> = 3–4 disk reads. Disk I/O dominates, so fewer, larger nodes win.<br><br>" +
         "<b>B-tree properties (order m):</b> each internal node has up to <code>m</code> children and <code>m−1</code> sorted keys; <b>all leaves are at the same depth</b>; it stays balanced by <b>splitting</b> a node on overflow and <b>borrowing/merging</b> on underflow. Search/insert/delete are O(log n) with a tiny constant.<br><br>" +
         "<b>B+ tree (what most DBs actually use):</b> all <b>data lives in the leaves</b>; internal nodes hold only routing keys; and the <b>leaves are linked together</b>. This makes <b>range scans</b> and ordered/sequential reads very fast (walk the leaf linked-list). Used by MySQL <b>InnoDB</b>, PostgreSQL, and many filesystems.<br><br>" +
         "<b>B-tree vs B+ tree:</b> B-tree can store data in internal nodes (point lookups may end early higher up); B+ tree keeps all data in leaves (uniform lookups + fast ranges). No standard LeetCode/GFG problem — this is a <b>system-design / theory</b> topic.",
-      code:
+      code: {
+        pseudo:
+`a B-tree node holds sorted keys with child pointers between them.
+  search(node, key):
+    scan keys while key > keys[i]
+    if keys[i] == key -> found (node, i)
+    if node is a leaf -> not present
+    else descend into children[i]
+  height ~ log_m(n) with m keys per page, so ~3-4 disk reads for 1e9 keys.`,
+        py:
 `# Conceptual B-tree node + search (real DBs use B+ trees on disk pages)
 class BTreeNode:
     def __init__(self, leaf=False):
@@ -1320,7 +1544,65 @@ def search(node, key):
 # Height intuition:
 #   BST / AVL : height ~ log2(n)      -> ~30 levels for 1e9 keys
 #   B-tree    : height ~ log_m(n)     -> ~3-4 levels (m = keys/page)
-# Fewer levels = fewer disk reads = why databases use B/B+ trees.` },
+# Fewer levels = fewer disk reads = why databases use B/B+ trees.`,
+        java:
+`class BTreeNode {
+    List<Integer> keys = new ArrayList<>();       // sorted keys in this node
+    List<BTreeNode> children = new ArrayList<>(); // size = keys+1 if internal
+    boolean leaf;
+    BTreeNode(boolean leaf) { this.leaf = leaf; }
+}
+
+// Returns {node, index} of the key, or null if absent
+Object[] search(BTreeNode node, int key) {
+    int i = 0;
+    while (i < node.keys.size() && key > node.keys.get(i)) i++;   // scan keys
+    if (i < node.keys.size() && node.keys.get(i) == key) return new Object[]{node, i};
+    if (node.leaf) return null;                                   // not present
+    return search(node.children.get(i), key);                     // descend
+}
+
+// BST/AVL height ~ log2(n) (~30 levels for 1e9); B-tree ~ log_m(n)
+// (~3-4 levels). Fewer levels = fewer disk reads: why DBs use B/B+ trees.`,
+        cpp:
+`struct BTreeNode {
+    vector<int> keys;                 // sorted keys in this node
+    vector<BTreeNode*> children;      // size = keys+1 if internal
+    bool leaf;
+    BTreeNode(bool l) : leaf(l) {}
+};
+
+// Returns {node, index}, or {nullptr, -1} if absent
+pair<BTreeNode*,int> search(BTreeNode* node, int key) {
+    int i = 0;
+    while (i < (int)node->keys.size() && key > node->keys[i]) i++;  // scan keys
+    if (i < (int)node->keys.size() && node->keys[i] == key) return {node, i};
+    if (node->leaf) return {nullptr, -1};                          // not present
+    return search(node->children[i], key);                         // descend
+}
+
+// BST/AVL height ~ log2(n) (~30 levels for 1e9); B-tree ~ log_m(n)
+// (~3-4 levels). Fewer levels = fewer disk reads: why DBs use B/B+ trees.`,
+        js:
+`class BTreeNode {
+  constructor(leaf = false) {
+    this.keys = [];          // sorted keys in this node
+    this.children = [];      // size = keys+1 if internal
+    this.leaf = leaf;
+  }
+}
+
+// Returns [node, index], or null if absent
+function search(node, key) {
+  let i = 0;
+  while (i < node.keys.length && key > node.keys[i]) i++;   // scan keys
+  if (i < node.keys.length && node.keys[i] === key) return [node, i];
+  if (node.leaf) return null;                               // not present
+  return search(node.children[i], key);                     // descend
+}
+
+// BST/AVL height ~ log2(n) (~30 levels for 1e9); B-tree ~ log_m(n)
+// (~3-4 levels). Fewer levels = fewer disk reads: why DBs use B/B+ trees.` } },
   ]},
 
   /* ===================== RECURSION & BACKTRACKING (Striver) ===================== */
