@@ -48,14 +48,54 @@ function rotate(a, k) {
   rev(0, n - 1); rev(0, k - 1); rev(k, n - 1);
 }`,
       },
-      "Buy/Sell & Pascal":
-`# O(n) time · O(1) space — track cheapest price seen so far
+      "Buy/Sell & Pascal": {
+        pseudo:
+`best profit from buying once then selling later. O(n), O(1).
+  lo = +infinity        # cheapest price seen so far
+  best = 0
+  for each price p
+    lo = min(lo, p)             # maybe a cheaper buy
+    best = max(best, p - lo)    # sell today vs cheapest buy
+  return best`,
+        py:
+`# O(n) time · O(1) space, track cheapest price seen so far
 # best time to buy & sell (one pass)
 def max_profit(prices):
     lo, best = float('inf'), 0
     for p in prices:
         lo = min(lo, p); best = max(best, p - lo)
     return best`,
+        java:
+`// O(n) time, O(1) space: track cheapest price seen so far
+int maxProfit(int[] prices) {
+    int lo = Integer.MAX_VALUE, best = 0;
+    for (int p : prices) {
+        lo = Math.min(lo, p);
+        best = Math.max(best, p - lo);
+    }
+    return best;
+}`,
+        cpp:
+`// O(n) time, O(1) space: track cheapest price seen so far
+int maxProfit(vector<int>& prices) {
+    int lo = INT_MAX, best = 0;
+    for (int p : prices) {
+        lo = min(lo, p);
+        best = max(best, p - lo);
+    }
+    return best;
+}`,
+        js:
+`// O(n) time, O(1) space: track cheapest price seen so far
+function maxProfit(prices) {
+  let lo = Infinity, best = 0;
+  for (const p of prices) {
+    lo = Math.min(lo, p);
+    best = Math.max(best, p - lo);
+  }
+  return best;
+}`,
+      },
       "Opposite ends (left + right)": {
         pseudo:
 `two values summing to target, in a SORTED array. O(n), O(1).
@@ -107,30 +147,161 @@ function twoSumSorted(a, target) {
   return [-1, -1];
 }`,
       },
-      "Same direction (fast & slow)":
-`# O(n) time · O(1) space — write pointer keeps the kept elements packed
+      "Same direction (fast & slow)": {
+        pseudo:
+`move every zero to the end, keep the order of the rest. O(n).
+  w = 0                  # write index for the next non-zero
+  for r from 0 to n-1
+    if a[r] != 0
+      swap a[w] and a[r]
+      w = w + 1`,
+        py:
+`# O(n) time · O(1) space, write pointer keeps the kept elements packed
 def move_zeroes(a):
     w = 0                       # write index
     for r in range(len(a)):
         if a[r] != 0:
             a[w], a[r] = a[r], a[w]; w += 1`,
-      "Partition / Dutch National Flag":
-`# O(n) time · O(1) space — 3 pointers, single pass
+        java:
+`// O(n) time, O(1) space: write pointer packs the kept elements
+void moveZeroes(int[] a) {
+    int w = 0;
+    for (int r = 0; r < a.length; r++) {
+        if (a[r] != 0) { int t = a[w]; a[w] = a[r]; a[r] = t; w++; }
+    }
+}`,
+        cpp:
+`// O(n) time, O(1) space: write pointer packs the kept elements
+void moveZeroes(vector<int>& a) {
+    int w = 0;
+    for (int r = 0; r < (int)a.size(); r++) {
+        if (a[r] != 0) swap(a[w++], a[r]);
+    }
+}`,
+        js:
+`// O(n) time, O(1) space: write pointer packs the kept elements
+function moveZeroes(a) {
+  let w = 0;
+  for (let r = 0; r < a.length; r++) {
+    if (a[r] !== 0) { [a[w], a[r]] = [a[r], a[w]]; w++; }
+  }
+}`,
+      },
+      "Partition / Dutch National Flag": {
+        pseudo:
+`sort 0s, 1s, 2s in one pass. O(n), O(1). Three moving walls.
+  lo = 0, mid = 0, hi = n-1
+  while mid <= hi
+    if a[mid] == 0 -> swap a[lo], a[mid]; lo++; mid++
+    else if a[mid] == 1 -> mid++
+    else                -> swap a[mid], a[hi]; hi--`,
+        py:
+`# O(n) time · O(1) space, 3 pointers, single pass
 def sort_colors(a):             # 0s,1s,2s in one pass
     lo, mid, hi = 0, 0, len(a)-1
     while mid <= hi:
         if a[mid] == 0: a[lo],a[mid]=a[mid],a[lo]; lo+=1; mid+=1
         elif a[mid] == 1: mid += 1
         else: a[mid],a[hi]=a[hi],a[mid]; hi-=1`,
-      "Fixed Size":
-`# O(n) time · O(1) space — slide window: add new, drop old
+        java:
+`// O(n) time, O(1) space: three pointers, single pass
+void sortColors(int[] a) {
+    int lo = 0, mid = 0, hi = a.length - 1;
+    while (mid <= hi) {
+        if (a[mid] == 0) swap(a, lo++, mid++);
+        else if (a[mid] == 1) mid++;
+        else swap(a, mid, hi--);
+    }
+}
+void swap(int[] a, int i, int j) { int t = a[i]; a[i] = a[j]; a[j] = t; }`,
+        cpp:
+`// O(n) time, O(1) space: three pointers, single pass
+void sortColors(vector<int>& a) {
+    int lo = 0, mid = 0, hi = (int)a.size() - 1;
+    while (mid <= hi) {
+        if (a[mid] == 0) swap(a[lo++], a[mid++]);
+        else if (a[mid] == 1) mid++;
+        else swap(a[mid], a[hi--]);
+    }
+}`,
+        js:
+`// O(n) time, O(1) space: three pointers, single pass
+function sortColors(a) {
+  let lo = 0, mid = 0, hi = a.length - 1;
+  const swap = (i, j) => { [a[i], a[j]] = [a[j], a[i]]; };
+  while (mid <= hi) {
+    if (a[mid] === 0) swap(lo++, mid++);
+    else if (a[mid] === 1) mid++;
+    else swap(mid, hi--);
+  }
+}`,
+      },
+      "Fixed Size": {
+        pseudo:
+`largest sum of any k consecutive items. O(n), O(1).
+  s = sum of the first k items
+  best = s
+  for r from k to n-1
+    s = s + a[r] - a[r-k]    # add the new, drop the old
+    best = max(best, s)
+  return best`,
+        py:
+`# O(n) time · O(1) space, slide window: add new, drop old
 def max_sum_k(a, k):            # fixed window
     s = sum(a[:k]); best = s
     for r in range(k, len(a)):
         s += a[r] - a[r-k]; best = max(best, s)
     return best`,
-      "Variable Size (expand-shrink)":
-`# O(n) time · O(min(n, charset)) space — grow right, jump left past dup
+        java:
+`// O(n) time, O(1) space: slide the window, add new and drop old
+int maxSumK(int[] a, int k) {
+    int s = 0;
+    for (int i = 0; i < k; i++) s += a[i];
+    int best = s;
+    for (int r = k; r < a.length; r++) {
+        s += a[r] - a[r - k];
+        best = Math.max(best, s);
+    }
+    return best;
+}`,
+        cpp:
+`// O(n) time, O(1) space: slide the window, add new and drop old
+int maxSumK(vector<int>& a, int k) {
+    int s = 0;
+    for (int i = 0; i < k; i++) s += a[i];
+    int best = s;
+    for (int r = k; r < (int)a.size(); r++) {
+        s += a[r] - a[r - k];
+        best = max(best, s);
+    }
+    return best;
+}`,
+        js:
+`// O(n) time, O(1) space: slide the window, add new and drop old
+function maxSumK(a, k) {
+  let s = 0;
+  for (let i = 0; i < k; i++) s += a[i];
+  let best = s;
+  for (let r = k; r < a.length; r++) {
+    s += a[r] - a[r - k];
+    best = Math.max(best, s);
+  }
+  return best;
+}`,
+      },
+      "Variable Size (expand-shrink)": {
+        pseudo:
+`longest substring with no repeated character. O(n).
+  last = empty map (char -> last index it was seen)
+  left = 0, best = 0
+  for r, ch in the string
+    if ch is in last and last[ch] >= left
+      left = last[ch] + 1        # jump left past the duplicate
+    last[ch] = r
+    best = max(best, r - left + 1)
+  return best`,
+        py:
+`# O(n) time · O(min(n, charset)) space, grow right, jump left past dup
 def longest_no_repeat(s):
     last, left, best = {}, 0, 0
     for r, ch in enumerate(s):
@@ -139,32 +310,214 @@ def longest_no_repeat(s):
         last[ch] = r
         best = max(best, r - left + 1)
     return best`,
-      "Prefix Sum":
-`# O(n) time · O(n) space — hashmap of prefix-sum frequencies
+        java:
+`// O(n) time, O(min(n, charset)) space: grow right, jump left past dup
+int longestNoRepeat(String s) {
+    Map<Character,Integer> last = new HashMap<>();
+    int left = 0, best = 0;
+    for (int r = 0; r < s.length(); r++) {
+        char ch = s.charAt(r);
+        if (last.containsKey(ch) && last.get(ch) >= left) left = last.get(ch) + 1;
+        last.put(ch, r);
+        best = Math.max(best, r - left + 1);
+    }
+    return best;
+}`,
+        cpp:
+`// O(n) time, O(min(n, charset)) space: grow right, jump left past dup
+int longestNoRepeat(string s) {
+    unordered_map<char,int> last;
+    int left = 0, best = 0;
+    for (int r = 0; r < (int)s.size(); r++) {
+        char ch = s[r];
+        if (last.count(ch) && last[ch] >= left) left = last[ch] + 1;
+        last[ch] = r;
+        best = max(best, r - left + 1);
+    }
+    return best;
+}`,
+        js:
+`// O(n) time, O(min(n, charset)) space: grow right, jump left past dup
+function longestNoRepeat(s) {
+  const last = new Map();
+  let left = 0, best = 0;
+  for (let r = 0; r < s.length; r++) {
+    const ch = s[r];
+    if (last.has(ch) && last.get(ch) >= left) left = last.get(ch) + 1;
+    last.set(ch, r);
+    best = Math.max(best, r - left + 1);
+  }
+  return best;
+}`,
+      },
+      "Prefix Sum": {
+        pseudo:
+`count subarrays whose sum equals k. O(n), O(n).
+  seen = { 0: 1 }        # prefix sum -> how many times seen
+  pre = 0, ans = 0
+  for x in nums
+    pre = pre + x
+    ans = ans + seen.get(pre - k, 0)   # a start that leaves sum k
+    seen[pre] = seen.get(pre, 0) + 1
+  return ans`,
+        py:
+`# O(n) time · O(n) space, hashmap of prefix-sum frequencies
 # count subarrays with sum == k
 seen = {0: 1}; pre = ans = 0
 for x in nums:
     pre += x
     ans += seen.get(pre - k, 0)
     seen[pre] = seen.get(pre, 0) + 1`,
-      "Prefix XOR / 2D Prefix":
-`# O(n) time · O(n) space — hashmap of prefix-XOR frequencies
+        java:
+`// O(n) time, O(n) space: count prefix sums with a hashmap
+int subarraysSumK(int[] nums, int k) {
+    Map<Integer,Integer> seen = new HashMap<>();
+    seen.put(0, 1);
+    int pre = 0, ans = 0;
+    for (int x : nums) {
+        pre += x;
+        ans += seen.getOrDefault(pre - k, 0);
+        seen.merge(pre, 1, Integer::sum);
+    }
+    return ans;
+}`,
+        cpp:
+`// O(n) time, O(n) space: count prefix sums with a hashmap
+int subarraysSumK(vector<int>& nums, int k) {
+    unordered_map<int,int> seen{{0, 1}};
+    int pre = 0, ans = 0;
+    for (int x : nums) {
+        pre += x;
+        ans += seen.count(pre - k) ? seen[pre - k] : 0;
+        seen[pre]++;
+    }
+    return ans;
+}`,
+        js:
+`// O(n) time, O(n) space: count prefix sums with a hashmap
+function subarraysSumK(nums, k) {
+  const seen = new Map([[0, 1]]);
+  let pre = 0, ans = 0;
+  for (const x of nums) {
+    pre += x;
+    ans += seen.get(pre - k) || 0;
+    seen.set(pre, (seen.get(pre) || 0) + 1);
+  }
+  return ans;
+}`,
+      },
+      "Prefix XOR / 2D Prefix": {
+        pseudo:
+`count subarrays whose XOR equals k. O(n), O(n).
+  seen = { 0: 1 }        # prefix XOR -> times seen
+  pre = 0, ans = 0
+  for x in nums
+    pre = pre XOR x
+    ans = ans + seen.get(pre XOR k, 0)
+    seen[pre] = seen.get(pre, 0) + 1
+  return ans`,
+        py:
+`# O(n) time · O(n) space, hashmap of prefix-XOR frequencies
 # subarray XOR = pre[r] ^ pre[l-1]
 seen = {0: 1}; pre = ans = 0
 for x in nums:
     pre ^= x
     ans += seen.get(pre ^ k, 0)
     seen[pre] = seen.get(pre, 0) + 1`,
-      "Kadane's / Max Subarray":
-`# O(n) time · O(1) space — at each i: extend running sum or restart
+        java:
+`// O(n) time, O(n) space: count prefix XORs with a hashmap
+int subarraysXorK(int[] nums, int k) {
+    Map<Integer,Integer> seen = new HashMap<>();
+    seen.put(0, 1);
+    int pre = 0, ans = 0;
+    for (int x : nums) {
+        pre ^= x;
+        ans += seen.getOrDefault(pre ^ k, 0);
+        seen.merge(pre, 1, Integer::sum);
+    }
+    return ans;
+}`,
+        cpp:
+`// O(n) time, O(n) space: count prefix XORs with a hashmap
+int subarraysXorK(vector<int>& nums, int k) {
+    unordered_map<int,int> seen{{0, 1}};
+    int pre = 0, ans = 0;
+    for (int x : nums) {
+        pre ^= x;
+        ans += seen.count(pre ^ k) ? seen[pre ^ k] : 0;
+        seen[pre]++;
+    }
+    return ans;
+}`,
+        js:
+`// O(n) time, O(n) space: count prefix XORs with a hashmap
+function subarraysXorK(nums, k) {
+  const seen = new Map([[0, 1]]);
+  let pre = 0, ans = 0;
+  for (const x of nums) {
+    pre ^= x;
+    ans += seen.get(pre ^ k) || 0;
+    seen.set(pre, (seen.get(pre) || 0) + 1);
+  }
+  return ans;
+}`,
+      },
+      "Kadane's / Max Subarray": {
+        pseudo:
+`largest sum of a contiguous subarray. O(n), O(1).
+  cur = a[0]             # best sum of a block ending here
+  best = a[0]
+  for x in a from index 1
+    cur = max(x, cur + x)     # start fresh at x, or extend
+    best = max(best, cur)
+  return best`,
+        py:
+`# O(n) time · O(1) space, at each i: extend running sum or restart
 def kadane(a):
     cur = best = a[0]
     for x in a[1:]:
         cur = max(x, cur + x)   # extend or restart
         best = max(best, cur)
     return best`,
-      "Matrix Operations (Striver)":
-`# O(n^2) time · O(1) space — in-place transpose + row reverse
+        java:
+`// O(n) time, O(1) space: extend the running sum or restart at x
+int kadane(int[] a) {
+    int cur = a[0], best = a[0];
+    for (int i = 1; i < a.length; i++) {
+        cur = Math.max(a[i], cur + a[i]);
+        best = Math.max(best, cur);
+    }
+    return best;
+}`,
+        cpp:
+`// O(n) time, O(1) space: extend the running sum or restart at x
+int kadane(vector<int>& a) {
+    int cur = a[0], best = a[0];
+    for (int i = 1; i < (int)a.size(); i++) {
+        cur = max(a[i], cur + a[i]);
+        best = max(best, cur);
+    }
+    return best;
+}`,
+        js:
+`// O(n) time, O(1) space: extend the running sum or restart at x
+function kadane(a) {
+  let cur = a[0], best = a[0];
+  for (let i = 1; i < a.length; i++) {
+    cur = Math.max(a[i], cur + a[i]);
+    best = Math.max(best, cur);
+  }
+  return best;
+}`,
+      },
+      "Matrix Operations (Striver)": {
+        pseudo:
+`rotate an n x n matrix 90 degrees clockwise, in place.
+  transpose: for i, for j > i, swap m[i][j] with m[j][i]
+  then reverse each row
+  (result: what was a column top-down is now a row left-right)`,
+        py:
+`# O(n^2) time · O(1) space, in-place transpose + row reverse
 # rotate image 90deg = transpose then reverse each row
 def rotate(m):
     n = len(m)
@@ -172,8 +525,48 @@ def rotate(m):
         for j in range(i+1, n):
             m[i][j], m[j][i] = m[j][i], m[i][j]
     for row in m: row.reverse()`,
-      "Rearrangement & Counting (Striver)":
-`# O(n) time · O(1) space — vote up for cand, down otherwise
+        java:
+`// O(n^2) time, O(1) space: transpose, then reverse each row
+void rotate(int[][] m) {
+    int n = m.length;
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++) {
+            int t = m[i][j]; m[i][j] = m[j][i]; m[j][i] = t;
+        }
+    for (int[] row : m)
+        for (int l = 0, r = n - 1; l < r; l++, r--) {
+            int t = row[l]; row[l] = row[r]; row[r] = t;
+        }
+}`,
+        cpp:
+`// O(n^2) time, O(1) space: transpose, then reverse each row
+void rotate(vector<vector<int>>& m) {
+    int n = m.size();
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            swap(m[i][j], m[j][i]);
+    for (auto& row : m) reverse(row.begin(), row.end());
+}`,
+        js:
+`// O(n^2) time, O(1) space: transpose, then reverse each row
+function rotate(m) {
+  const n = m.length;
+  for (let i = 0; i < n; i++)
+    for (let j = i + 1; j < n; j++)
+      [m[i][j], m[j][i]] = [m[j][i], m[i][j]];
+  for (const row of m) row.reverse();
+}`,
+      },
+      "Rearrangement & Counting (Striver)": {
+        pseudo:
+`find the value appearing more than n/2 times. O(n), O(1).
+  cand = none, count = 0
+  for x in a
+    if count == 0 -> cand = x         # adopt a new candidate
+    count = count + (x == cand ? 1 : -1)
+  return cand      # valid only if a > n/2 majority exists`,
+        py:
+`# O(n) time · O(1) space, vote up for cand, down otherwise
 # Boyer-Moore majority (> n/2)
 def majority(a):
     cand = count = 0
@@ -181,8 +574,47 @@ def majority(a):
         if count == 0: cand = x
         count += 1 if x == cand else -1
     return cand`,
-      "Duplicates & Missing (Striver)":
-`# O(n) time · O(1) space — treat values as next pointers (cycle = dup)
+        java:
+`// O(n) time, O(1) space: Boyer-Moore vote for the > n/2 majority
+int majority(int[] a) {
+    int cand = 0, count = 0;
+    for (int x : a) {
+        if (count == 0) cand = x;
+        count += (x == cand) ? 1 : -1;
+    }
+    return cand;
+}`,
+        cpp:
+`// O(n) time, O(1) space: Boyer-Moore vote for the > n/2 majority
+int majority(vector<int>& a) {
+    int cand = 0, count = 0;
+    for (int x : a) {
+        if (count == 0) cand = x;
+        count += (x == cand) ? 1 : -1;
+    }
+    return cand;
+}`,
+        js:
+`// O(n) time, O(1) space: Boyer-Moore vote for the > n/2 majority
+function majority(a) {
+  let cand = 0, count = 0;
+  for (const x of a) {
+    if (count === 0) cand = x;
+    count += (x === cand) ? 1 : -1;
+  }
+  return cand;
+}`,
+      },
+      "Duplicates & Missing (Striver)": {
+        pseudo:
+`find the duplicate in [1..n], using each value as a next pointer.
+  slow = a[0], fast = a[0]
+  repeat: slow = a[slow]; fast = a[a[fast]]   until slow == fast
+  slow = a[0]
+  while slow != fast: slow = a[slow]; fast = a[fast]
+  return slow      # the cycle's entry point is the duplicate`,
+        py:
+`# O(n) time · O(1) space, treat values as next pointers (cycle = dup)
 # find duplicate: Floyd's cycle on values
 def find_dup(a):
     slow = fast = a[0]
@@ -192,8 +624,47 @@ def find_dup(a):
     slow = a[0]
     while slow != fast: slow = a[slow]; fast = a[fast]
     return slow`,
-      "Merge & Intervals (Striver)":
-`# O(n log n) time (sort) · O(n) space — sort by start, extend or append
+        java:
+`// O(n) time, O(1) space: Floyd's cycle on values (value = next index)
+int findDup(int[] a) {
+    int slow = a[0], fast = a[0];
+    do { slow = a[slow]; fast = a[a[fast]]; } while (slow != fast);
+    slow = a[0];
+    while (slow != fast) { slow = a[slow]; fast = a[fast]; }
+    return slow;
+}`,
+        cpp:
+`// O(n) time, O(1) space: Floyd's cycle on values (value = next index)
+int findDup(vector<int>& a) {
+    int slow = a[0], fast = a[0];
+    do { slow = a[slow]; fast = a[a[fast]]; } while (slow != fast);
+    slow = a[0];
+    while (slow != fast) { slow = a[slow]; fast = a[fast]; }
+    return slow;
+}`,
+        js:
+`// O(n) time, O(1) space: Floyd's cycle on values (value = next index)
+function findDup(a) {
+  let slow = a[0], fast = a[0];
+  do { slow = a[slow]; fast = a[a[fast]]; } while (slow !== fast);
+  slow = a[0];
+  while (slow !== fast) { slow = a[slow]; fast = a[fast]; }
+  return slow;
+}`,
+      },
+      "Merge & Intervals (Striver)": {
+        pseudo:
+`merge overlapping intervals. O(n log n) to sort, then O(n).
+  sort intervals by start
+  res = empty list
+  for [s, e] in intervals
+    if res not empty and s <= end of res.last
+      res.last.end = max(res.last.end, e)   # overlaps, extend
+    else
+      append [s, e] to res
+  return res`,
+        py:
+`# O(n log n) time (sort) · O(n) space, sort by start, extend or append
 def merge(intervals):
     intervals.sort()
     res = []
@@ -202,6 +673,43 @@ def merge(intervals):
             res[-1][1] = max(res[-1][1], e)
         else: res.append([s, e])
     return res`,
+        java:
+`// O(n log n) time, O(n) space: sort by start, extend or append
+int[][] merge(int[][] intervals) {
+    Arrays.sort(intervals, (x, y) -> Integer.compare(x[0], y[0]));
+    List<int[]> res = new ArrayList<>();
+    for (int[] iv : intervals) {
+        if (!res.isEmpty() && iv[0] <= res.get(res.size() - 1)[1])
+            res.get(res.size() - 1)[1] = Math.max(res.get(res.size() - 1)[1], iv[1]);
+        else res.add(iv);
+    }
+    return res.toArray(new int[0][]);
+}`,
+        cpp:
+`// O(n log n) time, O(n) space: sort by start, extend or append
+vector<vector<int>> merge(vector<vector<int>>& intervals) {
+    sort(intervals.begin(), intervals.end());
+    vector<vector<int>> res;
+    for (auto& iv : intervals) {
+        if (!res.empty() && iv[0] <= res.back()[1])
+            res.back()[1] = max(res.back()[1], iv[1]);
+        else res.push_back(iv);
+    }
+    return res;
+}`,
+        js:
+`// O(n log n) time, O(n) space: sort by start, extend or append
+function merge(intervals) {
+  intervals.sort((x, y) => x[0] - y[0]);
+  const res = [];
+  for (const [s, e] of intervals) {
+    if (res.length && s <= res[res.length - 1][1])
+      res[res.length - 1][1] = Math.max(res[res.length - 1][1], e);
+    else res.push([s, e]);
+  }
+  return res;
+}`,
+      },
 
       "On array / index":
 `# O(log n) time · O(1) space — halve the search range each step
