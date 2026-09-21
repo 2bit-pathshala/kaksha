@@ -3416,23 +3416,113 @@ function maxXor(nums) {
 }`,
       },
 
-      "1D DP (take / not-take)":
-`# O(n) time · O(1) space — roll two states: take vs skip
+      "1D DP (take / not-take)": {
+        pseudo:
+`house robber: max sum with no two adjacent. O(n), O(1).
+  take = best if we rob this house
+  skip = best if we skip this house
+  for x in nums:
+    new take = skip + x        # rob x, so the previous was skipped
+    new skip = max(skip, take)
+  answer = max(take, skip)`,
+        py:
+`# O(n) time · O(1) space, roll two states: take vs skip
 def rob(nums):                  # house robber
     take, skip = 0, 0
     for x in nums:
         take, skip = skip + x, max(skip, take)
     return max(take, skip)`,
-      "Grid / 2D DP":
-`# O(m·n) time · O(n) space — 1 row rolled; dp[j] += dp[j-1]
+        java:
+`// O(n) time, O(1) space: roll two states, take vs skip
+int rob(int[] nums) {
+    int take = 0, skip = 0;
+    for (int x : nums) {
+        int newTake = skip + x;
+        skip = Math.max(skip, take);
+        take = newTake;
+    }
+    return Math.max(take, skip);
+}`,
+        cpp:
+`// O(n) time, O(1) space: roll two states, take vs skip
+int rob(vector<int>& nums) {
+    int take = 0, skip = 0;
+    for (int x : nums) {
+        int newTake = skip + x;
+        skip = max(skip, take);
+        take = newTake;
+    }
+    return max(take, skip);
+}`,
+        js:
+`// O(n) time, O(1) space: roll two states, take vs skip
+function rob(nums) {
+  let take = 0, skip = 0;
+  for (const x of nums) {
+    const newTake = skip + x;
+    skip = Math.max(skip, take);
+    take = newTake;
+  }
+  return Math.max(take, skip);
+}`,
+      },
+      "Grid / 2D DP": {
+        pseudo:
+`count paths top-left to bottom-right, moving right/down only. O(m·n).
+  dp[j] = ways to reach column j on the current row.
+  start the row as all 1s (the top row).
+  for each next row, for j from 1: dp[j] += dp[j-1]   # from left + above
+  answer = dp[n-1]`,
+        py:
+`# O(m·n) time · O(n) space, 1 row rolled; dp[j] += dp[j-1]
 def unique_paths(m, n):
     dp = [1]*n
     for _ in range(1, m):
         for j in range(1, n):
             dp[j] += dp[j-1]
     return dp[-1]`,
-      "Subsequences / Knapsack":
-`# O(n·cap) time · O(n·cap) space — memoize (index, remaining capacity)
+        java:
+`// O(m*n) time, O(n) space: roll one row; dp[j] += dp[j-1]
+int uniquePaths(int m, int n) {
+    int[] dp = new int[n];
+    Arrays.fill(dp, 1);
+    for (int i = 1; i < m; i++)
+        for (int j = 1; j < n; j++)
+            dp[j] += dp[j - 1];
+    return dp[n - 1];
+}`,
+        cpp:
+`// O(m*n) time, O(n) space: roll one row; dp[j] += dp[j-1]
+int uniquePaths(int m, int n) {
+    vector<int> dp(n, 1);
+    for (int i = 1; i < m; i++)
+        for (int j = 1; j < n; j++)
+            dp[j] += dp[j - 1];
+    return dp[n - 1];
+}`,
+        js:
+`// O(m*n) time, O(n) space: roll one row; dp[j] += dp[j-1]
+function uniquePaths(m, n) {
+  const dp = new Array(n).fill(1);
+  for (let i = 1; i < m; i++)
+    for (let j = 1; j < n; j++)
+      dp[j] += dp[j - 1];
+  return dp[n - 1];
+}`,
+      },
+      "Subsequences / Knapsack": {
+        pseudo:
+`0/1 knapsack: max value within a capacity. O(n·cap).
+  state = (index i, remaining capacity cap).
+  knap(i, cap):
+    if i past the end or cap == 0 -> 0
+    best = knap(i+1, cap)                  # skip item i
+    if wt[i] <= cap:
+      best = max(best, val[i] + knap(i+1, cap - wt[i]))   # take item i
+    return best
+  memoize on (i, cap).`,
+        py:
+`# O(n·cap) time · O(n·cap) space, memoize (index, remaining capacity)
 from functools import lru_cache
 @lru_cache(None)
 def knap(i, cap):               # 0/1 knapsack
@@ -3441,8 +3531,66 @@ def knap(i, cap):               # 0/1 knapsack
     if wt[i] <= cap:
         best = max(best, val[i] + knap(i+1, cap-wt[i]))  # take
     return best`,
-      "Strings DP (LCS family)":
-`# O(m·n) time · O(m·n) space — match: diag+1, else max(up, left)
+        java:
+`// O(n*cap): memoize on (index, remaining capacity)
+int[] wt, val; int n; Integer[][] memo;
+int knapsack(int[] weights, int[] values, int cap) {
+    wt = weights; val = values; n = weights.length;
+    memo = new Integer[n + 1][cap + 1];
+    return knap(0, cap);
+}
+int knap(int i, int cap) {
+    if (i == n || cap == 0) return 0;
+    if (memo[i][cap] != null) return memo[i][cap];
+    int best = knap(i + 1, cap);                        // skip
+    if (wt[i] <= cap)
+        best = Math.max(best, val[i] + knap(i + 1, cap - wt[i]));   // take
+    return memo[i][cap] = best;
+}`,
+        cpp:
+`// O(n*cap): memoize on (index, remaining capacity)
+vector<int> wt, val; int n;
+vector<vector<int>> memo;                              // -1 = not computed
+int knap(int i, int cap) {
+    if (i == n || cap == 0) return 0;
+    if (memo[i][cap] != -1) return memo[i][cap];
+    int best = knap(i + 1, cap);                       // skip
+    if (wt[i] <= cap)
+        best = max(best, val[i] + knap(i + 1, cap - wt[i]));   // take
+    return memo[i][cap] = best;
+}
+int knapsack(vector<int>& weights, vector<int>& values, int cap) {
+    wt = weights; val = values; n = weights.size();
+    memo.assign(n + 1, vector<int>(cap + 1, -1));
+    return knap(0, cap);
+}`,
+        js:
+`// O(n*cap): memoize on (index, remaining capacity)
+function knapsack(wt, val, cap) {
+  const n = wt.length;
+  const memo = new Map();                              // key "i,cap"
+  const knap = (i, c) => {
+    if (i === n || c === 0) return 0;
+    const key = i + "," + c;
+    if (memo.has(key)) return memo.get(key);
+    let best = knap(i + 1, c);                          // skip
+    if (wt[i] <= c)
+      best = Math.max(best, val[i] + knap(i + 1, c - wt[i]));   // take
+    memo.set(key, best);
+    return best;
+  };
+  return knap(0, cap);
+}`,
+      },
+      "Strings DP (LCS family)": {
+        pseudo:
+`longest common subsequence. O(m·n).
+  dp[i][j] = LCS of a[..i-1] and b[..j-1].
+  if a[i-1] == b[j-1] -> dp[i][j] = dp[i-1][j-1] + 1   # match, take diagonal
+  else -> dp[i][j] = max(dp[i-1][j], dp[i][j-1])       # drop one char
+  answer = dp[m][n]`,
+        py:
+`# O(m·n) time · O(m·n) space, match: diag+1, else max(up, left)
 def lcs(a, b):
     m, n = len(a), len(b)
     dp = [[0]*(n+1) for _ in range(m+1)]
@@ -3450,8 +3598,54 @@ def lcs(a, b):
         for j in range(1, n+1):
             dp[i][j] = dp[i-1][j-1]+1 if a[i-1]==b[j-1] else max(dp[i-1][j], dp[i][j-1])
     return dp[m][n]`,
-      "LIS & Stocks":
-`# O(n log n) time · O(n) space — patience: replace first tail >= x
+        java:
+`// O(m*n): match -> diagonal + 1, else max(up, left)
+int lcs(String a, String b) {
+    int m = a.length(), n = b.length();
+    int[][] dp = new int[m + 1][n + 1];
+    for (int i = 1; i <= m; i++)
+        for (int j = 1; j <= n; j++)
+            dp[i][j] = a.charAt(i-1) == b.charAt(j-1)
+                ? dp[i-1][j-1] + 1
+                : Math.max(dp[i-1][j], dp[i][j-1]);
+    return dp[m][n];
+}`,
+        cpp:
+`// O(m*n): match -> diagonal + 1, else max(up, left)
+int lcs(string a, string b) {
+    int m = a.size(), n = b.size();
+    vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));
+    for (int i = 1; i <= m; i++)
+        for (int j = 1; j <= n; j++)
+            dp[i][j] = a[i-1] == b[j-1]
+                ? dp[i-1][j-1] + 1
+                : max(dp[i-1][j], dp[i][j-1]);
+    return dp[m][n];
+}`,
+        js:
+`// O(m*n): match -> diagonal + 1, else max(up, left)
+function lcs(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, () => new Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1] + 1
+        : Math.max(dp[i-1][j], dp[i][j-1]);
+  return dp[m][n];
+}`,
+      },
+      "LIS & Stocks": {
+        pseudo:
+`longest increasing subsequence in O(n log n). Patience method.
+  tails[k] = smallest possible tail of an increasing run of length k+1.
+  for x in nums:
+    find the first tail >= x (binary search).
+    if none -> append x (a longer run is now possible).
+    else -> replace that tail with x (keep tails small).
+  answer = length of tails.`,
+        py:
+`# O(n log n) time · O(n) space, patience: replace first tail >= x
 import bisect
 def lis(a):                     # O(n log n)
     tails = []
@@ -3460,8 +3654,59 @@ def lis(a):                     # O(n log n)
         if i == len(tails): tails.append(x)
         else: tails[i] = x
     return len(tails)`,
-      "Partition / MCM / Interval DP":
-`# O(n^3) time · O(n^2) space — try each k as the LAST balloon in (l,r)
+        java:
+`// O(n log n): patience sorting; replace the first tail >= x
+int lis(int[] a) {
+    List<Integer> tails = new ArrayList<>();
+    for (int x : a) {
+        int lo = 0, hi = tails.size();       // lower bound of x
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (tails.get(mid) < x) lo = mid + 1; else hi = mid;
+        }
+        if (lo == tails.size()) tails.add(x);
+        else tails.set(lo, x);
+    }
+    return tails.size();
+}`,
+        cpp:
+`// O(n log n): patience sorting; replace the first tail >= x
+int lis(vector<int>& a) {
+    vector<int> tails;
+    for (int x : a) {
+        auto it = lower_bound(tails.begin(), tails.end(), x);
+        if (it == tails.end()) tails.push_back(x);
+        else *it = x;
+    }
+    return tails.size();
+}`,
+        js:
+`// O(n log n): patience sorting; replace the first tail >= x
+function lis(a) {
+  const tails = [];
+  for (const x of a) {
+    let lo = 0, hi = tails.length;          // lower bound of x
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (tails[mid] < x) lo = mid + 1; else hi = mid;
+    }
+    if (lo === tails.length) tails.push(x);
+    else tails[lo] = x;
+  }
+  return tails.length;
+}`,
+      },
+      "Partition / MCM / Interval DP": {
+        pseudo:
+`burst balloons for max coins. O(n^3). Interval DP.
+  pad the array with a 1 on both ends.
+  dp(l, r) = best coins from bursting balloons strictly between l and r.
+    if no balloon between -> 0
+    try each k in (l, r) as the LAST balloon burst in this range:
+      a[l]*a[k]*a[r] + dp(l, k) + dp(k, r)
+    take the max.`,
+        py:
+`# O(n^3) time · O(n^2) space, try each k as the LAST balloon in (l,r)
 from functools import lru_cache
 def burst_balloons(nums):
     a = [1] + nums + [1]
@@ -3471,8 +3716,70 @@ def burst_balloons(nums):
         return max(a[l]*a[k]*a[r] + dp(l,k) + dp(k,r)
                    for k in range(l+1, r))
     return dp(0, len(a)-1)`,
-      "DP on Trees / Bitmask":
-`# O(n) time · O(h) space — each node returns (rob, skip) pair
+        java:
+`// O(n^3): interval DP; try each k as the LAST balloon burst in (l, r)
+int[] a; Integer[][] memo;
+int burstBalloons(int[] nums) {
+    int n = nums.length;
+    a = new int[n + 2]; a[0] = a[n + 1] = 1;
+    for (int i = 0; i < n; i++) a[i + 1] = nums[i];
+    memo = new Integer[n + 2][n + 2];
+    return dp(0, n + 1);
+}
+int dp(int l, int r) {
+    if (l + 1 == r) return 0;
+    if (memo[l][r] != null) return memo[l][r];
+    int best = 0;
+    for (int k = l + 1; k < r; k++)
+        best = Math.max(best, a[l]*a[k]*a[r] + dp(l, k) + dp(k, r));
+    return memo[l][r] = best;
+}`,
+        cpp:
+`// O(n^3): interval DP; try each k as the LAST balloon burst in (l, r)
+vector<int> a; vector<vector<int>> memo;
+int dp(int l, int r) {
+    if (l + 1 == r) return 0;
+    if (memo[l][r] != -1) return memo[l][r];
+    int best = 0;
+    for (int k = l + 1; k < r; k++)
+        best = max(best, a[l]*a[k]*a[r] + dp(l, k) + dp(k, r));
+    return memo[l][r] = best;
+}
+int burstBalloons(vector<int>& nums) {
+    int n = nums.size();
+    a.assign(n + 2, 1);
+    for (int i = 0; i < n; i++) a[i + 1] = nums[i];
+    memo.assign(n + 2, vector<int>(n + 2, -1));
+    return dp(0, n + 1);
+}`,
+        js:
+`// O(n^3): interval DP; try each k as the LAST balloon burst in (l, r)
+function burstBalloons(nums) {
+  const a = [1, ...nums, 1], n = a.length;
+  const memo = Array.from({length: n}, () => new Array(n).fill(-1));
+  const dp = (l, r) => {
+    if (l + 1 === r) return 0;
+    if (memo[l][r] !== -1) return memo[l][r];
+    let best = 0;
+    for (let k = l + 1; k < r; k++)
+      best = Math.max(best, a[l]*a[k]*a[r] + dp(l, k) + dp(k, r));
+    return memo[l][r] = best;
+  };
+  return dp(0, n - 1);
+}`,
+      },
+      "DP on Trees / Bitmask": {
+        pseudo:
+`house robber on a tree. O(n). Each node returns (rob, skip).
+  dfs(node):
+    if null -> (0, 0)
+    (lRob, lSkip) = dfs(left); (rRob, rSkip) = dfs(right)
+    rob  = node.val + lSkip + rSkip     # rob node -> skip both children
+    skip = max(lRob, lSkip) + max(rRob, rSkip)   # children free to choose
+    return (rob, skip)
+  answer = max(dfs(root))`,
+        py:
+`# O(n) time · O(h) space, each node returns (rob, skip) pair
 def rob_tree(root):             # return (rob_this, skip_this)
     def dfs(n):
         if not n: return (0, 0)
@@ -3481,6 +3788,46 @@ def rob_tree(root):             # return (rob_this, skip_this)
         skip = max(l) + max(r)
         return (rob, skip)
     return max(dfs(root))`,
+        java:
+`// O(n): each node returns {robThis, skipThis}
+int[] dfs(TreeNode n) {
+    if (n == null) return new int[]{0, 0};
+    int[] l = dfs(n.left), r = dfs(n.right);
+    int rob = n.val + l[1] + r[1];                     // rob n -> skip kids
+    int skip = Math.max(l[0], l[1]) + Math.max(r[0], r[1]);
+    return new int[]{rob, skip};
+}
+int robTree(TreeNode root) {
+    int[] res = dfs(root);
+    return Math.max(res[0], res[1]);
+}`,
+        cpp:
+`// O(n): each node returns {robThis, skipThis}
+pair<int,int> dfs(TreeNode* n) {
+    if (!n) return {0, 0};
+    auto l = dfs(n->left), r = dfs(n->right);
+    int rob = n->val + l.second + r.second;            // rob n -> skip kids
+    int skip = max(l.first, l.second) + max(r.first, r.second);
+    return {rob, skip};
+}
+int robTree(TreeNode* root) {
+    auto res = dfs(root);
+    return max(res.first, res.second);
+}`,
+        js:
+`// O(n): each node returns [robThis, skipThis]
+function robTree(root) {
+  const dfs = n => {
+    if (!n) return [0, 0];
+    const l = dfs(n.left), r = dfs(n.right);
+    const rob = n.val + l[1] + r[1];                   // rob n -> skip kids
+    const skip = Math.max(l[0], l[1]) + Math.max(r[0], r[1]);
+    return [rob, skip];
+  };
+  const res = dfs(root);
+  return Math.max(res[0], res[1]);
+}`,
+      },
 
       "XOR tricks":
 `# O(n) time · O(1) space — equal pairs cancel under XOR
