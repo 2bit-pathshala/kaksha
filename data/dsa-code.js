@@ -3245,7 +3245,14 @@ def is_bipartite(n, adj):
                 if not color[v]: color[v] = -color[u]; q.append(v)
     return True`,
 
-      "Insert / Search / Prefix":
+      "Insert / Search / Prefix": {
+        pseudo:
+`Trie: a tree where each edge is a letter. O(L) per op.
+  each node has children (letter -> node) and an end flag.
+  insert(w): walk/create a node per letter, mark the last node as end.
+  search(w, prefix): walk letter by letter; a missing letter -> false;
+    return true if prefix, else the end flag of the last node.`,
+        py:
 `# O(L) per insert/search (L = word length) · O(total chars) space
 class Trie:
     def __init__(self): self.root = {}
@@ -3259,8 +3266,83 @@ class Trie:
             if c not in node: return False
             node = node[c]
         return prefix or '$' in node`,
-      "Bitwise Trie (XOR)":
-`# O(n·32) time · O(n·32) space — at each bit, greedily go opposite
+        java:
+`// O(L) per insert/search (L = word length)
+class Trie {
+    static class Node { Map<Character,Node> next = new HashMap<>(); boolean end; }
+    Node root = new Node();
+    void insert(String w) {
+        Node node = root;
+        for (char c : w.toCharArray())
+            node = node.next.computeIfAbsent(c, z -> new Node());
+        node.end = true;
+    }
+    boolean search(String w, boolean prefix) {
+        Node node = root;
+        for (char c : w.toCharArray()) {
+            node = node.next.get(c);
+            if (node == null) return false;
+        }
+        return prefix || node.end;
+    }
+}`,
+        cpp:
+`// O(L) per insert/search (L = word length)
+struct Node { unordered_map<char, Node*> next; bool end = false; };
+class Trie {
+    Node* root = new Node();
+public:
+    void insert(string w) {
+        Node* node = root;
+        for (char c : w) {
+            if (!node->next.count(c)) node->next[c] = new Node();
+            node = node->next[c];
+        }
+        node->end = true;
+    }
+    bool search(string w, bool prefix = false) {
+        Node* node = root;
+        for (char c : w) {
+            if (!node->next.count(c)) return false;
+            node = node->next[c];
+        }
+        return prefix || node->end;
+    }
+};`,
+        js:
+`// O(L) per insert/search (L = word length)
+class Trie {
+  constructor() { this.root = { next: new Map(), end: false }; }
+  insert(w) {
+    let node = this.root;
+    for (const c of w) {
+      if (!node.next.has(c)) node.next.set(c, { next: new Map(), end: false });
+      node = node.next.get(c);
+    }
+    node.end = true;
+  }
+  search(w, prefix = false) {
+    let node = this.root;
+    for (const c of w) {
+      if (!node.next.has(c)) return false;
+      node = node.next.get(c);
+    }
+    return prefix || node.end;
+  }
+}`,
+      },
+      "Bitwise Trie (XOR)": {
+        pseudo:
+`maximum XOR of any pair. O(n·32) with a binary trie of bits.
+  for each number x (32 bits, high to low):
+    insert x's bits into the trie
+    and at the same time walk the trie greedily:
+      prefer the OPPOSITE bit (it makes this XOR bit = 1)
+      if present -> take it and set this bit of the running answer
+      else follow the same bit
+  the best running answer over all x is the max XOR.`,
+        py:
+`# O(n·32) time · O(n·32) space, at each bit, greedily go opposite
 # maximize XOR: greedily pick the opposite bit at each level
 def max_xor(nums):
     root = {}; best = 0
@@ -3274,6 +3356,65 @@ def max_xor(nums):
             else: node = node.get(bit, node)
         best = max(best, cur)
     return best`,
+        java:
+`// O(n*32): insert each number and greedily pick the opposite bit
+class BitNode { BitNode[] child = new BitNode[2]; }
+int maxXor(int[] nums) {
+    BitNode root = new BitNode();
+    int best = 0;
+    for (int x : nums) {
+        BitNode ins = root, node = root;
+        int cur = 0;
+        for (int b = 31; b >= 0; b--) {
+            int bit = (x >> b) & 1, want = 1 - bit;
+            if (ins.child[bit] == null) ins.child[bit] = new BitNode();
+            ins = ins.child[bit];                       // insert x's bit
+            if (node.child[want] != null) { cur |= (1 << b); node = node.child[want]; }
+            else if (node.child[bit] != null) node = node.child[bit];
+        }
+        best = Math.max(best, cur);
+    }
+    return best;
+}`,
+        cpp:
+`// O(n*32): insert each number and greedily pick the opposite bit
+struct BitNode { BitNode* child[2] = {nullptr, nullptr}; };
+int maxXor(vector<int>& nums) {
+    BitNode* root = new BitNode();
+    int best = 0;
+    for (int x : nums) {
+        BitNode *ins = root, *node = root;
+        int cur = 0;
+        for (int b = 31; b >= 0; b--) {
+            int bit = (x >> b) & 1, want = 1 - bit;
+            if (!ins->child[bit]) ins->child[bit] = new BitNode();
+            ins = ins->child[bit];                      // insert x's bit
+            if (node->child[want]) { cur |= (1 << b); node = node->child[want]; }
+            else if (node->child[bit]) node = node->child[bit];
+        }
+        best = max(best, cur);
+    }
+    return best;
+}`,
+        js:
+`// O(n*32): insert each number and greedily pick the opposite bit
+function maxXor(nums) {
+  const root = { child: [null, null] };
+  let best = 0;
+  for (const x of nums) {
+    let ins = root, node = root, cur = 0;
+    for (let b = 31; b >= 0; b--) {
+      const bit = (x >> b) & 1, want = 1 - bit;
+      if (!ins.child[bit]) ins.child[bit] = { child: [null, null] };
+      ins = ins.child[bit];                       // insert x's bit
+      if (node.child[want]) { cur |= (1 << b); node = node.child[want]; }
+      else if (node.child[bit]) node = node.child[bit];
+    }
+    best = Math.max(best, cur);
+  }
+  return best;
+}`,
+      },
 
       "1D DP (take / not-take)":
 `# O(n) time · O(1) space — roll two states: take vs skip
