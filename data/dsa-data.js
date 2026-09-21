@@ -9,7 +9,12 @@ const DSA = [
   /* ===================== FUNDAMENTALS ===================== */
   { n: "Fundamentals (Python) — Start Here", h: "Master these building blocks first; every pattern below reuses them.", c: [
     { n: "Big-O Complexity", note: "Judge an algorithm by how it <b>scales</b>, not raw speed. Aim: reduce a brute-force <code>O(n²)</code> to <code>O(n log n)</code> or <code>O(n)</code>.<br><b>Common orders:</b> O(1) &lt; O(log n) &lt; O(n) &lt; O(n log n) &lt; O(n²) &lt; O(2ⁿ) &lt; O(n!).<br><b>Space</b> counts recursion stack + extra structures." },
-    { n: "Arrays & Lists", note: "Python <code>list</code> = dynamic array. Index/append are O(1); insert/pop at front are O(n).", code:
+    { n: "Arrays & Lists", note: "Python <code>list</code> = dynamic array. Index/append are O(1); insert/pop at front are O(n).", code: {
+        pseudo:
+`the same dynamic-array moves in each language:
+  append at end (O(1) amortised), sort, custom/reverse sort,
+  read the last element, take a slice [start, end), iterate index+value.`,
+        py:
 `nums = [3, 1, 2]
 nums.append(4)          # O(1) add at end
 nums.sort()             # O(n log n) in-place
@@ -17,46 +22,201 @@ nums.sort(key=lambda x: -x)   # custom / reverse
 last = nums[-1]         # negative indexing
 sub = nums[1:3]         # slicing [start:end)
 for i, v in enumerate(nums):   # index + value
-    ...` },
-    { n: "Strings", note: "Strings are <b>immutable</b> — building with <code>+=</code> in a loop is O(n²). Collect into a list and <code>\"\".join(...)</code>.", code:
+    ...`,
+        java:
+`List<Integer> nums = new ArrayList<>(List.of(3, 1, 2));  // dynamic array
+nums.add(4);                              // O(1) amortised add at end
+Collections.sort(nums);                   // O(n log n)
+nums.sort(Comparator.reverseOrder());     // custom / reverse
+int last = nums.get(nums.size() - 1);     // no negative indexing
+List<Integer> sub = nums.subList(1, 3);   // view of [1, 3)
+for (int i = 0; i < nums.size(); i++) { int v = nums.get(i); }  // index + value`,
+        cpp:
+`vector<int> nums = {3, 1, 2};
+nums.push_back(4);                        // O(1) amortised add at end
+sort(nums.begin(), nums.end());           // O(n log n)
+sort(nums.begin(), nums.end(), greater<int>());   // custom / reverse
+int last = nums.back();                   // last element
+vector<int> sub(nums.begin() + 1, nums.begin() + 3);  // copy of [1, 3)
+for (int i = 0; i < (int)nums.size(); i++) { int v = nums[i]; }  // index + value`,
+        js:
+`const nums = [3, 1, 2];
+nums.push(4);                             // O(1) amortised add at end
+nums.sort((a, b) => a - b);               // numeric sort (default is string!)
+nums.sort((a, b) => b - a);               // custom / reverse
+const last = nums.at(-1);                 // negative indexing
+const sub = nums.slice(1, 3);             // copy of [1, 3)
+nums.forEach((v, i) => { /* index + value */ });` } },
+    { n: "Strings", note: "Strings are <b>immutable</b> — building with <code>+=</code> in a loop is O(n²). Collect into a list and <code>\"\".join(...)</code>.", code: {
+        pseudo:
+`the same string moves in each language:
+  reverse, sort the characters (an anagram key), char <-> int code,
+  and a frequency map of the characters.`,
+        py:
 `s = "leetcode"
 s[::-1]                 # reverse -> "edocteel"
 "".join(sorted(s))      # anagram key
 ord('a'), chr(97)       # char <-> int
 from collections import Counter
-Counter(s)              # {char: freq}` },
-    { n: "Hashing — dict & set", h: "When you see \"find/seen before\", \"count\", or \"pair sums to target\" → reach for a hash map/set for O(1) lookup.", code:
+Counter(s)              # {char: freq}`,
+        java:
+`String s = "leetcode";
+new StringBuilder(s).reverse().toString();        // reverse
+char[] c = s.toCharArray(); Arrays.sort(c);       // anagram key = new String(c)
+int code = 'a'; char ch = (char) 97;              // char <-> int
+Map<Character,Integer> freq = new HashMap<>();
+for (char x : s.toCharArray()) freq.merge(x, 1, Integer::sum);`,
+        cpp:
+`string s = "leetcode";
+reverse(s.begin(), s.end());              // reverse in place
+string key = s; sort(key.begin(), key.end());     // anagram key
+int code = 'a'; char ch = char(97);       // char <-> int
+unordered_map<char,int> freq;
+for (char x : s) freq[x]++;               // {char: count}`,
+        js:
+`const s = "leetcode";
+[...s].reverse().join("");                // reverse -> "edocteel"
+[...s].sort().join("");                   // anagram key
+const code = "a".charCodeAt(0), ch = String.fromCharCode(97);
+const freq = new Map();
+for (const x of s) freq.set(x, (freq.get(x) || 0) + 1);` } },
+    { n: "Hashing — dict & set", h: "When you see \"find/seen before\", \"count\", or \"pair sums to target\" → reach for a hash map/set for O(1) lookup.", code: {
+        pseudo:
+`the three hashing staples in each language:
+  a frequency map (value -> count), a set for O(1) membership,
+  and an adjacency list (node -> list of neighbours).`,
+        py:
 `from collections import defaultdict, Counter
 freq = Counter(nums)          # frequency map
 seen = set()                  # O(1) membership
 graph = defaultdict(list)     # adjacency list
-graph[u].append(v)` },
-    { n: "Stack & Queue", note: "Use a <code>list</code> as a stack (append/pop). Use <code>collections.deque</code> for a queue/deque (O(1) both ends).", code:
+graph[u].append(v)`,
+        java:
+`Map<Integer,Integer> freq = new HashMap<>();      // frequency map
+for (int x : nums) freq.merge(x, 1, Integer::sum);
+Set<Integer> seen = new HashSet<>();              // O(1) membership
+Map<Integer,List<Integer>> graph = new HashMap<>();   // adjacency list
+graph.computeIfAbsent(u, z -> new ArrayList<>()).add(v);`,
+        cpp:
+`unordered_map<int,int> freq;              // frequency map
+for (int x : nums) freq[x]++;
+unordered_set<int> seen;                  // O(1) membership
+unordered_map<int, vector<int>> graph;    // adjacency list
+graph[u].push_back(v);`,
+        js:
+`const freq = new Map();                   // frequency map
+for (const x of nums) freq.set(x, (freq.get(x) || 0) + 1);
+const seen = new Set();                   // O(1) membership
+const graph = new Map();                  // adjacency list
+if (!graph.has(u)) graph.set(u, []);
+graph.get(u).push(v);` } },
+    { n: "Stack & Queue", note: "Use a <code>list</code> as a stack (append/pop). Use <code>collections.deque</code> for a queue/deque (O(1) both ends).", code: {
+        pseudo:
+`stack = LIFO (push/pop one end); queue = FIFO (add back, remove front);
+deque = add/remove at both ends. Each language's O(1) tools below.`,
+        py:
 `stack = []; stack.append(x); stack.pop()
 from collections import deque
 q = deque(); q.append(x); q.popleft()   # BFS queue
-q.appendleft(x); q.pop()                # deque both ends` },
-    { n: "Heap (Priority Queue)", h: "Python <code>heapq</code> is a <b>min-heap</b>. For a max-heap, push negatives. \"Top-K / Kth / smallest-largest so far\" → heap.", code:
+q.appendleft(x); q.pop()                # deque both ends`,
+        java:
+`Deque<Integer> stack = new ArrayDeque<>();
+stack.push(x); stack.pop();               // LIFO
+Deque<Integer> q = new ArrayDeque<>();
+q.addLast(x); q.pollFirst();              // FIFO queue (BFS)
+q.addFirst(x); q.pollLast();              // deque both ends`,
+        cpp:
+`stack<int> st; st.push(x); st.pop();      // top() to peek
+queue<int> q; q.push(x); q.pop();         // front() to peek (BFS)
+deque<int> dq;                            // both ends
+dq.push_front(x); dq.pop_back();`,
+        js:
+`const stack = []; stack.push(x); stack.pop();     // LIFO
+const q = []; q.push(x); q.shift();               // FIFO (shift is O(n)!)
+// for a real O(1) queue, keep a head index instead of shift()
+const dq = []; dq.unshift(x); dq.pop();           // both ends` } },
+    { n: "Heap (Priority Queue)", h: "Python <code>heapq</code> is a <b>min-heap</b>. For a max-heap, push negatives. \"Top-K / Kth / smallest-largest so far\" → heap.", code: {
+        pseudo:
+`a priority queue: push items, pop the smallest (min-heap) in O(log n).
+  max-heap: negate values (Python) or use the language's max variant.`,
+        py:
 `import heapq
 h = []
 heapq.heappush(h, 5)
 smallest = heapq.heappop(h)      # min-heap
 heapq.heappush(h, -x)            # max-heap trick
-heapq.nlargest(k, nums)` },
-    { n: "Recursion Basics", h: "Every recursion needs (1) a <b>base case</b> and (2) a call that moves toward it. Think: what does f(n) return given f(n-1)?", code:
+heapq.nlargest(k, nums)`,
+        java:
+`PriorityQueue<Integer> h = new PriorityQueue<>();   // min-heap
+h.add(5);
+int smallest = h.poll();
+PriorityQueue<Integer> max = new PriorityQueue<>(Collections.reverseOrder());
+// top-k: keep a size-k heap and poll whenever it grows past k`,
+        cpp:
+`priority_queue<int, vector<int>, greater<int>> h;   // min-heap
+h.push(5);
+int smallest = h.top(); h.pop();
+priority_queue<int> maxH;                 // max-heap (the default)`,
+        js:
+`// JS has no built-in heap. Use a small MinHeap class (see the Heap topic),
+// or, for a static top-k, sort and slice:
+const kLargest = [...nums].sort((a, b) => b - a).slice(0, k);` } },
+    { n: "Recursion Basics", h: "Every recursion needs (1) a <b>base case</b> and (2) a call that moves toward it. Think: what does f(n) return given f(n-1)?", code: {
+        pseudo:
+`every recursion needs a base case that returns with no call,
+and a step that moves toward it. Watch the stack-depth limit.`,
+        py:
 `def fact(n):
     if n <= 1:            # base case
         return 1
     return n * fact(n-1)  # recursive step
 
 # recursion depth default ~1000
-import sys; sys.setrecursionlimit(10**6)` },
-    { n: "Sorting & Binary Search built-ins", note: "Know the library before hand-rolling sorts.", code:
+import sys; sys.setrecursionlimit(10**6)`,
+        java:
+`int fact(int n) {
+    if (n <= 1) return 1;                 // base case
+    return n * fact(n - 1);               // recursive step
+}
+// the JVM stack overflows after a few thousand frames; raise it with -Xss,
+// or convert deep recursion to an explicit stack or a loop.`,
+        cpp:
+`int fact(int n) {
+    if (n <= 1) return 1;                 // base case
+    return n * fact(n - 1);               // recursive step
+}
+// deep recursion can overflow the call stack; convert to a loop if needed.`,
+        js:
+`function fact(n) {
+  if (n <= 1) return 1;                   // base case
+  return n * fact(n - 1);                 // recursive step
+}
+// the call stack caps around ~10^4 frames; use a loop for deep recursion.` } },
+    { n: "Sorting & Binary Search built-ins", note: "Know the library before hand-rolling sorts.", code: {
+        pseudo:
+`library sort (O(n log n)), a multi-key comparator, and lower-bound
+binary search (first index >= x). Each language's built-ins below.`,
+        py:
 `nums.sort()                       # Timsort O(n log n)
 sorted(pairs, key=lambda p: (p[0], -p[1]))
 import bisect
 i = bisect.bisect_left(nums, x)   # first index >= x
-bisect.insort(nums, x)            # insert keeping sorted` },
+bisect.insort(nums, x)            # insert keeping sorted`,
+        java:
+`Arrays.sort(nums);                        // O(n log n)
+pairs.sort(Comparator.comparingInt((int[] p) -> p[0])
+    .thenComparing(p -> -p[1]));          // multi-key
+int i = Arrays.binarySearch(nums, x);     // exact; negative if absent
+// for lower_bound, write a manual binary search (see the Binary Search topic)`,
+        cpp:
+`sort(nums.begin(), nums.end());           // O(n log n)
+sort(pairs.begin(), pairs.end(), [](auto& a, auto& b){
+    return a.first != b.first ? a.first < b.first : a.second > b.second; });
+auto it = lower_bound(nums.begin(), nums.end(), x);   // first >= x`,
+        js:
+`nums.sort((a, b) => a - b);               // numeric (default sort is string!)
+pairs.sort((a, b) => a[0] - b[0] || b[1] - a[1]);     // multi-key
+// no built-in binary search; write one (see the Binary Search topic)` } },
   ]},
 
   /* ===================== ARRAYS (Striver Arrays I–IV) ===================== */
