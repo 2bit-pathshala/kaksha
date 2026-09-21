@@ -918,21 +918,114 @@ function power(a, b) {
 }`,
       },
 
-      "Two Pointers":
-`# O(n) time · O(1) space — compare ends moving inward
+      "Two Pointers": {
+        pseudo:
+`is the string a palindrome? Compare ends moving inward. O(n).
+  l = 0, r = n-1
+  while l < r
+    if s[l] != s[r] -> return false
+    l = l + 1, r = r - 1
+  return true`,
+        py:
+`# O(n) time · O(1) space, compare ends moving inward
 def is_palindrome(s):
     l, r = 0, len(s)-1
     while l < r:
         if s[l] != s[r]: return False
         l += 1; r -= 1
     return True`,
-      "Anagrams & Frequency":
-`# O(n) time · O(charset) space — compare character counts
+        java:
+`// O(n) time, O(1) space: compare ends moving inward
+boolean isPalindrome(String s) {
+    int l = 0, r = s.length() - 1;
+    while (l < r) {
+        if (s.charAt(l) != s.charAt(r)) return false;
+        l++; r--;
+    }
+    return true;
+}`,
+        cpp:
+`// O(n) time, O(1) space: compare ends moving inward
+bool isPalindrome(string s) {
+    int l = 0, r = (int)s.size() - 1;
+    while (l < r) {
+        if (s[l] != s[r]) return false;
+        l++; r--;
+    }
+    return true;
+}`,
+        js:
+`// O(n) time, O(1) space: compare ends moving inward
+function isPalindrome(s) {
+  let l = 0, r = s.length - 1;
+  while (l < r) {
+    if (s[l] !== s[r]) return false;
+    l++; r--;
+  }
+  return true;
+}`,
+      },
+      "Anagrams & Frequency": {
+        pseudo:
+`are a and b anagrams? Same letters, same counts. O(n).
+  if lengths differ -> false
+  count = map of letter -> count
+  add 1 for each letter of a, subtract 1 for each letter of b
+  true only if every count ended at 0`,
+        py:
+`# O(n) time · O(charset) space, compare character counts
 from collections import Counter
 def is_anagram(a, b):
     return Counter(a) == Counter(b)   # or sorted(a)==sorted(b)`,
-      "Pattern Matching (KMP / Rolling Hash)":
-`# O(m) build, O(n+m) match · O(m) space — longest prefix=suffix table
+        java:
+`// O(n) time, O(charset) space: counts must match
+boolean isAnagram(String a, String b) {
+    if (a.length() != b.length()) return false;
+    int[] cnt = new int[26];
+    for (int i = 0; i < a.length(); i++) {
+        cnt[a.charAt(i) - 'a']++;
+        cnt[b.charAt(i) - 'a']--;
+    }
+    for (int c : cnt) if (c != 0) return false;
+    return true;
+}`,
+        cpp:
+`// O(n) time, O(charset) space: counts must match
+bool isAnagram(string a, string b) {
+    if (a.size() != b.size()) return false;
+    int cnt[26] = {0};
+    for (int i = 0; i < (int)a.size(); i++) {
+        cnt[a[i] - 'a']++;
+        cnt[b[i] - 'a']--;
+    }
+    for (int c : cnt) if (c != 0) return false;
+    return true;
+}`,
+        js:
+`// O(n) time, O(charset) space: counts must match
+function isAnagram(a, b) {
+  if (a.length !== b.length) return false;
+  const cnt = {};
+  for (const ch of a) cnt[ch] = (cnt[ch] || 0) + 1;
+  for (const ch of b) {
+    if (!cnt[ch]) return false;
+    cnt[ch]--;
+  }
+  return true;
+}`,
+      },
+      "Pattern Matching (KMP / Rolling Hash)": {
+        pseudo:
+`KMP failure table: lps[i] = length of the longest proper prefix
+of p[0..i] that is also a suffix of it. O(m).
+  lps[0] = 0, k = 0
+  for i from 1 to m-1
+    while k > 0 and p[i] != p[k] -> k = lps[k-1]   # fall back
+    if p[i] == p[k] -> k = k + 1
+    lps[i] = k
+  return lps`,
+        py:
+`# O(m) build, O(n+m) match · O(m) space, longest prefix=suffix table
 def build_lps(p):               # KMP failure function
     lps = [0]*len(p); k = 0
     for i in range(1, len(p)):
@@ -940,8 +1033,55 @@ def build_lps(p):               # KMP failure function
         if p[i] == p[k]: k += 1
         lps[i] = k
     return lps`,
-      "Compression & Misc (Striver)":
-`# O(n) time · O(1) space — write pointer emits char + run length
+        java:
+`// O(m) time, O(m) space: longest prefix that is also a suffix
+int[] buildLps(String p) {
+    int[] lps = new int[p.length()];
+    int k = 0;
+    for (int i = 1; i < p.length(); i++) {
+        while (k > 0 && p.charAt(i) != p.charAt(k)) k = lps[k - 1];
+        if (p.charAt(i) == p.charAt(k)) k++;
+        lps[i] = k;
+    }
+    return lps;
+}`,
+        cpp:
+`// O(m) time, O(m) space: longest prefix that is also a suffix
+vector<int> buildLps(string p) {
+    vector<int> lps(p.size(), 0);
+    int k = 0;
+    for (int i = 1; i < (int)p.size(); i++) {
+        while (k > 0 && p[i] != p[k]) k = lps[k - 1];
+        if (p[i] == p[k]) k++;
+        lps[i] = k;
+    }
+    return lps;
+}`,
+        js:
+`// O(m) time, O(m) space: longest prefix that is also a suffix
+function buildLps(p) {
+  const lps = new Array(p.length).fill(0);
+  let k = 0;
+  for (let i = 1; i < p.length; i++) {
+    while (k > 0 && p[i] !== p[k]) k = lps[k - 1];
+    if (p[i] === p[k]) k++;
+    lps[i] = k;
+  }
+  return lps;
+}`,
+      },
+      "Compression & Misc (Striver)": {
+        pseudo:
+`run-length compress chars in place, return the new length. O(n).
+  w = 0 (write index), i = 0
+  while i < n
+    c = chars[i]; advance j past the run of equal chars
+    write c at w; w = w + 1
+    if run length > 1 -> write each digit of the length
+    i = j
+  return w`,
+        py:
+`# O(n) time · O(1) space, write pointer emits char + run length
 def compress(chars):            # run-length in place
     w = 0; i = 0
     while i < len(chars):
@@ -952,6 +1092,49 @@ def compress(chars):            # run-length in place
             for d in str(j-i): chars[w]=d; w += 1
         i = j
     return w`,
+        java:
+`// O(n) time, O(1) space: write pointer emits char then run length
+int compress(char[] chars) {
+    int w = 0, i = 0, n = chars.length;
+    while (i < n) {
+        char c = chars[i]; int j = i;
+        while (j < n && chars[j] == c) j++;
+        chars[w++] = c;
+        if (j - i > 1)
+            for (char d : String.valueOf(j - i).toCharArray()) chars[w++] = d;
+        i = j;
+    }
+    return w;
+}`,
+        cpp:
+`// O(n) time, O(1) space: write pointer emits char then run length
+int compress(vector<char>& chars) {
+    int w = 0, i = 0, n = chars.size();
+    while (i < n) {
+        char c = chars[i]; int j = i;
+        while (j < n && chars[j] == c) j++;
+        chars[w++] = c;
+        if (j - i > 1)
+            for (char d : to_string(j - i)) chars[w++] = d;
+        i = j;
+    }
+    return w;
+}`,
+        js:
+`// O(n) time, O(1) space: write pointer emits char then run length
+function compress(chars) {
+  let w = 0, i = 0;
+  const n = chars.length;
+  while (i < n) {
+    const c = chars[i]; let j = i;
+    while (j < n && chars[j] === c) j++;
+    chars[w++] = c;
+    if (j - i > 1) for (const d of String(j - i)) chars[w++] = d;
+    i = j;
+  }
+  return w;
+}`,
+      },
 
       "Lookup & Two Sum family": {
         pseudo:
