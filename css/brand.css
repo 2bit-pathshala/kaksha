@@ -1,0 +1,27 @@
+/* brand.css - the logo lockup: the mark plus "2BIT Pathshala", used wherever the
+   site names itself (headers, footers). Every page defines --text; the accent is
+   set here so the lockup looks the same on pages with different palettes. */
+
+.brandlock{
+  display:inline-flex;align-items:center;gap:9px;flex:0 0 auto;
+  color:var(--text);text-decoration:none;font-weight:600;font-size:1rem;
+  letter-spacing:-.01em;line-height:1.2;white-space:nowrap;vertical-align:middle;
+}
+.brandlock img{display:block;border-radius:22%;flex:0 0 auto}
+.brandlock .bl-accent{color:#b83c0a}
+[data-theme="dark"] .brandlock .bl-accent{color:#F5A623}
+.brandlock:hover{color:var(--text)}
+.brandlock:hover .bl-accent{text-decoration:underline;text-underline-offset:3px}
+
+/* smaller, for footers and running text */
+.brandlock.sm{gap:6px;font-size:.92em;font-weight:600}
+
+/* a section name that follows the lockup in a header */
+.bl-divider{width:1px;height:22px;background:var(--border,var(--rule));flex:0 0 auto}
+
+/* phones: headers are tight, so the lockup gives back a little room */
+@media (max-width:440px){
+  .brandlock{font-size:.94rem;gap:7px}
+  .brandlock:not(.sm) img{width:24px;height:24px}
+  .bl-divider{display:none}
+}

@@ -15,6 +15,8 @@
   <meta name="description" content="In-depth DSA revision: key properties, sub-topics, Python templates, diagrams, and must-know algorithms." />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/brand.css" />
+  <script src="js/scroll-focus.js" defer></script>
   <style>
     :root{
       --bg:#f5f6fa; --surface:#fff; --surface2:#eef1f7; --text:#161a23; --muted:#5a6273;
@@ -99,12 +101,13 @@
 <body>
   <header class="bar">
     <div class="bar-in">
+      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <span class="bl-divider" aria-hidden="true"></span>
       <div>
         <div class="logo">DSA <span>Cheat Sheet</span></div>
         <div class="sub">deep revision · properties · templates · algorithms · diagrams</div>
       </div>
       <div class="sp"></div>
-      <a class="btn" href="index.html">← 2BIT Pathshala</a>
       <a class="btn" href="dsa-notes.html">Notes</a>
       <a class="btn" href="dsa-patterns.html">Patterns</a>
       <button class="btn" onclick="window.print()">Save PDF</button>
@@ -722,7 +725,7 @@ def power(a, b, mod):
     </section>
   </main>
 
-  <footer>Deep revision notes · pair with the <a href="dsa-patterns.html">patterns roadmap</a> for practice links · <a href="index.html">2BIT Pathshala</a></footer>
+  <footer>Deep revision notes · pair with the <a href="dsa-patterns.html">patterns roadmap</a> for practice links · <a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a></footer>
 
   <script>
     const secs=[...document.querySelectorAll("section.card")];

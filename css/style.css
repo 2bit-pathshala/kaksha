@@ -46,6 +46,8 @@ a{color:var(--accent-text);text-underline-offset:2px}
 .brand-mark span{color:var(--accent-text)}
 .brand-sub{font-size:.8rem;color:var(--muted);font-weight:400}
 .sp{flex:1}
+.nav-in.center{align-items:center}
+.brand-row{display:flex;align-items:center;gap:10px}
 .btn{background:none;border:0;padding:2px 0;font-family:inherit;font-size:.82rem;
   color:var(--muted);text-decoration:none;cursor:pointer;white-space:nowrap}
 .btn:hover{color:var(--text)}

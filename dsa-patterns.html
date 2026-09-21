@@ -15,6 +15,7 @@
   <meta name="description" content="A structured DSA patterns roadmap: topics, patterns, and curated Easy/Medium/Hard LeetCode problems." />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/brand.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
   <style>
@@ -79,7 +80,11 @@
     .topic > summary::after { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 4px; background: linear-gradient(var(--primary), var(--accent)); }
     .topic > summary { padding-left: 22px; }
     .count { font-size: .72rem; color: var(--muted); font-weight: 500; margin-left: auto; }
-    .study-link { margin-left: auto; font-size: .76rem; font-weight: 700; color: var(--primary-ink); text-decoration: none; padding: 5px 13px; border: 1px solid var(--border); border-radius: 99px; transition: background .15s, border-color .15s; }
+    .topic-row { position: relative; }
+    .topic > summary { padding-right: 96px; }
+    .topic-row > .study-link { position: absolute; top: 13px; right: 16px; }
+    .topic.hidden + .study-link { display: none; }
+    .study-link { font-size: .76rem; font-weight: 700; color: var(--primary-ink); text-decoration: none; padding: 5px 13px; border: 1px solid var(--border); border-radius: 99px; transition: background .15s, border-color .15s; }
     .study-link:hover { border-color: var(--primary); background: var(--primary-soft); }
 
     /* nested patterns */
@@ -129,18 +134,20 @@
       header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
       /* site badges: each colour nudged until it clears 4.5:1, darker on light, lighter on dark */
     [data-theme="dark"] .p-num.gfg{color:#419756} [data-theme="dark"] .p-num.am{color:#22c55e}
+      @media (max-width:440px){ .top-title{flex:1 1 150px;min-width:0} }
   </style>
 </head>
 <body>
   <header class="top">
     <div class="top-row">
-      <div>
+      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <span class="bl-divider" aria-hidden="true"></span>
+        <div class="top-title">
         <h1 class="brand">DSA <span>Patterns</span></h1>
         <div class="credit">Roadmap · curated LeetCode problems</div>
       </div>
       <div class="spacer"></div>
       <div class="search"><input id="search" type="text" placeholder="Search pattern or problem…" /></div>
-      <a class="btn" href="index.html">← 2BIT Pathshala</a>
       <a class="btn" href="dsa-notes.html">Notes</a>
       <a class="btn" href="dsa-sheet.html">One-day sheet</a>
       <button class="btn" id="expandAll">Expand all</button>
@@ -158,7 +165,7 @@
   </main>
 
   <footer>
-    Built for focused DSA prep · problems open on <a href="https://leetcode.com" target="_blank" rel="noopener">LeetCode</a> · <a href="index.html">2BIT Pathshala</a>
+    Built for focused DSA prep · problems open on <a href="https://leetcode.com" target="_blank" rel="noopener">LeetCode</a> · <a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
   </footer>
 
   <script src="data/dsa-data.js"></script>
@@ -236,21 +243,23 @@
       d.className = level === 0 ? "topic" : level === 1 ? "pat" : "subpat";
       const s = document.createElement("summary");
       s.innerHTML = `<span class="chev">▶</span> ${node.n}`;
-      if (level === 0) {
-        const a = document.createElement("a");
-        a.className = "study-link";
-        a.href = "dsa-notes.html?topic=" + encodeURIComponent(node.n);
-        a.textContent = "Study";
-        a.addEventListener("click", (e) => e.stopPropagation());
-        s.appendChild(a);
-      }
+
       d.appendChild(s);
       const kids = document.createElement("div");
       kids.className = "kids";
       if (node.h) kids.appendChild(hintEl(node.h));
       node.c.forEach((child) => kids.appendChild(nodeEl(child, level + 1)));
       d.appendChild(kids);
-      return d;
+      if (level !== 0) return d;
+      const row = document.createElement("div");
+      row.className = "topic-row";
+      const a = document.createElement("a");
+      a.className = "study-link";
+      a.href = "dsa-notes.html?topic=" + encodeURIComponent(node.n);
+      a.textContent = "Study";
+      a.setAttribute("aria-label", "Study " + node.n);
+      row.append(d, a);
+      return row;
     }
 
     const tree = $("#tree");

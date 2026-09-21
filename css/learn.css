@@ -74,6 +74,7 @@ header.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
   background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
 .bar-in{max-width:1120px;margin:0 auto;padding:11px 22px;display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
 .logo{font-weight:600;font-size:.95rem;color:var(--text);text-decoration:none;letter-spacing:-.01em}
+.bar-in .brandlock{align-self:center}
 .here{font-size:.8rem;color:var(--muted)}
 .sp{flex:1}
 .bar-in a.nav,.bar-in button.nav{
