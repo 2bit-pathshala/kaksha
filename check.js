@@ -97,6 +97,66 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
     (quoted.length ? "   <-- stray backtick: " + quoted.join(", ") : ""));
 }
 
+/* ---------- 4b. the derivations: every step worked, and nothing wrapping ----------
+   A derivation block sits in the 66ch prose column, not in the full-width code
+   listing, so it wraps far earlier. It also has to actually show its working:
+   a step with a title and no arithmetic under it is a claim, not a derivation. */
+{
+  const LIMIT = 68;
+  const wide = [], empty = [], thin = [];
+  let steps = 0, worked = 0;
+  CONCEPTS.forEach(c => {
+    if (!c.math) return;
+    if (c.math.length < 3) thin.push(c.id + " (" + c.math.length + ")");
+    c.math.forEach((m, i) => {
+      steps++;
+      if (!m.t || (!m.w && !m.d)) empty.push(c.id + " step " + (i + 1));
+      if (!m.w) return;
+      worked++;
+      m.w.split("\n").forEach(l => {
+        if (l.length > LIMIT) wide.push(c.id + " step " + (i + 1) + " (" + l.length + ")");
+      });
+    });
+  });
+  const withMath = CONCEPTS.filter(c => c.math).length;
+  test("derivations", wide.length === 0 && empty.length === 0 && thin.length === 0,
+    withMath + "/" + CONCEPTS.length + " concepts, " + steps + " steps, " +
+    worked + " worked blocks within " + LIMIT + " columns" +
+    (wide.length ? "   <-- too wide: " + wide.slice(0, 3).join(", ") : "") +
+    (thin.length ? "   <-- too few steps: " + thin.slice(0, 3).join(", ") : "") +
+    (empty.length ? "   <-- nothing under the title: " + empty.slice(0, 3).join(", ") : ""));
+}
+
+/* ---------- 4c. prose a first-timer can follow ----------
+   The pages are read by someone meeting the idea for the first time, so the
+   explanations carry a hard sentence-length ceiling. A sentence that runs past
+   it is nearly always two ideas that were never separated. Headings, list
+   breaks and the ends of paragraphs all count as breaks, so a bold lead-in is
+   not charged to the sentence after it. */
+{
+  const LIMIT = 28;
+  const SPLIT = /<\/p>|<p>|<br>|(?<=[.!?:])(?:["”’]|<\/[a-z]+>)*\s+/;
+  const strip = t => String(t).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const wc = t => { const s = strip(t); return s ? s.split(/\s+/).length : 0; };
+  const over = [];
+  let counted = 0;
+  for (const c of CONCEPTS) {
+    const parts = [["plain", c.plain], ["hing", c.hing]];
+    c.why.forEach((w, i) => parts.push(["why" + i, w.d]));
+    (c.math || []).forEach((m, i) => parts.push(["math" + i, m.d || ""]));
+    for (const [label, text] of parts)
+      String(text).split(SPLIT).forEach(sent => {
+        const n = wc(sent);
+        if (!n) return;
+        counted++;
+        if (n > LIMIT) over.push(c.id + "/" + label + " (" + n + "w)");
+      });
+  }
+  test("plain english", over.length === 0,
+    counted + " sentences across plain, why, hing and the derivations, none over " + LIMIT + " words" +
+    (over.length ? "   <-- " + over.slice(0, 4).join(", ") : ""));
+}
+
 /* ---------- 5. no escape sequence may survive into the rendered text ----------
    A quoted heredoc once turned \u00b2 into a literal backslash-u-0-0-b-2, which
    the page then printed at the reader instead of a superscript two. */
@@ -251,7 +311,7 @@ if (!JSDOM) {
     const { d, w, errs } = render("concept.html", "concept.html?c=" + c.id);
     const n = s => d.querySelectorAll(s).length;
     if (errs.length) problems.push(c.id + ": " + errs[0]);
-    const expectSections = 9 + (c.variants ? 1 : 0);
+    const expectSections = 9 + (c.variants ? 1 : 0) + (c.math ? 1 : 0);
     if (n(".rung") !== expectSections)
       problems.push(c.id + ": " + n(".rung") + " sections, expected " + expectSections);
     if (n(".langtabs button") !== 5) problems.push(c.id + ": " + n(".langtabs button") + " code tabs");

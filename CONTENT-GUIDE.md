@@ -6,11 +6,12 @@ as the file grows.
 
 ## The design in one paragraph
 
-A concept is taught in a **fixed order of nine sections**, the same order every time. The
+A concept is taught in a **fixed order of ten sections**, the same order every time. The
 order is not decorative: you meet the idea as a sentence, then as a picture, then as words,
-then as reasoning, then again in Hinglish if the reasoning slipped, then as numbers, then as
-code, then as a test. Nothing on the page tracks what any reader has done. This repo is
-shared, so there are no checkboxes, meters or per-person state.
+then as reasoning, then again in Hinglish if the reasoning slipped, then worked out in
+actual arithmetic, then as numbers to quote, then as code, then as a test. Nothing on the
+page tracks what any reader has done. This repo is shared, so there are no checkboxes,
+meters or per-person state.
 
 | # | Section | Field | Job |
 |---|---------|-------|-----|
@@ -19,10 +20,11 @@ shared, so there are no checkboxes, meters or per-person state.
 | 3 | In plain words | `plain` | What and why, no jargon, one analogy |
 | 4 | Why it works | `why` | Build it up from nothing |
 | 5 | In Hinglish | `hing` | The same hard part, easier language |
-| 6 | Costs and traps | `costs`, `traps`, `impl` | Numbers to quote, mistakes to avoid |
-| 7 | The template | `code`, `codecap` | Pseudocode plus four languages |
-| 8 | Check yourself | `q` | Answer out loud, then open |
-| 9 | Practice | `p` | Problems, easiest first |
+| 6 | The maths, step by step | `math` | The working, with real numbers in it |
+| 7 | Costs and traps | `costs`, `traps`, `impl` | Numbers to quote, mistakes to avoid |
+| 8 | The template | `code`, `codecap` | Pseudocode plus four languages |
+| 9 | Check yourself | `q` | Answer out loud, then open |
+| 10 | Practice | `p` | Problems, easiest first |
 
 `revise.html` reads only `one` and `q`. That is deliberate: **the revision page can only be
 as good as the recall line**, so spend real effort on `one`.
@@ -33,8 +35,11 @@ as good as the recall line**, so spend real effort on `one`.
 Weak: "Sliding window is a technique for subarray problems." Strong: "Consecutive windows
 overlap, so never recompute one from scratch: subtract what leaves, add what joins."
 
-**`plain`**, 2–4 short paragraphs of HTML. No jargon that has not been introduced yet. End
-with one concrete **analogy** from outside programming. Around 180 words.
+**`plain`**, 2–4 short paragraphs of HTML. Written for someone meeting the idea for the
+first time, so it assumes nothing: no term is used before it is explained, and a term that
+has to appear gets its gloss in the same sentence ("<b>contiguous</b>, meaning a run of
+items sitting next to each other with no gaps"). Start from the problem, not the structure.
+End with one concrete **analogy** from outside programming. Around 180 words.
 
 **`why`**, 5–6 steps of `{t, d}`, and keep them short. Each step must follow from the one
 before, so a reader could have guessed the next. Start from a requirement or a constraint,
@@ -45,6 +50,20 @@ write "it can be shown that", show it.
 **`hing`**. Roman script, natural Hindi-English mix, technical terms left in English
 (*hash function*, *load factor*, *amortised*). Do not translate section 4 line by line:
 re-teach the two or three hardest moves and add the interview-facing advice.
+
+**`math`**, 3 to 5 steps of `{ t, d, w }`. This is the section that shows its working.
+`t` names what is being derived, `d` is a sentence or two of setup, and `w` is the working
+itself: a monospace block, **68 columns maximum**, because it sits in the prose column and
+not in the full-width code listing. There is a test for the width and a test that no step
+has a title with nothing under it.
+
+The rule that makes this section worth having: **put real numbers in it**. Not
+"O(n log n) is better than O(n²)", but `n = 10^5: 1.7 x 10^6 versus 5 x 10^9`. A reader
+who has seen the two numbers side by side does not need to be told which to pick. Derive
+the bound where a derivation fits in six lines (the halvings that give `log n`, the
+geometric sum behind amortised append, the `n!` argument for the sorting bound), and where
+it does not, work a small case by hand instead. Use ASCII throughout: `x` for multiply,
+`^` for powers, `<=` for comparisons, so the block lines up in every font.
 
 **`variants`** (optional), for umbrella topics with a family of algorithms underneath:
 `[{ n, cost, idea, when, watch }]`. It renders as an extra section, "Which one, and when",
@@ -70,6 +89,26 @@ needs a fact that appears nowhere above it, the concept is incomplete.
 
 **`p`**, `[leetcodeNumber, "slug", "Title, what it drills", "E|M|H"]`, or
 `["SRC", "https://…", "Title", "E"]` for anything else. Easiest first.
+
+## Plain enough for a first reader
+
+Three rules, and a test that enforces the first one.
+
+**No sentence over 28 words**, in `plain`, `why`, `hing` or a `math` step. This is checked
+by `check.js` and it fails the build. The limit is not a style preference: a sentence that
+runs past it is almost always two ideas that were never separated, and the reader has to
+hold the first one while parsing the second. Split it at the comma that was doing the work
+of a full stop. A bold lead-in, a `<br>` and the end of a paragraph all count as breaks,
+so a heading is never charged to the sentence after it.
+
+**Numbers beat adjectives.** Not "this is much slower", but `n = 10^5: 5 x 10^9 versus
+2 x 10^5`. The reader who has seen the two numbers does not need to be told which to pick.
+
+**Prove it on an instance, not in symbols.** The fastest way to lose a beginner is a
+proof written in letters: "if b x = b y then m divides b(x - y)". Walk it on real values
+first, then state the general rule in one line at the end. Every derivation on the site
+that used to be algebra is now a small case worked by hand, and the `math` section exists
+to carry exactly that.
 
 ## Voice
 
@@ -136,9 +175,9 @@ Add one with `VIZ["my-id"] = { kind, …, frames: [...] }`, then reference it as
 node --check concept-data.js && node --check viz.js
 ```
 
-Then open `concept.html?c=<id>` and confirm: nine sections render, every visual plays and
-nothing overflows its box, all five code tabs have content, and each answer is genuinely
-derivable from section 4.
+Then open `concept.html?c=<id>` and confirm: ten sections render, every visual plays and
+nothing overflows its box, no derivation block scrolls sideways on a phone, all five code
+tabs have content, and each answer is genuinely derivable from section 4.
 
 # Adding a Design Lab project
 

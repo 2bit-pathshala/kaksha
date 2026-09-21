@@ -14,8 +14,8 @@
   --faint:#9a9a91;
   --rule:#e4e3dd;
   --rule-2:#d6d5cd;
-  --accent:#2f5faa;
-  --accent-soft:#e9f0fa;
+  --accent:#F0540C;
+  --accent-soft:#FDECE1;
   --warm:#a4551b;
   --warm-soft:#fbf2e9;
   --e:#3f7a4a; --m:#8a6410; --h:#9b3a3a;
@@ -33,8 +33,8 @@
   --faint:#6e6e68;
   --rule:#292a2d;
   --rule-2:#35363a;
-  --accent:#8fb6ea;
-  --accent-soft:#15202f;
+  --accent:#F5A623;
+  --accent-soft:#2A180E;
   --warm:#e0a878;
   --warm-soft:#251c13;
   --e:#7fb98a; --m:#c9a03f; --h:#d08585;
@@ -239,6 +239,20 @@ h1.ctitle{font-size:2.3rem;font-weight:600;letter-spacing:-.028em;margin-bottom:
 }
 .variant code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.83em;
   background:var(--bg-soft);padding:1px 5px;border-radius:3px;white-space:nowrap}
+
+/* 4b, the derivation block: the working, set apart from the sentence that
+   introduces it. Deliberately not the dark chrome of a code listing, because
+   this is arithmetic to read, not a program to copy. */
+.maths li div{margin-bottom:9px}
+.maths li:last-child{padding-bottom:0}
+pre.derive{
+  margin:0;background:var(--bg-soft);border-left:2px solid var(--accent);
+  padding:13px 16px;border-radius:0 4px 4px 0;max-width:100%;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.78rem;line-height:1.75;color:var(--text-2);
+  overflow-x:auto;white-space:pre;
+}
+pre.derive{scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
 
 /* 5. Hinglish */
 .hing{

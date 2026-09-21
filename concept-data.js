@@ -9,6 +9,7 @@
      plain, what it is, in words a beginner would follow, plus one analogy
      why, why it works, built up from nothing; no memorised facts
      hing, the same hard part again, in Hinglish
+     math, the working, with real numbers in it rather than assertions
      costs, the cost table, the traps, and what your language calls it
      code, pseudocode first, then Python / Java / C++ / JavaScript
      q, check yourself; if you cannot answer these, go back to `why`
@@ -17,7 +18,7 @@
    Authoring rules live in CONTENT-GUIDE.md. Keep `one` under 30 words. It is the
    whole revision page.
 
-   Node: { id, n, group, one, plain, why:[{t,d}], hing, viz:[],
+   Node: { id, n, group, one, plain, why:[{t,d}], hing, math:[{t,d,w}], viz:[],
            see:[[src,url,title]], costs:[[op,cost,why]], traps:[], impl:[[lang,api,note]],
            code:{pseudo,py,java,cpp,js}, codecap,
            q:[[question,answer]], p:[[num|SRC, slug|url, title, "E|M|H"]] }
@@ -50,7 +51,7 @@ const CONCEPTS = [
     { t: "Always say which case you mean",
       d: "A hash map is O(1) on <i>average</i> and O(n) at <i>worst</i>. Quicksort is O(n log n) average and O(n²) worst. Best, average and worst are three different claims about three different things, and answering with the wrong one is not a rounding error." },
     { t: "Amortised is a fourth claim, and it is not the average",
-      d: "Average case is about the distribution of <i>inputs</i>: on typical data, this is what happens. <b>Amortised</b> is about a <i>sequence of operations</i>: any n appends cost under 2n in total, so each is O(1), and that is a <b>guarantee</b> rather than a hope. An adversary can defeat an average case by choosing nasty input, and cannot defeat an amortised bound at all. Saying \"average\" when you mean \"amortised\" gives away that the distinction has not landed." },
+      d: "Average case is about the distribution of <i>inputs</i>: on typical data, this is what happens. <b>Amortised</b> is a claim about a <i>sequence of operations</i>, not about one call. Any n appends cost under 2n in total, so the average is O(1). That is a <b>guarantee</b>, not a hope. An adversary can defeat an average case by choosing nasty input, and cannot defeat an amortised bound at all. Saying \"average\" when you mean \"amortised\" gives away that the distinction has not landed." },
   ],
 
   variants: [
@@ -94,6 +95,50 @@ const CONCEPTS = [
 
   viz: ["big-o"],
   see: [["VA", "https://www.bigocheatsheet.com/", "Big-O cheat sheet, every structure on one chart"]],
+
+  math: [
+    { t: "Constants lose to growth, and you can watch the moment they lose", d: "A hundred times faster per step is a constant. It buys you one factor, once. The growth term keeps charging.", w:
+`            f(n) = 100 n      g(n) = n^2 / 10
+n = 10             1,000                   10
+n = 100           10,000                1,000
+n = 1,000        100,000              100,000   <- they cross
+n = 10,000     1,000,000           10,000,000
+n = 100,000   10,000,000        1,000,000,000   <- 100x apart` },
+    { t: "Only the biggest term survives, and here is the share it takes", d: "Nobody drops the smaller terms because they are unimportant. They are dropped because the arithmetic makes them disappear on their own.", w:
+`T(n) = n^2 + 100 n + 5000
+
+n            n^2        100 n     5000   share of n^2
+10           100        1,000    5,000          1.6 %
+100       10,000       10,000    5,000           40 %
+1,000  1,000,000      100,000    5,000           90 %
+100,000     1e10      1e7        5,000         99.9 %` },
+    { t: "The 10x test, which is the only question the notation answers", d: "Multiply the input by ten and see what happens to the work. Everything else about Big-O is commentary on this table.", w:
+`growth        n = 10^6     n = 10^7    work grows by
+O(1)                 1            1            1.0x
+O(log n)            20           23            1.2x
+O(n)               1e6          1e7             10x
+O(n log n)     2 x 10^7    2.3 x 10^8          11.5x
+O(n^2)            1e12         1e14            100x` },
+    { t: "Where the one-second budget comes from", d: "About 10^8 simple operations per second is the working figure. Read n off the constraints, divide, and the growth you are allowed to use is settled before you have had an idea.", w:
+`budget: roughly 10^8 operations in a second
+
+n            affordable      the arithmetic
+10^9         O(log n)        30 steps
+10^7         O(n)            10^7
+10^6         O(n log n)      10^6 x 20 = 2 x 10^7
+10^4         O(n^2)          10^8
+500          O(n^3)          1.25 x 10^8
+20           O(2^n)          1.05 x 10^6
+11           O(n!)           4 x 10^7` },
+    { t: "Amortised, summed rather than asserted", d: "Amortised O(1) is a claim about a whole sequence of operations, and it is proved by adding up the expensive ones and finding the total is still linear.", w:
+`a growable array doubling 1 -> 2 -> 4 -> ... -> n
+copies done on the way:  1 + 2 + 4 + ... + n/2  =  n - 1
+n appends cost   n writes + (n - 1) copies  <  2n
+per append:      2n / n = 2 operations, a constant
+
+worst single append is still n. Amortised is the average
+over the sequence, not a promise about any one call.` },
+  ],
 
   costs: [
     ["O(1)", "constant", "dict/set lookup, array index, arithmetic, append. Input size is irrelevant."],
@@ -239,7 +284,7 @@ map.get(k) / set.has(k)   // O(1) average`,
   group: "Fundamentals",
   one: "A variable does not contain your object. It holds the <b>address</b> of one. So <code>b = a</code> copies the address, not the thing, and now two names can change one object.",
 
-  plain: `<p>Memory is one long strip of numbered slots. A variable is a name for one slot. A small fixed-size value like an integer fits in that slot directly, but a list, an object or a string has no size known in advance, so it cannot.</p>
+  plain: `<p>Memory is one long strip of numbered slots. A variable is a name for one slot. A small fixed-size value like an integer fits in that slot directly. A list, an object or a string has no size known in advance, so it cannot.</p>
 <p>Instead the object is built somewhere else in memory, and the slot holds its <b>address</b>. That address is what a pointer is. A reference is the same idea with the dereferencing hidden from you.</p>
 <p>Everything surprising follows from that one fact. <code>b = a</code> copies the slot, which means it copies the address, so both names now describe the same object. Change it through one and the other sees the change, because there was only ever one object.</p>
 <p><b>Analogy.</b> A slip of paper with a house address on it. Photocopy the slip and you have two slips, not two houses. Anyone who follows either slip walks into the same living room and can move the furniture.</p>`,
@@ -251,7 +296,7 @@ map.get(k) / set.has(k)   // O(1) average`,
     { t: "Copying has depth, and shallow is the default", d: "A copy of a list duplicates the <b>outer</b> container and its addresses. Anything those addresses point to is still shared. That is the whole explanation for <code>[[0]*3]*3</code>: you built one row and stored its address three times, so writing to <code>g[0][0]</code> appears to change every row. A deep copy follows every arrow and duplicates all the way down." },
     { t: "Immutable objects make all of this disappear", d: "You can only observe aliasing by <i>changing</i> something. If an object cannot change, a string, a number, a tuple, then sharing it is invisible and completely safe. That is a large part of why languages make strings immutable, and why immutable values are safe to use as hash-map keys and to hand between threads." },
     { t: "Two lifetimes: the frame dies, the object need not", d: "Local names live in a <b>stack frame</b> that is discarded when the function returns. The object they point to lives elsewhere, on the <b>heap</b>, and survives as long as something still points at it. Garbage-collected languages free it when nothing does; C++ makes it your job, and returning the address of a dead local is the classic dangling-pointer bug." },
-    { t: "And null is an address that points at nothing", d: "A pointer has to be able to say \"no object\". Following it is the most common crash in the industry, which is why every tree and linked-list function begins by checking for it, and why languages keep inventing ways to make the check unforgettable." },
+    { t: "And null is an address that points at nothing", d: "A pointer has to be able to say \"no object\". Following it is the most common crash in the industry. That is why every tree and linked-list function starts by checking for it, and why languages keep inventing ways to make the check impossible to forget." },
   ],
 
   hing: `<p><b>Sabse pehle asli baat:</b> variable ke andar tumhara object <b>nahi</b> hota. Uske andar object ka <b>pata (address)</b> hota hai. Bas isi ek baat se aage sab kuch samajh aa jaata hai.</p>
@@ -265,6 +310,46 @@ map.get(k) / set.has(k)   // O(1) average`,
 
   viz: ["aliasing"],
   see: [["DOC", "https://docs.python.org/3/library/copy.html", "Python docs, shallow vs deep copy"]],
+
+  math: [
+    { t: "What the variable actually holds, in bytes", d: "A reference is one machine word. Everything else lives somewhere else, and the gap between those two numbers is where the surprise is.", w:
+`64-bit machine: one reference = 8 bytes
+
+a Python list of 1,000,000 small ints
+  the pointer array   1e6 x 8  =   8 MB
+  the int objects     1e6 x 28 =  28 MB
+  total                           36 MB
+
+the same data as a Java int[]  1e6 x 4 = 4 MB
+9x, and none of it shows up in the Big-O` },
+    { t: "Copying has depth, and the two depths cost different amounts", d: "A shallow copy duplicates the pointers. A deep copy duplicates what they point at. For a grid those are n and n x m.", w:
+`grid = 1,000 rows x 1,000 columns
+
+shallow copy:  1,000 pointers copied        O(rows)
+deep copy:     1,000,000 cells copied       O(rows x cols)
+
+[[0] * 3] * 4    -> 1 row object, 4 pointers to it
+                    grid[0][0] = 9 shows up in all four rows
+[[0] * 3 for _ in range(4)] -> 4 row objects, 12 cells` },
+    { t: "Passing an object to a function, priced", d: "This is the one place where the language you are writing in changes the complexity rather than the constant.", w:
+`hand a 1,000,000-element list to a function
+
+by reference   8 bytes copied         O(1)
+by value       1e6 elements copied    O(n)
+
+Python, Java, JavaScript: always the first
+C++: the second, unless you write & or const&` },
+    { t: "The frame dies, the object need not", d: "Two lifetimes, counted separately. The local name is 8 bytes freed at return; the object survives for as long as anything still points at it.", w:
+`def f():
+    x = [1, 2, 3]     # frame: 8 bytes for x
+    return x          # frame freed here
+
+caller holds the list. references: 1
+del that name         references: 1 -> 0, now it dies
+
+so "the function returned" and "the memory was freed"
+are two different events, and the second can be much later` },
+  ],
 
   costs: [
     ["b = a (assignment)", "O(1)", "one address is copied; no object is created"],
@@ -434,14 +519,14 @@ res.push([...path]);`,
   plain: `<p>Three things about numbers cause real bugs, and none of them are obvious until they bite.</p>
 <p><b>Integers have edges.</b> A 32-bit <code>int</code> stops at about 2.1 billion. Go past it and it does not raise an error or saturate. It <b>wraps around to a large negative number</b> and carries on as if nothing happened.</p>
 <p><b>Integer division has to choose a direction</b>, and languages disagree. <code>-7 / 2</code> is <code>-3</code> in Java, C++ and JavaScript, but <code>-4</code> in Python. Modulo inherits the disagreement, so <code>-7 % 3</code> is <code>-1</code> in one family and <code>2</code> in the other.</p>
-<p><b>Floats are binary fractions.</b> 0.1 cannot be written exactly in binary any more than 1/3 can be written exactly in decimal, so <code>0.1 + 0.2</code> is not <code>0.3</code>.</p>
+<p><b>Floats are binary fractions.</b> 0.1 cannot be written exactly in binary, any more than 1/3 can be written exactly in decimal. So <code>0.1 + 0.2</code> is not <code>0.3</code>.</p>
 <p><b>Analogy.</b> A car odometer with five digits. At 99999 the next mile does not read 100000 and it does not refuse. It reads 00000, and nothing anywhere records that it happened.</p>`,
 
   why: [
     { t: "A fixed-width integer is a fixed number of bits, so it has edges", d: "32 bits hold 2³² distinct patterns. Signed, that is −2,147,483,648 to 2,147,483,647. There is no room for anything larger, so the hardware does the only thing it can: it keeps the low 32 bits and discards the carry. The value <b>wraps</b>, silently and at full speed." },
     { t: "Which is why the classic binary-search line is a bug", d: "<code>(lo + hi) / 2</code> can overflow even when the answer is perfectly representable, because the intermediate sum is not. Writing <code>lo + (hi - lo) / 2</code> computes the same value without ever forming the large sum. This bug sat in the JDK for nine years." },
     { t: "Integer division must round, and the two families round oppositely", d: "-3.5 has to become an integer. C, C++, Java, Go and JavaScript <b>truncate toward zero</b> and give −3; Python <b>floors</b> toward negative infinity and gives −4. On non-negative numbers the two agree completely, which is exactly why the difference stays hidden until it matters." },
-    { t: "Modulo follows division, so its sign follows too", d: "The two must satisfy <code>a == (a/b)*b + a%b</code>. Truncating division therefore gives a remainder with the sign of the <b>dividend</b> (−7 % 3 = −1), while flooring gives the sign of the <b>divisor</b> (−7 % 3 = 2). When you need an index, write <code>((x % n) + n) % n</code>. It is non-negative everywhere." },
+    { t: "Modulo follows division, so its sign follows too", d: "The two must satisfy <code>a == (a/b)*b + a%b</code>. So truncating leaves a remainder with the sign of the <b>dividend</b>: −7 % 3 = −1. Flooring leaves the sign of the <b>divisor</b>: −7 % 3 = 2. When you need an index, write <code>((x % n) + n) % n</code>. It is non-negative everywhere." },
     { t: "Floats trade exactness for range", d: "A double stores a binary fraction, so any value that is not a sum of powers of two, 0.1, 0.2, 0.3. Is stored approximately. The errors are tiny but real, and they accumulate. So never test floats for equality; compare against a small tolerance, or avoid floats entirely by scaling to integers (work in cents, not in rupees)." },
     { t: "The practical rules that follow", d: "Use 64-bit when a product or a sum might grow, <code>a * b</code> overflows long before <code>a</code> and <code>b</code> do. Check <i>before</i> multiplying rather than after (<code>a &gt; limit / b</code>), because the overflowed result tells you nothing. And know your language: Python integers grow without limit, so none of this applies until you port the solution somewhere else." },
   ],
@@ -456,6 +541,52 @@ res.push([...path]);`,
 
   viz: ["int-overflow", "division-rounding"],
   see: [["DOC", "https://en.wikipedia.org/wiki/Two%27s_complement", "Two's complement, how the wrap-around works"]],
+
+  math: [
+    { t: "The edges, written out", d: "A fixed-width integer is a fixed number of bits, so it has a first value and a last one. Past the last, it wraps rather than complaining.", w:
+`signed 32-bit:  -2^31 .. 2^31 - 1
+                -2,147,483,648 .. 2,147,483,647
+signed 64-bit:  -2^63 .. 2^63 - 1  ~  +- 9.22 x 10^18
+
+2,147,483,647 + 1 = -2,147,483,648
+no exception, no warning, no log line` },
+    { t: "The binary search midpoint bug, with the actual numbers", d: "Both bounds are legal 32-bit values. Their sum is not, and the wrapped result indexes somewhere that does not exist.", w:
+`lo = 2,000,000,000    hi = 2,100,000,000   (both fit)
+
+lo + hi     = 4,100,000,000  >  2,147,483,647
+wraps to      4,100,000,000 - 2^32 = -194,967,296
+/ 2         = -97,483,648      -> negative index
+
+lo + (hi - lo) / 2
+            = 2,000,000,000 + 50,000,000
+            = 2,050,000,000   -> correct, never overflows` },
+    { t: "The two rounding families, checked against the identity", d: "Both answers are self-consistent. They just answer a different question, and the difference only shows on negatives.", w:
+`             -7 / 2      -7 % 2
+Python          -4           1     floor, sign follows the divisor
+Java, C++       -3          -1     truncate toward zero
+
+the identity that must hold: q * b + r == a
+Python:  -4 x 2 +  1 = -7
+Java:    -3 x 2 + -1 = -7
+so normalise with ((x % m) + m) % m when you need [0, m)` },
+    { t: "Where a double stops counting", d: "A double has 53 bits of mantissa. Below that every integer is exact; above it, some of them simply are not there.", w:
+`2^53     = 9,007,199,254,740,992
+2^53 + 1 = 9,007,199,254,740,992    the +1 is lost
+
+0.1 + 0.2 = 0.30000000000000004
+  neither 0.1 nor 0.2 is representable in base 2
+
+so compare with abs(a - b) < 1e-9, never with ==
+and in JavaScript do integer work past 2^53 in BigInt` },
+    { t: "Reduce as you go, not at the end", d: "The intermediate is what overflows, so the modulus goes inside the loop. Two values just under 10^9 multiply to just under 10^18, which is why the accumulator must be 64 bits.", w:
+`(10^9) x (10^9) = 10^18        needs 60 bits, so long/int64
+                               an int32 accumulator is gone
+
+20! = 2.43 x 10^18   fits in int64, barely
+21! = 5.11 x 10^19   does not
+
+so never compute n! and then reduce: reduce every step` },
+  ],
 
   costs: [
     ["32-bit signed int", "−2,147,483,648 … 2,147,483,647", "about 2.1 billion; overflows silently"],
@@ -610,30 +741,77 @@ BigInt(2) ** BigInt(200);            // exact, arbitrarily large`,
 
   plain: `<p>Number theory sounds like a university course. The interview version is six short routines, and every one of them exists because the obvious approach does far too much work.</p>
 <p>Is n prime? You do not need to try every divisor, only the ones up to √n. Which numbers below a million are prime? Do not ask each one separately, cross out the multiples instead. What is the largest number dividing both a and b? Do not factorise either of them, just keep replacing the pair with a smaller pair. What is 2 to the power of a billion? Do not multiply a billion times, square your way there in thirty steps.</p>
-<p>The last piece is the modulus. Problems ask for an answer <code>mod 10⁹ + 7</code> so the result fits in a 64-bit integer, which means you keep every intermediate value small instead of computing something astronomical and shrinking it at the end. Addition, subtraction and multiplication survive that treatment. Division does not, and the fix for division is most of the remaining difficulty.</p>
+<p>The last piece is the <b>modulus</b>, which is just the remainder after dividing. Problems ask for the answer <code>mod 10⁹ + 7</code> so the result fits in a 64-bit integer. That means keeping every value small as you go, instead of building something astronomical and shrinking it at the end. Addition, subtraction and multiplication survive that treatment. Division does not, and the fix for division is most of the remaining difficulty.</p>
 <p><b>Analogy.</b> Checking whether a rectangle of area n can be made from whole-number sides. You only ever measure the short side, because once you pass the square the long side has already been on your list.</p>`,
 
   why: [
     { t: "A factor above the square root drags a partner below it", d: "If <code>n = a × b</code> and both a and b were larger than √n, their product would already exceed n. So at least one factor is <b>at or below √n</b>. Test 2, 3, 4 up to √n, find nothing, and there is nothing to find. That single sentence is the whole of primality testing at interview level: <b>O(√n)</b>, and you can say why." },
     { t: "Asking every number separately repeats the same work", d: "To list primes up to n, trial division costs about n√n. But the moment you know 2 is prime you also know 4, 6, 8, 10 are not, without dividing anything. So invert the question: instead of testing each number, take each prime and <b>cross out its multiples</b>. Every composite gets struck by its own prime factors, so whatever survives is prime." },
-    { t: "The inner loop starts at p × p, not 2p", d: "Any multiple of p below p × p is <code>k × p</code> with <code>k &lt; p</code>, so it has a prime factor smaller than p and was crossed out on an earlier pass. Starting at p × p skips all of that. It also means the outer loop can stop once <code>p × p &gt; n</code>. The total is <b>O(n log log n)</b>, which is near enough linear that you should treat it as free. The log log comes from summing 1/p over the primes, and it is not something anyone derives at a whiteboard. Quote it, do not prove it." },
-    { t: "For a gcd, subtract the pair down instead of factorising it", d: "Suppose d divides both a and b. Write <code>a = q × b + r</code>. Then <code>r = a - q × b</code>, and d divides both terms on the right, so <b>d divides r too</b>. The common divisors of (a, b) and of (b, a mod b) are therefore exactly the same set, so the largest one is the same: <code>gcd(a, b) = gcd(b, a mod b)</code>. Repeat until b hits 0, and the answer is a. The remainder at least halves every two steps, so this is <b>O(log min(a, b))</b>." },
+    { t: "The inner loop starts at p × p, not 2p", d: "Any multiple of p below p × p is <code>k × p</code> where <code>k &lt; p</code>. So it already has a prime factor smaller than p, and that smaller factor crossed it out on an earlier pass. Starting at p × p skips all of that. It also means the outer loop can stop once <code>p × p &gt; n</code>. The total is <b>O(n log log n)</b>, which is near enough linear that you should treat it as free. The log log comes from summing 1/p over the primes, and it is not something anyone derives at a whiteboard. Quote it, do not prove it." },
+    { t: "For a gcd, subtract the pair down instead of factorising it", d: "Suppose d divides both a and b. Write <code>a = q × b + r</code>. Then <code>r = a - q × b</code>, and d divides both terms on the right, so <b>d divides r too</b>. So (a, b) and (b, a mod b) have exactly the same common divisors. The biggest one is therefore the same as well: <code>gcd(a, b) = gcd(b, a mod b)</code>. Repeat until b hits 0, and the answer is a. The remainder at least halves every two steps, so this is <b>O(log min(a, b))</b>." },
     { t: "lcm comes free from gcd, if you order the arithmetic properly", d: "Each of a and b contributes its own factors, and the shared part is counted once, so <code>lcm(a, b) = a × b / gcd(a, b)</code>. Write it as <code>a / gcd(a, b) * b</code> instead. The gcd divides a exactly, so nothing is lost, and you never form the product <code>a × b</code>, which is the value that overflows. See the numbers concept for what that overflow actually does to you." },
     { t: "Powers halve instead of counting down", d: "<code>x¹⁶</code> does not need sixteen multiplications. Square four times. In general <code>x^e</code> is <code>(x^(e/2))²</code> when e is even, and <code>x × x^(e-1)</code> when it is odd, so each step either halves the exponent or makes it even. That is <b>O(log e)</b> multiplications. Take the modulus after every single one and no intermediate ever exceeds m², which is precisely why the answer is asked for mod 10⁹ + 7." },
-    { t: "Mod distributes over three operations, and pointedly not the fourth", d: "<code>(a + b) mod m</code>, <code>(a - b) mod m</code> and <code>(a × b) mod m</code> can all be computed from the reduced values, because remainders add and multiply the way you hope. <b>Division cannot.</b> Dividing by b becomes multiplying by the <b>modular inverse</b> of b, the value with <code>b × inv ≡ 1 (mod m)</code>. When m is prime, Fermat gives it away: <code>b^(m-1) ≡ 1</code>, so <code>inv = b^(m-2) mod m</code>, one fast power. That is how nCr survives a modulus: precompute factorials and their inverses, then <code>nCr = fact[n] × invfact[r] × invfact[n-r]</code>. What this cannot do: a non-prime modulus (Fermat does not apply, you need the extended Euclidean algorithm), and it will not factorise a 200-digit number for you either. None of these routines break big integers apart, they only avoid having to." },
+    { t: "Mod distributes over three operations, and pointedly not the fourth", d: "<code>(a + b) mod m</code>, <code>(a - b) mod m</code> and <code>(a × b) mod m</code> can all be worked out from the reduced values. Remainders add and multiply the way you hope they will. <b>Division cannot.</b> Dividing by b becomes multiplying by the <b>modular inverse</b> of b, the value with <code>b × inv ≡ 1 (mod m)</code>. When m is prime, Fermat gives it away: <code>b^(m-1) ≡ 1</code>, so <code>inv = b^(m-2) mod m</code>, one fast power. That is how nCr survives a modulus: precompute factorials and their inverses, then <code>nCr = fact[n] × invfact[r] × invfact[n-r]</code>. What this cannot do: a non-prime modulus (Fermat does not apply, you need the extended Euclidean algorithm), and it will not factorise a 200-digit number for you either. None of these routines break big integers apart, they only avoid having to." },
   ],
 
   hing: `<p><b>Poore number theory ka interview version chhe chhoti routines hai.</b> Har ek isliye exist karti hai kyunki seedha tarika bekaar mein zyada kaam karta hai.</p>
 <p><b>1. √n tak hi kyun?</b> Maan lo <code>n = a × b</code>. Agar a aur b dono √n se bade hote, to unka product n se bada ho jaata, jo ho nahi sakta. Matlab <b>kam se kam ek factor √n ke neeche ya barabar hoga</b>. To 2 se √n tak dekh lo, kuch nahi mila to number prime hai. Bas itni si baat, aur interview mein isse zyada primality test chahiye bhi nahi.</p>
 <p><b>2. Sieve, har number se poochho mat, kaat do.</b> Ek-ek number ko test karne ke bajaye, har prime ke <b>multiples cross</b> kar do. Har composite apne hi prime factor se mar jaayega, jo bacha woh prime.</p>
-<p><b>Sabse poochha jaane wala sawaal: inner loop <code>p * p</code> se kyun shuru hota hai, <code>2p</code> se kyun nahi?</b> Kyunki <code>p * p</code> se chhota koi bhi multiple <code>k × p</code> hai jismein <code>k &lt; p</code>. Us number ka ek chhota prime factor pehle se hai, aur woh <b>pehle hi round mein kat chuka hai</b>. Dobara kaatne ka koi fayda nahi. Cost <b>O(n log log n)</b> hai. Yeh log log kahan se aaya, yeh interview mein derive karne ki cheez nahi hai, bas bol do aur aage badho.</p>
-<p><b>3. GCD ka one-line proof, yaad kar lo.</b> Agar d, a aur b dono ko divide karta hai, aur <code>a = q × b + r</code>, to <code>r = a - q × b</code>. Right side ke dono terms d se divide hote hain, isliye <b>d, r ko bhi divide karta hai</b>. Matlab (a, b) aur (b, a mod b) ke common divisors bilkul same hain, to sabse bada bhi same: <code>gcd(a, b) = gcd(b, a mod b)</code>. b zero hone tak repeat karo.</p>
+<p><b>Sabse poochha jaane wala sawaal: inner loop <code>p * p</code> se kyun shuru hota hai, <code>2p</code> se kyun nahi?</b> Socho: <code>p * p</code> se chhota har multiple <code>k × p</code> hota hai, jisme <code>k</code> khud <code>p</code> se chhota hai. Us number ka ek chhota prime factor pehle se hai, aur woh <b>pehle hi round mein kat chuka hai</b>. Dobara kaatne ka koi fayda nahi. Cost <b>O(n log log n)</b> hai. Yeh log log kahan se aaya, yeh interview mein derive karne ki cheez nahi hai, bas bol do aur aage badho.</p>
+<p><b>3. GCD kyun chalta hai? Numbers par karke dekho, formula baad mein.</b> <code>gcd(1071, 462)</code> nikalna hai. Pehla step: <code>1071 = 2 × 462 + 147</code>.</p>
+<p>Ab socho koi number dono ko divide karta hai, jaise <b>21</b>. To <code>2 × 462</code> bhi 21 se katega, aur 1071 bhi. Matlab jo bacha, yaani <b>147</b>, woh bhi 21 se hi katega. Ulta bhi utna hi sach hai: jo 462 aur 147 dono ko kaatta hai, woh 1071 ko bhi kaatega. To <b>(1071, 462) aur (462, 147) ke common divisors bilkul same hain</b>, bas numbers chhote ho gaye. Sabse bada bhi isliye same rahega.</p>
+<p>Yahi <code>gcd(a, b) = gcd(b, a mod b)</code> hai. Repeat karte jao jab tak b zero na ho: <code>1071, 462</code> se <code>462, 147</code>, phir <code>147, 21</code>, phir <code>21, 0</code>. Jawab <b>21</b>. Har do step mein bada number kam se kam aadha ho jaata hai, isliye <b>O(log min(a, b))</b>.</p>
 <p><b>4. lcm mein order galat mat karna.</b> <code>lcm = a / gcd(a, b) * b</code> likho, <code>a * b / gcd</code> nahi. gcd, a ko poora divide karta hai to kuch khota nahi, par <code>a * b</code> banaya to woh <b>overflow</b> kar sakta hai. Overflow kya karta hai, woh numbers wale concept mein detail se hai.</p>
 <p><b>5. Fast power.</b> <code>x^16</code> ke liye 16 baar guna mat karo, chaar baar square kar lo. Exponent ko aadha karte jao, <b>O(log e)</b> steps. Aur har step ke baad <code>% m</code> lagao, tabhi number chhota rehta hai. Isiliye problems answer <code>mod 10⁹ + 7</code> maangte hain.</p>
 <p><b>6. Mod ke saath division kaam nahi karta.</b> Plus, minus, multiply, teeno mod ke andar theek chalte hain. <b>Divide nahi.</b> b se divide karne ke liye uska <b>modular inverse</b> chahiye, matlab woh number jiska <code>b × inv</code> mod m mein 1 ho. Jab m prime hai (aur 10⁹ + 7 prime hai), Fermat se: <code>inv = power(b, m - 2, m)</code>. Isi se nCr nikalta hai: factorials aur unke inverses pehle bana lo, phir har query O(1).</p>
 <p><b>Ek warning:</b> Fermat sirf <b>prime modulus</b> par chalta hai, aur tabhi jab b, m ka multiple na ho. Modulus prime nahi hai to extended Euclid chahiye, aur woh alag kahani hai.</p>`,
 
   viz: ["sieve"],
+
+  math: [
+    { t: "Why the square root is the stopping line, counted", d: "The bound is not a heuristic. Every factor above the root is paired with one below it, so the loop above the root can only find what the loop below it already found.", w:
+`n = 10,007 (prime), sqrt(n) = 100.03
+
+tests done up to the root:   2 .. 100    =    99
+tests done without a bound:  2 .. 10,006 = 10,005
+same answer, 100x the work
+
+if n = a x b and a > sqrt(n), then b = n / a < sqrt(n)` },
+    { t: "The sieve, as a sum", d: "Each prime crosses out n/p numbers. Add those up over the primes and the total is a little under three marks per number, which is why the whole thing behaves like a linear pass.", w:
+`crossings = n/2 + n/3 + n/5 + n/7 + ... over primes <= n
+          = n x (1/2 + 1/3 + 1/5 + 1/7 + ...)
+that inner sum grows like log log n
+
+n = 10^6: roughly 2.9 x 10^6 crossings, about 3 per number
+trial division on the same range: about 10^8 divisions` },
+    { t: "Euclid, run once and then bounded", d: "Each step replaces the pair with a strictly smaller one, and two steps at least halve the larger value, which is where the log comes from.", w:
+`gcd(1071, 462):
+  1071 = 2 x 462 + 147
+   462 = 3 x 147 +  21
+   147 = 7 x  21 +   0      gcd = 21
+
+why two steps halve a:
+  if b <= a/2 then a mod b < b <= a/2
+  if b >  a/2 then a mod b = a - b < a/2
+so O(log min(a, b)) steps, about 45 for values near 10^9` },
+    { t: "The lcm overflow, with values that trigger it", d: "Both orderings are algebraically identical. Only one of them ever forms the product that does not fit.", w:
+`a = 3 x 10^9   b = 4 x 10^9   gcd = 10^9
+int64 tops out at 9.22 x 10^18
+
+a x b / gcd:  3e9 x 4e9 = 1.2 x 10^19   overflowed already
+a / gcd x b:  3 x 4e9   = 1.2 x 10^10   fine
+
+the gcd divides a exactly, so dividing first loses nothing` },
+    { t: "Fast power, counted in multiplications", d: "The exponent in binary is the recipe: one squaring per bit, one extra multiply per set bit.", w:
+`2^100, and 100 in binary is 1100100  (7 bits, 3 ones)
+
+squarings:      6
+multiplies:     3   (one per set bit)
+total:          9   operations
+naive:         99   multiplications
+
+e = 10^18: 60 bits, so at most 120 operations` },
+  ],
 
   costs: [
     ["primality by trial division", "O(√n)", "a factor above √n forces a partner below it"],
@@ -651,7 +829,7 @@ BigInt(2) ** BigInt(200);            // exact, arbitrarily large`,
     "<b>Starting the sieve's inner loop at <code>2 * p</code>.</b> It still gives the right answer, it just re-crosses numbers that died on an earlier pass. Start at <code>p * p</code> and stop the outer loop once <code>p * p &gt; n</code>.",
     "<b><code>a * b / gcd(a, b)</code> for the lcm.</b> The product overflows for inputs that the lcm itself would survive. Divide first: <code>a / gcd(a, b) * b</code>.",
     "<b>Taking the modulus only at the end</b> of a power or a factorial. The intermediate is what overflows, so reduce after every multiplication, and hold the accumulator in 64 bits because the product of two values just under 10⁹ needs 60 bits.",
-    "<b>Using Fermat's inverse on a composite modulus</b>, or on a b that is a multiple of m. Both are silent: you get a number, it is simply not an inverse. Fermat needs m prime and b not divisible by m.",
+    "<b>Using Fermat's inverse on a composite modulus</b>, or on a b that is a multiple of m. Both are silent: you get a number, it is simply not an inverse. Fermat needs m prime and b not divisible by m, and the modular inverse concept has the rest of the story, including what to do when neither holds.",
     "<b>Feeding negative values to gcd or to a mod chain.</b> In the truncating languages <code>-7 % 3</code> is negative, so normalise with <code>((x % m) + m) % m</code>, especially after a subtraction under a modulus. The numbers concept has the full story on modulo signs.",
   ],
 
@@ -882,6 +1060,288 @@ Number(power(2n, 100n, M));               // convert back only at the very end`,
 
 /* ==================================================================== */
 {
+  id: "mod-inverse",
+  n: "Modular multiplicative inverse",
+  group: "Fundamentals",
+  one: "Under a modulus there is no division, only multiplication. <b>a / b becomes a × inv(b)</b>, the one residue with <code>b × inv(b) ≡ 1</code>.",
+
+  plain: `<p>Some problems ask for the answer <b>mod 10⁹ + 7</b>. That means: give the remainder after dividing by that number. It is asked for so the numbers stay small, because the true answer might have a thousand digits.</p>
+<p>Adding, subtracting and multiplying all survive that. You can take the remainder at every step and still end up with the right final remainder. Then the problem asks for an average, or a probability, or a count that involves a division, and you are stuck. <b>There is no divide.</b></p>
+<p>Not slow, not fiddly. It is not there. Working mod 7, the value <code>3 / 5</code> is not a whole number, so there is no remainder for it to be.</p>
+<p>So keep what division was <i>for</i> and throw away the fraction. Dividing by 5 always meant multiplying by the thing that undoes 5. So look for a number <code>inv</code> where <code>5 × inv</code> leaves remainder 1, and then read <code>a / 5</code> as <code>a × inv</code>. Such a number exists only when 5 and the modulus share no factor, and when it exists there is exactly one of it.</p>
+<p><b>Analogy.</b> A clock with m hours, and you always jump b hours forward. Start at 0 and keep going. If b and m share no factor you eventually stand on every hour there is. So you must pass through 1, and the number of jumps that took is the inverse. If they share a factor you only ever land on some of the hours, and 1 is not one of them. The whole existence question is that picture.</p>`,
+
+  why: [
+    { t: "The modulus is there so nothing overflows, and three operations survive it", d: "An answer is requested <code>mod m</code> so you can reduce after every step and keep every value under m. That works because remainders are compatible with <b>addition, subtraction and multiplication</b>: reduce first or reduce last, same result. Division is the one operation left outside, and everything below is the cost of that." },
+    { t: "There is no fraction to reduce, and the number you would divide is already gone", d: "Under mod 7, <code>3 / 5</code> is not an integer, so asking for it mod 7 has no answer by that route at all. And where the quotient <i>is</i> a whole number, the route is still blocked: <code>nCr = n! / (r!(n-r)!)</code> is an integer, but you never stored <code>n!</code>, only <code>n! mod m</code>. The one value you wanted to divide is the one that was thrown away on purpose." },
+    { t: "So keep the definition of division and drop the fraction", d: "In ordinary arithmetic, dividing by b means multiplying by the number that undoes b: <code>b × (1/b) = 1</code>. Keep exactly that, and look for the undoing number among the remainders. Find x with <code>b × x ≡ 1 (mod m)</code> and call it <code>inv(b)</code>. Then <code>a / b</code> simply means <code>a × inv(b)</code>. When b really does divide a, this agrees with the ordinary quotient, because multiplying the result back by b returns a." },
+    { t: "It exists exactly when gcd(b, m) = 1, and then there is only one", d: "Picture a clock with <b>m hours</b>, and jump <b>b hours</b> forward each time, starting at 0. Asking whether an inverse exists is asking one thing: <b>do you ever land on 1?</b> You get back to 0 after <code>m / gcd(b, m)</code> jumps. You have stood on that many hours, and on no others. If <code>gcd(b, m) = 1</code> that is all m hours, so 1 is one of them. You stand on it exactly once, which is why the inverse exists and why there is only one. Now let <code>d = gcd(b, m)</code> be bigger than 1. Every hour you land on is a multiple of d, because b is one and m is one, so jumping and wrapping both keep you on them. 1 is not a multiple of d. You never reach it, however long you walk." },
+    { t: "When m is prime, Fermat hands it to you in one fast power", d: "Fermat's little theorem: for prime m and b not a multiple of m, <code>b^(m-1) ≡ 1</code>. Peel off one factor of b and read it as a product: <code>b × b^(m-2) ≡ 1</code>. The second factor satisfies the definition, so <code>inv(b) = b^(m-2) mod m</code>, computed by squaring in <b>O(log m)</b>. That is the whole reason problems pick 10⁹ + 7: it is prime, so every division in the problem costs one fast power." },
+    { t: "When m is not prime, Euclid still works, and also tells you when to stop", d: "Run Euclid while carrying coefficients and it produces x and y with <code>b × x + m × y = gcd(b, m)</code>. If that gcd is 1, take both sides mod m. The <code>m × y</code> term disappears, leaving <code>b × x ≡ 1</code>. So x is the inverse, once you have shifted it into <code>[0, m)</code>. Same <b>O(log m)</b>, no primality needed. And if the gcd comes back as anything other than 1, the algorithm has just proved no inverse exists, which is the useful half of the answer." },
+    { t: "For many inverses, pay one power. And know what this still cannot do", d: "nCr mod a prime needs every inverse factorial. Doing each with its own power is <code>O(n log m)</code> and wasteful: invert <code>fact[n]</code> once, then walk down with <code>invfact[i-1] = invfact[i] × i</code>, since <code>1/(i-1)! = (1/i!) × i</code>. One power, then n multiplications. What none of this buys you: an inverse is a residue, not a size. <code>inv(2) mod 7</code> is 4, which is larger than 2 and means nothing, so you cannot compare, sort, floor or maximise modular values. And when <code>gcd(b, m) &gt; 1</code> there is no answer at all. The only way out is to avoid dividing: Pascal's triangle only ever adds, which is why it survives any modulus." },
+  ],
+
+  hing: `<p><b>Sabse pehle yeh samajh lo: mod ke andar division exist hi nahi karta.</b> Plus, minus, multiply theek chalte hain. Divide ke liye <code>inv(b)</code> chahiye, matlab woh residue jiska <code>b × inv(b)</code> mod m mein <b>1</b> ho. Phir <code>a / b</code> ka matlab hai <code>a × inv(b)</code>.</p>
+<p><b>1. Exist kab karta hai? Ek ghadi soch lo, algebra ki zaroorat nahi.</b> Ghadi mein <code>m</code> ghante hain, aur aap har baar <code>b</code> ghante aage kood rahe ho, 0 se shuru karke. Sawaal bas itna hai: <b>kya aap kabhi 1 par khade honge?</b></p>
+<p><b>m = 7, b = 5 lo.</b> 0 se chalo: 0, 5, 3, 1, 6, 4, 2, aur phir wapas 0. <b>Saat ke saat ghante</b> aa gaye, to 1 to aana hi tha. Aur 1 tak pahunchne mein <b>3 chhalaang</b> lagi, isliye <code>inv(5) = 3</code>. Bas, inverse mil gaya, bina kisi formula ke.</p>
+<p><b>Ab m = 6, b = 2 lo.</b> 0, 2, 4, aur wapas 0. Sirf <b>teen</b> jagah. Aap hamesha even ghante par hi rukoge, kyunki 2 bhi even hai aur 6 bhi. 1 odd hai, to woh kabhi aayega hi nahi, chahe jitna chal lo. <b>Inverse nahi milta kyunki hai hi nahi</b>, dhoondhne mein mushkil nahi hai.</p>
+<p><b>Poora rule ek line mein:</b> aap 0 par wapas <code>m / gcd(b, m)</code> chhalaang ke baad aate ho, aur utne hi ghante dekhte ho. gcd 1 hua to poori ghadi ghoom jaati hai, matlab 1 bhi zaroor aayega. gcd <code>d</code> hua to sirf d ke multiples aate hain, aur 1 unmein hai hi nahi. Interview mein itna bol do: <b>"exists if and only if gcd(b, m) = 1"</b>.</p>
+<p><b>2. Fermat ka derivation, ratna mat, nikalna seekho.</b> m prime hai to <code>b^(m-1) ≡ 1</code>. Ab ek b bahar nikal lo: <code>b × b^(m-2) ≡ 1</code>. Definition ke hisaab se doosra factor hi inverse hai. Bas: <code>inv(b) = power(b, m - 2, m)</code>, <b>O(log m)</b>. 10⁹ + 7 prime isliye chuna jaata hai.</p>
+<p><b>3. m prime nahi hai to extended Euclid.</b> Woh x, y deta hai jisme <code>b×x + m×y = gcd</code>. gcd 1 hua to mod m lene par <code>m×y</code> gayab, bacha <code>b×x ≡ 1</code>. x negative aa sakta hai, to <code>((x % m) + m) % m</code> zaroor karna.</p>
+<p><b>4. Yeh wali galti sabse mehngi padti hai.</b> nCr ke liye har factorial ka inverse alag power se nikalna <code>O(n log m)</code> hai, aur n = 10⁶ par TLE. <b>Ek hi power lagao</b> <code>invfact[n]</code> ke liye, phir neeche walk karo: <code>invfact[i-1] = invfact[i] * i</code>. Kyunki <code>1/(i-1)! = (1/i!) × i</code>. Ek power, phir n multiplications.</p>
+<p><b>Ek aakhri baat:</b> inverse ek residue hai, size nahi. <code>inv(2) mod 7 = 4</code>, jo 2 se bada hai aur iska koi matlab nahi. Mod ke andar compare, sort, floor, maximum, kuch bhi meaningful nahi hota. Problem "maximum ratio mod 10⁹ + 7" maange to woh problem galat likhi hai.</p>`,
+
+  viz: ["mod-inverse"],
+
+  math: [
+    { t: "Find one by hand, then find the same one by Fermat", d: "Walking the row is the definition. Fermat is the shortcut that lands on the identical value without walking anything.", w:
+`m = 7, b = 5.  the row 5k mod 7:
+
+k     0   1   2   3   4   5   6
+5k    0   5   3   1   6   4   2
+                  ^ 1 sits at k = 3, so inv(5) = 3
+
+Fermat: inv(5) = 5^(7-2) = 5^5 = 3125
+        3125 = 446 x 7 + 3   ->  3 . Same answer.` },
+    { t: "Now do the division, and check it the only way that means anything", d: "The check is the definition read backwards: multiply the answer by the divisor and the original value has to reappear.", w:
+`3 / 5 (mod 7)
+  = 3 x inv(5)
+  = 3 x 3 = 9 = 2   (mod 7)
+
+check: 2 x 5 = 10 = 3 (mod 7)    the 3 came back` },
+    { t: "Extended Euclid on the same pair, both directions", d: "Run Euclid forwards for the gcd, then substitute backwards to get the coefficients. The coefficient of b is the inverse.", w:
+`forwards:
+  7 = 1 x 5 + 2
+  5 = 2 x 2 + 1
+  2 = 2 x 1 + 0        gcd = 1, so an inverse exists
+
+backwards:
+  1 = 5 - 2 x 2
+    = 5 - 2 x (7 - 1 x 5)
+    = 3 x 5 - 2 x 7
+
+mod 7 the second term vanishes: 3 x 5 = 1, inv(5) = 3` },
+    { t: "And the case where there is nothing to find", d: "Change the modulus to 6 and the row stops being a permutation. It visits only the multiples of the gcd, and 1 is not one of them.", w:
+`m = 6, b = 2.  the row 2k mod 6:
+
+k     0   1   2   3   4   5
+2k    0   2   4   0   2   4
+
+3 distinct values, not 6. gcd(2, 6) = 2, and the row hits
+exactly the 6/2 = 3 multiples of 2. 1 is not among them,
+so no inverse exists. Not hard to find: absent.` },
+    { t: "One power, not n of them", d: "This is the difference between a solution that passes and one that times out, and it is a single line of arithmetic.", w:
+`n = 200,000 inverse factorials, m = 10^9 + 7
+one fast power costs about 30 squarings + 30 multiplies
+
+a power per entry:  200,000 x 60  = 1.2 x 10^7 multiplies
+one power, then walk down:   60 + 200,000  = 2 x 10^5
+
+invfact[i-1] = invfact[i] x i,  since 1/(i-1)! = (1/i!) x i` },
+  ],
+
+  costs: [
+    ["inverse by Fermat, prime m", "O(log m)", "it is one fast power, b^(m-2), and nothing else"],
+    ["inverse by extended Euclid, gcd(b, m) = 1", "O(log m)", "the same steps as a plain gcd, carrying two coefficients along"],
+    ["deciding whether an inverse exists", "O(log m)", "it is a gcd, and the answer is yes only when it returns 1"],
+    ["one division under a modulus", "O(log m)", "one inverse plus one multiply, so never put it inside a hot loop"],
+    ["factorials and inverse factorials up to n", "O(n) precompute, O(1) per nCr", "one power for invfact[n], then walk down multiplying by i"],
+    ["every inv[1..n] for a prime m", "O(n) total", "inv[i] is built from inv[m mod i], which is already known"],
+  ],
+
+  traps: [
+    "<b>Using Fermat on a composite modulus.</b> <code>b^(m-2)</code> is a perfectly good number for m = 12, it is simply not an inverse. Nothing throws, nothing warns, and the answer is wrong by a value you cannot reverse engineer. Fermat needs m prime, full stop.",
+    "<b>Inverting 0, or any b that is a multiple of m.</b> <code>pow(0, m-2, m)</code> returns 0, which multiplies back to 0, not 1. This happens for real when a factorial or a product legitimately reduces to 0 mod m, so guard the divisor rather than trusting the formula.",
+    "<b>Forgetting that extended Euclid can return a negative x.</b> Outside Python the coefficient often comes back below zero and indexes or multiplies as garbage. Normalise once with <code>((x % m) + m) % m</code>.",
+    "<b>Computing an inverse inside the loop.</b> Every nCr costing its own <code>O(log m)</code> power turns an O(n) solution into O(n log m), which at n = 10⁶ is the difference between passing and a timeout. Precompute the inverse factorial table once.",
+    "<b>Writing <code>fact[n] / fact[r] % M</code> in code.</b> Both values are already reduced, so this is integer division on two residues: it silently produces a number that has nothing to do with the answer. If a <code>/</code> appears anywhere inside a modular expression, it is a bug.",
+    "<b>Treating the result as a magnitude.</b> Modular values have no order, so comparing them, taking a maximum, or rounding one is meaningless even though the code compiles and runs.",
+  ],
+
+  impl: [
+    ["Python", "pow(b, -1, m) since 3.8 · pow(b, m - 2, m) · math.gcd", "The negative exponent form works for any m coprime to b, not just primes, and raises ValueError when no inverse exists, which is the behaviour you want. No overflow to plan around."],
+    ["Java", "BigInteger.modInverse · BigInteger.modPow", "Correct but allocation heavy in a tight loop. For long arithmetic write the four-line fast power yourself, hold everything in long, and reduce after every multiply. modInverse throws ArithmeticException when the gcd is not 1."],
+    ["C++", "nothing built in, std::gcd in numeric (C++17)", "Write the power or the extended Euclid, both short. Use long long for the products, and __int128 once the modulus passes about 3 × 10⁹, since the square of the operand is what overflows."],
+    ["JavaScript", "no built-in, and numbers are doubles", "Integers are exact only to 2⁵³, so <code>b * b</code> with b near 10⁹ is already wrong. Do all of it in BigInt. BigInt has no modPow, so the squaring loop is yours to write, and convert back with Number only at the end."],
+  ],
+
+  code: {
+    pseudo: `# THE DEFINITION: inv(b) is the residue with b * inv(b) = 1 (mod m).
+# It exists if and only if gcd(b, m) = 1, and then it is unique.
+
+# 1. FERMAT, only when m is PRIME and b is not a multiple of m
+#    b^(m-1) = 1  ->  b * b^(m-2) = 1  ->  inv(b) = b^(m-2)
+inverse_prime(b, m):
+    return power(b, m - 2, m)
+
+power(b, e, m):                        # squaring, O(log e)
+    r <- 1; b <- b mod m
+    while e > 0:
+        if e is odd: r <- r * b mod m  # reduce EVERY step, not at the end
+        b <- b * b mod m
+        e <- e / 2
+    return r
+
+# 2. EXTENDED EUCLID, any m coprime to b, prime or not
+#    returns (g, x, y) with a * x + b * y = g = gcd(a, b)
+egcd(a, b):
+    if b == 0: return (a, 1, 0)
+    (g, x1, y1) <- egcd(b, a mod b)
+    return (g, y1, x1 - (a / b) * y1)  # integer division
+
+inverse_any(b, m):
+    (g, x, y) <- egcd(b, m)
+    if g != 1: return NONE             # no inverse exists. Not a hard one: none
+    return ((x mod m) + m) mod m       # x can come back negative
+
+# 3. DIVISION under a modulus is a multiplication
+(a / b) mod m  ->  a * inverse(b) mod m
+
+# 4. n INVERSES cost ONE power, not n
+invfact[n] <- inverse_prime(fact[n], m)
+for i from n down to 1:
+    invfact[i - 1] <- invfact[i] * i mod m    # 1/(i-1)! = (1/i!) * i
+
+nCr(n, r) <- fact[n] * invfact[r] * invfact[n - r]    # reduce at each step`,
+    py: `M = 10 ** 9 + 7
+
+pow(b, M - 2, M)        # Fermat. Correct ONLY because M is prime
+pow(b, -1, M)           # 3.8+, any m coprime to b, ValueError when there is none
+
+def egcd(a, b):                       # a*x + b*y = gcd(a, b)
+    if b == 0: return (a, 1, 0)
+    g, x1, y1 = egcd(b, a % b)
+    return (g, y1, x1 - (a // b) * y1)
+
+def inverse(b, m):
+    g, x, _ = egcd(b, m)
+    if g != 1: return None            # gcd is not 1, so nothing exists to return
+    return x % m                      # Python's % already lands in [0, m)
+
+N = 200000
+fact = [1] * (N + 1)
+for i in range(1, N + 1): fact[i] = fact[i - 1] * i % M
+
+invfact = [1] * (N + 1)
+invfact[N] = pow(fact[N], M - 2, M)   # ONE power for the whole table
+for i in range(N, 0, -1): invfact[i - 1] = invfact[i] * i % M
+
+def nCr(n, r):
+    if r < 0 or r > n: return 0
+    return fact[n] * invfact[r] % M * invfact[n - r] % M`,
+    java: `static final long M = 1_000_000_007L;
+
+static long power(long b, long e, long m) {
+    long r = 1; b %= m;
+    while (e > 0) {
+        if ((e & 1) == 1) r = r * b % m;  // long: the product needs 60 bits
+        b = b * b % m;
+        e >>= 1;
+    }
+    return r;
+}
+static long inverse(long b) { return power(b, M - 2, M); }   // M must be prime
+
+// Any coprime modulus: extended Euclid. r = {g, x, y} with a*x + b*y = g
+static long[] egcd(long a, long b) {
+    if (b == 0) return new long[]{a, 1, 0};
+    long[] r = egcd(b, a % b);
+    return new long[]{r[0], r[2], r[1] - (a / b) * r[2]};
+}
+static long inverse(long b, long m) {
+    long[] r = egcd(b, m);
+    if (r[0] != 1) return -1;             // caller must check: there is none
+    return ((r[1] % m) + m) % m;          // x can come back negative
+}
+
+// BigInteger.modInverse is correct and throws when the gcd is not 1,
+// but it allocates, so keep it out of an inner loop.`,
+    cpp: `const long long M = 1000000007;
+
+long long power(long long b, long long e, long long m) {
+    long long r = 1; b %= m;
+    while (e > 0) {
+        if (e & 1) r = r * b % m;
+        b = b * b % m;
+        e >>= 1;
+    }
+    return r;
+}
+long long inverse(long long b) { return power(b, M - 2, M); }  // prime M only
+
+// Extended Euclid: any m with gcd(b, m) == 1, returns -1 when there is none
+long long egcd(long long a, long long b, long long &x, long long &y) {
+    if (b == 0) { x = 1; y = 0; return a; }
+    long long x1, y1, g = egcd(b, a % b, x1, y1);
+    x = y1; y = x1 - (a / b) * y1;
+    return g;
+}
+long long inverseAny(long long b, long long m) {
+    long long x, y;
+    if (egcd(b, m, x, y) != 1) return -1;
+    return ((x % m) + m) % m;
+}
+
+// Every inv[1..n] in O(n), no powers at all. M must be prime.
+vector<long long> smallInverses(int n) {
+    vector<long long> inv(n + 1, 1);
+    for (int i = 2; i <= n; i++)
+        inv[i] = (M - (M / i) * inv[M % i] % M) % M;
+    return inv;
+}`,
+    js: `// Doubles are exact only to 2**53, and b * b with b near 1e9 is not.
+// So all of this is BigInt, and BigInt has no modPow: write the loop.
+const M = 1000000007n;
+
+function power(b, e, m) {
+  let r = 1n; b %= m;
+  while (e > 0n) {
+    if (e & 1n) r = (r * b) % m;
+    b = (b * b) % m;
+    e >>= 1n;
+  }
+  return r;
+}
+const inverse = (b) => power(b, M - 2n, M);   // Fermat, and M is prime
+
+// Any coprime modulus. Iterative, so a large m cannot blow the stack.
+function inverseAny(b, m) {
+  let [oldR, r] = [b % m, m];
+  let [oldS, s] = [1n, 0n];
+  while (r !== 0n) {
+    const q = oldR / r;                       // BigInt division truncates
+    [oldR, r] = [r, oldR - q * r];
+    [oldS, s] = [s, oldS - q * s];
+  }
+  if (oldR !== 1n) return null;               // gcd is not 1: no inverse
+  return ((oldS % m) + m) % m;
+}
+Number(inverse(5n));                          // back to Number only at the end`,
+  },
+  codecap: "Two routes to the same residue: one fast power when the modulus is prime, extended Euclid when it is not. Everything else here is one of those two, batched.",
+
+  q: [
+    ["Why can you not simply divide under a modulus?", "Because the quotient need not be an integer, so there is no residue for it to be: 3 / 5 mod 7 has no answer as a fraction. And where the quotient is an integer, you no longer hold the value to divide, only its remainder. Division is rebuilt as multiplication by the inverse instead."],
+    ["When does an inverse exist, and why?", "Exactly when gcd(b, m) = 1. Jump b hours at a time around a clock of m hours, starting at 0: you return to 0 after m / gcd(b, m) jumps, having stood on that many hours. If the gcd is 1 you stand on all m of them, so you land on 1, exactly once, and the number of jumps that took is the inverse. If the gcd is d > 1 you only ever land on multiples of d, since b and m are both multiples of d, and 1 is not one of them, so you never reach it at all."],
+    ["Derive Fermat's inverse rather than quoting it.", "For prime m and b not a multiple of m, b^(m-1) ≡ 1. Split off one b: b × b^(m-2) ≡ 1. The second factor is by definition the inverse, so inv(b) = b^(m-2) mod m, one fast power in O(log m)."],
+    ["The modulus is 2³², and the divisor is even. What do you do?", "Nothing, on that route: gcd is at least 2, so no inverse exists. The division has to be avoided instead. Build the value by addition (Pascal's triangle for binomials, since it only ever adds), or factor the powers of two out of the numerator and denominator first and invert what remains."],
+    ["You need every inverse factorial up to 2 × 10⁵. How many fast powers is that?", "One. Invert fact[N] with a single power, then walk down using invfact[i-1] = invfact[i] × i, because 1/(i-1)! = (1/i!) × i. Doing a power per entry is O(n log m) and is a common source of timeouts."],
+    ["Extended Euclid returns x = -3 for m = 7. What is the inverse, and what does a gcd of 2 mean?", "The inverse is ((-3 % 7) + 7) % 7 = 4, since the coefficient is only defined up to multiples of m. A gcd of 2 means the algorithm has proved there is no inverse, which is a complete answer and not a failure."],
+  ],
+
+  p: [
+    [50, "powx-n", "Pow(x, n), the squaring loop every inverse is built on", "M"],
+    [1922, "count-good-numbers", "Count Good Numbers, one fast power mod 10⁹ + 7", "M"],
+    [365, "water-and-jug-problem", "Water and Jug, Bézout, the identity behind extended Euclid", "M"],
+    [62, "unique-paths", "Unique Paths, nCr wearing a grid, and the divide is the whole problem", "M"],
+    [2400, "number-of-ways-to-reach-a-position-after-exactly-k-steps", "Ways to Reach a Position, one binomial mod a prime", "M"],
+    [1569, "number-of-ways-to-reorder-array-to-get-same-bst", "Reorder Array for the Same BST, inverse factorials or a timeout", "H"],
+    [1250, "check-if-it-is-a-good-array", "Check If It Is a Good Array, gcd = 1 is exactly when an inverse exists", "H"],
+  ],
+},
+
+/* ==================================================================== */
+{
   id: "bits",
   n: "Bit manipulation",
   group: "Fundamentals",
@@ -889,14 +1349,14 @@ Number(power(2n, 100n, M));               // convert back only at the very end`,
 
   plain: `<p>Every integer you have ever used is stored as a row of bits, each worth twice the one to its right. Bit manipulation is not a separate branch of mathematics. It is just addressing those switches directly instead of politely going through arithmetic.</p>
 <p>There are four things you can do to a bit: set it, clear it, flip it, or ask whether it is on. All four are the same two steps. Build a mask with a shift, then combine it with AND, OR or XOR.</p>
-<p>Most of the time this buys you nothing that a boolean array would not, and costs you readability. It earns its place in exactly two situations: when you need a set of up to about 32 items to fit in a single integer (bitmask DP, subsets, visited states), and when XOR's cancelling property turns an O(n) space problem into an O(1) space one.</p>
+<p>Most of the time this buys you nothing that a boolean array would not, and costs you readability. It earns its place in exactly two situations. First, when a set of up to about 32 items has to fit in one integer: bitmask DP, subsets, visited states. Second, when XOR's cancelling turns an O(n) space problem into an O(1) space one.</p>
 <p><b>Analogy.</b> A row of light switches on a wall. You can flip one, or you can hold a stencil over the wall and flip everything showing through the holes. The stencil is the mask. That is genuinely the entire concept.</p>`,
 
   why: [
     { t: "Position is value, so shifting is multiplying", d: "Bit i is worth 2<sup>i</sup>. Shifting left by one moves every bit up a position, which doubles the number; shifting right halves it and throws away the remainder. So <code>1 &lt;&lt; k</code> is \"a single 1, sitting in position k\", which is how every mask gets built." },
     { t: "The three operators do the three jobs, and no others", d: "<b>OR</b> turns bits on and never turns any off, so it sets. <b>AND</b> keeps only what both sides agree on, so with an inverted mask it clears, and with a single-bit mask it tests. <b>XOR</b> differs, so it flips. Once you see which operator has which personality you stop memorising the four idioms." },
     { t: "XOR is the one with a real superpower", d: "<code>a ^ a = 0</code> and <code>a ^ 0 = a</code>. Together those mean XOR-ing a whole array cancels out every value that appears an even number of times and leaves the odd one standing. Finding the single unpaired number takes <b>O(n) time and O(1) space</b>, with no hash map and no sorting. It is also symmetric and order-independent, so you can do it in any order you like." },
-    { t: "A number is a set, if you squint", d: "Bit i on means \"item i is in the set\". Now union is OR, intersection is AND, membership is one AND, and the whole set is a single integer you can use as a dictionary key or a DP state. That is the actual reason bitmask DP exists: 2<sup>n</sup> subsets become 2<sup>n</sup> integers, which a machine handles comfortably up to about n = 20." },
+    { t: "A number is a set, if you squint", d: "Bit i on means \"item i is in the set\". Now union is OR, intersection is AND, and membership is a single AND. The whole set is one integer, which you can use as a dictionary key or a DP state. That is the actual reason bitmask DP exists: 2<sup>n</sup> subsets become 2<sup>n</sup> integers, which a machine handles comfortably up to about n = 20." },
     { t: "The identities worth knowing, and the ones that are just showing off", d: "<code>x &amp; (x - 1)</code> clears the lowest set bit, because subtracting one flips that bit off and everything below it on. That gives you both the power-of-two test (<code>x &amp; (x-1) == 0</code>) and a population count that runs once per set bit instead of 32 times. Everything beyond those is a party trick, and your language has a built-in for it anyway." },
     { t: "The sharp edges are all about width and sign", d: "Shifting by more than the width is undefined in C++ and quietly wraps in Java. Right-shifting a negative number copies the sign bit, which is why Java has a separate <code>&gt;&gt;&gt;</code>. JavaScript coerces to 32 bits for any bitwise operation, so a perfectly good large number becomes garbage. And Python has no width at all, so <code>~5</code> is <code>-6</code> forever rather than wrapping. Four languages, four different opinions." },
   ],
@@ -914,6 +1374,50 @@ Number(power(2n, 100n, M));               // convert back only at the very end`,
 
   viz: ["bits"],
   see: [["DOC", "https://graphics.stanford.edu/~seander/bithacks.html", "Bit Twiddling Hacks (read once, use twice)"]],
+
+  math: [
+    { t: "Position is value, so a shift is a multiply", d: "Nothing clever here, it is base two written out. But it is the line every other identity leans on.", w:
+`1011 = 1x2^3 + 0x2^2 + 1x2^1 + 1x2^0 = 8 + 0 + 2 + 1 = 11
+
+11 << 3  =  11 x 8   = 88
+11 >> 1  =  11 / 2   = 5      rounds DOWN, always
+-11 >> 1 =  -6                floor, not truncation` },
+    { t: "n & (n-1) clears the lowest set bit", d: "Subtracting one borrows through the trailing zeros, flipping the lowest 1 to 0 and everything under it to 1. The AND then keeps only what is above.", w:
+`n      = 12 = 1100
+n - 1  = 11 = 1011      <- lowest 1 flipped, zeros below became 1
+n & (n-1)   = 1000 = 8
+
+12 -> 8 -> 0 : two steps, so popcount(12) = 2
+
+cost is the number of set bits, not the width.
+one iteration per 1, up to 32 or 64, usually far fewer.` },
+    { t: "XOR cancels, in any order", d: "a ^ a = 0 and a ^ 0 = a, and XOR is commutative and associative, so pairs annihilate wherever they happen to sit in the array.", w:
+`[4, 1, 2, 1, 2]
+
+4 ^ 1 ^ 2 ^ 1 ^ 2
+= 4 ^ (1 ^ 1) ^ (2 ^ 2)      reorder freely
+= 4 ^ 0 ^ 0
+= 4
+
+O(n) time, O(1) space, and no second pass to confirm` },
+    { t: "Subsets, counted, including the one that catches people out", d: "A set of k items has 2^k subsets, and the integers 0 to 2^k - 1 are exactly those subsets written in binary.", w:
+`k = 20:  2^20 = 1,048,576          fine
+k = 25:  2^25 = 33,554,432         borderline
+k = 30:  2^30 = 1.07 x 10^9        too many
+
+iterating every submask of every mask is 3^n, not 4^n:
+each element is in neither, in the mask only, or in both
+3^20 = 3.5 x 10^9   4^20 = 1.1 x 10^12` },
+    { t: "The width traps, in numbers", d: "Every one of these compiles, runs, and gives a value. The value is just not the one you meant.", w:
+`1 << 31    in a 32-bit int = -2,147,483,648   (the sign bit)
+1L << 31   = 2,147,483,648                    (widen first)
+
+-8 >> 1  = -4              arithmetic: the sign is copied in
+-8 >>> 1 = 2,147,483,644   logical: a zero is shifted in
+
+shifting by >= the width is undefined in C++ and is
+a shift by (count mod 32) in Java. Neither is what you want.` },
+  ],
 
   costs: [
     ["set / clear / flip / test one bit", "O(1)", "a single machine instruction each"],
@@ -1102,7 +1606,7 @@ function singleNumber(nums) {
 
   plain: `<p>An array is not a list of boxes scattered in memory. It is <b>one unbroken strip</b>, every slot the same size, laid end to end. That is the whole design.</p>
 <p>Because of it, <code>a[7]</code> needs no searching at all: the computer computes <code>start + 7 × slot_size</code> and reads that address directly. One multiplication and one addition. That is why indexing is O(1), and why it stays O(1) whether the array holds 10 items or 10 million.</p>
-<p><b>Analogy.</b> A row of numbered lockers bolted to a wall. Locker 412 takes the same time to reach as locker 3. You just walk straight to it. But adding a locker <i>between</i> 3 and 4 means unbolting and shifting every locker after it. That shift is the O(n) insert, and it is not a quirk of any one language: it is what "contiguous" costs.</p>`,
+<p><b>Analogy.</b> A row of numbered lockers bolted to a wall. Locker 412 takes the same time to reach as locker 3. You just walk straight to it. But adding a locker <i>between</i> 3 and 4 means unbolting and shifting every locker after it. That shift is the O(n) insert. It is not a quirk of any one language. It is the price of keeping everything in one unbroken run, which is what <b>contiguous</b> means.</p>`,
 
   why: [
     { t: "Memory only understands addresses",
@@ -1162,6 +1666,48 @@ function singleNumber(nums) {
 
   viz: ["dynamic-array"],
   see: [["VA", "https://visualgo.net/en/list", "VisuAlgo, array vs linked list, animated"]],
+
+  math: [
+    { t: "The index is arithmetic, which is what O(1) actually means", d: "There is no search. The machine computes an address and reads it, and the computation does not depend on i.", w:
+`base = 0x1000, 4 bytes per int
+
+a[0]  ->  0x1000
+a[1]  ->  0x1004
+a[i]  ->  base + 4 x i
+
+a[999999] costs exactly what a[0] costs: one multiply,
+one add, one read. A linked list would cost 999,999 hops.` },
+    { t: "Doubling: add up every copy ever made", d: "Each growth copies the whole array, which looks alarming until you add the copies up. The sum is geometric, so it never passes n.", w:
+`growing 1 -> 2 -> 4 -> ... -> n, copying on each step:
+
+1 + 2 + 4 + ... + n/2  =  n - 1
+
+n appends  =  n writes + (n - 1) copies  <  2n
+per append <  2 operations, amortised O(1)
+
+now grow by ONE slot instead:
+1 + 2 + 3 + ... + (n-1) = n(n-1)/2
+n = 100,000:  under 100,000 copies  vs  5 x 10^9 copies` },
+    { t: "Amortised O(1) and worst-case O(1) are different promises", d: "The average over the sequence is a small constant. One unlucky call still copies the entire array, which matters if anything is timing individual calls.", w:
+`capacity 1,000,000, size 1,000,000
+
+the next append: allocate 2,000,000, copy 1,000,000 items
+that one call is O(n)
+
+average over the whole sequence: under 2
+worst case for one call: n
+
+a latency budget cares about the second number` },
+    { t: "The front is expensive, and here is the bill", d: "Contiguity is what made indexing free, and the same contiguity is what makes an insert at the front move everything.", w:
+`insert at index 0 of n items: n elements shift right
+
+building a list by prepending n times:
+  1 + 2 + ... + (n-1)  =  n(n-1)/2  shifts
+  n = 100,000  ->  5 x 10^9 shifts
+
+append n times, then reverse once:
+  n + n = 200,000 operations` },
+  ],
 
   costs: [
     ["a[i] read / write", "O(1)", "computed address, no search"],
@@ -1329,8 +1875,8 @@ while (i < j) { [a[i], a[j]] = [a[j], a[i]]; i++; j--; }`,
   one: "A grid is an array of arrays, so <code>grid[r][c]</code> is <b>row first</b>. Keep the four directions in one list and check bounds before you index, and most grid bugs never happen.",
 
   plain: `<p>A 2-D array is not a new data structure. It is an array whose elements happen to be arrays, which is why <code>grid[r][c]</code> means "row r, then column c inside it".</p>
-<p>That ordering is the source of an embarrassing share of grid bugs, and they hide well: on a square grid, swapping row and column produces a wrong answer rather than a crash, so your code runs, returns something plausible, and fails the one test case that uses a rectangle.</p>
-<p>The other half of grid work is neighbours. Nearly every grid problem asks about the cells next to a cell, so the four directions get written out as a list of <code>(dr, dc)</code> pairs once and looped over, rather than copied and pasted four times with the third one subtly wrong.</p>
+<p>That ordering causes an embarrassing share of grid bugs, and they hide well. On a square grid, swapping row and column gives a wrong answer rather than a crash. So the code runs, returns something plausible, and fails the one test case that uses a rectangle.</p>
+<p>The other half of grid work is neighbours. Nearly every grid problem asks about the cells next to a cell. So write the four directions once, as a list of <code>(dr, dc)</code> pairs, and loop over it. The alternative is four copy-pasted blocks with the third one subtly wrong.</p>
 <p>Everything else is bounds checking, and bounds checking is only interesting because Python will not do it for you. A negative index does not fail there. It cheerfully wraps to the far end of the grid and hands you a confidently incorrect result.</p>
 <p><b>Analogy.</b> A spreadsheet. Nobody says "column C, row 4", they say "C4" and then get it backwards in code anyway.</p>`,
 
@@ -1339,13 +1885,13 @@ while (i < j) { [a[i], a[j]] = [a[j], a[i]]; i++; j--; }`,
     { t: "Each row is a separate object, and that matters more than it sounds", d: "Because the rows are independent objects, building a grid by repeating one row hands you the same row several times over. Writing to one apparently writes to all of them. This is not a grid problem, it is the aliasing rule from the memory page arriving in a costume." },
     { t: "Neighbours are data, not control flow", d: "Write the four offsets as <code>[(-1,0),(1,0),(0,-1),(0,1)]</code> and loop. Four hand-written branches means four bounds checks, which means one of them is wrong, which means a bug that only appears on the top edge. Diagonals are four more pairs in the same list and nothing else changes." },
     { t: "Check bounds before indexing, not after", d: "<code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code>, evaluated first. Java and C++ throw or corrupt memory, which is at least honest. Python treats <code>grid[-1]</code> as the last row and returns an answer from the opposite corner of the board, which is considerably worse than a crash." },
-    { t: "The classic transforms are two boring steps, not one clever one", d: "Rotating a matrix 90 degrees in place looks like it needs a spiral and four-way swaps. It does not: <b>transpose, then reverse each row</b>. Transposing means swapping <code>grid[r][c]</code> with <code>grid[c][r]</code> only where <code>c &gt; r</code>, because doing it for every cell swaps each pair twice and returns you politely to the start." },
-    { t: "A grid is a graph that never needed building", d: "Every cell is a node and every legal move is an edge, so flood fill is DFS, shortest path on an open grid is BFS, and you never construct an adjacency list because the coordinates already are one. This is why grid questions are really graph questions wearing a rectangle, and why this page exists before the graph pages." },
+    { t: "The classic transforms are two boring steps, not one clever one", d: "Rotating a matrix 90 degrees in place looks like it needs a spiral and four-way swaps. It does not: <b>transpose, then reverse each row</b>. Transposing means swapping <code>grid[r][c]</code> with <code>grid[c][r]</code>, but only where <code>c &gt; r</code>. Do it for every cell and each pair is swapped twice, which returns you politely to where you started." },
+    { t: "A grid is a graph that never needed building", d: "Every cell is a node and every legal move is an edge. So flood fill is DFS and shortest path on an open grid is BFS. You never build an adjacency list, because the coordinates already are one. This is why grid questions are really graph questions wearing a rectangle, and why this page exists before the graph pages." },
   ],
 
   hing: `<p><b>2-D array koi nayi cheez nahi hai.</b> Yeh bas ek array hai jiske andar arrays hain. Isiliye <code>grid[r][c]</code> ka matlab hai: pehle <b>row</b> r, phir uske andar column c.</p>
 <p><b>Aur yahi sabse zyada galtiyon ki jagah hai.</b> Square grid par row aur column ulta kar do, to program crash nahi karega. Woh chalega, jawaab dega, aur woh jawaab galat hoga. Pakda tab jaayega jab koi rectangle wala test case aayega.</p>
-<p><b>Rows alag-alag objects hote hain.</b> Isiliye ek row ko repeat karke grid banaoge to wahi ek row baar-baar mil jaayegi, aur ek cell badalne par saari rows badli dikhengi. Yeh grid ki problem nahi hai, yeh <b>memory wale page ka aliasing</b> hai jo naye kapdon mein aa gaya.</p>
+<p><b>Rows alag-alag objects hote hain.</b> Ek hi row ko repeat karke grid banaya, to wahi ek row baar-baar mil jaayegi. Phir ek cell badlo, aur saari rows badli hui dikhengi. Yeh grid ki problem nahi hai, yeh <b>memory wale page ka aliasing</b> hai jo naye kapdon mein aa gaya.</p>
 <p><b>Padosi (neighbours) ko data banao, code nahi.</b> Chaar directions ek list mein likho: <code>[(-1,0),(1,0),(0,-1),(0,1)]</code>, aur loop chala do. Chaar alag if likhoge to chaar bounds check likhne padenge, aur unme se ek galat hoga. Woh bug sirf kinare wali row par dikhega, aur tab tak tum kuch aur dhoondh rahe hoge.</p>
 <p><b>Bounds pehle check karo, index baad mein.</b> Java aur C++ to crash kar denge ya memory kharab kar denge, jo kam se kam <b>imaandaar</b> hai. Python <code>grid[-1]</code> ko aakhri row maan leta hai aur board ke doosre kone se jawaab utha kar de deta hai. Crash se yeh zyada khatarnak hai.</p>
 <p><b>90 degree rotate karna:</b> log isme spiral aur chaar-chaar swap sochne lagte hain. Zaroorat nahi. Do boring steps: <b>transpose karo, phir har row ko ulta kar do</b>. Transpose mein swap sirf wahan karo jahan <code>c &gt; r</code> hai, warna har pair do baar swap hoga aur grid waise ka waisa reh jaayega.</p>
@@ -1353,6 +1899,52 @@ while (i < j) { [a[i], a[j]] = [a[j], a[i]]; i++; j--; }`,
 
   viz: ["grid-basics"],
   see: [["VA", "https://visualgo.net/en/dfsbfs", "VisuAlgo, traversal on a grid or graph"]],
+
+  math: [
+    { t: "Two indices, one address", d: "A grid is stored as one flat run of memory, so the pair (r, c) is folded into a single offset. Knowing the fold both ways is what lets you use an integer as a cell id.", w:
+`R rows, C columns, stored row by row:
+
+  grid[r][c]  ->  flat[r * C + c]
+
+R = 3, C = 4, cell (2, 1)  ->  2 x 4 + 1 = 9
+
+and back again:
+  r = i / C     c = i mod C
+  i = 9  ->  r = 9 / 4 = 2,  c = 9 mod 4 = 1` },
+    { t: "Which loop goes outside, and what it costs to get it wrong", d: "Both orders visit every cell once and both are O(R x C). Only one of them reads memory in the order the machine actually fetches it.", w:
+`1000 x 1000 ints, 4 bytes each, 64-byte cache line = 16 ints
+
+rows outside (row-major):  1 miss per 16 reads =  62,500 misses
+cols outside:              1 miss per read     = 1,000,000 misses
+
+identical Big-O, identical output, several times the clock` },
+    { t: "Neighbours, counted", d: "Keeping the directions in a list turns four near-identical if statements into one loop, and the arithmetic below is the whole cost of doing it.", w:
+`DIRS = [(-1,0), (1,0), (0,-1), (0,1)]
+
+per cell:       4 checks    (8 with diagonals)
+full traversal: 4 x R x C   = O(R x C)
+1000 x 1000:    4 x 10^6 checks, which is free` },
+    { t: "Why the bounds check is not optional, and why testing misses it", d: "Only the border cells can walk off the grid, and on any grid worth using the border is a rounding error of the total.", w:
+`corner cell:    2 of 4 neighbours exist
+edge cell:      3 of 4
+interior cell:  4 of 4
+
+1000 x 1000 grid:
+  interior  998 x 998 = 996,004 cells   99.6 %
+  border               =   3,996 cells    0.4 %
+
+so an unguarded index is right 99.6 % of the time` },
+    { t: "Rotation is two boring passes", d: "One 90-degree clockwise turn sends (r, c) to (c, R-1-r). Transpose does the first half, reversing each row does the second.", w:
+`transpose:        (r, c) -> (c, r)
+reverse each row: (c, r) -> (c, R-1-r)
+composed:         (r, c) -> (c, R-1-r)   = 90 degrees clockwise
+
+in place, n x n:
+  transpose  n(n-1)/2 swaps
+  reversal   n x n/2  swaps
+  total      about n^2 swaps, O(1) extra space
+four turns return the grid to itself` },
+  ],
 
   costs: [
     ["grid[r][c]", "O(1)", "two index operations, nothing is searched"],
@@ -1643,7 +2235,7 @@ function rotate90(g) {
   ],
 
   hing: `<p><b>String immutable hai, matlab kya?</b> Zyaadatar languages mein (Python, Java, JS, C#) ek baar bani string badal nahi sakti. (C++ ki <code>std::string</code> aur Java ka <code>StringBuilder</code> jaan-boojh kar mutable hain, isiliye to woh bane hain.) <code>s[0] = 'x'</code> error deta hai. Padhna sab allowed hai, likhna kuch bhi nahi.</p>
-<p><b>Phir <code>s += "b"</code> kya karta hai?</b> Woh purani string ko badalta nahi, <b>ek naya object banata hai</b>, poori purani string usme copy karta hai, phir 'b' lagata hai. Purani cheez kachre mein.</p>
+<p><b>Phir <code>s += "b"</code> kya karta hai?</b> Woh purani string ko badalta nahi. Ek <b>naya object</b> banata hai, poori purani string usme copy karta hai, aur phir 'b' lagata hai. Purani cheez kachre mein.</p>
 <p><b>Ab loop mein socho.</b> Pehla step 1 char copy, doosra 2, teesra 3… n-va n. Total = n(n+1)/2 = <b>O(n²)</b>. Code dekhne mein ek simple loop lagta hai, par andar se n² hai. n = 1 lakh par yeh 5 arab character copies. TLE pakka. <b>Yeh interview ka sabse chupa hua bug hai.</b></p>
 <p><b>Sahi tarika:</b> tukde ek <b>list</b> mein daalo (list mutable hai, append O(1)), aur last mein <code>"".join(parts)</code>. join pehle total length nikaalta hai, <b>ek hi baar</b> memory leta hai, har char <b>ek hi baar</b> copy hota hai → <b>O(n)</b>.</p>
 <p><b>Immutable rakha hi kyun?</b> Kyunki tabhi string <b>dict ki key</b> ban sakti hai. Hash ek baar calculate karke cache ho jaata hai. Agar string badal sakti, to key ka hash badal jaata aur dictionary ka data kho jaata. Yeh feature hai, bug nahi.</p>
@@ -1651,6 +2243,44 @@ function rotate90(g) {
 
   viz: ["string-immutable"],
   see: [["DOC", "https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str", "Python docs, str methods"]],
+
+  math: [
+    { t: "The quadratic hiding inside a one-line loop", d: "Each += builds a whole new string, so the cost of step i is the length so far. Add those up and the loop is not linear at all.", w:
+`s = ""
+for i in 1..n:  s += "x"      # each += copies everything
+
+characters copied = 1 + 2 + 3 + ... + n = n(n+1)/2
+
+n = 1,000        500,500
+n = 100,000      5 x 10^9      seconds
+n = 1,000,000    5 x 10^11     do not` },
+    { t: "Join once and the sum collapses", d: "Collect the pieces in a list, which appends in amortised constant time, then walk the list once and allocate the result a single time.", w:
+`parts = []
+for i in 1..n: parts.append("x")    # n appends, amortised O(1)
+"".join(parts)                      # one pass, n characters
+
+total: n + n = 2n
+
+n = 100,000:  200,000 operations instead of 5 x 10^9
+the same output, about 25,000x apart` },
+    { t: "Substrings, counted, which is why brute force dies early", d: "The count is quadratic and the total length is cubic, so enumerating substrings is affordable only on very small n.", w:
+`a string of length n has n(n+1)/2 non-empty substrings
+
+n = 1,000      500,500        fine
+n = 10,000     5 x 10^7       borderline
+n = 100,000    5 x 10^9       no
+
+and materialising them all copies
+  1x1 + 2x2 + ... = n(n+1)(n+2)/6  ~  n^3/6 characters` },
+    { t: "Anagram and palindrome checks, priced against each other", d: "The sorting answer is the one everyone reaches for first. Counting is strictly better whenever the alphabet is small, which in interviews it always is.", w:
+`n = string length, k = alphabet size (26 for lowercase)
+
+sort both, compare    O(n log n) time, O(n) space
+count both, compare   O(n) time,       O(k) space
+one count array, +/-  O(n) time,       O(k) space, one pass
+
+n = 10^5:  1.7 x 10^6 comparisons  vs  2 x 10^5 increments` },
+  ],
 
   costs: [
     ["s[i]", "O(1)", "contiguous, like an array"],
@@ -1834,7 +2464,7 @@ function isPal(s) {
   one: "A hash map <b>computes the address from the key</b> instead of searching for it. That is the entire idea, and it is why \"have I seen this before?\" costs O(1) instead of O(n).",
 
   plain: `<p>Suppose you must answer "is 47 in this collection?" thousands of times. With a list you scan, O(n) each time. With a sorted array you binary search, O(log n). A hash map does something different in kind: it <b>calculates where 47 would live</b> and looks only there.</p>
-<p>The recipe: run the key through a hash function to get a big integer, take that modulo the table size to get a slot number, and use the slot directly. No comparisons with other keys, no scanning. Insert, lookup and delete are all one computation → O(1) average.</p>
+<p>The recipe is three steps. Run the key through a hash function to get a big integer. Take that number modulo the table size to get a slot. Use the slot directly. No comparisons with other keys, no scanning. Insert, lookup and delete are all one computation → O(1) average.</p>
 <p><b>Analogy.</b> A library where a book's shelf is <i>derived from its title</i> by a fixed rule, instead of being recorded in a catalogue. You never search the catalogue. You apply the rule and walk straight to the shelf. Occasionally two books land on the same shelf (a <b>collision</b>), so you glance through the two or three books there. Keep the library big enough and that glance is always tiny.</p>`,
 
   why: [
@@ -1888,6 +2518,52 @@ function isPal(s) {
 
   viz: ["hashmap"],
   see: [["VA", "https://visualgo.net/en/hashtable", "VisuAlgo, hash table with collisions, animated"]],
+
+  math: [
+    { t: "The average case, and the number it depends on", d: "The chain length is the load factor, nothing else. So O(1) is not a property of hashing, it is a property of keeping the table roomy.", w:
+`n keys, b buckets, load factor a = n / b
+expected chain length = a
+one lookup = hash + a comparisons on average
+
+n = 1,000, b = 1,333   a = 0.75  ->  0.75 comparisons
+n = 1,000, b = 16      a = 62.5  ->  62.5 comparisons
+
+same keys, same hash function, same code` },
+    { t: "Resizing is the doubling sum, again", d: "Every resize rehashes the entire table. Adding those up over the life of the map gives the same geometric series a growable array gives.", w:
+`double b whenever n passes 0.75 b
+rehash cost at each doubling: the whole table
+
+1 + 2 + 4 + ... + n  <  2n rehashes over n inserts
+per insert: amortised O(1)
+one unlucky insert: O(n), because it rehashed everything` },
+    { t: "Open addressing: the probe count explodes near the end", d: "With no chains, a full-ish table has to walk to find a free slot, and the walk length is not linear in how full it is.", w:
+`expected probes, linear probing, successful lookup:
+    (1 + 1/(1 - a)) / 2
+
+a = 0.50   ->   1.5 probes
+a = 0.75   ->   2.5
+a = 0.90   ->   5.5
+a = 0.99   ->  50.5
+
+which is why every implementation resizes well before full` },
+    { t: "The worst case is a real attack, not a footnote", d: "If every key lands in one bucket the map has quietly become a linked list, and an adversary who knows your hash function can arrange exactly that.", w:
+`n keys, all colliding:
+  lookup    O(n)
+  n inserts 1 + 2 + ... + n = n^2 / 2
+
+n = 100,000  ->  5 x 10^9 comparisons
+
+so Python and Java randomise the seed per process, and
+Java converts a bucket to a tree past 8 entries: O(log n)` },
+    { t: "Collisions arrive far earlier than the table size suggests", d: "The birthday bound says you should expect the first collision at around the square root of the space, not at the space itself.", w:
+`first collision likely at about sqrt(b) keys
+
+b = 365          ->  23 people
+b = 2^32         ->  77,000 keys
+b = 2^64         ->  5 x 10^9 keys
+
+so collision handling is never an optimisation to skip` },
+  ],
 
   costs: [
     ["d[k] lookup / insert / delete", "O(1) average", "one hash computation plus a tiny bucket"],
@@ -2053,18 +2729,18 @@ groups.get(key).push(w);
 <p><b>Analogy.</b> Two identical twins. Same appearance, so equal. Different people, so not identical. If the school files them by appearance alone, one of them is going to get the other's report card.</p>`,
 
   why: [
-    { t: "The two questions are different, so there are two operators", d: "Identity compares addresses and is always O(1). Equality compares contents and costs whatever that takes. When a language uses the same symbol for both, it has quietly chosen one for you: <code>==</code> on Java objects compares addresses, which is why two strings built at runtime can be equal and still fail <code>==</code>." },
+    { t: "The two questions are different, so there are two operators", d: "Identity compares addresses and is always O(1). Equality compares contents and costs whatever that takes. When a language uses the same symbol for both, it has quietly chosen one for you. <code>==</code> on Java objects compares addresses. That is why two strings built at runtime can hold the same letters and still fail <code>==</code>." },
     { t: "A hash map asks the hash first and equality second", d: "Look-up computes the hash to find a bucket, then uses equality to pick the right entry inside it. So the two must agree: <b>equal objects must produce the same hash</b>. If they do not, the map searches the wrong bucket, finds nothing, and reports that your key is absent while holding it a few slots away. This is the contract, and it is the reason it exists." },
     { t: "The reverse is not required, and cannot be", d: "Unequal objects may share a hash. They have to: there are unlimited possible values and a fixed number of hashes. That is why the map still runs an equality check after finding the bucket, and why a hash on its own is never proof of equality." },
     { t: "And this is why keys must be immutable", d: "The bucket is chosen from the contents. Mutate a key after inserting it and its hash changes, so it is now filed under an address nobody will look at. The entry is not deleted, it is unreachable, which is worse: it still occupies the map and still turns up when you iterate. Immutability is not a purity preference here, it is the only way the mechanism holds together." },
     { t: "Ordering is a third question with its own rules", d: "A comparator must be a genuine total order: consistent (a before b implies b never before a), transitive, and honest about ties. Return a boolean where a three-way answer is expected, or claim both a &lt; b and b &lt; a, and you have not merely produced odd output. C++ calls it undefined behaviour and may run off the end of the array; Java throws \"Comparison method violates its general contract\", generally in production." },
-    { t: "Sorting by two keys is where stability quietly matters", d: "Sort by the secondary key, then by the primary, and a <b>stable</b> sort keeps the first ordering intact inside each group. With an unstable sort the same code produces correct output on small inputs and wrong output on large ones, because whether it reorders equal items depends on the algorithm's internal state. Alternatively, compare both keys in one comparator and stop depending on a property your language may not have." },
+    { t: "Sorting by two keys is where stability quietly matters", d: "Sort by the secondary key, then by the primary, and a <b>stable</b> sort keeps the first ordering intact inside each group. With an unstable sort, the same code is right on small inputs and wrong on large ones. Whether it reorders equal items depends on what the algorithm is doing internally, which changes with size. Alternatively, compare both keys in one comparator and stop depending on a property your language may not have." },
   ],
 
-  hing: `<p><b>Teen sawaal alag hain, aur log unhe ek hi samajh lete hain:</b> kya yeh <b>ek hi</b> object hai (identity), kya yeh <b>barabar</b> hai (equality), aur <b>pehle kaun</b> aayega (ordering).</p>
+  hing: `<p><b>Teen sawaal alag hain, aur log unhe ek hi samajh lete hain:</b> kya yeh <b>ek hi</b> object hai, kya yeh <b>barabar</b> hai, aur <b>pehle kaun</b> aayega. Teeno ka jawab alag ho sakta hai.</p>
 <p><b>Identity</b> do addresses compare karta hai, hamesha O(1). <b>Equality</b> andar ka content compare karta hai. Java mein <code>==</code> objects par <b>address</b> compare karta hai, isliye do alag-alag bani strings barabar hote hue bhi <code>==</code> mein false dete hain. Isiliye <code>.equals()</code> use karna hai.</p>
 <p><b>Ab asli baat, hash map kaam kaise karta hai:</b> pehle <b>hash</b> se bucket dhoondta hai, phir us bucket ke andar <b>equality</b> se sahi entry chunta hai. Matlab dono mein <b>samjhauta</b> hona chahiye:</p>
-<p><b>Jo objects barabar hain, unka hash bhi ek hona chahiye.</b> Agar aisa nahi hua, to map galat bucket mein dhoondega, kuch nahi milega, aur tumse kahega ki key hai hi nahi. Jabki key uske paas hi padi hai, do slot door. Yeh sabse chidhane wala bug hai kyunki code bilkul sahi dikhta hai.</p>
+<p><b>Jo objects barabar hain, unka hash bhi ek hona chahiye.</b> Aisa nahi hua to map galat bucket mein dhoondega. Wahan kuch nahi milega, aur woh kahega ki key hai hi nahi. Jabki key uske paas hi padi hai, do slot door. Yeh sabse chidhane wala bug hai kyunki code bilkul sahi dikhta hai.</p>
 <p><b>Ulta zaroori nahi hai:</b> alag objects ka hash same ho sakta hai, aur hoga hi, kyunki values infinite hain aur hashes limited. Isiliye bucket milne ke <b>baad</b> bhi equality check hoti hai.</p>
 <p><b>Aur isiliye keys immutable honi chahiye.</b> Bucket contents se decide hota hai. Key ko daalne ke baad badal do, to uska hash badal gaya, aur ab woh aisi jagah padi hai jahan koi dhoondne nahi jaayega. Woh delete nahi hui, bas <b>pahunch se bahar</b> ho gayi, jo delete hone se zyada buri baat hai kyunki iterate karne par ab bhi dikhegi.</p>
 <p><b>Comparator ke apne niyam hain.</b> Woh ek <b>sachcha total order</b> hona chahiye: consistent, transitive, aur ties ke baare mein imaandaar. Agar tumne dono ko ek doosre se chhota bata diya, to C++ ise <b>undefined behaviour</b> maanta hai aur array ke bahar chala ja sakta hai. Java "Comparison method violates its general contract" phenk deta hai, aksar production mein.</p>
@@ -2072,6 +2748,55 @@ groups.get(key).push(w);
 
   viz: ["ordering"],
   see: [["DOC", "https://docs.oracle.com/javase/8/docs/api/java/lang/Object.html#hashCode--", "The equals and hashCode contract, stated formally"]],
+
+  math: [
+    { t: "One direction of the contract is required, the other is impossible", d: "Equal objects must hash the same. Equal hashes cannot imply equal objects, and the reason is a counting argument, not an implementation detail.", w:
+`required:      a equals b   =>   hash(a) == hash(b)
+not required:  hash(a) == hash(b)   =>   a equals b
+
+why the second cannot hold:
+  hashes:  2^32 distinct values
+  objects: unbounded
+pigeonhole: some distinct objects must share a hash` },
+    { t: "What a mutated key costs, traced through the buckets", d: "The map stored the entry by the hash it had at insertion time. Change the field and you are looking in a different bucket for something that never moved.", w:
+`b = 16 buckets
+
+put(key, v):   hash(key) = 7    ->  bucket 7 mod 16 = 7
+mutate a field used by hash()
+get(key):      hash(key) = 41   ->  bucket 41 mod 16 = 9
+
+bucket 9 is empty. The entry is still sitting in bucket 7.
+size() = 1 and get() = null, at the same time.` },
+    { t: "The comparator subtraction that returns the wrong sign", d: "Returning a difference is the classic shortcut and it is correct for small values. The two extremes of the range are where it inverts.", w:
+`return a.x - b.x;
+
+a.x =  2,000,000,000
+b.x = -2,000,000,000
+a.x - b.x = 4,000,000,000  >  2^31 - 1
+
+wraps to 4,000,000,000 - 2^32 = -294,967,296
+
+negative means "a is smaller", which is the opposite
+Integer.compare branches instead, and cannot overflow` },
+    { t: "Two sort keys, and where stability actually earns its keep", d: "Stability means equal elements keep their previous order. That is what lets you sort twice instead of writing one comparator with a tie-break.", w:
+`want: score descending, then name ascending
+
+with a stable sort: sort by name, then sort by score
+  equal scores keep the name order. Two clean passes.
+with an unstable sort: the second pass scrambles the first
+
+comparisons either way, n = 10^6:
+  n log2 n = 10^6 x 20 = 2 x 10^7` },
+    { t: "The three laws, and the exception that fires when you break them", d: "A comparator that is not a total order does not merely sort oddly. Modern sorts detect the contradiction and refuse to continue.", w:
+`for all a, b, c the comparator must satisfy
+  antisymmetry   cmp(a,b) = -cmp(b,a)
+  transitivity   cmp(a,b) <= 0 and cmp(b,c) <= 0 => cmp(a,c) <= 0
+  consistency    cmp(a,b) = 0 behaves like equality
+
+Java's TimSort merges runs of 32 and checks as it goes:
+  "Comparison method violates its general contract!"
+so an array of 10 will pass every test you write` },
+  ],
 
   costs: [
     ["identity check", "O(1)", "compares two addresses and nothing else"],
@@ -2260,7 +2985,7 @@ rows.sort((a, b) => a.score - b.score);`,
     { t: "Function calls run on a stack too",
       d: "Calling a function stores the caller's variables and where to resume; returning pops them back. Recursion <i>is</i> a stack, which is why it can overflow, and why any recursion can be rewritten with a stack you manage yourself." },
     { t: "Shortest path needs the opposite rule",
-      d: "BFS has to finish everything one step away before looking at anything two steps away, otherwise the first time it reaches the target may not be the shortest route. That means serving in <b>arrival order</b>: a queue. Swap in a stack and you get DFS: still a valid walk, but no shortest-path guarantee." },
+      d: "BFS has to finish everything one step away before it looks at anything two steps away. Otherwise the first time it reaches the target may not be by the shortest route. That means serving in <b>arrival order</b>: a queue. Swap in a stack and you get DFS: still a valid walk, but no shortest-path guarantee." },
     { t: "Never use a plain array as a queue",
       d: "Removing from the front shifts every remaining element, O(n) each time. A deque is built to be cheap at both ends. Get this wrong and an O(V+E) BFS silently becomes O(V²) with nothing looking wrong." },
     { t: "The monotonic stack, in one line",
@@ -2276,6 +3001,45 @@ rows.sort((a, b) => a.score - b.score);`,
 
   viz: ["stack", "queue"],
   see: [["VA", "https://visualgo.net/en/list", "VisuAlgo, stack & queue operations"]],
+
+  math: [
+    { t: "One end is cheap, the other end is the whole array", d: "The restriction is not a rule about tidiness. Removing from the front of a contiguous block moves everything behind it.", w:
+`pop from the END:    read index n-1, n = n - 1      O(1)
+pop from the FRONT:  shift n-1 elements left        O(n)
+
+n pops from the front:
+  (n-1) + (n-2) + ... + 1 = n(n-1)/2 moves
+  n = 100,000  ->  5 x 10^9 element moves
+
+a real deque does the same n pops in n operations` },
+    { t: "The two-stack queue: four moves per element, for ever", d: "One dequeue can cost O(n), and yet the whole sequence is linear, because an element can only make the trip once.", w:
+`an element's entire life across in-stack and out-stack:
+  1  push onto in
+  2  pop from in
+  3  push onto out
+  4  pop from out
+
+n operations  <=  4n moves  ->  amortised O(1) each
+worst single dequeue: O(n), when out is empty and in is full` },
+    { t: "The call stack is a stack, and it has a published size", d: "Recursion depth is not an abstract concern. It is bytes, and you can work out roughly how many frames fit before anything overflows.", w:
+`typical thread stack:  1 MB (JVM, Windows), 8 MB (Linux main)
+one frame with a few locals: 50 to 100 bytes
+
+1 MB / 100 bytes  ~  10,000 frames
+Python's own ceiling: recursion limit 1000 by default
+
+walking a 100,000-node list recursively: overflow
+the same walk as a loop: zero frames` },
+    { t: "DFS and BFS differ by one word, and by a lot of memory", d: "Same code, same visited set, different container. What changes is not the order so much as how much of the structure you are holding at once.", w:
+`take from the same end you added -> stack -> depth first
+take from the other end          -> queue -> breadth first
+
+a complete binary tree of n = 10^6 nodes:
+  height       = log2 n     = 20      DFS holds ~20 nodes
+  widest level = n / 2      = 500,000 BFS holds 500,000
+
+25,000x apart, for the same traversal` },
+  ],
 
   costs: [
     ["stack push / pop (list)", "O(1)", "both at the end. Nothing shifts"],
@@ -2484,7 +3248,7 @@ function nextGreater(a) {
 
   plain: `<p>You need the smallest item repeatedly, and new items keep arriving. Sorting gives you that, but it orders <i>everything</i> when you only ever look at <b>one</b> element. You paid for information you never used.</p>
 <p>A heap makes a deliberately weaker promise: <b>every parent is ≤ its children</b>. Siblings are unordered, the underlying array is not sorted. All you are guaranteed is that the root is the minimum, which is all you asked for.</p>
-<p>Because the promise is <i>local</i>, repairing it after a change is local too: a new item swaps upward along a single root-to-leaf path, about log n swaps, not n.</p>
+<p>Because the promise is <i>local</i>, repairing it after a change is local too. A new item swaps upward along one path from root to leaf. That is about log n swaps, not n.</p>
 <p><b>Analogy.</b> A hospital waiting room. Nobody ranks all 200 patients; they only need to know who is treated <b>next</b>. A new critical case is moved up past a few people, not inserted into a full ranking of everyone.</p>`,
 
   why: [
@@ -2495,7 +3259,7 @@ function nextGreater(a) {
     { t: "A small promise is cheap to repair",
       d: "Add a new item at the bottom and swap it upward while it is smaller than its parent. Remove the top, move the last item up there, and swap it downward. Either way you walk <b>one path</b>, never the whole structure." },
     { t: "Keep the tree full and that path is short",
-      d: "A heap fills every level before starting the next, so n items give a height of exactly log₂n. Push and pop are therefore <b>O(log n)</b> guaranteed, and because there are no gaps, the whole thing fits in a plain array: the children of position i sit at 2i+1 and 2i+2. No pointers, no nodes." },
+      d: "A heap fills every level before starting the next, so n items give a height of exactly log₂n. So push and pop are <b>O(log n)</b>, guaranteed rather than on average. And because there are no gaps, the whole thing fits in a plain array: the children of position i sit at 2i+1 and 2i+2. No pointers, no nodes." },
     { t: "Top-K is the payoff",
       d: "For the k largest of n items, keep a <b>min</b>-heap holding only k items: add each item, and whenever it holds more than k, drop the smallest. That is <b>O(n log k)</b> time and O(k) memory instead of sorting's O(n log n) and O(n)." },
     { t: "Know what it refuses to do",
@@ -2539,6 +3303,47 @@ function nextGreater(a) {
 
   viz: ["heap"],
   see: [["VA", "https://visualgo.net/en/heap", "VisuAlgo, heap insert & extract, animated"]],
+
+  math: [
+    { t: "Count what a sorted order promises, then count what a heap promises", d: "Sorting establishes every pairwise fact. A heap establishes one fact per node. The gap between those two numbers is the speed.", w:
+`n = 1,000,000
+
+a sorted array asserts every pair:  n(n-1)/2 = 5 x 10^11 facts
+a heap asserts parent < child:      n - 1    = 10^6 facts
+
+top-of-heap is all that was asked for, so the rest
+was never bought. Building: O(n) instead of O(n log n).` },
+    { t: "The repair path is the height, and the height is log2 n", d: "Keeping the tree complete is what bounds every operation. A complete tree of a million nodes is twenty levels deep, so nothing ever walks far.", w:
+`complete binary tree, n nodes -> height floor(log2 n)
+
+n = 1,000      height 9
+n = 1,000,000  height 19
+n = 10^9       height 29
+
+push: one sift-up   <= 19 swaps at n = 10^6
+pop:  one sift-down <= 19 levels, 2 comparisons each
+
+no pointers needed:
+  parent(i) = (i-1)/2   left(i) = 2i+1   right(i) = 2i+2` },
+    { t: "Build-heap is O(n), and here is the sum that proves it", d: "The usual guess is n log n, one sift-down per node. It is wrong because almost every node is near the bottom, where a sift-down has nowhere to go.", w:
+`nodes at height h:      about n / 2^(h+1)
+sift-down from height h costs at most h
+
+total = sum over h of  (n / 2^(h+1)) x h
+      = n x sum of  h / 2^(h+1)
+      = n x 1                      (the series converges to 1)
+      = O(n)
+
+half the nodes are leaves and cost 0. Only the root pays 19.` },
+    { t: "Top-K, and why the k inside the log is the point", d: "Keeping a heap of size k rather than sorting everything changes both the time and, more importantly, the memory by orders of magnitude.", w:
+`n = 10^7 items, k = 10
+
+sort it all:      n log2 n = 10^7 x 23  = 2.3 x 10^8
+heap of size k:   n log2 k = 10^7 x 3.3 = 3.3 x 10^7
+                  memory k = 10, not 10^7
+
+7x the work saved, and a million times the memory` },
+  ],
 
   costs: [
     ["peek min (heap[0])", "O(1)", "the invariant puts it at the root"],
@@ -2744,15 +3549,54 @@ class MinHeap {
 
   hing: `<p><b>Sabse badi galti:</b> recursion ko dimaag mein trace karne ki koshish. Do-teen level ke baad sab gadbad. <b>Trace karna hai hi nahi.</b></p>
 <p><b>Sahi tarika: bharosa (leap of faith).</b> <code>factorial(5)</code> chahiye? Maan lo <code>factorial(4)</code> pehle se sahi kaam karta hai. Kaise? Mat poocho. Tumhara kaam sirf ek line: <code>5 × factorial(4)</code>. Tumne <b>ek step imaandari se likha</b>, baaki delegate kar diya.</p>
-<p><b>Do cheezein is bharose ko safe banati hain:</b> (1) <b>base case</b>, sabse chhota input jiska jawaab bina kisi call ke pata ho, (2) har call base case ke <b>kareeb</b> jaaye. Ek bhi missing to infinite recursion.</p>
+<p><b>Do cheezein is bharose ko safe banati hain:</b> (1) <b>base case</b>, matlab sabse chhota input jiska jawab bina kisi call ke pata ho. (2) har call base case ke <b>kareeb</b> jaaye. Ek bhi missing to infinite recursion.</p>
 <p><b>Machine kaise sambhalti hai?</b> Har call ka apna <b>stack frame</b> banta hai, apne parameters, apne locals. Isliye har level ke variables alag rehte hain. Depth d matlab d frames zinda → <b>space O(depth)</b>. Har language ki limit hoti hai, Python ~1000 frames par RecursionError deta hai, JVM/C++ StackOverflow.</p>
 <p><b>Time kaise ginein?</b> Call tree banao. <b>Time = kitne nodes hain</b>, <b>space = kitni gehrai hai</b>. Ek call per level → O(n) time. Do call per level (jaise fib) → ~2ⁿ nodes → O(2ⁿ) time, par space phir bhi sirf O(n). Yeh farak interview mein pucha jaata hai.</p>
-<p><b>Ab sabse important baat.</b> Naive fib mein <code>fib(2)</code> baar-baar compute hota hai, subproblems <b>repeat</b> ho rahe hain. Answer cache kar do (memo table: Python <code>@lru_cache</code>, Java <code>HashMap</code>, C++ <code>vector</code>, JS <code>Map</code>), har distinct subproblem ek hi baar chalega, aur O(2ⁿ) seedha <b>O(n)</b> ban jaayega. <b>Yahi memoization hai, aur yahi top-down DP hai.</b> DP koi alag jaadu nahi, recursion + dictionary hai.</p>
+<p><b>Ab sabse important baat.</b> Naive fib mein <code>fib(2)</code> baar-baar compute hota hai, subproblems <b>repeat</b> ho rahe hain. Answer cache kar do, ek memo table mein. Phir har alag subproblem sirf ek baar chalega, aur O(2ⁿ) seedha <b>O(n)</b> ban jaayega. <b>Yahi memoization hai, aur yahi top-down DP hai.</b> DP koi alag jaadu nahi, recursion + dictionary hai.</p>
 <p><b>Backtracking:</b> choose → recurse → <b>un-choose</b>. Woh un-choose isliye zaroori hai taaki agli branch saaf state se shuru ho. Aur <code>res.append(path)</code> mat likhna, <code>path[:]</code> likhna, warna sab results ek hi badalti hui list ki taraf point karenge.</p>`,
 
   viz: ["recursion-tree"],
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, recursion tree, animated"],
         ["DOC", "https://docs.python.org/3/library/functools.html#functools.lru_cache", "Python docs, functools.lru_cache"]],
+
+  math: [
+    { t: "Depth is memory, and the memory runs out at a specific number", d: "Every pending call is a frame on the stack. Multiply frames by bytes and you can predict the overflow instead of discovering it.", w:
+`one frame: return address, saved registers, locals
+            roughly 50 to 100 bytes
+
+recursion over a 100,000-node list
+  100,000 x 100 bytes = 10 MB of stack
+  available:            1 MB typical
+
+Python refuses sooner: default recursion limit 1000` },
+    { t: "Time is the number of calls, so count the nodes of the call tree", d: "Naive fib is the standard example because the repetition is visible. The call count grows by the golden ratio, which is what makes n = 50 hopeless.", w:
+`calls(n) = calls(n-1) + calls(n-2) + 1  =  2 fib(n+1) - 1
+
+n = 5      15 calls
+n = 10     177
+n = 30     2,692,537
+n = 40     3.3 x 10^8       seconds
+n = 50     4.0 x 10^10      minutes
+
+memoised: 50 calls. Same recurrence, each one answered once.` },
+    { t: "Five recurrences, five complexity classes", d: "Almost every recursion you meet is one of these. Read off how many branches there are and how fast the argument shrinks, and the class follows.", w:
+`T(n) = T(n/2) + 1     -> log2 n calls      binary search
+T(n) = T(n-1) + 1     -> n calls, n deep   linear recursion
+T(n) = 2T(n/2) + 1    -> 2n - 1 calls      tree traversal
+T(n) = 2T(n/2) + n    -> n log2 n work     merge sort
+T(n) = 2T(n-1) + 1    -> 2^n - 1 calls     every subset
+
+n = 10^6 under the first: 20 calls
+n = 30 under the last:    10^9 calls` },
+    { t: "Tail position, and the three languages where it buys nothing", d: "A tail call has nothing waiting for it, so the frame could be reused. Whether it actually is depends entirely on the language.", w:
+`sum(n)      = n + sum(n-1)        not tail: the + waits
+sum(n, acc) = sum(n-1, acc + n)   tail: nothing waits
+
+flattened to a loop, depth 1:  C++, Kotlin, Scala, most Lisps
+not flattened, depth n:        Python, Java, JavaScript
+
+so in those three, convert it yourself or accept the depth` },
+  ],
 
   costs: [
     ["linear recursion (factorial, list walk)", "O(n) time · O(n) space", "n frames alive at the deepest point"],
@@ -2960,8 +3804,8 @@ function subsets(nums) {
 
   why: [
     { t: "The bug is ambiguity, not arithmetic", d: "An inclusive range forces you to remember a +1 in the size, a −1 in the last index, and a special case for emptiness. Every one of those is a chance to be wrong, and they compound as soon as ranges are split or joined." },
-    { t: "Half-open removes all three at once", d: "With <b>[lo, hi)</b>: size is <code>hi − lo</code>; empty is <code>lo == hi</code>; and two ranges join seamlessly because one ends exactly where the next begins. Nothing has to be adjusted, so nothing can be adjusted wrongly. This is why <code>range(0, n)</code>, <code>slice[a:b]</code> and <code>end()</code> iterators all work this way." },
-    { t: "An invariant turns a loop into something you can check", d: "State one sentence that stays true across every iteration, \"everything before <code>slow</code> is already sorted\", \"the answer, if it exists, is inside [lo, hi)\", \"the window always satisfies the condition\". Now correctness is local: check that each branch preserves it, and the loop is right by construction." },
+    { t: "Half-open removes all three at once", d: "With <b>[lo, hi)</b> the size is <code>hi − lo</code> and empty means <code>lo == hi</code>. Two ranges also join seamlessly, because one ends exactly where the next begins. Nothing has to be adjusted, so nothing can be adjusted wrongly. This is why <code>range(0, n)</code>, <code>slice[a:b]</code> and <code>end()</code> iterators all work this way." },
+    { t: "An invariant turns a loop into something you can check", d: "State one sentence that stays true on every pass through the loop. \"Everything before <code>slow</code> is already sorted.\" \"The answer, if it exists, is inside [lo, hi).\" \"The window always satisfies the condition.\" Now correctness is local: check that each branch preserves it, and the loop is right by construction." },
     { t: "Termination is a separate promise", d: "An invariant says the loop is <i>correct</i>; it does not say the loop <i>ends</i>. For that, something must strictly decrease every pass, the range shrinks, an index advances. Every infinite loop is a branch that failed to shrink anything, which is exactly the classic binary-search hang." },
     { t: "The edge cases then fall out of the invariant", d: "Empty input, one element, everything identical, the answer at the first or last position. You no longer guess which to test. You ask whether the invariant holds when the range is empty, or when it holds one element. The test cases come from the statement rather than from memory." },
   ],
@@ -2976,6 +3820,48 @@ function subsets(nums) {
 
   viz: ["half-open"],
   see: [["DOC", "https://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD831.html", "Dijkstra, why numbering should start at zero"]],
+
+  math: [
+    { t: "Half-open, priced against closed, on every operation you need", d: "The convention is not taste. Each line below is somewhere an off-by-one can live, and one column has fewer of them.", w:
+`[lo, hi) with lo = 2, hi = 5  ->  {2, 3, 4}
+
+                  half-open [lo,hi)     closed [lo,hi]
+size              hi - lo               hi - lo + 1
+empty when        lo == hi              lo > hi
+split at m        [lo,m) and [m,hi)     [lo,m-1] and [m+1,hi]
+join              [a,b) + [b,c) = [a,c) needs b and b+1
+
+three chances to be off by one, versus none` },
+    { t: "An invariant is a sentence you can check at three moments", d: "Say what is true before the loop, show each step preserves it, and read the answer off what it means when the loop ends. That is the whole method.", w:
+`binary search over [lo, hi)
+invariant: if the answer exists, it lies in [lo, hi)
+
+before:  lo = 0, hi = n     the range is everything, true
+step:    discard a half that cannot hold the answer, so
+         the invariant still holds afterwards
+after:   lo == hi, the range is empty
+         so the answer does not exist
+
+three lines, and they are the same three lines every time` },
+    { t: "Termination is a second promise: name the measure", d: "The invariant says the loop is right. It does not say the loop stops. For that you need a non-negative integer that strictly falls on every path.", w:
+`measure = hi - lo, never negative, must strictly decrease
+
+lo = mid + 1   ->  falls by at least 1            safe
+hi = mid       ->  falls by at least 1 (mid < hi) safe
+lo = mid       ->  may not fall at all            hangs
+
+with hi = lo + 1:  mid = lo + (hi-lo)/2 = lo
+  lo = mid leaves lo unchanged: the loop never ends` },
+    { t: "The four ranges, and which two fail silently", d: "Only one of these is right. The interesting part is that the two obviously broken ones are the safe kind of broken.", w:
+`n = 5, valid indices 0..4
+
+for i in [0, n)     5 passes, last index 4   correct
+for i in [0, n]     6 passes, last index 5   crashes, loudly
+for i in [1, n)     4 passes, misses 0       silent, plausible
+for i in [0, n-1)   4 passes, misses 4       silent, plausible
+
+the crash is the good outcome: it tells you` },
+  ],
 
   costs: [
     ["size of [lo, hi)", "hi − lo", "no +1 to remember or forget"],
@@ -3170,7 +4056,7 @@ const levelSize = q.length - head;`,
   hing: `<p><b>Ek comparison se kitna faayda?</b> Bikhre hue data mein ek element check karke sirf <b>ek</b> element hatta hai, isliye O(n) hi best hai. Par sorted data mein beech wale se compare karo to <b>aadha data ek hi baar mein</b> udd jaata hai. Yahi poora khel hai.</p>
 <p><b>log n kahan se aaya?</b> n → n/2 → n/4 → … → 1. Kitni baar aadha karna pada? n/2^k = 1 → k = <b>log₂n</b>. 10 lakh elements = sirf ~20 steps. Yeh optimisation nahi, <b>growth class ka badalna</b> hai.</p>
 <p><b>Asli condition "sorted" nahi hai.</b> Asli condition hai <b>monotonic</b>, ek aisa sawaal jiska jawaab shuru mein false…false ho aur ek point ke baad hamesha true…true. Sorted array to bas ek aasaan tarika hai yeh property paane ka.</p>
-<p><b>Sabse bada unlock, answer par binary search.</b> "Minimum capacity kya ho ki D din mein saara saamaan chala jaaye?" Yahan array par search nahi karte, <b>answer ki range</b> par karte hain. Check: "capacity c se D din mein ho jaayega?", yeh monotonic hai (chhoti capacity par false, badi par true). To capacity ko binary search karo. Interview ki hard problems yahin se aati hain.</p>
+<p><b>Sabse bada unlock, answer par binary search.</b> "Minimum capacity kya ho ki D din mein saara saamaan chala jaaye?" Yahan array par search nahi karte. Search <b>answer ki range</b> par hoti hai. Check: "capacity c se D din mein ho jaayega?", yeh monotonic hai (chhoti capacity par false, badi par true). To capacity ko binary search karo. Interview ki hard problems yahin se aati hain.</p>
 <p><b>Bug hamesha kyun aata hai?</b> Kyunki range <b>har baar sikudni chahiye</b>. Agar kisi branch mein <code>lo</code> aur <code>hi</code> dono waise ke waise reh gaye, to infinite loop. Isliye structure hi aisa rakho: <code>while lo &lt; hi</code>, aur <code>lo = mid + 1</code> / <code>hi = mid</code>. Ab range har iteration mein pakka chhoti hoti hai.</p>
 <p><b>Overflow wali baat (Java/C++ mein important):</b> <code>(lo + hi) / 2</code> bada ho kar overflow kar sakta hai. <code>lo + (hi - lo) / 2</code> likho. Python mein integers unlimited hain isliye dikkat nahi, par interview mein yeh bolna acha impression deta hai.</p>
 <p><b>Loop se pehle invariant bolo:</b> "answer hamesha <code>[lo, hi]</code> ke andar hai". Har branch ko yeh sach rakhna hai. Bas, off-by-one errors khud khatam ho jaate hain.</p>`,
@@ -3178,6 +4064,62 @@ const levelSize = q.length - head;`,
   viz: ["binary-search"],
   see: [["VA", "https://visualgo.net/en/bst", "VisuAlgo, ordered search, animated"],
         ["GFG", "https://www.geeksforgeeks.org/binary-search/", "GFG, binary search, all variants"]],
+
+  math: [
+    { t: "Where log n comes from, as one equation", d: "Each comparison halves the surviving range, so the question is how many halvings reduce n to one. Solve it and the famous number falls out.", w:
+`after k steps the range holds  n / 2^k  items
+stop when   n / 2^k = 1
+            2^k = n
+            k = log2 n
+
+n = 1,000              10 steps
+n = 1,000,000          20
+n = 1,000,000,000      30
+n = 10^18              60
+
+doubling the input adds exactly one step` },
+    { t: "When the sort pays for itself", d: "Binary search is not free: something had to sort the data. The break-even point is a short calculation and it is lower than most people guess.", w:
+`q queries over n items
+
+scan every time:     q x n
+sort once, then q binary searches:  n log2 n + q log2 n
+
+n = 10^6, q = 1        10^6       vs  2.0 x 10^7   scan wins
+n = 10^6, q = 20       2 x 10^7   vs  2.0 x 10^7   level
+n = 10^6, q = 1,000    10^9       vs  2.0 x 10^7   search wins
+
+break-even is at about q = log2 n queries` },
+    { t: "The midpoint, and the one assignment that hangs", d: "Floor division puts mid strictly below hi and at or above lo. Everything about termination follows from those two facts.", w:
+`mid = lo + (hi - lo) / 2      lo <= mid < hi, always
+
+the dangerous case is a range of size 1 or 2
+[lo, hi) with hi = lo + 1  ->  mid = lo
+
+  lo = mid + 1   ->  lo = hi, loop ends       fine
+  hi = mid       ->  hi = lo, loop ends       fine
+  lo = mid       ->  nothing changed          hangs
+
+so every branch must exclude mid from the next range` },
+    { t: "Searching the answer instead of the array", d: "The array was never the requirement. A monotone yes/no over a numeric range is, and the range can be values rather than indices.", w:
+`search over [1, 10^9] instead of over an array
+steps: log2(10^9) = 30
+
+each step runs a feasibility check costing O(n)
+total: 30 x n, and at n = 10^5 that is 3 x 10^6
+
+the check must flip exactly once:
+  false false false true true true
+one flip. Two flips and the halving is meaningless.` },
+    { t: "The rotated array still halves", d: "A rotated sorted array is not sorted, but at any midpoint one of the two halves is, and that is enough to discard a half per comparison.", w:
+`[4, 5, 6, 7, 0, 1, 2]   lo = 0, hi = 6, mid = 3, a[mid] = 7
+
+a[lo] = 4 <= a[mid] = 7   ->  the left half is sorted
+target = 1: is 4 <= 1 < 7?  no  ->  discard the left half
+
+range 7 -> 3 -> 1 on the same rule: still O(log n)
+duplicates break it: [1,1,1,0,1] cannot tell which side
+is sorted, and degrades to O(n)` },
+  ],
 
   costs: [
     ["search in a sorted array", "O(log n)", "each comparison halves the candidates"],
@@ -3379,8 +4321,8 @@ function minFeasible(low, high, ok) {
     { t: "Then every item has to say where the next one is", d: "Without a fixed layout, position can no longer be computed, so it must be <b>stored</b>. Each node becomes value + next-address. The order lives in the pointers, not in the memory layout." },
     { t: "What you buy: rewiring instead of shifting", d: "To insert between two nodes you point the new node at the second and the first at the new node. <b>Two writes, O(1)</b>, regardless of list length, and no reallocation ever, because nothing needs to be contiguous." },
     { t: "What you pay: no address arithmetic", d: "Reaching position i means following i pointers, <b>O(n)</b>, and binary search becomes impossible because there is no cheap way to find the middle. You also pay one pointer of memory per node, and every hop lands somewhere unrelated in memory, so the cache cannot help you. The constant factor is genuinely worse than the Big-O suggests." },
-    { t: "So the O(1) insert has a condition attached", d: "It is O(1) only once you are <i>already holding</i> the node. Insert at a given index is O(n) to walk there plus O(1) to rewire. That distinction is what interview questions are built on: problems are shaped so you arrive at the right node by other means, a fast pointer, a previous pointer, a hash map." },
-    { t: "A dummy head deletes half the bugs", d: "Most linked-list bugs are the special case \"what if it is the head?\". Put one throwaway node in front of the real list and the head stops being special: every node now has a previous node, and you return <code>dummy.next</code> at the end." },
+    { t: "So the O(1) insert has a condition attached", d: "It is O(1) only once you are <i>already holding</i> the node. Insert at a given index is O(n) to walk there plus O(1) to rewire. That distinction is what interview questions are built on. The problem is shaped so that you arrive at the right node by other means: a fast pointer, a previous pointer, a hash map." },
+    { t: "A dummy head deletes half the bugs", d: "Most linked-list bugs are the special case \"what if it is the head?\". Put one throwaway node in front of the real list and the head stops being special. Every node now has a node before it, and you return <code>dummy.next</code> at the end." },
     { t: "Reversal is the archetype, and it needs three pointers", d: "The moment you point <code>curr.next</code> backwards, you have destroyed your only route forward. So the loop is always: <b>save next, flip, advance</b>. Everyone who writes it with two pointers loses the rest of the list." },
   ],
 
@@ -3388,12 +4330,66 @@ function minFeasible(low, high, ok) {
 <p><b>Naya idea:</b> har item ab ek <b>node</b> hai, value, aur agle node ka <b>pata (address)</b>. Nodes memory mein kahin bhi pade ho sakte hain, kisi bhi order mein. Sequence ko sirf yeh arrows jod kar rakhte hain.</p>
 <p><b>Faayda:</b> beech mein insert karna matlab sirf <b>do pointers</b> badalna. Kuch khisakna nahi, kuch copy nahi, <b>O(1)</b>.</p>
 <p><b>Nuksan:</b> ab position <b>calculate</b> nahi hoti, isliye i-th node tak pahunchne ke liye i arrows follow karne padte hain, <b>O(n)</b>. Binary search yahan possible hi nahi, kyunki beech wala node sasta mein milta hi nahi. Upar se har node ka apna pointer memory khaata hai aur har hop memory mein kahin door jaata hai, to <b>cache</b> madad nahi kar pata. Practically array se dheema hai, chahe Big-O barabar dikhe.</p>
-<p><b>Yeh baat sabse zaroori hai:</b> insert O(1) tabhi hai jab tum <b>us node par pehle se khade ho</b>. "i-th position par insert karo" to O(n) hi hai, chalna to padega. Interview problems isi cheez par bani hoti hain: woh aise design ki jaati hain ki tum sahi node tak kisi aur tareeke se pahunch jao (fast pointer, prev pointer, hash map).</p>
+<p><b>Yeh baat sabse zaroori hai:</b> insert O(1) tabhi hai jab tum <b>us node par pehle se khade ho</b>. "i-th position par insert karo" to O(n) hi hai, chalna to padega. Interview problems isi cheez par bani hoti hain. Woh aise design hoti hain ki tum sahi node tak kisi aur tareeke se pahunch jao: fast pointer, prev pointer, ya hash map.</p>
 <p><b>Dummy head ka jugaad:</b> aadhe bugs sirf isliye aate hain ki "agar head hi delete karna ho to?". Ek nakli node list ke aage laga do, ab head special nahi raha, har node ka ek previous hai. Aakhir mein <code>dummy.next</code> return kar do. Bahut saare if-else khatam.</p>
 <p><b>Reverse karna (yeh zaroor samajhna):</b> jaise hi tumne <code>curr.next</code> ko peeche modha, aage jaane ka raasta khatam. Isliye har step mein teen kaam, isi order mein, <b>next ko save karo, arrow palto, aage badho</b>. Do pointers se likhoge to baaki list gum ho jaayegi. Aur end mein <b>prev</b> return karna hai, <b>curr</b> nahi, curr to null par khada hai.</p>`,
 
   viz: ["linked-list", "linked-list-reverse"],
   see: [["VA", "https://visualgo.net/en/list", "VisuAlgo, linked list operations, animated"]],
+
+  math: [
+    { t: "The trade, priced on both sides", d: "Giving up contiguity is not a win, it is an exchange. Two columns, and the right structure is whichever column matches the operation you actually do most.", w:
+`n = 1,000,000
+
+                          array        linked list
+read a[i]                 1 op         i hops
+insert at the front       n shifts     1 rewire
+insert where you stand    n shifts     1 rewire
+find, then insert         log n + n    n + 1
+bytes per int             4            4 + 8 pointer = 12+
+cache misses on a scan    n / 16       n` },
+    { t: "The O(1) insert has a condition attached", d: "Rewiring is constant. Getting to the place where you rewire is not, and if you restart from the head every time the constant is irrelevant.", w:
+`insert after a node you already hold:      O(1)
+insert after the k-th node, from the head: k hops
+
+do that n times at the middle, from the head each time:
+  n x n/2 = n^2 / 2 hops
+  n = 100,000  ->  5 x 10^9
+
+the O(1) is real only while you are already standing there` },
+    { t: "Floyd: why the two pointers must meet", d: "Once both are inside the cycle, the fast one closes the distance by exactly one node per step. A gap that falls by one cannot be stepped over.", w:
+`slow moves 1, fast moves 2, so fast gains 1 per step
+
+let the gap from fast to slow, measured around the cycle,
+be g. Each step: g -> g - 1. It cannot skip zero.
+so they meet within L steps, where L = cycle length
+
+no cycle: fast reaches null first, in n/2 steps` },
+    { t: "And why the second pointer starts at the head", d: "The place they meet is not arbitrary. Write down both distances travelled and the rule for finding the cycle entrance drops out in two lines.", w:
+`m = nodes before the cycle,  L = cycle length
+a = steps into the cycle where they meet
+
+slow walked   m + a
+fast walked   2(m + a),  and also  m + a + kL
+
+  2(m + a) = m + a + kL
+      m + a = kL
+          m = kL - a
+
+so from the meeting point, m more steps land on the entrance.
+Walk one pointer from the head and one from the meeting
+point, one step each, and they collide there.` },
+    { t: "Finding the middle, and the guard that the count forces", d: "Fast travels twice as far, so it finishes in half the steps, and wherever it stops slow is halfway. The only care needed is the parity.", w:
+`n = 4, indices 0 1 2 3
+
+fast:  0 -> 2 -> 4 (past the end)
+slow:  0 -> 1 -> 2        lands on the SECOND middle
+
+n = 5:  fast 0 -> 2 -> 4, slow 0 -> 1 -> 2   the true middle
+
+so the loop guard is (fast and fast.next), two checks.
+Testing only fast.next dereferences null on even n.` },
+  ],
 
   costs: [
     ["access position i", "O(n)", "follow i pointers; no arithmetic shortcut"],
@@ -3610,30 +4606,72 @@ function middle(head) {
   group: "Data structures",
   one: "Every node is itself the root of a smaller tree, so almost every tree problem is the same three lines: <b>solve the left, solve the right, combine</b>.",
 
-  plain: `<p>Take a linked list and give each node <b>two</b> next-pointers instead of one. That is a binary tree. The consequence is out of all proportion to the change: instead of a line, you get branching, and the number of nodes you can reach doubles with every step down.</p>
+  plain: `<p>Take a linked list and give each node <b>two</b> next-pointers instead of one. That is a binary tree. The consequence is out of all proportion to the change. Instead of a line you get branching, and the number of nodes you can reach doubles with every step down.</p>
 <p>That is why trees are shallow. A million nodes arranged in a line is a million steps deep; the same million arranged as a balanced tree is about twenty. Every fast tree operation is really just "the depth is small".</p>
-<p>The second consequence is structural. A node's left child is itself a perfectly good tree, so any solution that works for the whole thing works for the part, which is why tree code is almost always recursive and almost always short.</p>
+<p>The second consequence is structural. A node's left child is itself a perfectly good tree. So any solution that works for the whole thing works for the part. That is why tree code is almost always recursive, and almost always short.</p>
 <p><b>Analogy.</b> An org chart. Any manager, taken with everyone below them, is a smaller org chart with the same shape. "How many people are under you?" is answered the same way at every level: ask both reports, add one for yourself.</p>`,
 
   why: [
     { t: "One extra pointer changes the geometry", d: "One next-pointer per node gives you a line of length n. Two gives you branching, and level d can hold 2<sup>d</sup> nodes. Turned around: n nodes only need <b>log₂n levels</b>. Depth is the resource trees are cheap in." },
     { t: "The structure is self-similar, so the code is recursive", d: "A child is not a piece of a tree. It <b>is</b> a tree. So the recipe is always the same: assume the left and right subtrees are already solved, then combine their answers with this node's value. The base case is the empty node, which is why every tree function starts by checking for null." },
     { t: "The three depth-first orders are one algorithm, reordered", d: "Visit the node <i>before</i> recursing (<b>pre-order</b>), <i>between</i> the two calls (<b>in-order</b>), or <i>after</i> both (<b>post-order</b>). Same three lines, three positions. Choose by dependency: pre-order when children need the parent's answer, post-order when the parent needs the children's." },
-    { t: "Depth-first versus breadth-first is a choice of container", d: "DFS rides the call stack and naturally answers path-shaped questions. Swap the stack for a <b>queue</b> and the same walk becomes BFS, which visits level by level, the shape you need for \"minimum depth\", \"per level\", or anything about distance from the root." },
+    { t: "Depth-first versus breadth-first is a choice of container", d: "DFS rides the call stack and naturally answers path-shaped questions. Swap the stack for a <b>queue</b> and the same walk becomes BFS, visiting level by level. That is the shape you need for \"minimum depth\", for anything per level, and for anything about distance from the root." },
     { t: "Every cost is O(h), and h is not free", d: "Search, insert and delete all walk one root-to-leaf path, so they cost <b>O(height)</b>. That is O(log n) only while the tree stays bushy. Insert sorted data into an unbalanced tree and it degenerates into a linked list: h = n, and every operation is O(n). Balance is a promise someone has to keep, which is what AVL and red-black trees exist to do." },
-    { t: "Space is the height too", d: "A recursive traversal holds one frame per level, so it uses <b>O(h)</b> memory: fine at O(log n) balanced, but O(n) on a skewed tree, deep enough to overflow the stack on 10⁵ nodes. BFS instead holds one level at a time, up to O(n/2) nodes at the widest point. Neither is free; they just fail differently." },
+    { t: "Space is the height too", d: "A recursive traversal holds one frame per level, so it uses <b>O(h)</b> memory. On a balanced tree that is O(log n) and fine. On a skewed tree it is O(n), which is deep enough to overflow the stack at 10⁵ nodes. BFS instead holds one level at a time, up to O(n/2) nodes at the widest point. Neither is free; they just fail differently." },
   ],
 
   hing: `<p><b>Ek chhota sa badlav, bahut bada asar.</b> Linked list ke har node ko <b>do</b> pointers de do, bas, binary tree ban gaya. Ab line nahi, <b>branching</b> hai: har level neeche jaane par nodes <b>double</b> ho sakte hain.</p>
 <p><b>Isi se sab kuch aata hai.</b> 10 lakh nodes ek line mein = 10 lakh steps gehra. Wahi 10 lakh balanced tree mein = sirf <b>~20</b>. Tree ki saari speed bas ek baat se aati hai: <b>gehrai kam hai</b>.</p>
 <p><b>Doosri baat, tree apne aap mein dohraata hai.</b> Kisi node ka left child ek "hissa" nahi hai, woh khud ek <b>poora tree</b> hai. Isliye jo tarika poore tree par chalta hai wahi chhote par bhi chalega. Yahi wajah hai ki tree ka code hamesha <b>recursive</b> aur hamesha chhota hota hai: <i>left solve karo, right solve karo, jodo</i>. Base case hamesha khaali node (null).</p>
-<p><b>Teen traversals asal mein ek hi cheez hain.</b> Sirf yeh farak hai ki node ko <b>kab</b> visit karte ho, dono calls se <b>pehle</b> (pre-order), <b>beech</b> mein (in-order), ya dono ke <b>baad</b> (post-order). Kaunsa chuno? Dependency dekho: agar bachchon ko parent ka answer chahiye to pre-order; agar parent ko bachchon ka answer chahiye (jaise height, sum) to <b>post-order</b>.</p>
+<p><b>Teen traversals asal mein ek hi cheez hain.</b> Sirf itna farak hai ki node ko <b>kab</b> visit karte ho. Dono calls se <b>pehle</b>, unke <b>beech</b> mein, ya dono ke <b>baad</b>. Yahi pre-order, in-order aur post-order hain. Kaunsa chuno? Dependency dekho: agar bachchon ko parent ka answer chahiye to pre-order; agar parent ko bachchon ka answer chahiye (jaise height, sum) to <b>post-order</b>.</p>
 <p><b>DFS aur BFS ka farak sirf container ka hai.</b> DFS call stack par chalta hai. Usi walk mein stack ki jagah <b>queue</b> laga do, BFS ban gaya, level by level. "Minimum depth", "har level ka answer", "root se distance", yeh sab BFS wale sawaal hain.</p>
 <p><b>Sabse zaroori warning:</b> har operation <b>O(h)</b> hai, O(log n) nahi. O(log n) tabhi jab tree <b>balanced</b> ho. Sorted data daal do bina balance kiye, to tree seedhi line ban jaata hai, h = n, aur sab kuch O(n). Interview mein "O(log n)" bolne se pehle sochо ki balance ki guarantee de kaun raha hai.</p>
 <p><b>Space bhi height jitni hi hai.</b> Recursive traversal har level ka ek frame rakhta hai → O(h). Skewed tree par 10⁵ nodes matlab stack overflow. BFS ek poora level rakhta hai → sabse chaude point par O(n/2). Dono free nahi hain, bas alag tarike se fail hote hain.</p>`,
 
   viz: ["tree-traversal"],
   see: [["VA", "https://visualgo.net/en/bst", "VisuAlgo, tree traversals, animated"]],
+
+  math: [
+    { t: "Height against node count, at both extremes", d: "Every tree operation is O(h). So the whole question is what h is, and the answer spans five orders of magnitude for the same n.", w:
+`a perfect tree of height h holds 2^(h+1) - 1 nodes
+  h = 3   ->        15
+  h = 19  ->  1,048,575
+
+so for n = 10^6 nodes:
+  perfectly balanced   h = 19
+  one long chain       h = 999,999
+
+50,000x, for identical data inserted in a different order` },
+    { t: "Half the nodes are leaves, which is what BFS pays for", d: "A binary tree is bottom-heavy. That decides the memory of a level-order walk, and it is the reason depth-first is usually the cheaper habit.", w:
+`perfect tree, n nodes:
+  leaves           = (n + 1) / 2        about half
+  bottom 2 levels  = about 3/4 of all nodes
+
+n = 10^6:
+  BFS queue at its widest   500,000 nodes
+  DFS stack at its deepest       20 frames
+
+same traversal, same output order-of-work, 25,000x memory` },
+    { t: "Three orders are one walk, recorded at three different moments", d: "There are not three algorithms. There is one depth-first walk that passes each node three times, and the traversal you get depends on which pass writes it down.", w:
+`the walk touches every node 3 times:
+
+  arriving          -> record here = preorder
+  between children  -> record here = inorder
+  leaving           -> record here = postorder
+
+touches = 3n,  records = n,  so every order is O(n)
+and a BST read in-order comes out sorted, by definition` },
+    { t: "Time is the node count, space is the depth", d: "These are two different numbers and mixing them up is where tree answers go wrong in interviews.", w:
+`T(n) = T(left) + T(right) + O(1)
+every node is entered exactly once  ->  O(n) time
+
+space is the deepest pending call, not the node count:
+  balanced     O(log n)   20 frames at n = 10^6
+  degenerate   O(n)       10^6 frames  ->  overflow
+
+Morris traversal trades that to O(1) by rewiring, at the
+cost of temporarily mutating the tree` },
+  ],
 
   costs: [
     ["traverse every node", "O(n)", "each node is visited exactly once"],
@@ -3845,16 +4883,16 @@ function levelOrder(root) {
 
   plain: `<p>Binary search is wonderful and needs a sorted array, which is wonderful until something needs inserting, at which point half the array shuffles along to make room.</p>
 <p>A search tree keeps the halving and drops the shuffling. Put a middling value at the root, everything smaller in the left subtree, everything larger in the right, and repeat. Now finding a value is the same sequence of decisions binary search makes, except the decisions are baked into the shape instead of recomputed from indices.</p>
-<p>Insert costs the same walk, and nothing moves afterwards because there is no contiguous block to maintain. You have traded array locality for the ability to insert in the middle without apologising to everything after it.</p>
+<p>Insert costs the same walk, and nothing moves afterwards, because there is no single unbroken block of memory to keep tidy. You have traded array locality for the ability to insert in the middle without apologising to everything after it.</p>
 <p>There is one condition, and the whole page hinges on it: the tree has to stay bushy. Nothing in a plain search tree makes that happen.</p>
 <p><b>Analogy.</b> A pub quiz where every question is "higher or lower". You get there in about twenty guesses out of a million, provided the person answering is picking sensible midpoints and not counting up from one.</p>`,
 
   why: [
     { t: "Store the decision instead of recomputing it", d: "Binary search needs an array so it can jump to the middle. A tree cannot jump anywhere, but it can <b>remember</b> what the middle was: the root is the split point, and the two subtrees are the halves. The structure is the search, which is why the code is a walk rather than arithmetic." },
-    { t: "The rule is about whole subtrees, not about children", d: "Every value in the left subtree must be smaller than the node, not merely its immediate left child. This distinction is invisible in a diagram and fatal in code: the classic broken validator checks parent against child, passes happily, and accepts a tree where a grandchild sits on completely the wrong side." },
+    { t: "The rule is about whole subtrees, not about children", d: "Every value in the left subtree must be smaller than the node, not merely its immediate left child. This distinction is invisible in a diagram and fatal in code. The classic broken validator compares each parent with its child, passes happily, and accepts a tree where a grandchild sits on completely the wrong side." },
     { t: "So validating is a range problem", d: "Walk down carrying a permitted range. The root may be anything; going left tightens the upper bound to the node's value, going right tightens the lower bound. A node outside its inherited range is a violation. Once you see the rule as a range rather than a comparison, the correct check writes itself." },
     { t: "In-order traversal is the invariant read aloud", d: "Left, then node, then right, means smaller things, then this thing, then larger things, at every level. So an in-order walk emits the values in <b>sorted order</b>, and \"kth smallest\" is that walk with a counter and an early exit rather than anything cleverer." },
-    { t: "Everything costs O(h), and h is a promise nobody made", d: "Search, insert and delete each follow one root-to-leaf path. On a bushy tree that is log n. Insert already-sorted data and every value goes right, producing a tree that is a linked list with extra pointers: <b>h = n</b>, and every operation degrades to O(n). Sorted input is not an exotic edge case, it is what most real data looks like on arrival." },
+    { t: "Everything costs O(h), and h is a promise nobody made", d: "Search, insert and delete each follow one root-to-leaf path. On a bushy tree that is log n. Insert already-sorted data and every value goes right. What you have built is a linked list with extra pointers: <b>h = n</b>, and every operation degrades to O(n). Sorted input is not an exotic edge case, it is what most real data looks like on arrival." },
     { t: "Which is the entire reason self-balancing trees exist", d: "AVL and red-black trees do the same job while performing rotations to keep the height near log n. They are not a different idea, they are this idea with the promise actually kept. In interviews you use the balanced version by name; in libraries it is what <code>TreeMap</code> and <code>std::map</code> already are." },
     { t: "Choose it over a hash map only for the ordering", d: "A hash map gives O(1) average and no order whatsoever. A balanced search tree gives O(log n) and keeps everything sorted, which buys range queries, floor and ceiling, predecessor and successor, and ordered iteration. If you never ask an ordered question, you are paying log n for nothing." },
   ],
@@ -3888,7 +4926,7 @@ function levelOrder(root) {
 
   hing: `<p><b>Shuruaat yahan se karo:</b> binary search ke liye <b>sorted array</b> chahiye, taaki beech wala element turant mil jaaye. Par array mein beech mein kuch daalo to aadha array khisakna padta hai. <b>O(n)</b>.</p>
 <p><b>Search tree ka idea:</b> halving rakho, khisakna hatao. Beech wali value ko root banao, chhoti sab left mein, badi sab right mein, aur yahi baat har node par dohrao. Ab dhoondhna wahi decisions hain jo binary search leta hai, bas woh decisions <b>pehle se tree ki shakal mein likhe hue hain</b>.</p>
-<p><b>Sabse zaroori baat, aur yahin log galti karte hain:</b> niyam <b>poore subtree</b> par lagta hai, sirf bachche par nahi. Left subtree ka <b>har</b> element node se chhota hona chahiye, sirf uska left child nahi. Isiliye "isValidBST" ka galat solution itna common hai: woh sirf parent aur child compare karta hai, khush ho kar pass kar deta hai, aur ek galat jagah baithe grandchild ko nahi pakadta.</p>
+<p><b>Sabse zaroori baat, aur yahin log galti karte hain:</b> niyam <b>poore subtree</b> par lagta hai, sirf bachche par nahi. Left subtree ka <b>har</b> element node se chhota hona chahiye, sirf uska left child nahi. Isiliye "isValidBST" ka galat solution itna common hai. Woh sirf parent aur child compare karta hai aur khush ho kar pass kar deta hai. Galat jagah baithe grandchild ko woh pakad hi nahi paata.</p>
 <p><b>To validate kaise karein?</b> Range leke neeche jao. Root kuch bhi ho sakta hai. Left jaate waqt <b>upper limit</b> chhoti karo, right jaate waqt <b>lower limit</b> badi karo. Jo node apni range se bahar hai, wahi galat hai.</p>
 <p><b>In-order traversal (left, node, right)</b> ka matlab hai: pehle chhote, phir yeh, phir bade. Isliye values <b>sorted</b> nikalti hain. Yeh koi ittefaq nahi, yeh wahi invariant hai bol kar sunaya gaya. "Kth smallest" bas isi walk mein ek counter lagana hai.</p>
 <p><b>Ab woh baat jo sab bhool jaate hain:</b> har operation <b>O(h)</b> hai, O(log n) nahi. Agar data pehle se <b>sorted</b> aa gaya, to har value right mein jaayegi aur tree ek seedhi line ban jaayega. <b>h = n</b>, sab kuch O(n). Aur sorted data koi ajeeb edge case nahi hai, asli duniya mein data aksar aise hi aata hai.</p>
@@ -3897,6 +4935,63 @@ function levelOrder(root) {
 
   viz: ["bst"],
   see: [["VA", "https://visualgo.net/en/bst", "VisuAlgo, insert and delete on a BST"]],
+
+  math: [
+    { t: "What the ordering rule buys, compared with the alternatives", d: "A balanced BST matches a sorted array on lookup and beats it on update, which is the only reason to accept the extra pointers.", w:
+`n = 1,000,000
+
+                        lookup      insert      in order?
+unsorted array          10^6        1           no
+sorted array            20          10^6 shift  yes
+hash map                1           1           no
+balanced BST            20          20          yes
+
+the last row is the only one with three usable columns` },
+    { t: "Sorted input is the disaster case, and it is the common case", d: "The degenerate tree is not a contrived adversary. It is what you get from ids, timestamps, or anything already in order.", w:
+`insert 1, 2, 3, ..., n into an unbalanced BST
+every key becomes a right child: h = n - 1
+
+total insert cost  1 + 2 + ... + n  =  n^2 / 2
+n = 100,000  ->  5 x 10^9 comparisons
+
+the same keys shuffled first: h ~ 40, cost ~ 4 x 10^6` },
+    { t: "Random order is fine, and here is how fine", d: "Between the two extremes sits the average case, which is a constant factor away from balanced and nowhere near the worst case.", w:
+`random insertion order, n keys:
+  average node depth   ~ 2 ln n    = 1.39 log2 n
+  expected height      ~ 4.31 ln n = 2.99 log2 n
+
+n = 10^6:
+  average depth  ~ 28      height ~ 60
+  balanced tree:   20              20
+
+random is survivable. Sorted is not. Only one of the two
+is something the caller decides for you.` },
+    { t: "Validation is a range question, and the parent test fails on it", d: "Comparing each node with its parent checks a local fact. The BST rule is about entire subtrees, so the check has to carry a range down.", w:
+`        10
+       /  \\
+      5    15
+          /  \\
+         6    20
+
+parent checks: 5 < 10 ok, 15 > 10 ok, 6 < 15 ok, 20 > 15 ok
+all four pass, and the tree is invalid: 6 sits in the
+right subtree of 10, so it must exceed 10
+
+carry (low, high) instead:
+  left of 10   gets (-inf, 10)
+  right of 10  gets (10, +inf)
+  6 arrives with (10, 15) and is rejected` },
+    { t: "In-order is the invariant, read aloud", d: "Because the rule is a range rule, walking left-node-right emits the keys in sorted order. Several separate problems collapse into that one sentence.", w:
+`in-order walk of a valid BST is strictly increasing
+
+so:
+  validate       one pass, check each key > the previous
+  k-th smallest  stop after k emissions   O(h + k)
+  successor      the next emission after x
+  range [a, b]   prune subtrees that cannot contain it
+
+all O(h) or O(h + output), none of them O(n)` },
+  ],
 
   costs: [
     ["search / insert / delete", "O(h)", "one root-to-leaf path, every time"],
@@ -4123,7 +5218,7 @@ function kthSmallest(root, k) {
   plain: `<p>Two nodes sit somewhere in a tree. Walk down from the root towards each of them and, for a while, you take the same turns. At some node the two routes disagree for the first time, one goes left and the other goes right. That node is the lowest common ancestor: the last place they were still together.</p>
 <p>Every node above it is also an ancestor of both, so "an ancestor of both" is not a strong enough description. The word carrying the meaning is <b>lowest</b>. And notice that if one of the two nodes sits directly above the other, the answer is that node itself, because a node counts as its own ancestor. That sounds like a technicality and it is the single most useful fact on this page.</p>
 <p>You could find it by writing down both root-to-node paths and comparing them. That works and costs a second array. The better method never builds a path at all: it walks to the bottom first and lets the answer come back up.</p>
-<p><b>Analogy.</b> Two people trace their family tree back through their parents. The first shared name is the answer, and you find it not by reading the tree from the top but by both of you walking upward until you collide.</p>`,
+<p><b>Analogy.</b> Two people trace their family tree back through their parents. The first shared name is the answer. You find it not by reading the tree from the top, but by both of you walking upward until you meet.</p>`,
 
   why: [
     { t: "Say precisely what is being asked", d: "From the root there is exactly one path to each node. The two paths start identically and separate at most once, because a tree has no second route anywhere. So the question is not really about ancestry, it is: <b>where do the two paths stop agreeing?</b>" },
@@ -4169,6 +5264,53 @@ function kthSmallest(root, k) {
 
   viz: ["lca"],
   see: [["VA", "https://visualgo.net/en/bst", "VisualGo, walk a tree one node at a time"]],
+
+  math: [
+    { t: "The direct method, priced honestly", d: "Storing both root-to-node paths works. In a general binary tree the finding of those paths is itself a full traversal, which is the part people forget to count.", w:
+`general binary tree, n nodes, height h
+
+path method:
+  find the path to p      O(n)
+  find the path to q      O(n)
+  compare the prefixes    O(h)
+  extra memory            2 x O(h) for the two paths
+
+one recursive pass:
+  every node entered once O(n)
+  extra memory            O(h), the call stack, nothing else` },
+    { t: "Why exactly one node can be the answer", d: "The set of nodes that contain p is not an arbitrary set. It is a chain, and two chains from the root can only overlap in a prefix.", w:
+`A = the nodes whose subtree contains p
+every element of A is an ancestor of p, so A is the chain
+root -> ... -> p, and |A| = depth(p) + 1
+
+B = the same chain for q
+
+A and B both start at the root, so their intersection is
+a prefix of both: another chain. Its deepest element is
+the LCA. A chain has one deepest element, so the answer
+exists and is unique.` },
+    { t: "Three cases at every node, and only one of them is the answer", d: "Ask both children what they found. There are four possible replies and the interesting one fires exactly once in the whole tree.", w:
+`at node x, after recursing:
+
+  left != null and right != null   ->  x is the LCA
+  left != null, right == null      ->  pass left up
+  left == null, right != null      ->  pass right up
+  both null                        ->  pass null up
+
+the first case fires exactly once across all n nodes,
+which is why a single pass is enough` },
+    { t: "Many queries change the answer: binary lifting", d: "One pass per query is fine for one query. For 100,000 of them the arithmetic stops working, and the fix is to precompute ancestors at power-of-two distances.", w:
+`n nodes, q queries
+
+one pass per query:   q x n
+binary lifting:       n log2 n to build, log2 n per query
+
+n = 10^5, q = 10^5:
+  10^10             vs   1.7 x 10^6 + 1.7 x 10^6
+
+up[k][v] = the 2^(k)-th ancestor of v, k = 0 .. 17
+any jump of distance d is the set bits of d: at most 17 hops` },
+  ],
 
   costs: [
     ["recursive LCA, one query", "O(n) time", "worst case every node is visited once, and it must be, since the tree gives no hint where the targets are"],
@@ -4385,10 +5527,11 @@ function build(n, parent, LOG = 17) {
   group: "Data structures",
   one: "Store words as <b>shared paths, one character per edge</b>, so a prefix stops being a search and becomes a walk of length equal to the prefix.",
 
-  plain: `<p>A hash set answers one question superbly: is this exact string present. Ask it anything softer, such as which stored words begin with "pre", and it has nothing to offer but a full scan, because hashing deliberately scrambles similar keys into unrelated slots. "cat" and "cats" are neighbours to you and strangers to the table.</p>
-<p>A trie keeps the resemblance instead of destroying it. Each edge carries one character, each node is the prefix spelled by the path from the root, and any two words sharing a first few letters share those first few edges. "car", "cart" and "care" cost you c, a, r once between them.</p>
-<p>So a lookup is: start at the root, follow one edge per character, and see whether you fall off the tree. That costs the length of the word and nothing else. A million stored words do not make it slower, because you only ever walk your own word.</p>
-<p><b>Analogy.</b> A filing system by street address rather than by name. Everyone on Baker Street is filed down the same corridor, so "who lives on Baker Street" is a walk to one cabinet, not a sweep of the building. The price is that you keep a corridor even for the streets with one resident.</p>`,
+  plain: `<p>A hash set answers one question superbly: is this exact word present? Ask it anything softer and it has nothing for you. "Which stored words start with <b>pre</b>?" forces it to check every single word it holds.</p>
+<p>The reason is that hashing deliberately scrambles similar keys into unrelated slots. "cat" and "cats" look like neighbours to you. To the table they are strangers.</p>
+<p>A trie keeps that resemblance instead of destroying it. Each edge carries one letter. Each node is the prefix you have spelled by walking down from the root. Two words that start the same way share those first edges, so "car", "cart" and "care" cost you <code>c</code>, <code>a</code>, <code>r</code> once between them.</p>
+<p>A lookup is then: start at the root, follow one edge per letter, and see whether you fall off the tree. That costs the length of your word and nothing else. A million stored words do not slow it down, because you only ever walk your own word.</p>
+<p><b>Analogy.</b> Filing by street address rather than by name. Everyone on Baker Street is filed down the same corridor. So "who lives on Baker Street" is a walk to one cabinet, not a sweep of the building. The price is that you keep a whole corridor even for a street with one resident.</p>`,
 
   why: [
     { t: "Start from the question a hash set cannot answer",
@@ -4404,7 +5547,7 @@ function build(n, parent, LOG = 17) {
     { t: "The honest cost is memory",
       d: "Every node needs a way to reach its children: a map keyed by character, or a fixed array of 26 pointers. The array is faster and wastes most of itself on sparse data, since a node with one child still pays for 26 slots. A trie buys prefix walks with space, and on short unrelated strings that is a bad trade." },
     { t: "Which decides when to use it",
-      d: "Use it when prefixes are the question: autocomplete, counting words with a prefix, word search on a board where one walk tests many candidate words at once, or a <b>bit trie</b> where numbers are stored as their bits and maximum XOR becomes greedily walking to the opposite bit at each level. If you only ever ask about whole exact strings, a hash set is smaller, simpler and better." },
+      d: "Use it when prefixes are the question. Autocomplete. Counting the words that start with something. Word search on a board, where one walk tests many candidate words at once. And the <b>bit trie</b>, where numbers are stored as their bits, so finding the maximum XOR becomes walking to the opposite bit at every level. If you only ever ask about whole exact strings, a hash set is smaller, simpler and better." },
   ],
 
   hing: `<p><b>Sawal yeh hai:</b> hash set batata hai "yeh exact word hai ya nahi", O(1) mein. Par "kaunse words 'pre' se shuru hote hain" par woh bilkul bekaar hai. Kyun? Kyunki hashing <b>jaan bujh kar</b> similar keys ka rishta tod deta hai. "cat" aur "cats" tumhare liye padosi hain, hash table ke liye do ajnabi.</p>
@@ -4413,9 +5556,52 @@ function build(n, parent, LOG = 17) {
 <p><b>Asli selling point (interview mein yahi bolo):</b> cost <b>O(L)</b> hai, L = word ki length, aur yeh <b>store kitne words hain uspar depend hi nahi karta</b>. 10 words ho ya 10 lakh, tum sirf apne word ke letters chalte ho. Hash map ki O(1) bhi asal mein key ko hash karti hai, yaani O(L) hi hai, par woh prefix ka jawab de hi nahi sakta.</p>
 <p><b>isEnd flag kyun chahiye, yeh sabse zyada miss hota hai.</b> "cat" daala to c, ca, cat, teeno nodes ban gaye. Agar node par pahunchna hi "mil gaya" maana jaaye to trie kahega "ca" bhi present hai, jo galat hai. Isliye har node par <b>isEnd</b> rakho, sirf wahan true jahan koi word khatam hota hai. <code>search()</code> flag check karta hai, <code>startsWith()</code> nahi karta. Poora difference yahi ek line hai.</p>
 <p><b>Kimat kya hai? Memory.</b> Har node ko children chahiye: ya to ek map, ya 26 pointers ka fixed array. Array tez hai par ek child wale node par bhi poore 26 slots ka kharcha deta hai, yaani sparse data par zyaadatar memory khaali padi rehti hai. Map memory bachata hai, thoda slow hai. Interview mein yeh trade-off khud bolo, achha lagta hai.</p>
-<p><b>Kab lena hai:</b> autocomplete, prefix count, board par word search (ek DFS walk se kai words ek saath test ho jaate hain), aur <b>bit trie</b>, jahan numbers ko unke bits ke roop mein daalte ho aur maximum XOR nikalna bas har level par ulta bit chunne ki greedy walk ban jaata hai. <b>Kab nahi lena:</b> jab sirf poore exact strings poochhe jaayein. Wahan hash set chhota bhi hai aur simple bhi.</p>`,
+<p><b>Kab lena hai:</b> autocomplete, prefix count, aur board par word search, jahan ek DFS walk se kai words ek saath test ho jaate hain.</p>
+<p><b>Aur ek aur jagah: bit trie.</b> Numbers ko unke bits ke roop mein daal do. Ab maximum XOR nikalna bas itna hai ki har level par <b>ulta bit</b> chun lo. <b>Kab nahi lena:</b> jab sirf poore exact strings poochhe jaayein. Wahan hash set chhota bhi hai aur simple bhi.</p>`,
 
   viz: ["trie"],
+
+  math: [
+    { t: "The question a hash set cannot answer, priced", d: "Exact lookup is a tie. The prefix question is not, and the gap grows with the number of stored words rather than staying flat.", w:
+`n words, average length L, query prefix of length P
+
+                   hash set            trie
+contains(word)     O(L) hash + compare O(L)
+startsWith(p)      O(n x L) scan all   O(P)
+
+n = 10^6 words, P = 5:
+  hash set   5 x 10^6 character reads
+  trie       5` },
+    { t: "Count characters, not words", d: "Shared prefixes are stored once, so the node count is bounded by the total length of everything inserted, and is usually far below it.", w:
+`insert car, cart, care
+
+stored separately: 3 + 4 + 4 = 11 characters
+as a trie:         c - a - r  then t, then e = 5 nodes
+
+worst case, no shared prefixes at all:
+  nodes = total characters = n x L
+  10^5 words x 10 chars = 10^6 nodes` },
+    { t: "The memory bill, which is the real reason to stop and think", d: "Time is never why a trie gets rejected. It is that every node holds a whole alphabet of mostly empty slots.", w:
+`one node as a 26-slot reference array:
+  26 x 8 bytes = 208, plus a header ~ 16 = 224 bytes
+
+10^6 nodes x 224 bytes = 224 MB
+
+one node as a hash map of present children only:
+  ~48 bytes + ~40 per child actually there
+a sparse trie shrinks by roughly 10x this way, and pays
+with a hash lookup per character instead of an index` },
+    { t: "Arriving at a node is not the same as a word ending there", d: "One boolean per node separates the two, and without it the structure quietly claims to contain every prefix of everything inserted.", w:
+`insert "car" only
+
+walk "ca": you arrive at a real, existing node
+  contains("ca")    must be false
+  startsWith("ca")  must be true
+
+so each node carries isEnd. Without it, inserting n words
+of length L silently defines n x L words:
+  10^5 words x 10 chars = 10^6 false positives` },
+  ],
 
   costs: [
     ["insert a word of length L", "O(L)", "one node created or reused per character, nothing else is touched"],
@@ -4653,9 +5839,9 @@ class Trie {
   one: "Neither structure can do the job alone: a hash map has no order, a list has no lookup. <b>Hold the same nodes in both</b> and every operation is O(1).",
 
   plain: `<p>A cache has a fixed capacity. It has to answer "what is the value for this key" quickly, and when it fills up it has to throw something away. Least recently used means it throws away whatever has gone longest without being touched.</p>
-<p>A hash map does the first half perfectly and the second half not at all: it finds a key in O(1) and has no concept of order, so it cannot tell you what is oldest. A linked list does the opposite: keep it ordered by recency and eviction is free, it is whatever sits at the tail, but finding a key means walking it, which is O(n).</p>
+<p>A hash map does the first half perfectly and the second half not at all. It finds a key in O(1). It has no idea of order, so it cannot tell you what is oldest. A linked list does the opposite. Keep it ordered by how recently things were used and eviction is free: it is whatever sits at the tail. But finding a key means walking the list, which is O(n).</p>
 <p>The move is to use both, over the same objects. The map's value is not the cached value, it is a <b>pointer to the list node</b> holding it. One map lookup and you are standing on the node, with no walking, and from there you can unlink and relink it in constant time. Every operation touches both structures, and they must stay in step: anything evicted has to leave the list and the map.</p>
-<p><b>Analogy.</b> A library with a card index and a shelf of returns. The index tells you instantly where a book is; the shelf keeps them in the order they were last read, so the one at the far end is the one nobody wants. Remove a book and you must pull its card too, or the index sends the next reader to an empty slot.</p>`,
+<p><b>Analogy.</b> A library with a card index and a shelf of returns. The index tells you instantly where a book is. The shelf keeps them in the order they were last read, so the one at the far end is the one nobody wants. Remove a book and you must pull its card too, or the index sends the next reader to an empty slot.</p>`,
 
   why: [
     { t: "Write down what the thing must do", d: "Two operations, both required to be O(1): <b>get</b> a value by key, and <b>put</b> a key, evicting the least recently used entry if that would exceed capacity. Reading a key counts as using it. The word 'both' is doing all the work, because each operation on its own is easy." },
@@ -4663,8 +5849,8 @@ class Trie {
     { t: "A list answers the other half", d: "Keep entries in a list ordered by when they were last touched, newest at the head. Eviction is now free: the tail is the answer, by definition. But looking up a key means walking the list, <b>O(n)</b>, which loses the other requirement. Each structure is fast at exactly what the other is slow at." },
     { t: "So hold the same objects in both", d: "Do not store values in the map. Store, for each key, <b>the list node itself</b>. The map turns a key into a position in O(1), and the list turns a position into an order in O(1). Neither structure duplicates the data; they are two indexes over one set of nodes." },
     { t: "Unlinking is why the list must be doubly linked", d: "To remove a node you must reach the one <b>before</b> it, so its next pointer can be redirected. A singly linked list only offers that by walking from the head, which is the O(n) you just paid to avoid. A back pointer turns unlink into four assignments and nothing else." },
-    { t: "Two sentinel nodes delete every null check", d: "Put a permanent dummy at the head and another at the tail. Now every real node has a genuine neighbour on both sides, so unlink and insert are the same two lines whether the list is empty, full, or holding one item. This is the same trick as a dummy head on any linked-list problem." },
-    { t: "The two structures must never disagree", d: "Every write touches both. Evicting means unlinking the node <b>and</b> deleting its key from the map, which is why the node has to store its own key: standing on the tail node, you need to know what to delete. Miss that and the map points at a node no longer in the list, and get returns a value the cache does not hold." },
+    { t: "Two sentinel nodes delete every null check", d: "Put a permanent dummy at the head and another at the tail. Now every real node has a genuine neighbour on both sides. Unlink and insert become the same two lines, whether the list is empty, full, or holding one item. This is the same trick as a dummy head on any linked-list problem." },
+    { t: "The two structures must never disagree", d: "Every write touches both. Evicting means unlinking the node <b>and</b> deleting its key from the map. That is why the node has to store its own key. Standing on the tail node, you need to know what to delete. Miss that and the map points at a node no longer in the list, and get returns a value the cache does not hold." },
     { t: "What this does not give you", d: "LRU is a guess, not a prediction: it assumes recent use predicts future use, which is false for a single long scan through cold data. And if you need frequency rather than recency, this shape does not stretch, LFU needs a second layer of lists grouped by count." },
   ],
 
@@ -4697,10 +5883,58 @@ class Trie {
 
   viz: ["lru"],
 
-  hing: `<p><b>Do cheezein chahiye, aur koi ek structure dono nahi de sakta.</b> Hash map: key se value O(1), lekin usme <b>order hai hi nahi</b>, to purana kaun hai yeh bata hi nahi sakta. Linked list: recency ke hisaab se rakho to eviction free hai, tail utha lo, lekin key dhoondhne ke liye poori list chalni padegi, O(n). Har structure theek wahan tez hai jahan doosra slow hai.</p>
+  hing: `<p><b>Do cheezein chahiye, aur koi ek structure dono nahi de sakta.</b> Hash map se key ka value O(1) mein mil jaata hai. Par usme <b>order hai hi nahi</b>, to woh bata hi nahi sakta ki purana kaun hai. Linked list: recency ke hisaab se rakho to eviction free hai, tail utha lo, lekin key dhoondhne ke liye poori list chalni padegi, O(n). Har structure theek wahan tez hai jahan doosra slow hai.</p>
 <p><b>To dono use karo, ek hi nodes ke upar.</b> Map mein value mat rakho, <b>node ka pointer</b> rakho. Ek lookup aur tum seedhe us node par khade ho, chalna nahi pada. Yeh join hi poora answer hai.</p>
 <p><b>List doubly linked kyun?</b> Kisi node ko nikalne ke liye uske <b>pehle wale</b> node tak pahunchna padta hai. Singly list mein head se chalna padega, matlab wahi O(n) wapas. Back pointer se unlink char assignment ka kaam hai. Aur do <b>sentinel</b> nodes daal do, ek head par ek tail par, phir null check kabhi nahi karna padega, list khaali ho ya bhari, code same.</p>
 <p><b>Sabse badi galti:</b> evict karte waqt sirf list se nikaal dena aur map se bhoolna. Phir map ek aise node ko point karta rahega jo list mein hai hi nahi, aur get galat value de dega. Isliye <b>node apni key khud store karta hai</b>, taki tail par khade ho kar pata chale map se kya delete karna hai. Yeh line interview mein khud bol dena, poochne se pehle.</p>`,
+
+  math: [
+    { t: "Each structure answers half, and half is worthless here", d: "Both operations have to be O(1), because a cache that is slower than the thing it caches has no reason to exist.", w:
+`capacity C, n operations
+
+hash map only:  get O(1), "which is least recent?" O(C)
+list only:      order is free, find(key) is O(C)
+both, sharing the same node objects: every operation O(1)
+
+C = 100,000, n = 10^6:
+  one structure   10^6 x 100,000 = 10^11
+  both            10^6` },
+    { t: "Why the list must be doubly linked, counted in pointer writes", d: "Eviction is not the hard part. Moving a node you found through the map to the front is, and that needs the node before it.", w:
+`to unlink x you need x's predecessor
+
+singly linked:  walk from the head to find it      O(C)
+doubly linked:  x.prev and x.next are right there  O(1)
+
+  x.prev.next = x.next
+  x.next.prev = x.prev
+
+2 reads, 2 writes, wherever x happens to sit` },
+    { t: "Two sentinels delete six cases", d: "Head and tail specials are where this implementation goes wrong under time pressure. Two dummy nodes make every real node an interior node.", w:
+`without sentinels, each of unlink and insert must ask
+  is it the head?  is it the tail?  is it the only node?
+  3 questions x 2 operations = 6 branches to get right
+
+with a head and tail sentinel
+  every real node has a real prev and a real next
+  0 branches, 2 nodes of extra memory, for ever` },
+    { t: "What a capacity actually costs in bytes", d: "The bookkeeping is not free, and it is what decides the capacity you can afford, quite apart from the values being cached.", w:
+`one entry: key, value, prev, next, plus the map's own entry
+  8 + 8 + 8 + 8 + ~48  =  ~80 bytes of overhead
+
+capacity 1,000,000  ->  ~80 MB before a single value
+
+which is why "unbounded LRU" is not a cache. It is a
+memory leak that reports a hit rate.` },
+    { t: "The access pattern LRU is worst at, in one number", d: "Least-recently-used is a guess about the future. There is one very ordinary pattern where the guess is wrong every single time.", w:
+`cache of size C = 1,000
+a loop that scans 1,001 items, repeatedly
+
+every access evicts the item needed next
+hits: 0 out of 10^6 accesses. Hit rate 0 %.
+
+random eviction on the same pattern keeps about
+C / (C+1) of the working set and gets ~ 99 %` },
+  ],
 
   costs: [
     ["get(key), hit or miss", "O(1)", "one map lookup lands on the node, then four pointer writes move it, and nothing is scanned"],
@@ -4933,36 +6167,83 @@ const pushFront = (head, n) => {
   group: "Data structures",
   one: "A plain array is O(1) update and O(n) query, a prefix array is the reverse. These trees refuse both extremes: <b>O(log n) for the update and the query alike</b>.",
 
-  plain: `<p>Prefix sums answer any range in one subtraction, and they hold that record right up until somebody changes an element. One write invalidates every prefix after it, so the honest cost of an update is a full rebuild, O(n). The plain array has the opposite problem: writing is instant, reading a range means walking it.</p>
-<p>So you have two structures, each brilliant at one operation and hopeless at the other. Real problems interleave reads and writes, which means the thing you actually want is the compromise neither of them offers: both operations merely fast, rather than one free and one ruinous.</p>
-<p>Both structures on this page buy exactly that. A <b>segment tree</b> stores an aggregate for every half, quarter and eighth of the array, so any range is assembled from a handful of stored pieces and any write repairs a handful of them. A <b>Fenwick tree</b> does the narrower job of prefix aggregates in a tenth of the code, by letting the binary representation of an index do the bookkeeping.</p>
-<p><b>Analogy.</b> A company that reports revenue per region, per country and per city. Nobody adds up every shop to answer a regional question, and one shop having a good day updates its city, its country and its region, not everybody else.</p>`,
+  plain: `<p>You have a list of numbers. Two things keep happening: someone changes one number, and someone asks for the total of a stretch of them. Say positions 3 to 700.</p>
+<p>You have two obvious options and both are bad at one of the jobs. Keep the plain list: changing a number is instant, but adding up a stretch means walking every one of them. Or keep a running-totals list: the stretch becomes one subtraction, but changing a single number means rebuilding every total after it.</p>
+<p>So one is fast to write and slow to read. The other is fast to read and slow to write. If your problem does both, you lose either way.</p>
+<p>The fix is to stop storing single numbers or whole totals, and store the totals of <b>blocks</b> instead. A block knows its own sum. Change one number and you fix only the blocks containing it. Ask for a stretch and you add up a few whole blocks instead of hundreds of numbers. Both jobs become about twenty steps at a million items.</p>
+<p><b>Analogy.</b> A company reporting sales. Asking every salesperson takes all day. A single printed total is instant to read and stale the moment one sale changes. So you keep totals per team, per office, per region. One sale updates three totals, and any question is answered from a handful of them.</p>`,
 
   why: [
-    { t: "The two structures you already have are both extreme",
-      d: "A plain array updates in O(1) and answers a range sum in O(n), because you walk the range. A prefix array answers in O(1) and updates in O(n), because one write poisons every prefix after it. There is nothing in between on offer, and a problem that mixes reads and writes wants precisely the thing in between." },
-    { t: "Store aggregates over blocks instead of over prefixes",
-      d: "Cut the array into blocks of size b and keep one sum per block. A query reads whole blocks in the middle plus a few loose elements at each end, roughly n/b + b work; an update fixes one element and one block, O(1). Set b to the square root of n and both sides land at O(sqrt n). This is <b>sqrt decomposition</b>, and it is already worth knowing, but the useful part is the idea it exposes: precompute over ranges, not over prefixes." },
-    { t: "Now stop picking a block size and recurse instead",
-      d: "One block size is an arbitrary compromise. Split the whole range in half, split each half again, and keep going down to single elements, storing the aggregate at every node. You now have blocks of <b>every</b> size at once, arranged in a tree that is about log2 n levels deep. n leaves, n-1 internal nodes, so the memory is still linear." },
-    { t: "A query tiles the range, an update walks one path",
-      d: "To answer l..r, descend from the root. A node entirely inside the range hands back its stored value and you stop; a node entirely outside hands back the identity. Only nodes straddling an endpoint get split further, and there are two endpoints across log n levels, so you touch <b>O(log n)</b> nodes and the ones you keep tile the range exactly, nothing double counted. Changing one element is the mirror image: the nodes containing index i form a single root-to-leaf path, so write the leaf and recombine each parent on the way back up." },
-    { t: "The operation only has to be associative, and that is the whole payoff",
-      d: "Notice that nothing above subtracted anything. The combine step only needs to give the same answer however the pieces are bracketed, so the identical tree does minimum, maximum, gcd, bitwise or, or matrix product; you change <code>op</code> and the identity value and nothing else. That is why the extra code earns its place. A prefix array can never answer a range <b>minimum</b>, because you cannot un-add a number out of a min." },
-    { t: "Fenwick: the same job for prefixes, in a tenth of the code",
-      d: "If you only ever need prefixes and the operation can be undone, most of the tree is unnecessary. Let node i be responsible for the last <code>i &amp; -i</code> elements ending at i, where <code>i &amp; -i</code> isolates the <b>lowest set bit</b> and therefore says how wide that node is. A prefix is then the sum of the nodes you meet by repeatedly stripping that bit off i, and an update walks the other way by adding it. Both loops run once per bit, O(log n). It is one indexed because 0 has no lowest set bit, so both loops would sit there forever. It is harder to derive and much easier to type, which is the honest reason people prefer it." },
-    { t: "Know the three places this is the wrong answer",
-      d: "If the array never changes, a prefix array is simpler, faster and has better cache behaviour, so use it and say why. If the <b>updates</b> are ranges rather than points, a plain segment tree degrades to O(n log n) per update and you need <b>lazy propagation</b>, which stores a pending change at a node and pushes it down only when someone looks: name it, and expect not to need it in an interview. And a Fenwick tree cannot do minimum, because turning two prefixes into a range needs subtraction, and minimum does not have one." },
+    { t: "Write down the two structures you already have, and what each one costs", d: "A plain array: changing one value is one write. Asking for the sum of a stretch means touching every value in it, so a wide stretch costs <b>O(n)</b>. A running-totals array is the mirror image. The stretch is one subtraction, <b>O(1)</b>, but changing one value means fixing every total after it, <b>O(n)</b>. Each is perfect at one job and worst at the other." },
+    { t: "A workload with both operations lands in the bad half whichever you pick", d: "With a million values and a million operations, either choice does about 10^12 steps. Notice what is going wrong: both structures store something at the two extremes. One stores single values. The other stores totals that reach all the way back to the start. Nothing sits in between." },
+    { t: "So store the totals of blocks, which is the in-between thing", d: "Cut the array into blocks of size k and store each block's sum. Changing one value fixes its own block, so that is <b>O(k)</b> at worst. A stretch is now some whole blocks, plus a few loose values at each end. That is about <code>n/k</code> blocks plus <code>2k</code> leftovers. Pick <code>k = sqrt(n)</code> and both come to about <b>sqrt(n)</b>, which at a million is a thousand. Better than a million, and still not good." },
+    { t: "Stop choosing a block size and let the blocks contain blocks", d: "The block size was a compromise, so remove it. Take the whole array as one block, split it in half, split each half in half, and keep going until each block holds one value. Every block stores the sum of its two children. That is a <b>segment tree</b>, and it has <code>log n</code> levels because you halved each time. Twenty levels at a million." },
+    { t: "Now read the two costs straight off the picture", d: "An update changes one leaf. Only the blocks containing that leaf are now wrong, and those are its ancestors: one per level. So an update fixes <b>log n</b> blocks. A query covers the stretch with whole blocks, and at each level at most two blocks stick out at the ends. So a query reads at most <b>2 log n</b> blocks. At a million values that is 20 writes and about 40 reads, instead of a million of either." },
+    { t: "The operation only has to be associative, and that is the real payoff", d: "Nothing above mentioned addition. The only thing used was that a block can be built from its two halves, in that order. Any operation where <code>(a then b) then c</code> equals <code>a then (b then c)</code> works unchanged: minimum, maximum, gcd, product, even matrix multiplication. Averages do not, because an average of averages is not the average. Store the sum and the count instead, then divide at the very end." },
+    { t: "Fenwick does the same job for prefixes, in a tenth of the code", d: "Suppose you only ever need totals that start at the beginning. Then a Fenwick tree stores a cleverer set of partial sums in one flat array. It gets the same <b>log n</b> for both jobs, in about ten lines. The catch is how it answers a middle stretch: it takes the total up to the end and subtracts the total up to the start. That subtraction is the requirement. Sums can be subtracted, so a Fenwick can do sums. Minimums cannot, so it cannot do minimums." },
+    { t: "Three places where this is the wrong answer", d: "If the values never change, a sparse table answers minimum and maximum in one step after a heavier build, so the tree is wasted effort. If n and the number of questions are both small, say a thousand each, a plain loop is a million steps and you are done in three lines. And if there is exactly one update at the start, build the running totals once. A segment tree is a hundred lines that lose to a loop in all three cases." },
   ],
-
-  hing: `<p><b>Kahani wahin se shuru hoti hai jahan prefix sums khatam hote hain.</b> Prefix array mein query O(1) hai, par ek element badal do aur uske baad ke saare prefixes galat ho jaate hain, yaani update O(n). Plain array mein ulta hai: update O(1), query O(n). Dono <b>extreme</b> hain. Jab reads aur writes dono mile hue aayein, to wahi beech wala structure chahiye jo dono nahi deta.</p>
-<p><b>Beech wala kaise banega?</b> Pehle sqrt decomposition socho: array ko blocks mein baanto, har block ka sum rakho. Query mein beech ke poore blocks + kinaare ke chhote elements, matlab n/b + b. b = sqrt(n) rakho to dono O(sqrt n). Idea yeh hai: <b>prefixes ke bajaye ranges par precompute karo</b>.</p>
-<p><b>Segment tree bas isi ko recursive kar deta hai.</b> Ek fixed block size chunne ke bajaye range ko aadha aadha todte jao, single element tak. Ab har size ke blocks maujood hain, tree ki depth log2 n. Query karte waqt: jo node poori range ke andar hai, uski stored value le lo aur ruk jao; jo bilkul bahar hai, identity return karo; sirf woh nodes tode jaate hain jo endpoint par latke hain. Do endpoints, log n levels, isliye <b>O(log n)</b> nodes. Update mein sirf ek root-to-leaf path badalta hai, wapas aate waqt har parent ko dobara combine kar do.</p>
-<p><b>Sabse important baat jo log interview mein miss karte hain:</b> is poore derivation mein kahin subtraction use nahi hua. Operation ko sirf <b>associative</b> hona chahiye. Isliye wahi tree sum, min, max, gcd, bitwise or, sab kar leta hai, bas <code>op</code> aur identity badalti hai. Yahi wajah hai ki itna code likhna sahi hai. Prefix array kabhi range minimum nahi de sakta, kyunki min ko "un-add" nahi kar sakte.</p>
-<p><b>Fenwick tree (BIT) ka trick, dheere se padho:</b> <code>i &amp; -i</code> matlab i ka <b>sabse chhota set bit</b>, aur wahi bata deta hai ki node i kitne elements ka zimmedaar hai. Prefix nikalna hai to i mein se woh bit hatate jao aur values jodte jao. Update karna hai to wahi bit jodte jao aur upar chadhte jao. Dono loops har bit par ek baar chalte hain, O(log n). <b>1-indexed kyun?</b> Kyunki 0 ka koi lowest set bit hota hi nahi, loop hil hi nahi payega, aur code bina error diye chup baith jaayega. Fenwick <b>derive karna mushkil, likhna aasan</b> hai, isliye contests mein sabko yahi pyaara hai.</p>
-<p><b>Aur kab yeh sab nahi chahiye, yeh bolna bhi marks deta hai.</b> Agar array badalta hi nahi, to seedha prefix sums bolo, simpler aur faster. Agar <b>range update</b> chahiye (poori range par add), to plain segment tree slow ho jaayega, wahan <b>lazy propagation</b> lagta hai: change ko node par pending rakh do aur tabhi neeche bhejo jab koi wahan dekhne aaye. Interview mein naam le lena kaafi hai, poora code shayad hi maanga jaata hai. Aur yaad rakho, Fenwick se <b>minimum</b> nahi hota, kyunki do prefixes se range banane ke liye subtraction chahiye.</p>`,
+  hing: `<p><b>Problem pehle, structure baad mein.</b> Ek list hai. Do cheezein baar-baar hoti hain: koi ek number badal deta hai, aur koi poochhta hai "position 3 se 700 tak ka total kya hai".</p>
+<p><b>Do seedhe options hain, aur dono ek kaam mein bekaar hain.</b> Plain array rakho: number badalna instant, par total nikalne ke liye saare numbers jodne padenge. Prefix sums rakho: total ek ghatav mein mil jaata hai, par ek number badla to uske aage ke saare totals dobara banane padenge. Ek likhne mein tez hai, doosra padhne mein. Problem dono maangti hai to dono fail.</p>
+<p><b>Asli idea: na single numbers store karo, na poore totals. Blocks ke totals store karo.</b> Array ko tukdon mein baanto, har tukde ka apna sum rakho. Ek number badla to sirf uske tukde ka sum theek karo. Total poochha to poore tukde jodo, ek-ek number nahi.</p>
+<p><b>Tukda kitna bada ho? Yahi sawaal tang karta hai, to hata do.</b> Poore array ko ek tukda maano. Usko do hisson mein baanto, phir har hisse ko do mein. Yeh chalta raho jab tak ek-ek number na bach jaye. Har tukda apne do bachchon ka sum rakhta hai. Yeh <b>segment tree</b> hai. Har baar aadha kiya, isliye <b>log n</b> levels, matlab 10 lakh par sirf 20.</p>
+<p><b>Ab dono cost picture se seedhe padh lo.</b> Update mein ek leaf badla, to sirf uske upar wale tukde galat hue, har level par ek: <b>log n</b>. Query mein range ko poore tukdon se dhako, har level par zyada se zyada do tukde bahar nikalte hain: <b>2 log n</b>. 10 lakh par 20 aur 40, dono jagah.</p>
+<p><b>Yeh sirf sum ke liye nahi hai, aur yeh pooch liya jaata hai.</b> Upar kahin addition ki zaroorat nahi padi. Bas itna chahiye ki tukda apne do hisson se ban jaye. To min, max, gcd, product, sab chalega. <b>Average nahi chalega</b>, kyunki averages ka average, average nahi hota. Sum aur count alag rakho, divide aakhir mein karo.</p>
+<p><b>Fenwick kab? Aur kab nahi?</b> Sirf shuruaat se lekar kisi point tak ka total chahiye, to Fenwick 10 line mein wahi log n de deta hai. Par beech ki range woh <b>ghata kar</b> nikalta hai: end tak ka total minus start tak ka total. Sum ghataya ja sakta hai, isliye Fenwick sum karta hai. <b>Minimum ghataya nahi ja sakta, isliye Fenwick min nahi karta.</b> Yeh line interview mein seedha poochhi jaati hai.</p>
+<p><b>Aur kab yeh galat jawab hai:</b> data badalta hi nahi to sparse table lo. n aur queries dono chhote hain, jaise 1000-1000, to simple loop 10 lakh steps mein ho jayega, 100 line ka tree mat likho.</p>`,
 
   viz: ["segment-tree"],
+
+  math: [
+    { t: "The two structures you already have are both extreme", d: "Neither is bad. They are optimal at opposite ends, and a workload with both operations in it lands in the worst case of whichever you picked.", w:
+`n = 10^6, q = 10^6 operations, mixed updates and queries
+
+plain array    update 1       query n      ->  10^12
+prefix sums    update n       query 1      ->  10^12
+segment tree   update log n   query log n  ->  4 x 10^7
+
+20 and 20, instead of 1 and 1,000,000` },
+    { t: "Why a query reads only about 2 log n nodes", d: "The range is covered by whole blocks. At each level of the tree at most two partial blocks survive, and everything inside them is already summarised.", w:
+`a segment tree over n leaves: 2n - 1 nodes, height log2 n
+
+any range is covered by at most 2 nodes per level
+  ->  at most 2 log2 n nodes in total
+
+n = 10^6: at most 40 nodes read, out of 2 x 10^6
+
+allocate 4n, not 2n: the bottom level is padded up to
+the next power of two, and 2 x 2^ceil(log2 n) <= 4n` },
+    { t: "Fenwick: the lowbit jump, traced on real indices", d: "The whole structure is i & (-i), the lowest set bit. Queries walk it off, updates walk it on, and both stop after one step per bit.", w:
+`i & (-i) isolates the lowest set bit
+
+prefix(13):  13 = 1101, subtract the lowbit each time
+  13 -> 12 -> 8 -> 0
+  3 reads, exactly the number of set bits in 13
+
+update(5):   5 = 0101, add the lowbit each time
+  5 -> 6 -> 8 -> 16 -> ... while <= n
+  at most log2 n writes` },
+    { t: "What the combine function has to satisfy", d: "Associativity is the whole requirement for a segment tree. Fenwick asks for one thing more, and that extra requirement is why it cannot answer range minimum.", w:
+`segment tree needs: (a . b) . c = a . (b . c)
+  sum, min, max, gcd, product, matrix product   yes
+  average                                       no
+
+  (store sum and count, divide at the very end)
+
+Fenwick needs an inverse as well, because it builds a
+range from two prefixes by subtracting:
+  sum has one (minus), min has none
+  hence no Fenwick for range minimum` },
+    { t: "Three situations where this is the wrong answer", d: "The tree is the right structure for interleaved updates and queries. Remove either half of that and something simpler wins outright.", w:
+`no updates at all       sparse table
+                        build n log n, query O(1)
+n and q both small      a plain loop
+                        n = q = 1000  ->  10^6, fine
+one update, then reads  prefix sums, rebuilt once
+                        build n, query 1
+
+a segment tree here is 100 lines that lose on both axes` },
+  ],
 
   costs: [
     ["build a segment tree", "O(n) time, O(4n) space", "one pass over n leaves and n-1 internal nodes, 4n is the safe array size"],
@@ -5320,7 +6601,7 @@ class SegTree {
     { t: "DFS and BFS differ only in which end of the container you take from", d: "Take the most recently added node and you go deep, following one path to its conclusion before backing up. Take the oldest and you expand in rings. Same loop, same visited set, same complexity. Recursion is just DFS with the call stack playing the part of the stack." },
     { t: "Which is why BFS finds shortest paths and DFS does not", d: "BFS finishes everything at distance 1 before anything at distance 2, so the <b>first time</b> it reaches a node is by the fewest edges. DFS reaches nodes in whatever order its commitments led to, so its first arrival means nothing. This holds only while every edge counts the same, which is exactly where the next page starts." },
     { t: "Direction is a modelling decision you make twice", d: "Undirected means adding both <code>adj[u].add(v)</code> and <code>adj[v].add(u)</code>. Forget the second and you have quietly built a directed graph and will spend an hour wondering why half your edges vanished. Directed graphs also permit cycles that are not obvious, which is why cycle detection there needs a recursion-stack marker rather than a plain visited flag." },
-    { t: "One traversal is one component", d: "A graph need not be connected. Loop over all nodes, and start a fresh traversal from each one not yet visited: the number of starts is the number of <b>connected components</b>, and the total cost is still O(V + E), because the visited set stops any node being processed twice." },
+    { t: "One traversal is one component", d: "A graph need not be connected. Loop over all nodes and start a fresh traversal from each one not yet visited. The number of starts is the number of <b>connected components</b>. The total cost is still O(V + E), because the visited set stops any node being processed twice." },
   ],
 
   variants: [
@@ -5356,7 +6637,7 @@ class SegTree {
   ],
 
   hing: `<p><b>Ab tak jo padha, sab graph hi tha, alag kapdon mein.</b> Linked list = graph jisme har node ka ek hi raasta bahar jaata hai. Tree = graph jisme ek root hai aur peeche laut-ne ka raasta nahi. Yeh saari <b>paabandiyan</b> hata do, to jo bachta hai wahi graph hai: kuch cheezein, aur unke beech connections.</p>
-<p><b>Do baatein turant badal jaati hain.</b> Pehli, koi <b>root nahi</b> hai, to "shuru kahan se karein" ek asli sawaal ban jaata hai, aur ek traversal se poora graph cover ho hi nahi sakta. Doosri, aur zyada important: <b>raaste ghoom kar wapas aa sakte hain</b>. Tree mein tum kabhi apne aap se nahi milte. Graph mein miloge, aur program kabhi rukega nahi.</p>
+<p><b>Do baatein turant badal jaati hain.</b> Pehli, koi <b>root nahi</b> hai. To "shuru kahan se karein" khud ek sawaal ban jaata hai, aur ek traversal se poora graph cover ho hi nahi sakta. Doosri, aur zyada important: <b>raaste ghoom kar wapas aa sakte hain</b>. Tree mein tum kabhi apne aap se nahi milte. Graph mein miloge, aur program kabhi rukega nahi.</p>
 <p><b>Isliye visited set koi optimisation nahi hai.</b> Woh wahi cheez hai jo program ko <b>khatam</b> hone deti hai. Yeh line interview mein bolna: "visited set correctness ke liye hai, speed ke liye nahi".</p>
 <p><b>Uske baad traversal bilkul boring hai:</b> node lo, uske padosi dekho, jo visit nahi hue unhe container mein daalo, dohrao. Container <b>stack</b> hai to <b>DFS</b>, <b>queue</b> hai to <b>BFS</b>. Bas itna hi farak hai. Recursion bhi DFS hi hai, bas stack ka kaam call stack kar raha hai.</p>
 <p><b>Aur isiliye BFS shortest path deta hai, DFS nahi.</b> BFS pehle distance 1 ke saare nodes khatam karta hai, phir distance 2. Isliye jab woh kisi node par <b>pehli baar</b> pahunchta hai, wahi sabse kam edges wala raasta hota hai. DFS jahan mann kiya wahan chala jaata hai, to uski "pehli baar" ka koi matlab nahi. <b>Par yeh sirf tab tak sach hai jab har edge ki cost barabar ho</b>, aur wahin se agla page shuru hota hai.</p>
@@ -5366,6 +6647,53 @@ class SegTree {
 
   viz: ["graph-basics", "adjacency"],
   see: [["VA", "https://visualgo.net/en/dfsbfs", "VisuAlgo, DFS and BFS side by side"]],
+
+  math: [
+    { t: "List or matrix, decided by density and nothing else", d: "Both are correct. The choice is memory, and on the sparse graphs interviews actually give you the difference is four orders of magnitude.", w:
+`V vertices, E edges
+
+matrix:  V^2 memory, edge test O(1),    neighbours O(V)
+list:    V + E memory, edge test O(deg), neighbours O(deg)
+
+V = 10^5, E = 2 x 10^5 (sparse):
+  matrix  10^10 cells  = 10 GB
+  list    3 x 10^5 entries = a few MB
+
+the matrix wins only as E approaches V^2 / 2` },
+    { t: "Where O(V + E) comes from", d: "The loop over neighbours does not run V times per node. It runs deg(v) times, and the degrees add up to twice the edge count.", w:
+`sum of all degrees = 2E   (undirected)
+                   = E    (directed, out-degrees)
+
+so all the inner loops together run 2E times, not V^2
+plus V pushes and V pops
+
+V = 10^5, E = 2 x 10^5  ->  about 5 x 10^5 steps
+scanning a matrix for the same graph: 10^10 cells` },
+    { t: "The visited set is correctness, and here is the difference", d: "On a tree you could leave it out and still terminate. On anything with a cycle it is the only thing between you and a loop that never ends.", w:
+`a tree has exactly V - 1 edges and no cycle
+any graph with E >= V contains at least one cycle
+
+with visited:     each node entered once, each edge
+                  examined twice   ->  O(V + E)
+without visited:  a 3-cycle revisits for ever
+
+it is not a speed-up. It is the termination argument.` },
+    { t: "The edge counts worth having memorised", d: "These four lines answer most of the modelling questions in one step, including whether the thing in front of you is secretly a tree.", w:
+`undirected simple:  E <= V(V-1)/2
+directed simple:    E <= V(V-1)
+a tree:             E = V - 1 exactly, and connected
+connected:          E >= V - 1
+
+connected AND E = V - 1  =>  it is a tree
+V = 1,000  ->  at most 499,500 undirected edges` },
+    { t: "One traversal is one component", d: "Nothing extra is needed to count components, and the total cost does not change, because the traversals partition the graph between them.", w:
+`for v in all V nodes:
+    if v not visited: traverse(v), components += 1
+
+each node is visited exactly once across all traversals
+each edge is examined exactly twice
+so the whole sweep is still O(V + E), not components x (V+E)` },
+  ],
 
   costs: [
     ["build an adjacency list", "O(V + E) time and space", "the default representation"],
@@ -5605,9 +6933,9 @@ function bfsShortest(start, goal) {
   group: "Graphs",
   one: "BFS finds the fewest edges, which stops meaning cheapest the moment edges have costs. Then you always expand the <b>cheapest known node</b>, and a heap is what makes that affordable.",
 
-  plain: `<p>BFS gets shortest paths right for a reason that is easy to miss: every edge costs exactly one, so the queue happens to hold nodes in order of distance already. The algorithm is not being clever, it is being handed the ordering for free.</p>
-<p>Put a cost on each edge and that free ordering evaporates. A route of one expensive edge can cost more than a route of five cheap ones, so "fewest edges" and "cheapest" part company, and BFS confidently returns the wrong answer.</p>
-<p>The repair is small in principle. Keep the best distance known so far for every node, always work on the <b>cheapest unfinished node</b>, and each time you do, check whether going through it improves any neighbour. That check is called relaxation and it is the entire algorithm. The priority queue exists solely to answer "which is cheapest" without rescanning everything.</p>
+  plain: `<p>BFS gets shortest paths right for a reason that is easy to miss. Every edge costs exactly one, so the queue already happens to hold nodes in order of distance. The algorithm is not being clever, it is being handed the ordering for free.</p>
+<p>Put a cost on each edge and that free ordering evaporates. A route of one expensive edge can cost more than a route of five cheap ones. So "fewest edges" and "cheapest" stop meaning the same thing, and BFS confidently returns the wrong answer.</p>
+<p>The repair is small in principle. Keep the best distance known so far for every node. Always work on the <b>cheapest unfinished node</b>. Each time you pick one, check whether going through it improves any of its neighbours. That check is called relaxation and it is the entire algorithm. The priority queue exists solely to answer "which is cheapest" without rescanning everything.</p>
 <p>There is one assumption hiding in there, and it is worth naming now: this only works if edges add cost. Allow a negative edge and a settled answer can turn out to be wrong later, which Dijkstra will never notice.</p>
 <p><b>Analogy.</b> Planning a drive by always extending the cheapest route you have so far. It works beautifully, right up until someone opens a road that pays you to drive down it.</p>`,
 
@@ -5662,8 +6990,8 @@ function bfsShortest(start, goal) {
 <p><b>Ab edges par cost daal do.</b> Ek mehnga edge paanch saste edges se zyada mehnga ho sakta hai. Yani "sabse kam edges" aur "sabse sasta" ab do alag cheezein hain, aur BFS poore aatmvishwas ke saath <b>galat</b> jawaab dega.</p>
 <p><b>Theek karne ka tarika:</b> har node ke liye "ab tak ka best distance" rakho (shuru mein sab infinity, source 0). Baar-baar <b>sabse saste bache hue node</b> ko uthao aur uske padosiyon ko check karo. Bas yahi ek badlav hai BFS se, aur isi ke liye <b>priority queue</b> chahiye. <b>Dijkstra = BFS with a heap.</b></p>
 <p><b>Relaxation kya hai?</b> Sirf ek sawaal: <code>dist[u] + weight(u,v)</code> kya <code>dist[v]</code> se behtar hai? Agar haan, to naya number likh do. Poora algorithm bas yahi ek line hai, baar-baar.</p>
-<p><b>Ab woh baat jo interview mein poochi jaati hai: settled node final kyun hota hai?</b> Jab tum sabse sasta bacha hua node u uthate ho, to baaki saare bache hue nodes usse mehnge ya barabar hain. u tak koi doosra raasta unhi mein se kisi se hoke aayega, aur weights <b>non-negative</b> hain, to aage badhne se cost sirf badhegi. Isliye koi sasta raasta ho hi nahi sakta. <b>Yeh poora argument non-negative weights par tika hua hai.</b></p>
-<p><b>Isliye negative edge sab tod deta hai.</b> Negative ke saath aage badhne se raasta <b>sasta</b> ho sakta hai, matlab jo node tum settle kar chuke the woh galat ho sakta hai. Dijkstra ke paas wapas jaane ka koi tarika nahi hai, aur woh tumhe batayega bhi nahi. Tab <b>Bellman-Ford</b> chahiye: greedy shortcut chhod do aur saare edges ko V-1 baar relax karo. <b>O(V·E)</b>, dheema par sahi. Aur agar V-vi baar mein bhi kuch improve ho raha hai, to graph mein <b>negative cycle</b> hai, jahan "shortest path" ka matlab hi khatam ho jaata hai.</p>
+<p><b>Ab woh baat jo interview mein poochi jaati hai: settled node final kyun hota hai?</b> Jab tum sabse sasta bacha hua node u uthate ho, to baaki bache hue saare nodes usse mehnge ya barabar hain. Yahi poori guarantee hai. u tak koi doosra raasta unhi mein se kisi se hoke aayega, aur weights <b>non-negative</b> hain, to aage badhne se cost sirf badhegi. Isliye koi sasta raasta ho hi nahi sakta. <b>Yeh poora argument non-negative weights par tika hua hai.</b></p>
+<p><b>Isliye negative edge sab tod deta hai.</b> Negative edge ke saath aage badhne par raasta <b>sasta</b> ho sakta hai. Matlab jo node tum settle kar chuke the, woh galat nikal sakta hai. Dijkstra ke paas wapas jaane ka koi tarika nahi hai, aur woh tumhe batayega bhi nahi. Tab <b>Bellman-Ford</b> chahiye: greedy shortcut chhod do aur saare edges ko V-1 baar relax karo. <b>O(V·E)</b>, dheema par sahi. Aur agar V-vi baar mein bhi kuch improve ho raha hai, to graph mein <b>negative cycle</b> hai, jahan "shortest path" ka matlab hi khatam ho jaata hai.</p>
 <p><b>Kaun sa algorithm kab (yeh yaad rakho):</b><br>
 Sab edges ki cost barabar → <b>BFS</b>, O(V + E). Heap lagane ki zaroorat nahi.<br>
 Non-negative weights → <b>Dijkstra</b>, O((V + E) log V).<br>
@@ -5673,6 +7001,60 @@ Interview mein "kaun sa aur kyun" zyada poocha jaata hai, code likhwaane se.</p>
 
   viz: ["dijkstra"],
   see: [["VA", "https://visualgo.net/en/sssp", "VisuAlgo, Dijkstra and Bellman-Ford running side by side"]],
+
+  math: [
+    { t: "Why BFS stops being correct the moment weights appear", d: "BFS counts edges. With weights, the path with fewest edges and the path with least cost are different questions, and a three-node example separates them.", w:
+`A --1--> B --1--> D          two edges, cost 2
+A --5--> D                   one edge,  cost 5
+
+BFS reaches D at depth 1 and stops: it reports 5
+the cheapest path costs 2
+
+BFS is exactly Dijkstra with every weight equal to 1` },
+    { t: "Dijkstra's cost, term by term", d: "Two numbers multiply here: how many times an edge can cause a heap push, and what a heap operation costs. Neither is V.", w:
+`each edge relaxed once                E
+each relaxation may push               E pushes
+each push or pop                       log(heap) <= 2 log V
+
+total  O((V + E) log V)
+
+V = 10^5, E = 5 x 10^5:
+  5 x 10^5 x 17  =  8.5 x 10^6 heap operations
+scanning an array for the minimum instead: V^2 = 10^10` },
+    { t: "Why a popped node is final, and exactly where the proof breaks", d: "The argument is three lines, and one of those lines quietly assumes every weight is non-negative. That line is the whole restriction.", w:
+`pop u, the smallest tentative distance in the heap
+suppose some shorter path to u exists. It leaves the
+settled set on an edge into y, so
+
+  d[u] > d[y] + (the rest of that path)
+and the rest is >= 0             <-- the assumption
+so  d[u] > d[y]
+
+but u was the smallest, so d[u] <= d[y]. Contradiction.
+one negative edge and the marked line fails.` },
+    { t: "Bellman-Ford: why V-1 rounds, exactly", d: "The round count is not a safety margin. It is the longest a shortest path can be, and one extra round is what detects a negative cycle.", w:
+`a shortest path visits no vertex twice, so it uses
+at most V - 1 edges
+
+after round k, every shortest path of <= k edges is final
+so V - 1 rounds settle all of them:  O(V x E)
+
+round V: if any distance still improves, no shortest path
+exists, because a negative cycle is reachable
+
+V = 10^3, E = 10^4  ->  10^7  fine
+V = 10^5, E = 5 x 10^5  ->  5 x 10^10  not fine` },
+    { t: "Reading the algorithm off the constraints", d: "The shape of the input decides this, not preference. Two lines of arithmetic rule out most of the table before you start.", w:
+`unweighted             BFS               O(V + E)
+weights 0 or 1         0-1 BFS, deque    O(V + E)
+non-negative           Dijkstra          O((V+E) log V)
+any weights            Bellman-Ford      O(V x E)
+all pairs, dense       Floyd-Warshall    O(V^3)
+DAG, any weights       topological DP    O(V + E)
+
+Floyd at V = 400:  6.4 x 10^7, fine
+Floyd at V = 2000: 8 x 10^9, not` },
+  ],
 
   costs: [
     ["BFS, unit weights", "O(V + E)", "the queue is already in distance order"],
@@ -5894,39 +7276,81 @@ function dijkstra(adj, source, n, MinHeap) {
   group: "Graphs",
   one: "Stop storing the edges and store only <b>which group each node is in</b>. Connectivity becomes \"same representative?\", and two small fixes make that answer near constant.",
 
-  plain: `<p>Traversal answers "are these two nodes connected?" perfectly well, once. Ask it a thousand times while edges are still arriving and it falls apart: every query is a fresh O(V + E) walk, and every new edge invalidates whatever you learned last time. The work is not being reused because there is nothing to reuse.</p>
-<p>So change what you store. You do not actually need the edges to answer that question. You need to know, for each node, <b>which group it belongs to</b>. Give every group one member elected as its <b>representative</b>, and "are u and v connected?" becomes "do u and v report to the same representative?". Adding an edge no longer means recording a connection, it means merging two groups into one.</p>
-<p>Everything else on this page is bookkeeping: how a node finds its representative, and how two groups are merged without the structure slowly turning into a linked list.</p>
-<p><b>Analogy.</b> Company mergers. Nobody keeps a list of who acquired whom; each employee just knows who they report to, and you follow that chain up until you hit someone who reports to no one. Two people are in the same company when the chain ends at the same CEO.</p>`,
+  plain: `<p>You have a pile of things and you keep being told "these two are connected". Later you are asked "are these two connected?" Not by what route, just yes or no.</p>
+<p>The obvious way is to keep the list of connections and search through it each time someone asks. That search is a fresh walk over the whole pile, and if a hundred thousand people ask, you do a hundred thousand walks.</p>
+<p>So stop storing the connections. Store the <b>answer</b> instead. Give every group one member who speaks for it, call it the leader, and have every thing remember its leader. "Are these two connected?" becomes "do these two have the same leader?", which is a lookup, not a search. Joining two groups is one line: point one leader at the other.</p>
+<p>Done carelessly this gets slow, because the chains of "my leader is him, his leader is her" grow long. Two small habits fix it, and together they make every question cost almost nothing.</p>
+<p><b>Analogy.</b> Asking whether two people are in the same company. You could trace the org chart every time. Or everyone just knows the name of their CEO, and you compare two names.</p>`,
 
   why: [
-    { t: "The question traversal is bad at is a repeated one",
-      d: "\"Are u and v connected?\" costs a DFS, <b>O(V + E)</b>, and the DFS then throws away everything it learned. Ask it after every new edge and you pay that again, from scratch, forever. The problem is not the walk. The problem is that nothing carries over." },
-    { t: "So stop storing the graph and store the answer instead",
-      d: "Connectivity does not need the edges, only the <b>grouping</b> they produce. Elect one member of each group as its <b>representative</b>. Now the query is \"same representative?\", which does not look at edges at all, and adding an edge is just <b>merging two groups</b>." },
-    { t: "One array is enough to hold that",
-      d: "<code>parent[i]</code> says who <code>i</code> reports to, and every node starts pointing at itself. <b>find(x)</b> follows that chain until it reaches a node pointing at itself: that is the representative, the root. <b>union(a, b)</b> finds both roots and points one at the other. Two groups, one root, done." },
-    { t: "The naive version quietly turns into a linked list",
-      d: "Union 1 with 2, then 2 with 3, then 3 with 4. Each time you hang the current root off the new node and the tree becomes a chain of length n, so <code>find</code> is an <b>O(n)</b> walk and you have rebuilt the slow thing you were escaping. The fix is to stop choosing the new root arbitrarily: <b>hang the smaller tree under the larger</b> (union by size, or by rank, which tracks depth instead). A node only gets deeper when its tree is absorbed by one at least as big, so the tree it lives in at least doubles. Doubling can happen at most <b>log n</b> times, so depth is bounded by log n." },
-    { t: "Path compression fixes it from the other end",
-      d: "A <code>find</code> already walked from x to the root, so it knows the answer for <i>every</i> node it passed. On the way back, point each of them <b>straight at the root</b>. The path you just paid for never has to be walked again. This is independent of union by size: either alone is a large improvement, and together the amortised cost per operation is <b>α(n)</b>, the inverse Ackermann function, which is below 5 for any n you will ever be handed. Say \"near constant, amortised\", not O(1)." },
-    { t: "What it refuses to do",
-      d: "It cannot <b>un-union</b>: there is no record of which merge produced which root, so deleting an edge means rebuilding. It cannot <b>list a set's members</b> without a separate map from root to list, because the arrows only point upward. And it says nothing about <b>paths</b>: it knows u and v are in the same group, not how to get from one to the other, or how far apart they are." },
-    { t: "What falls out for free",
-      d: "Start a counter at n and decrement it whenever a union actually merged something: that is the <b>component count</b>, maintained as edges stream in. An edge whose two ends already share a root adds nothing new, so in an <b>undirected</b> graph it closes a <b>cycle</b>. And <b>Kruskal's minimum spanning tree</b> is this plus one sort: order the edges by weight, walk them cheapest first, and keep an edge exactly when <code>union</code> returns true. The union-find is what stops the greedy choice from forming a cycle." },
+    { t: "The question being asked is not the one traversal is good at", d: "A traversal answers \"is there a path from A to B\" by walking until it finds one. That is fine once. But connectivity is usually asked over and over, with new connections arriving in between, and each question starts the walk from scratch. A hundred thousand questions on a hundred thousand nodes is about 10^10 steps." },
+    { t: "So do not store the connections. Store the answer", d: "Nobody asked for the route. They asked yes or no. So throw the edges away and keep one fact per thing: which group it is in. Name each group after one of its members, the <b>leader</b>. Now \"connected?\" is \"same leader?\", which is two lookups and a comparison." },
+    { t: "One array holds all of it", d: "<code>parent[x]</code> is the thing x points at on the way to its leader. A leader points at itself, which is how you recognise one. To find x's leader, follow the pointers until one points at itself. To join two groups, find both leaders and point one at the other. That is the entire structure: one array, two short functions." },
+    { t: "Done carelessly, it quietly becomes a linked list", d: "Nothing above said which leader should point at which. Join 1 to 2, then 2 to 3, then 3 to 4, always hanging the old leader under the new one. What you get is a single chain of length n. Finding a leader now walks the whole chain. A hundred thousand joins done this way cost about 5 x 10^9 steps, which is the thing you were trying to avoid." },
+    { t: "Fix one: always hang the smaller group under the bigger one", d: "Keep each group's size. When joining, the smaller leader points at the bigger. Now think about how deep a thing can get. Its depth only grows when its whole group gets attached under a bigger one, which means its group at least <b>doubled</b>. A group can double at most <code>log n</code> times before it runs out of members. So no chain is ever longer than about 20 at a million things." },
+    { t: "Fix two: on the way back, point everything straight at the leader", d: "When you walk from x up to the leader, you have just learned the answer for <b>every thing you passed</b>. So on the way back, point each of them directly at the leader. That path is now length one and can never be walked again. This is called path compression, and it costs one extra line." },
+    { t: "Together they make it near constant, and there is a name for how near", d: "With both fixes, m operations cost <code>O(m x alpha(n))</code> in total. Alpha grows so slowly that it stays below 5 for any n that could fit in a computer. In an interview say \"near constant, amortised\", which means averaged over the whole run of operations rather than promised for any single one. Do not say O(1), because it is not, and the difference is the thing being checked." },
+    { t: "What it refuses to do, and what falls out free", d: "It cannot tell you the route between two things, it cannot list the edges, and it cannot un-join a group, because the edges were thrown away on purpose. What it does give free: the number of groups, by starting at n and subtracting one per successful join. Also each group's size, since you were keeping that anyway. Cycle detection in an undirected graph is one pass: for each edge, if both ends already share a leader, that edge closes a cycle." },
   ],
-
-  hing: `<p><b>Shuruaat sawaal se:</b> "kya u aur v jude hue hain?" DFS yeh ek baar bahut acche se bata deta hai. Par agar yeh sawaal <b>baar baar</b> poochha jaaye, aur beech beech mein <b>nayi edges aati rahein</b>, to har baar poora O(V + E) traversal dobara chalana padega. Dikkat walk mein nahi hai, dikkat yeh hai ki pichhli mehnat ka kuch <b>bachta hi nahi</b>.</p>
-<p><b>To store karna hi badal do.</b> Edges ki zaroorat hi nahi hai. Sirf yeh yaad rakho ki <b>kaunsa node kis group mein hai</b>. Har group ka ek <b>representative</b> (root) chun lo. Ab sawaal ban gaya: "dono ka representative same hai kya?" Aur nayi edge ka matlab ban gaya: <b>do groups ko jodo</b>.</p>
-<p><b>Ek array kaafi hai.</b> <code>parent[i]</code> batata hai i kiske neeche hai, shuru mein sab apne aap ko point karte hain. <code>find(x)</code> upar chalta jaata hai jab tak aisa node na mile jo khud ko point kare, wahi root hai. <code>union(a, b)</code> dono ke root nikaalta hai aur ek ko doosre par laga deta hai.</p>
-<p><b>Ab sabse important part, kyunki naive version dhoka de deta hai.</b> union(1,2), union(2,3), union(3,4)... aise karte jaao to tree seedhi <b>chain</b> ban jaata hai aur find wapas <b>O(n)</b> ho jaata hai. Matlab tumne wahi slow cheez dobara bana di jisse bhaag rahe the.</p>
-<p><b>Fix 1, union by size (ya rank):</b> hamesha <b>chhota tree bade ke neeche</b> lagao. Kisi node ki depth tabhi badhti hai jab uska tree kisi bade ya barabar tree mein mila diya jaaye, aur tab uska tree kam se kam <b>double</b> ho jaata hai. Double se double n tak jaane mein sirf <b>log n</b> kadam lagte hain, to depth log n se zyada ho hi nahi sakti.</p>
-<p><b>Fix 2, path compression:</b> find ne x se root tak chal to liya hai, matlab raaste ke <b>har node</b> ka jawab usse pata hai. To wapas aate waqt un sab ko <b>seedha root par</b> point kara do. Jo raasta ek baar chal liye, dobara chalna hi nahi padega.</p>
-<p><b>Dono saath:</b> per operation amortised cost <b>α(n)</b>, inverse Ackermann. Yeh function itna dheere badhta hai ki kisi bhi practical n ke liye <b>5 se kam</b> hai. Interview mein "O(1)" mat bolo, bolo "near constant, amortised, α(n)".</p>
-<p><b>Jo yeh nahi kar sakta, woh bhi yaad rakho:</b> <b>undo nahi</b> ho sakta (edge hatani hai to poora dobara banao), kisi set ke <b>saare members ginwa nahi</b> sakta bina alag map rakhe, aur <b>path ya distance</b> ke baare mein kuch nahi jaanta. Sirf membership.</p>
-<p><b>Kahan pakadna hai:</b> jab problem mein edges <b>aate ja rahe</b> hon aur components ginne hon, jab <b>undirected graph mein cycle</b> dhoondni ho (jis edge ke dono sire pehle se same root par hain, wahi cycle band karti hai), ya jab <b>Kruskal MST</b> chahiye: edges ko weight se sort karo, sabse sasti se shuru karo, aur edge tabhi rakho jab <code>union</code> true lautaaye.</p>`,
+  hing: `<p><b>Sawaal se shuru karo:</b> "kya u aur v jude hue hain?" DFS yeh ek baar bahut acche se bata deta hai. Par yeh sawaal baar-baar aata hai, aur beech mein nayi edges bhi judti rehti hain. Har baar poora traversal dobara chalana padega.</p>
+<p><b>Dikkat walk mein nahi hai.</b> Dikkat yeh hai ki pichhli mehnat ka kuch bachta hi nahi. To jo cheez store kar rahe ho, wahi badal do.</p>
+<p><b>Edges ki zaroorat hi nahi hai.</b> Bas itna yaad rakho ki kaun sa node kis group mein hai. Har group ka ek <b>leader</b> chun lo. Ab sawaal ban gaya: "dono ka leader same hai kya?" Aur nayi edge ka matlab ban gaya: do groups ko jod do.</p>
+<p><b>Ek array kaafi hai.</b> <code>parent[i]</code> batata hai ki i kiski taraf ishara kar raha hai. Shuru mein sab apne aap ko point karte hain. <code>find(x)</code> upar chalta jaata hai jab tak koi node khud ko point na kare, wahi leader hai. <code>union(a, b)</code> dono ke leader nikaalta hai aur ek ko doosre par laga deta hai.</p>
+<p><b>Ab sabse zaroori baat, kyunki naive version dhoka de deta hai.</b> <code>union(1,2)</code>, phir <code>union(2,3)</code>, phir <code>union(3,4)</code>. Aise karte jao to tree ek seedhi chain ban jaata hai. find wapas O(n) ho gaya. Jisse bhaag rahe the, wahi dobara bana diya.</p>
+<p><b>Fix 1, union by size.</b> Hamesha chhota tree bade ke neeche lagao. Ab socho kisi node ki depth kab badhti hai. Sirf tab, jab uska poora tree kisi bade tree ke neeche jude. Aur us waqt uska tree kam se kam <b>double</b> ho jaata hai. Double karte-karte n tak pahunchne mein sirf <code>log n</code> kadam lagte hain. Isliye depth log n se zyada ho hi nahi sakti: 10 lakh nodes par sirf 20.</p>
+<p><b>Fix 2, path compression.</b> find ne x se leader tak ka raasta chal to liya hai. Matlab raaste ke har node ka jawab usko ab pata hai. To wapas aate waqt un sab ko <b>seedha leader par</b> point kara do. Jo raasta ek baar chal liye, woh dobara chalna hi nahi padega.</p>
+<p><b>Dono saath lagao to per operation cost α(n) reh jaati hai, inverse Ackermann.</b> Yeh function itna dheere badhta hai ki kisi bhi practical n ke liye <b>5 se kam</b> hai. Interview mein "O(1)" mat bolo. Bolo <b>"near constant, amortised"</b>, matlab poore run ka average, kisi ek call ka waada nahi.</p>
+<p><b>Jo yeh nahi kar sakta:</b> undo nahi hota, ek edge hatani hai to poora dobara banao. Kisi group ke saare members nahi gina sakta, uske liye alag map chahiye. Path aur distance ke baare mein kuch nahi jaanta. Sirf membership.</p>
+<p><b>Kahan pakadna hai:</b> edges aate ja rahe hain aur components ginne hain. Ya undirected graph mein cycle dhoondhni hai, jis edge ke dono sire pehle se ek hi leader par hain wahi cycle band karti hai. Ya Kruskal MST banana hai: edges weight se sort karo, sasti se shuru karo, aur edge tabhi rakho jab union true lautaaye.</p>`,
 
   viz: ["union-find"],
+
+  math: [
+    { t: "Why traversal is the wrong tool for a repeated question", d: "One connectivity query is a traversal. A hundred thousand of them is a hundred thousand traversals, and that multiplication is the entire motivation.", w:
+`V = 10^5, E = 2 x 10^5, q = 10^5 connectivity queries
+
+BFS per query:  q x (V + E)  =  3 x 10^10
+union-find:     (V + E + q) x alpha  ~  4 x 10^5
+
+five orders of magnitude, for the same answers` },
+    { t: "The naive version turns into a linked list", d: "Attach trees carelessly and every union adds a level. The structure still works, it has just become the thing it was meant to replace.", w:
+`union(1,2), union(2,3), ... union(n-1,n), no rules:
+
+each union hangs the existing tree under a new root
+depth after k unions: k
+find costs the depth, so n finds cost 1 + 2 + ... + n
+
+n = 100,000  ->  5 x 10^9 pointer hops` },
+    { t: "Union by size: the depth cannot pass log2 n", d: "Attach the smaller tree under the larger and a node's depth can only grow when its whole tree doubles. Doubling has a limit.", w:
+`a node's depth increases only when its tree is attached
+under a bigger one, so its tree at least DOUBLES
+
+therefore a tree of depth d holds at least 2^d nodes
+  2^d <= n   ->   d <= log2 n
+
+n = 10^6  ->  depth at most 20, with no compression at all` },
+    { t: "Path compression, and the constant nobody can write down", d: "A find that walks k steps rewires all k nodes to the root, so that walk can never happen again. Together with union by size the amortised cost stops being a log.", w:
+`find(x) walking k steps: k nodes repointed at the root
+that path is now length 1, for ever
+
+both fixes together: m operations cost O(m x alpha(n))
+
+alpha is the inverse Ackermann function
+  alpha(n) <= 4 for n up to 2^2^2^16
+so it is under 5 for any n that can be stored
+
+say "near constant, amortised". Not O(1).` },
+    { t: "What falls out free, and what is not there at all", d: "The structure keeps one fact per node. Anything that needs the edges back is not merely slow, it is unavailable.", w:
+`free:
+  component count   start at V, decrement per real union
+  component sizes   the size array you already maintain
+  undirected cycle  for each edge, find(a) == find(b)
+                    one pass, E finds
+
+absent:
+  the path between two nodes, the edge list,
+  deletion or splitting, anything about direction` },
+  ],
 
   costs: [
     ["build for n nodes", "O(n) time and space", "two arrays; the graph itself is never stored"],
@@ -6202,10 +7626,11 @@ function kruskal(n, edges) {
   group: "Graphs",
   one: "An order that respects every <b>must come before</b> exists only when no cycle does, so a topological sort <i>is</i> a cycle detector: whatever it fails to emit is the cycle.",
 
-  plain: `<p>Some problems do not ask for a path or a distance. They hand you a pile of things and a list of rules of the form "this one has to happen before that one", and ask for a sequence that breaks none of them. Compiling modules, installing packages, taking courses with prerequisites, recalculating a spreadsheet after one cell changes: all the same question.</p>
-<p>Model each thing as a node and each rule as a directed edge pointing from the earlier thing to the later one. Now the question is: can I lay the nodes in a line so that every arrow points forwards? That line is a <b>topological order</b>.</p>
-<p>Sometimes there is no such line. If A waits on B, B waits on C, and C waits on A, no arrangement can save you, and no algorithm can invent one. That is a <b>cycle</b>, and it is the only thing that can go wrong. So an algorithm that produces the order also, for free, answers "is this graph acyclic". The two questions are one computation, which is why so many interview problems that never say the words "topological sort" are exactly that.</p>
-<p><b>Analogy.</b> Getting dressed. Socks before shoes, shirt before jacket. Plenty of valid orders exist, nobody cares which one you pick, and if someone tells you the jacket goes before the shirt which goes before the jacket, you do not need to try harder, you need a different list of rules.</p>`,
+  plain: `<p>Some problems do not ask for a path or a distance. You are handed a pile of things and a list of rules, each one of the form "this has to happen before that". Find an order that breaks none of them.</p>
+<p>It comes up constantly. Compiling modules, installing packages, picking courses with prerequisites, recalculating a spreadsheet after one cell changes. All the same question.</p>
+<p>Make each thing a node. Make each rule an arrow from the earlier thing to the later one. Now the question is: can I lay the nodes out in a line so that every arrow points forwards? That line is called a <b>topological order</b>.</p>
+<p>Sometimes no such line exists. If A waits on B, B waits on C, and C waits on A, nothing can save you. That is a <b>cycle</b>, and it is the only thing that can go wrong. So an algorithm that produces the order also tells you, for free, whether the graph has a cycle in it. One computation answers both questions. That is why plenty of interview problems that never say the words "topological sort" are exactly that.</p>
+<p><b>Analogy.</b> Getting dressed. Socks before shoes, shirt before jacket. Plenty of valid orders exist and nobody cares which one you pick. But if the rules say jacket before shirt and shirt before jacket, you do not need to try harder. You need a different list of rules.</p>`,
 
   why: [
     { t: "Start from the rule, not from the algorithm", d: "You are given constraints of the shape \"u before v\". Draw each one as an arrow from u to v. Nothing else is given, and nothing else is needed: the whole problem is now \"arrange the nodes in a line with every arrow pointing right\"." },
@@ -6213,20 +7638,62 @@ function kruskal(n, edges) {
     { t: "Which gives Kahn's algorithm almost without thinking", d: "Something has to go first, and only a node with no incoming edges can. Count incoming edges (the <b>in-degree</b>), queue everything at zero, and emit them. Removing a node satisfies the constraints it imposed, so decrement its neighbours' in-degrees and queue any that hit zero. Repeat." },
     { t: "And Kahn reports the cycle by counting", d: "If the graph is acyclic, every node eventually reaches in-degree zero and gets emitted. If you emit fewer than V nodes, the ones left over never reached zero, which means each is still waiting on another survivor. <b>The leftovers are precisely the nodes on or downstream of a cycle.</b> No extra pass, no extra bookkeeping, just a length check." },
     { t: "The DFS version is the same idea run backwards", d: "Walk depth-first, and push a node onto a list only <b>after</b> every node it points to is finished. So a node is recorded later than all of its dependents, and reversing the list puts it earlier than all of them. Equivalent output, different bookkeeping: this is the finish-time ordering." },
-    { t: "DFS cycle detection needs three states, not a visited set", d: "A visited flag answers \"have I ever been here\". For a cycle you need \"am I here <i>right now</i>\": an edge into a node still on the current call stack is a cycle, an edge into a node already finished is just a shortcut into explored territory. So mark nodes unvisited, <b>in progress</b>, and done. Collapsing the last two into one flag reports cycles in a diamond that has none, and it is the single most common wrong answer on this topic." },
-    { t: "What it cannot do, and one thing it gets cheaply", d: "It cannot give you <i>the</i> order, because there generally is not one: any two nodes with no path between them may go either way, and asking for the lexicographically smallest just means Kahn's queue becomes a min-heap. It also cannot tell you <i>which</i> nodes form the cycle unless you look, only that one exists. What it does hand you free: with the nodes in topological order you can relax edges in one forward sweep and get shortest paths on a DAG in O(V + E), negative weights included, which Dijkstra cannot manage. That is the shortest paths page's business, but the order comes from here." },
+    { t: "DFS cycle detection needs three states, not a visited set", d: "A visited flag answers \"have I ever been here\". For a cycle you need a different question: am I here <i>right now</i>? An edge into a node still on the current call stack is a cycle. An edge into a node that already finished is only a shortcut into ground you have already covered. So mark nodes unvisited, <b>in progress</b>, and done. Collapsing the last two into one flag reports cycles in a diamond that has none, and it is the single most common wrong answer on this topic." },
+    { t: "What it cannot do, and one thing it gets cheaply", d: "It cannot give you <i>the</i> order, because there usually is not one. Any two nodes with no path between them can go in either order. If the problem wants the alphabetically smallest valid order, make Kahn's queue a min-heap and take the smallest available node each time. It also cannot tell you <i>which</i> nodes form the cycle unless you look, only that one exists. What it does hand you free: put the nodes in topological order and sweep forward once, improving each edge as you pass it. That gives shortest paths on a DAG in <b>O(V + E)</b>, negative weights included, which Dijkstra cannot manage. That is the shortest paths page's business, but the order comes from here." },
   ],
 
   hing: `<p><b>Sawaal kya hai:</b> kuch kaam hain aur rules hain "yeh usse pehle hona chahiye". Har cheez ko node banao, har rule ko <b>arrow</b> banao jo pehle wale se baad wale ki taraf jaaye. Ab bas ek line mein sabko lagana hai jisme saare arrows aage ki taraf point karein. Wahi <b>topological order</b> hai. Build steps, course prerequisites, spreadsheet recalculation, sab yahi hai.</p>
 <p><b>Sirf ek cheez galat ho sakti hai: cycle.</b> A ko B chahiye, B ko C, C ko A. Ab koi pehla ho hi nahi sakta. Aur agar cycle nahi hai to order hamesha milega. Matlab <b>order exist karta hai sirf aur sirf tab jab graph DAG ho</b>. Isliye topological sort aur cycle detection <b>ek hi computation</b> hai. Interview mein aadhe sawaal cycle detection hi hote hain, bas naam badla hua hota hai. Yeh line yaad rakho.</p>
 <p><b>Kahn ka tarika (BFS jaisa):</b> har node ke <b>in-degree</b> gino, matlab kitne log uska raasta rok rahe hain. Jinka in-degree 0 hai unhe queue mein daalo, kyunki unhe koi rok nahi raha. Ek node nikaalo, output mein daalo, aur uske padosiyon ka in-degree 1 kam kar do (uski shart poori ho gayi). Jiska 0 hua, woh queue mein. Bas.</p>
-<p><b>Kahn cycle bhi muft mein bata deta hai:</b> agar output mein V se <b>kam</b> nodes aaye, to jo bache woh kabhi 0 tak pahunche hi nahi, matlab woh aapas mein ek doosre ka intezaar kar rahe hain. <b>Bache hue nodes hi cycle hain (ya uske peeche latke hue hain).</b> Sirf ek length check, koi extra pass nahi. Isiliye interview mein Kahn se shuru karo, samjhaana aasan hai.</p>
+<p><b>Kahn cycle bhi muft mein bata deta hai:</b> agar output mein V se <b>kam</b> nodes aaye, to jo bache unka in-degree kabhi 0 tak pahuncha hi nahi. Matlab woh aapas mein ek doosre ka intezaar kar rahe hain. <b>Bache hue nodes hi cycle hain (ya uske peeche latke hue hain).</b> Sirf ek length check, koi extra pass nahi. Isiliye interview mein Kahn se shuru karo, samjhaana aasan hai.</p>
 <p><b>DFS wala tarika ulta chalta hai:</b> node ko list mein tab daalo jab uske saare descendants khatam ho jaayein, phir list ko <b>reverse</b> kar do. Kyunki node baad mein likha gaya, reverse karne par sabse pehle aa jaayega.</p>
 <p><b>Ab sabse zaroori part, jahan log maar khaate hain.</b> DFS mein cycle dhoondhne ke liye plain <code>visited</code> set <b>kaafi nahi hai</b>. Visited ka matlab hai "kabhi gaya tha". Cycle ke liye chahiye "<b>abhi is waqt isi raaste par hoon kya</b>". Isliye teen states rakho: <b>unvisited</b>, <b>in progress</b> (abhi call stack par hai), aur <b>done</b>. In-progress node par edge mila to cycle. Done node par edge mila to kuch nahi, woh sirf pehle explore kiya hua hissa hai. Do states mein daba diya to diamond shape (A se B aur C, dono se D) par jhoothi cycle report hogi, jahan cycle hai hi nahi. <b>Yeh is topic ka sabse common galat jawaab hai.</b></p>
 <p><b>Order unique nahi hota.</b> Jin do nodes ke beech koi raasta hi nahi, unka aage-peeche kuch bhi ho sakta hai. Agar <b>lexicographically smallest</b> maanga hai to bas Kahn ki queue ki jagah <b>min-heap</b> laga do, baaki sab wahi. Cost O(V + E) se O(V log V + E) ho jaati hai.</p>
-<p><b>Ek bonus:</b> DAG par nodes ko topological order mein leke edges relax kar do, to shortest paths <b>O(V + E)</b> mein mil jaate hain, <b>negative weights ke saath bhi</b>, jo Dijkstra nahi kar sakta. Uski detail shortest paths wale page par hai, par order yahin se aata hai.</p>`,
+<p><b>Ek bonus:</b> DAG par nodes ko topological order mein le lo aur ek hi sweep mein edges relax kar do. Shortest paths <b>O(V + E)</b> mein mil jaayenge, <b>negative weights ke saath bhi</b>, jo Dijkstra nahi kar sakta. Uski detail shortest paths wale page par hai, par order yahin se aata hai.</p>`,
 
   viz: ["toposort"],
+
+  math: [
+    { t: "Kahn, counted", d: "Two passes and a queue. Every node enters the queue once and every edge is touched once, which is where the linear bound comes from.", w:
+`building the in-degree table:  one pass over all edges, E
+each node enqueued once when its in-degree hits 0:  V
+each edge decremented exactly once:  E
+
+total O(V + E)
+
+emitted == V  ->  a valid order
+emitted <  V  ->  the missing nodes are exactly those
+                  on or downstream of a cycle` },
+    { t: "Why a cycle is the only thing that can block an order", d: "One direction is obvious. The other is an induction, and that induction is not a proof about the algorithm, it is the algorithm.", w:
+`a cycle a -> b -> a needs a before b and b before a.
+No order exists. So a cycle blocks it.
+
+no cycle  =>  some node has in-degree 0
+  (otherwise follow edges backwards V + 1 times: a vertex
+   repeats, and that repeat is a cycle)
+remove that node, and the rest is still acyclic. Repeat.
+
+so an order always exists, and the induction emits one` },
+    { t: "There is rarely one order, and here is how many", d: "Interview answers that say the topological order are wrong. The count is a permutation count, and only a chain pins it down.", w:
+`3 independent tasks, no edges:   3! = 6 valid orders
+a chain a -> b -> c:              exactly 1
+n independent tasks:              n!
+
+which order you get depends on the queue order in Kahn,
+or the neighbour order in DFS. Both are valid; neither
+is "the" answer.` },
+    { t: "DFS cycle detection needs three states, not two", d: "Visited-or-not cannot distinguish an ancestor on the current path from a node that was finished long ago, and only the first is a cycle.", w:
+`white  not seen
+grey   on the current recursion stack
+black  finished, subtree fully explored
+
+meet grey   -> a back edge  -> cycle
+meet black  -> already done -> not a cycle
+
+with only visited/unvisited:
+  1 -> 2, 1 -> 3, 2 -> 3
+  3 is "visited" when 1 reaches it, yet there is no cycle` },
+  ],
 
   costs: [
     ["build the graph and in-degrees", "O(V + E)", "one pass over the edges, counting arrivals"],
@@ -6509,32 +7976,20 @@ function hasCycle(n, adj) {
   group: "Graphs",
   one: "Connect every node as cheaply as possible: exactly V-1 edges, no cycles. Both algorithms are one greedy rule, <b>the lightest edge crossing any cut is safe</b>.",
 
-  plain: `<p>You have a weighted, undirected graph and a bill to pay. Every node has to end up connected to every other one, and you would like the total weight of the edges you keep to be as small as possible. Nothing else matters: not how far apart two nodes end up, not which node you started from.</p>
-<p>That last sentence is the one people skip. It sounds like the tree you build should also give you good routes between nodes, and it does not. <b>Cheapest overall</b> and <b>closest to a source</b> are two different requests, and the answers to them are two different trees. This page spends real time on that, because interviewers do too.</p>
-<p>The structure of the answer is forced. V nodes need at least V-1 edges to be connected, and any extra edge creates a cycle you could have saved money on. So the answer is a tree, and the only question left is which V-1 edges. Both classic algorithms answer it with the same greedy step applied from different directions: Kruskal sorts the edges and takes them cheapest first, Prim grows one tree and always eats the cheapest edge leaving it.</p>
-<p><b>Analogy.</b> Laying cable between towns. You are paying for cable, not for driving time. The cheapest network to build is not the network with the fastest route between any two towns, and a resident who cares about their commute will not thank you for the difference.</p>`,
+  plain: `<p>You have a set of towns and a list of possible cables between them, each with a price. Every town must end up reachable from every other. You want the total price to be as small as possible.</p>
+<p>Nothing else counts. Not how long the journey between two towns ends up being. Not which town you start from. Only the total bill.</p>
+<p>That sounds obvious, and it is the thing people get wrong. <b>The network that is cheapest to build is not the network with the best routes in it.</b> Those are two different questions with two different answers, and interviewers ask about the difference on purpose.</p>
+<p>The shape of the answer is fixed before you choose anything. To connect n towns you need at least n-1 cables. Any extra cable makes a loop, and on a loop you can always cut the most expensive cable and still reach everywhere. So the answer has exactly n-1 cables and no loops. The only question left is <b>which</b> n-1.</p>
+<p><b>Analogy.</b> You are paying for cable, not for driving time. The cheapest network to build is not the one with the fastest journeys, and a resident who cares about their commute will not thank you for the difference.</p>`,
 
   why: [
-    { t: "The shape of the answer is forced before you choose anything",
-      d: "V nodes cannot be connected by fewer than V-1 edges. Add one more and you have closed a cycle, and on a cycle you can always delete the heaviest edge: every node is still reachable, going the other way round, and the bill just went down. So an optimal answer has <b>no cycles and exactly V-1 edges</b>, which is the definition of a tree. The word tree here is a conclusion, not a starting assumption." },
-
-    { t: "It is not a shortest path tree, and this is where the question is lost",
-      d: "Three nodes: A-B costs 2, B-C costs 2, A-C costs 3. The MST keeps the two 2s for a total of 4, because every other spanning tree costs 5. Now walk from A to C inside that tree: 4. The true shortest path is the single edge of weight 3, which the MST deliberately threw away. <b>Minimising the sum is a different objective from minimising each individual distance from a source.</b> A shortest path tree from A would keep the 3 and cost more in total. Neither tree is wrong; they answer different questions." },
-
-    { t: "The cut property is the one fact both algorithms stand on",
-      d: "Split the nodes into two non-empty sides, any split at all. Look at the edges with one end on each side. <b>The lightest of those crossing edges belongs to some minimum spanning tree.</b> Note the phrasing borrowed from the greedy page: some, not every. One safe optimal solution containing it is all the argument needs." },
-
-    { t: "Prove it with the exchange argument, nothing new required",
-      d: "Let e be the lightest edge crossing the cut and let T be any MST that does not contain e. Add e to T and you create exactly one cycle. That cycle leaves one side of the cut and has to come back, so it uses a second crossing edge f, and by choice of e, <code>weight(f) >= weight(e)</code>. Drop f. What is left is still spanning, still a tree, and <b>no heavier</b> than T. So an MST containing e exists. As on the greedy page, you never argue that greedy beats the optimum, only that it ties." },
-
-    { t: "Kruskal falls out: sort, then ask which component",
-      d: "Take the edges cheapest first. When you reach an edge whose two ends are in different components, consider the cut that separates those two components: nothing lighter crosses it, because anything lighter has already been processed and would have merged them. So the edge is safe by the cut property. If the ends are already in the same component, the edge closes a cycle and is dropped. That component test is exactly <b>union-find</b>, which has its own page, and the total is <b>O(E log E)</b> with the sort paying nearly all of it." },
-
-    { t: "Prim falls out: fix one side of the cut and never move it",
-      d: "Start from any node and let the cut always be (what I have built, everything else). The cheapest edge crossing it is safe, so take it, absorb the node on the far end, and repeat. A <b>priority queue</b> of edges leaving the tree answers cheapest quickly, giving <b>O(E log V)</b>. This is Dijkstra's loop, line for line, with one difference worth memorising: <b>Dijkstra keys the queue by the distance from the source, <code>dist[u] + w</code>. Prim keys it by <code>w</code>, the weight of the single edge into the tree.</b> One addition, deleted. That is the entire difference, and it is also why one gives shortest paths and the other does not." },
-
-    { t: "Choosing between them, and what neither gives you",
-      d: "Kruskal for <b>sparse</b> graphs and whenever the input already arrives as a list of edges, since you were going to sort something anyway. Prim for <b>dense</b> graphs and whenever the graph is handed to you as an adjacency structure, and on a truly dense graph drop the heap for an O(V²) scan. Also: the MST is <b>not unique</b> when weights tie, so two correct programs can return different trees, but the <b>multiset of weights is the same</b> in every MST, which is why the total is safe to compare and the edge list is not. And all of this assumes an <b>undirected connected</b> graph. Directed edges make it a different problem with a different algorithm, and a disconnected graph has no spanning tree at all, only a spanning forest." },
+    { t: "The shape of the answer is forced before you choose anything", d: "V nodes cannot be joined with fewer than V-1 edges. Add one more edge and you have made a loop. On a loop you can always delete the heaviest edge: everything is still reachable, going round the other way, and the bill just went down. So the best answer has no loops and exactly V-1 edges. That is what the word <b>tree</b> means here. It is a conclusion, not an assumption you started with." },
+    { t: "It is not a shortest path tree, and this is where the question is lost", d: "Three nodes. A-B costs 2, B-C costs 2, A-C costs 3. The MST keeps the two 2s, total 4, because every other spanning tree costs 5. Now travel from A to C inside that tree. It costs 4. The direct edge cost 3, and the MST threw it away on purpose. <b>Cheapest total and shortest journey are different goals.</b> Neither tree is wrong. They answer different questions." },
+    { t: "The one fact both algorithms stand on", d: "Split the nodes into two groups, any split you like. Look at the edges with one end in each group. <b>The cheapest of those crossing edges is in some minimum spanning tree.</b> Read the word some carefully. Not every. One safe best answer containing it is all the argument needs." },
+    { t: "Prove it by swapping, which needs nothing new", d: "Let e be the cheapest edge crossing the split. Take any best tree T that does not contain e. Add e, and exactly one loop appears. That loop leaves one side of the split and has to come back, so it uses a second crossing edge f. Since e was the cheapest crossing edge, f costs at least as much. Now delete f. What is left still reaches everything, still has no loop, and costs no more than T. So a best tree containing e exists." },
+    { t: "Kruskal falls out: sort, then ask which group", d: "Take the edges cheapest first. When you reach an edge whose two ends are in different groups, split the nodes along those groups. Nothing cheaper crosses that split, because anything cheaper came earlier and would have merged them already. So the edge is safe. If both ends are already in the same group, the edge would close a loop, so drop it. That same-group test is exactly union-find, which has its own page. The total is <b>O(E log E)</b>, and the sort is nearly all of it." },
+    { t: "Prim falls out: fix one side of the split and never move it", d: "Start anywhere. Let the split always be: what I have built so far, against everything else. The cheapest edge crossing it is safe, so take it, swallow the node on the far end, and repeat. A heap of the edges leaving the tree finds that cheapest edge quickly, giving <b>O(E log V)</b>. This is Dijkstra's loop line for line, with one difference worth memorising. Dijkstra keys the heap by <code>dist[u] + w</code>, the distance from the source. Prim keys it by <code>w</code> alone, the price of that one edge. One addition, deleted. That is the whole difference, and it is why one gives shortest paths and the other does not." },
+    { t: "Choosing between them, and what neither gives you", d: "Kruskal for sparse graphs, and whenever the input already arrives as a list of edges, since you were going to sort something anyway. Prim for dense graphs and when the graph is handed to you as an adjacency list. On a truly dense graph, drop the heap and scan instead: <b>O(V²)</b>. Two more facts. When weights tie the MST is not unique, so two correct programs can return different trees. The multiset of weights is the same in every MST though, which is why comparing totals is safe and comparing edge lists is not. And all of this assumes the graph is undirected and connected. Directed edges are a different problem with a different algorithm, and a disconnected graph has no spanning tree at all, only a forest." },
   ],
 
   variants: [
@@ -6566,15 +8021,58 @@ function hasCycle(n, adj) {
 
   hing: `<p><b>Sawaal kya hai:</b> saare nodes ko jodna hai, aur total edge weight <b>jitna kam ho sake</b> utna kam. Bas. Kaun kitni door hai, ya kis node se shuru kiya, isse koi matlab nahi.</p>
 <p><b>Answer ka shape pehle se tay hai.</b> V nodes ko jodne ke liye kam se kam V-1 edges chahiye. Ek extra edge daalo to cycle ban jaati hai, aur cycle par sabse bhaari edge hamesha hata sakte ho: graph phir bhi connected rahega aur paisa bach jaayega. Isliye jawaab mein <b>cycle nahi hoti aur theek V-1 edges hoti hain</b>, matlab woh ek <b>tree</b> hai. Tree naam nateeja hai, shuruaat nahi.</p>
-<p><b>Ab woh baat jo interview mein pakadti hai: MST shortest path tree NAHI hai.</b> Teen nodes lo: A-B = 2, B-C = 2, A-C = 3. MST dono 2 rakhega, total 4. Lekin us tree ke andar A se C jaane ka raasta 4 ka padta hai, jabki asli shortest path 3 wali seedhi edge thi, jise MST ne jaan-boojh kar phenk diya. <b>Total kam karna aur har node ki source se doori kam karna, ye do alag maqsad hain.</b> Dono trees sahi hain, bas sawaal alag hai.</p>
+<p><b>Ab woh baat jo interview mein pakadti hai: MST shortest path tree NAHI hai.</b> Teen nodes lo: A-B = 2, B-C = 2, A-C = 3. MST dono 2 rakhega, total 4. Lekin us tree ke andar A se C jaane ka raasta 4 ka padta hai. Asli shortest path to 3 wali seedhi edge thi, jise MST ne jaan-boojh kar phenk diya. <b>Total kam karna aur har node ki source se doori kam karna, ye do alag maqsad hain.</b> Dono trees sahi hain, bas sawaal alag hai.</p>
 <p><b>Cut property, jis par dono algorithms tike hain:</b> nodes ko kisi bhi tarah do hisson mein baant do. Jo edges dono taraf ko cross karti hain, unmein se <b>sabse halki edge kisi na kisi MST mein zaroor hai</b>. Dhyaan do: "kisi ek mein", "har ek mein" nahi. Greedy page wali baat yahan bhi wahi hai.</p>
-<p><b>Proof wahi exchange argument hai.</b> Maan lo e sabse halki crossing edge hai aur T koi MST hai jismein e nahi hai. T mein e daalo, theek ek cycle banegi. Woh cycle cut ke ek taraf se nikli hai to wapas bhi aayegi, matlab usmein ek aur crossing edge f hai, aur e ke chunav se <code>weight(f) >= weight(e)</code>. Ab f hata do. Jo bacha woh abhi bhi spanning tree hai aur <b>bhaari nahi hua</b>. Matlab e wala MST exist karta hai. Yahan bhi tumhein greedy ko optimum se behtar sabit nahi karna, sirf <b>barabar</b>.</p>
+<p><b>Proof wahi exchange argument hai.</b> Maan lo e sabse halki crossing edge hai aur T koi MST hai jismein e nahi hai. T mein e daalo, theek ek cycle banegi. Woh cycle cut ke ek taraf se nikli hai, to wapas bhi aayegi. Matlab usmein ek aur crossing edge f hai. Aur e sabse sasti crossing edge thi, to <code>weight(f) >= weight(e)</code>. Ab f hata do. Jo bacha woh abhi bhi spanning tree hai aur <b>bhaari nahi hua</b>. Matlab e wala MST exist karta hai. Yahan bhi tumhein greedy ko optimum se behtar sabit nahi karna, sirf <b>barabar</b>.</p>
 <p><b>Kruskal:</b> saari edges weight se sort karo, aur har edge tabhi rakho jab uske dono sire <b>alag components</b> mein hon. Yeh check exactly <b>union-find</b> hai (uska apna page hai, wahin se uthao). Total <b>O(E log E)</b>, jismein poora kharcha sort ka hai.</p>
-<p><b>Prim:</b> ek node se tree ugao, aur baar baar tree se bahar jaane wali <b>sabse sasti edge</b> lo, priority queue se. <b>O(E log V)</b>. Aur ab woh ek line jo yaad rakhni hai: <b>Dijkstra queue ko source se doori par sort karta hai (<code>dist[u] + w</code>), Prim sirf <code>w</code> par, yaani tree mein aane wali ek edge ke weight par.</b> Sirf ek addition ka farq hai, aur wahi farq decide karta hai ki kaun shortest path deta hai aur kaun nahi.</p>
+<p><b>Prim:</b> ek node se tree ugao, aur baar baar tree se bahar jaane wali <b>sabse sasti edge</b> lo, priority queue se. <b>O(E log V)</b>. Aur ab woh ek line jo yaad rakhni hai. <b>Dijkstra queue ko source se doori par sort karta hai, yaani <code>dist[u] + w</code>. Prim sirf <code>w</code> par sort karta hai, yaani tree mein aane wali us ek edge ke weight par.</b> Bas ek addition ka farq hai. Aur wahi farq decide karta hai ki kaun shortest path deta hai aur kaun nahi.</p>
 <p><b>Kaun sa kab:</b> sparse graph ya edges pehle se list mein → <b>Kruskal</b>. Dense graph ya adjacency list mila hai → <b>Prim</b>, aur bahut dense ho to heap chhod kar seedha <b>O(V²)</b> scan likh do.</p>
 <p><b>Do aur baatein interview ke liye:</b> weights tie karte hon to <b>MST unique nahi hota</b>, do sahi programs alag-alag trees de sakte hain. Par har MST ka <b>weights ka multiset ek hi hota hai</b>, isliye total compare karna safe hai aur edge list compare karna nahi. Aur yeh sab <b>undirected</b> graph ke liye hai; directed edges ka to alag problem aur alag algorithm hai.</p>`,
 
   viz: ["mst"],
+
+  math: [
+    { t: "The answer's shape is fixed before any choice is made", d: "You are not choosing how many edges. That number is forced, and knowing it turns the problem into picking which ones.", w:
+`a spanning tree of V nodes has exactly V - 1 edges
+
+V - 2 edges:  cannot be connected
+V edges:      contains a cycle, and the heaviest edge on
+              that cycle can be deleted, leaving it
+              connected and strictly cheaper
+
+so every algorithm chooses WHICH V - 1, never how many` },
+    { t: "An MST is not a shortest-path tree, and one triangle shows it", d: "This is the single most common way the question is lost. Three nodes are enough to separate the two objectives.", w:
+`A-B = 1,  B-C = 1,  A-C = 1.9
+
+MST: take A-B and B-C, total weight 2
+  (A-C at 1.9 would make a cycle and is heavier than 1)
+
+shortest path A to C: the direct edge, 1.9
+inside the MST that trip costs 1 + 1 = 2
+
+minimising the total is not minimising any one path` },
+    { t: "The cut property, proved by exchange", d: "Both algorithms rest on this one fact, and the proof is the same swap argument used for greedy correctness everywhere else.", w:
+`take any cut. Let e be a lightest edge crossing it.
+Suppose some MST T does not contain e.
+
+add e to T  ->  exactly one cycle forms
+that cycle must cross the cut a second time, at some f
+  weight(f) >= weight(e)        (e was lightest crossing)
+
+T - f + e is still spanning, still acyclic, and weighs
+no more. So an MST containing e exists.` },
+    { t: "Kruskal and Prim, priced against each other", d: "They agree on the answer and differ on what they sort. The density of the graph is what decides which one is doing less work.", w:
+`Kruskal:  sort E edges           E log E
+          E union-find ops       E x alpha
+          total                  O(E log V)
+
+Prim, binary heap:               O(E log V)
+Prim, adjacency matrix, no heap: O(V^2)
+
+V = 10^5, E = 5 x 10^5 (sparse):  both ~ 8 x 10^6
+V = 10^3, E = 5 x 10^5 (dense):   matrix Prim 10^6,
+                                  Kruskal 9.5 x 10^6` },
+  ],
 
   costs: [
     ["Kruskal, total", "O(E log E)", "sorting is the only expensive step, and log E is at most 2 log V"],
@@ -6874,7 +8372,7 @@ function primDense(n, weight) {           // weight(i, j) computed on demand
   why: [
     { t: "Count what has to be decided", d: "There are <b>n!</b> possible orderings and only one is correct. A comparison returns one of two answers, so it can at best cut the surviving possibilities in half. You need enough comparisons k that 2<sup>k</sup> ≥ n!, which gives k ≥ log₂(n!) ≈ <b>n log n</b>. This is a lower bound on the problem, not on any particular algorithm." },
     { t: "Merge sort meets the bound exactly", d: "Split in half repeatedly. That is <b>log n levels</b>. Merging two already-sorted runs is a single walk with two fingers, <b>O(n) per level</b>. Multiply: O(n log n), guaranteed, worst case included. It is also <b>stable</b>, and it pays O(n) scratch memory for both properties." },
-    { t: "Quicksort meets it on average, with no extra memory", d: "Pick a pivot, partition so that smaller values sit left and larger right, recurse on each side. A good pivot halves the array and gives O(n log n) in O(1) extra space. A bad pivot peels off one element at a time and gives <b>O(n²)</b>, which is why real implementations randomise the pivot, or count their recursion depth and switch to heap sort." },
+    { t: "Quicksort meets it on average, with no extra memory", d: "Pick a pivot, partition so that smaller values sit left and larger right, recurse on each side. A good pivot halves the array and gives O(n log n) in O(1) extra space. A bad pivot peels off one element at a time and gives <b>O(n²)</b>. That is why real implementations randomise the pivot, or count their recursion depth and switch to heap sort." },
     { t: "What your standard library actually runs", d: "Rarely a textbook algorithm. <b>Timsort</b> (Python, and Java for objects) hunts for runs that are already ordered and merges those, so nearly-sorted input costs <b>O(n)</b>. <b>Introsort</b> (C++) is quicksort that falls back to heap sort when the recursion gets too deep, so it keeps the O(1) space without the O(n²) risk." },
     { t: "The bound only binds comparison sorts", d: "The whole proof assumed information arrives one comparison at a time. Counting sort makes no comparisons: it uses each value as an <b>index</b> into a tally array, then reads the tallies back out. That is <b>O(n + k)</b> for k distinct values, genuinely linear, and only worth it when k is small relative to n. Radix sort applies the same trick digit by digit." },
     { t: "Stability is not a detail", d: "A stable sort keeps equal elements in their original relative order. That is what allows multi-key sorting: sort by the secondary key, then by the primary, and the secondary ordering survives inside each group. If your language's sort is unstable, that technique silently produces wrong answers." },
@@ -6939,11 +8437,63 @@ function primDense(n, weight) {           // weight(i, j) computed on demand
 <p><b>Quicksort</b> average par wahi speed deta hai par <b>O(1) extra space</b> mein, pivot chuno, chhote left, bade right, dono taraf recurse. Par pivot har baar ganda nikla to <b>O(n²)</b>. Isliye asli libraries pivot <b>random</b> chunti hain ya depth zyada hone par heap sort par switch kar deti hain.</p>
 <p><b>Library asal mein kya chalati hai?</b> Python aur Java (objects), <b>Timsort</b>: pehle se sorted tukde dhoondh kar unhe merge karta hai, isliye "lagbhag sorted" data par <b>O(n)</b>. C++, <b>introsort</b>: quicksort, aur gehrai badhne par heap sort.</p>
 <p><b>Limit se bachne ka ek hi raasta hai, compare karna hi band kar do.</b> Counting sort value ko seedha <b>index</b> ki tarah use karta hai, gin kar wapas likh deta hai → <b>O(n + k)</b>. Faayda tabhi jab values ki range (k) chhoti ho.</p>
-<p><b>Stability kyun maayne rakhti hai?</b> Barabar elements ka aapsi order na badle, isi se <b>do keys par sorting</b> possible hoti hai: pehle chhoti key se sort karo, phir badi se; chhoti wali order har group ke andar bach jaata hai. C++ ka <code>sort</code> stable <b>nahi</b> hai (<code>stable_sort</code> alag hai), yeh yaad rakhna.</p>
+<p><b>Stability kyun maayne rakhti hai?</b> Barabar elements ka aapsi order na badle. Isi se <b>do keys par sorting</b> possible hoti hai: pehle chhoti key se sort karo, phir badi se. Chhoti wali order har group ke andar bachi reh jaati hai. C++ ka <code>sort</code> stable <b>nahi</b> hai (<code>stable_sort</code> alag hai), yeh yaad rakhna.</p>
 <p><b>Aur aakhri baat:</b> har jagah sort mat kar do. Top-k chahiye? Size-k heap se <b>O(n log k)</b>. Duplicate check karna hai? Hash set se <b>O(n)</b>. Sort tab karo jab tumhe <b>order khud chahiye</b>, ya order milne se two-pointer / binary search khul jaaye.</p>`,
 
   viz: ["merge-sort"],
   see: [["VA", "https://visualgo.net/en/sorting", "VisuAlgo, every sorting algorithm, animated"]],
+
+  math: [
+    { t: "The lower bound, counted rather than asserted", d: "This is the rare complexity claim that is a proof about every possible algorithm, not a statement about the ones we happen to have written.", w:
+`n items have n! possible orderings
+one comparison has 2 outcomes, so k comparisons can
+distinguish at most 2^k arrangements
+
+  2^k >= n!    ->    k >= log2(n!)
+Stirling:  log2(n!)  ~  n log2 n - 1.44 n
+
+n = 10^6:  at least 1.85 x 10^7 comparisons
+no comparison sort beats that. Ever.` },
+    { t: "Merge sort meets the bound, levels times work", d: "Split, recurse, merge. Every level does n units of merging and there are log n levels, which lands within a few percent of the floor.", w:
+`T(n) = 2 T(n/2) + n
+
+levels           log2 n
+work per level   n           (every element merged once)
+total            n log2 n
+
+n = 10^6:  2.0 x 10^7 comparisons
+the proven floor was 1.85 x 10^7
+merge sort is within 8 % of optimal, always` },
+    { t: "Quicksort: the same recurrence with a different pivot", d: "The average and the worst case differ by four orders of magnitude, and which one you get is decided entirely by the pivot rule.", w:
+`good pivot:  T(n) = 2T(n/2) + n  ->  n log2 n
+worst pivot: T(n) = T(n-1) + n   ->  n^2 / 2
+
+n = 10^6:   2 x 10^7    vs    5 x 10^11
+
+random pivots, expected: 1.39 n log2 n
+  about 39 % more comparisons than merge sort, and no
+  second array, which is why libraries still ship it
+
+sorted input + first-element pivot = the worst case` },
+    { t: "Escaping the bound means not comparing", d: "The proof only binds algorithms whose only move is a comparison. Counting sort looks at the value itself, which is why it is allowed to be linear.", w:
+`values in [0, k): count them, then walk the counts
+  time O(n + k), space O(k)
+
+n = 10^6 values in [0, 100)    ~ 10^6 steps        fine
+n = 10^6 values in [0, 10^9)   10^9 counters       no
+
+radix sort: d passes of counting sort, O(d(n + k))
+32-bit integers, 8 bits per pass: d = 4, k = 256` },
+    { t: "What your library actually runs", d: "Knowing which sort is under the call decides whether a second sort pass is safe, and whether an adversarial input can hurt you.", w:
+`Python  sorted, list.sort   TimSort, stable, n log n worst
+Java    objects             TimSort, stable
+Java    primitives          dual-pivot quicksort, unstable
+C++     std::sort           introsort, unstable
+C++     std::stable_sort    merge, stable, extra memory
+
+introsort = quicksort, switching to heapsort past a
+depth of 2 log2 n, so the n^2 case cannot happen` },
+  ],
 
   costs: [
     ["comparison-sort lower bound", "Ω(n log n)", "log₂(n!) comparisons are information-theoretically required"],
@@ -7127,16 +8677,16 @@ function countingSort(a, k) {            // O(n + k), no comparisons
   one: "Split until the pieces are trivial, solve them, then <b>combine</b>. The first two steps are bookkeeping. The combine step is where the algorithm actually is.",
 
   plain: `<p>Three steps, always the same three. Divide the problem into smaller versions of itself, conquer those by recursion, then combine their answers into the answer you were asked for.</p>
-<p>The first two steps are almost never interesting. Splitting an array in half takes no thought. What distinguishes one divide-and-conquer algorithm from another is entirely the third step, and the cost of the whole thing is usually the cost of combining, repeated once per level.</p>
+<p>The first two steps are almost never interesting. Splitting an array in half takes no thought. What separates one divide-and-conquer algorithm from another is entirely the third step. And the cost of the whole thing is usually the cost of combining, repeated once per level.</p>
 <p>Merge sort splits trivially and does its real work merging. Quicksort is the mirror image: it does the work up front partitioning, and its combine step is literally nothing, because the pieces are already in the right places. Same shape, opposite distribution of effort.</p>
 <p>And the reason it pays is that halving gives you only <b>log n</b> levels. Doing O(n) work on each of log n levels is O(n log n), which is a completely different animal from doing O(n) work n times.</p>
 <p><b>Analogy.</b> Counting a stadium crowd. You do not count 40,000 people. You split the stands into sections, hand each to somebody, and add up what they report. The addition is the only part you personally do, and it is the only part worth thinking about.</p>`,
 
   why: [
-    { t: "The combine step is the algorithm", d: "Dividing is usually a midpoint calculation and conquering is a recursive call. Neither requires insight. Merge sort's merge, quickselect's decision about which side to recurse into, the counting of cross-pairs when counting inversions: <b>that</b> is where the thinking lives, and it is also where the cost usually lives." },
+    { t: "The combine step is the algorithm", d: "Dividing is usually a midpoint calculation and conquering is a recursive call. Neither requires insight. Merge sort's merge. Quickselect's decision about which side to recurse into. The counting of cross-pairs when counting inversions. <b>That</b> is where the thinking lives, and it is usually where the cost lives too." },
     { t: "Cost is levels multiplied by work per level", d: "Draw the recursion tree. Halving gives <b>log n</b> levels. If every level does O(n) total work, you get O(n log n). If the work shrinks geometrically down the levels, the top dominates and the total is just O(n). If it grows, the leaves dominate. You almost never need more machinery than looking at the tree and asking which end is heavier." },
     { t: "The master theorem is that observation, formalised", d: "For <code>T(n) = a·T(n/b) + f(n)</code>, compare the work at the top, <code>f(n)</code>, against the work at the leaves, <code>n^(log_b a)</code>. Whichever is bigger wins; if they match, you pay an extra log factor. Merge sort is a=2, b=2, f(n)=n, the two sides tie, and out comes n log n. Quote it, but read the tree first, because the tree is what you can reconstruct under pressure." },
-    { t: "Recursing into one side only changes the class", d: "Binary search splits and then recurses into <b>one</b> half, so the levels do O(1) work each and the total is O(log n). Quickselect does the same trick with partitioning: it only recurses into the side containing the rank it wants, so the work halves each time and the whole thing averages <b>O(n)</b> rather than O(n log n). Sorting to find the kth element is throwing away that saving." },
+    { t: "Recursing into one side only changes the class", d: "Binary search splits and then recurses into <b>one</b> half, so the levels do O(1) work each and the total is O(log n). Quickselect does the same trick with partitioning. It only recurses into the side holding the rank it wants, so the work halves each time. The whole thing averages <b>O(n)</b> rather than O(n log n). Sorting to find the kth element is throwing away that saving." },
     { t: "It is not a sorting technique, it is a shape", d: "Counting inversions is merge sort with a counter in the merge. Closest pair of points is a split by x with a clever strip check when combining. Fast exponentiation halves the exponent. Karatsuba multiplication and Strassen's matrix multiplication both beat the obvious algorithm purely by rearranging what gets combined. The shape transfers; the combine step is bespoke each time." },
     { t: "It ends where the subproblems start to overlap", d: "Divide and conquer assumes the pieces are <b>independent</b>. The moment two branches ask the same question, you are recomputing, and the fix is to cache, which makes it dynamic programming. That independence is also why divide and conquer parallelises almost for free while DP largely does not: no branch is waiting on another." },
   ],
@@ -7175,7 +8725,7 @@ function countingSort(a, k) {            // O(n + k), no comparisons
 
   hing: `<p><b>Teen kadam, hamesha wahi teen:</b> problem ko chhote tukdon mein <b>baanto</b>, har tukda recursion se <b>hal karo</b>, phir un jawaabon ko <b>jodo</b>.</p>
 <p><b>Par asli baat yeh hai:</b> pehle do kadam mein koi dimaag nahi lagta. Array ko aadha karna kya sochne wali cheez hai? <b>Poora algorithm teesre kadam mein hota hai</b>, jodne mein. Aur aksar poori cost bhi wahin hoti hai.</p>
-<p><b>Do ulte udaharan yaad rakho:</b> merge sort baantne mein kuch nahi karta, saara kaam <b>merge</b> mein karta hai. Quicksort bilkul ulta hai: saara kaam <b>partition</b> mein pehle hi kar leta hai, aur uska combine step <b>bilkul khaali</b> hota hai, kyunki tukde pehle se sahi jagah par hain.</p>
+<p><b>Do ulte udaharan yaad rakho:</b> merge sort baantne mein kuch nahi karta, saara kaam <b>merge</b> mein karta hai. Quicksort bilkul ulta hai. Saara kaam <b>partition</b> mein pehle hi ho jaata hai. Uska combine step <b>bilkul khaali</b> hota hai, kyunki tukde pehle se sahi jagah par hain.</p>
 <p><b>Cost nikalne ka ek hi tarika:</b> recursion tree banao. Aadha-aadha karne se <b>log n levels</b> bante hain. Har level par O(n) kaam = <b>O(n log n)</b>. Bas dekho ki <b>upar bhaari hai ya neeche</b>, jo bhaari hai wahi answer hai. Master theorem isi observation ka formula hai, magic nahi.</p>
 <p><b>Ek taraf recurse karne se class hi badal jaati hai.</b> Binary search aadha karke sirf <b>ek</b> taraf jaata hai, isliye O(log n). Quickselect bhi partition ke baad sirf us taraf jaata hai jahan tumhara kth element hai, isliye average <b>O(n)</b>, poora sort nahi. Kth largest ke liye sort karna is bachat ko phenk dena hai.</p>
 <p><b>Yeh sirf sorting ki cheez nahi hai.</b> Inversions ginna = merge sort mein ek counter. Fast exponentiation = exponent aadha karna. Closest pair, Karatsuba, Strassen, sab yahi shakal hain, bas jodne ka tarika alag hai.</p>
@@ -7183,6 +8733,53 @@ function countingSort(a, k) {            // O(n + k), no comparisons
 
   viz: ["merge-sort"],
   see: [["VA", "https://visualgo.net/en/sorting", "VisuAlgo, merge sort splitting and combining"]],
+
+  math: [
+    { t: "Cost is levels multiplied by the work on each level", d: "Every divide and conquer analysis is this one table. Fill in three numbers and the total falls out without any theorem at all.", w:
+`T(n) = a T(n/b) + f(n)
+
+depth of the recursion        log_b n
+subproblems at level i        a^i
+size of each at level i       n / b^i
+work done at level i          a^i x f(n / b^i)
+
+merge sort, a = 2, b = 2, f(n) = n:
+  level i:  2^i x (n / 2^i)  =  n
+  levels:   log2 n
+  total:    n log2 n` },
+    { t: "The master theorem is that table, formalised", d: "Compare the work at the leaves with the work at the root. Whichever dominates is the answer, and the middle case is when they tie.", w:
+`compare f(n) with n^(log_b a):
+
+  f smaller  ->  T = O(n^(log_b a))         leaves win
+  f equal    ->  T = O(n^(log_b a) log n)   a tie
+  f bigger   ->  T = O(f(n))                the root wins
+
+binary search  a=1 b=2 f=1     n^0 = 1  tie   -> log n
+merge sort     a=2 b=2 f=n     n^1 = n  tie   -> n log n
+Karatsuba      a=3 b=2 f=n     n^1.585 > n    -> n^1.585
+Strassen       a=7 b=2 f=n^2   n^2.807 > n^2  -> n^2.807` },
+    { t: "Recursing into one side is a different class, not a saving", d: "Two branches visit everything. One branch throws half away at every level. The gap at n = 10^6 is five orders of magnitude.", w:
+`T(n) = 2T(n/2) + 1   ->  2n - 1 calls     visits all
+T(n) =  T(n/2) + 1   ->  log2 n calls     binary search
+
+n = 10^6:   2,000,000   vs   20
+
+quickselect: T(n) = T(n/2) + n  ->  2n expected
+so the k-th smallest is linear on average, without
+sorting the other n - 1 elements first` },
+    { t: "Karatsuba, worked, because it shows where the saving comes from", d: "Four multiplications become three by spending an addition. That single removed branch is what moves the exponent off 2.", w:
+`x = a.B + b,  y = c.B + d       (each half n/2 digits)
+
+xy = ac.B^2 + (ad + bc).B + bd          4 multiplications
+     ad + bc = (a+b)(c+d) - ac - bd     reuses ac and bd
+                                        3 multiplications
+
+T(n) = 3 T(n/2) + O(n)  ->  n^log2(3) = n^1.585
+
+n = 1024 digits:
+  schoolbook  1.05 x 10^6
+  Karatsuba   6.0 x 10^4` },
+  ],
 
   costs: [
     ["general shape", "levels × work per level", "draw the tree and ask which end is heavier"],
@@ -7425,7 +9022,7 @@ function power(x, n) {                 // O(log n)
     { t: "The cost is the size of the tree, and pruning is the only lever",
       d: "There are 2^n subsets and n! permutations. No implementation trick changes that, because the output is that big. What you <i>can</i> change is how much of the tree is doomed and still explored. Rejecting a choice at depth 3 removes the entire subtree beneath it, so a check that costs O(1) can delete millions of nodes. That is why N-Queens is tractable and brute force is not: same tree, one of them stops early." },
     { t: "If the same state is reachable by many paths, you wanted DP",
-      d: "Backtracking assumes each node is a <b>distinct</b> partial answer worth exploring. When different decision orders land on the same state, and you only care about a count or a best value rather than the arrangements themselves, you are re-solving identical subproblems and the answer is memoisation. The tell: your recursion's state is small (an index and a remaining sum) but the tree is exponential." },
+      d: "Backtracking assumes each node is a <b>distinct</b> partial answer worth exploring. Sometimes different decision orders land on the same state, and you only want a count or a best value rather than the arrangements themselves. Then you are re-solving identical subproblems, and the answer is memoisation. The tell: your recursion's state is small (an index and a remaining sum) but the tree is exponential." },
   ],
 
   hing: `<p><b>Sabse pehle:</b> backtracking koi naya algorithm nahi hai, yeh <b>recursion + undo</b> hai. Ek decision tree par DFS, aur woh tree kabhi banate nahi, sirf uspar chalte hain.</p>
@@ -7433,10 +9030,52 @@ function power(x, n) {                 // O(log n)
 <p><b>Doosri classic galti:</b> <code>res.append(path)</code>. Yeh path ka <b>reference</b> store karta hai, aur path aage badalta rehta hai, to saare results ek saath badalte hain. Ant mein tumhare paas N khaali lists hoti hain. Hamesha <b>copy</b> daalo: Python <code>path[:]</code>, Java <code>new ArrayList&lt;&gt;(path)</code>, JS <code>[...path]</code>. C++ mein <code>push_back(path)</code> khud copy kar leta hai, wahan ulta problem hai: galti se poori vector by value pass kar doge.</p>
 <p><b>Duplicates ka funda saaf samajh lo.</b> Input mein <code>[1,2,2]</code> hai to do alag branches same subset bana dengi. Pehle <b>sort</b> karo taaki equal values paas-paas aa jaayein, phir loop ke andar: <code>if (j &gt; i && nums[j] == nums[j-1]) continue;</code>. Dhyaan do, yeh sirf <b>same level ke siblings</b> ko skip karta hai. Ek 2 ke upar doosra 2 rakhna bilkul allowed hai, warna <code>[2,2]</code> banega hi nahi. Yeh distinction interview mein poocha jaata hai.</p>
 <p><b>Complexity ka jawaab bina jhijhak do:</b> subsets O(2^n), permutations O(n!), aur har answer copy karne ka O(n) alag se. Interviewer "optimise karo" bole to yaad rakho: output hi itna bada hai, isliye asymptotic class nahi badlegi. Sirf ek cheez asli lever hai, <b>pruning</b>. Depth 3 par ek choice reject karna matlab uske neeche ka poora subtree gaya. Isiliye N-Queens chal jaata hai: same tree, bas jaldi ruk jaata hai.</p>
-<p><b>Aur last, sabse zyada marks wali baat:</b> agar alag-alag decision order se <b>same state</b> par pahunch rahe ho, aur tumhein arrangements nahi balki sirf count ya best value chahiye, to yeh backtracking ka kaam hai hi nahi. Wahan subproblems overlap kar rahe hain, aur jawaab <b>DP</b> hai. Pehchaan simple hai: state chhoti hai (ek index aur ek remaining sum), par tree exponential hai. Yeh line interview mein bol dena, kaafi log yahin fisalte hain.</p>`,
+<p><b>Aur last, sabse zyada marks wali baat:</b> maan lo alag-alag decision order se <b>same state</b> par pahunch rahe ho. Aur tumhein arrangements nahi, sirf count ya best value chahiye. To yeh backtracking ka kaam hai hi nahi. Wahan subproblems overlap kar rahe hain, aur jawaab <b>DP</b> hai. Pehchaan simple hai: state chhoti hai (ek index aur ek remaining sum), par tree exponential hai. Yeh line interview mein bol dena, kaafi log yahin fisalte hain.</p>`,
 
   viz: ["backtracking"],
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, recursion tree, step it one frame at a time"]],
+
+  math: [
+    { t: "The cost is the size of the tree, so count the tree", d: "Backtracking has no clever bound. You are enumerating, and what you can afford is decided before you write a line.", w:
+`subsets of n        2^n leaves, 2^(n+1) - 1 nodes
+permutations of n   n! leaves, about e x n! nodes
+combinations nCk    C(n, k) leaves
+
+n = 20, subsets        1.05 x 10^6     fine
+n = 10, permutations   3.6 x 10^6      fine
+n = 12, permutations   4.8 x 10^8      slow
+n = 15, permutations   1.3 x 10^12     no` },
+    { t: "The copy at the leaf, which nobody counts", d: "Recording an answer costs its length. For subsets that multiplies the leaf count by the average depth, and it dominates the recursion itself.", w:
+`all subsets of n = 20
+
+recursion nodes        2 x 10^6
+leaves                 2^20 = 1.05 x 10^6
+average subset length  n / 2 = 10
+element writes         1.05 x 10^6 x 10 = 10^7
+
+the output is bigger than the search. It has to be:
+the answer itself is that large.` },
+    { t: "Pruning is the only lever, and it multiplies", d: "Each constraint does not subtract work, it divides it. N-queens is the clean demonstration.", w:
+`8 queens on an 8x8 board
+
+every placement            8^8 = 16,777,216
+one per row                8!  =     40,320
+plus column and diagonal checks, nodes actually visited
+                                ~     2,057
+solutions found                        92
+
+three constraints, four orders of magnitude` },
+    { t: "Why the undo keeps space at O(depth)", d: "One shared path with a choose and an un-choose costs the depth. A fresh copy per branch costs the whole tree, which is the difference between 20 slots and 20 million.", w:
+`one shared path array, choose then un-choose:
+  space = depth = n
+
+a fresh copy down every branch:
+  space = leaves x depth = 2^n x n
+
+n = 20:  20 slots  vs  2 x 10^7 slots
+
+the un-choose is one line and it is not optional` },
+  ],
 
   costs: [
     ["all subsets of n items", "O(2^n * n)", "2^n nodes, and copying each finished path costs another n"],
@@ -7726,6 +9365,58 @@ Interview mein: top-down se derive karo, phir bolo "isse bottom-up mein convert 
   viz: ["dp-fill", "dp-grid"],
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, the recursion tree that DP collapses"]],
 
+  math: [
+    { t: "Why memoising works: count the labels on the tree", d: "The recursion tree is exponential and the set of distinct arguments is tiny. Everything past that set is a repeat, and a repeat can be looked up.", w:
+`naive fib(n):  2 fib(n+1) - 1 calls,  growth ~ 1.618^n
+distinct subproblems:  n + 1
+
+n = 50:   4.0 x 10^10 calls   vs   51 states
+
+so the tree has 10^10 nodes carrying 51 different labels.
+Memoising is not an optimisation of the recursion, it is
+the observation that 10^10 - 51 of those calls were
+answering a question already answered.` },
+    { t: "The cost formula, applied to the standard problems", d: "Two numbers decide everything: how many states there are, and how much work each state does. Every DP complexity below is that product.", w:
+`time = states x work per state,  space = states
+
+0/1 knapsack   n x W states     2 transitions  O(nW)
+LCS            n x m states     3 transitions  O(nm)
+coin change    amount states    C transitions  O(aC)
+edit distance  n x m states     3 transitions  O(nm)
+TSP bitmask    2^n x n states   n transitions  O(2^n n^2)
+
+n = 20 TSP:  2^20 x 20 x 20 = 4 x 10^8, the ceiling` },
+    { t: "Pseudo-polynomial, which is why knapsack is still hard", d: "O(nW) looks polynomial and is not, because W is a value written in binary, not a count of things.", w:
+`knapsack, n = 100 items, capacity W = 10^9
+table: 100 x 10^9 = 10^11 cells
+
+W appears in the input as log2(W) = 30 bits
+so the table is exponential in the LENGTH of the input
+
+that is what pseudo-polynomial means, and it is why
+O(nW) does not settle the P versus NP question` },
+    { t: "Space reduction is read straight off the recurrence", d: "Look at which cells the formula touches. If it only reaches one row back, the rest of the table is history nobody consults.", w:
+`dp[i][j] reads dp[i-1][*]            ->  keep 2 rows
+dp[i][j] reads dp[i-1][j], dp[i][j-1] -> 1 row, left to right
+dp[i] reads dp[i-1], dp[i-2]          -> 2 variables
+
+LCS of two strings of 10^4:
+  full table  10^8 cells x 4 bytes  =  400 MB
+  two rows    2 x 10^4 cells        =   80 KB
+
+the value survives, the reconstruction does not` },
+    { t: "Top-down or bottom-up, chosen by how much of the table is reachable", d: "Tabulation computes every state. Memoised recursion computes the ones you actually reach, and on a sparse state space that is a real difference.", w:
+`coin change, amount = 10^4, coins {7, 11}
+
+reachable amounts: combinations of 7 and 11 only,
+far fewer than 10^4
+  memoised recursion visits those, plus stack frames
+  a full table computes all 10^4 entries regardless
+
+dense and fully reachable -> tabulate: no frames, no
+recursion limit, better cache behaviour` },
+  ],
+
   costs: [
     ["general rule", "states × transitions", "count the distinct states, multiply by the work at each"],
     ["1-D over an index", "O(n)", "climbing stairs, house robber, maximum subarray"],
@@ -7958,9 +9649,9 @@ function knapsack(weights, values, cap) {
   group: "Algorithms",
   one: "Take the best-looking option now and never reconsider it. The code is five lines; the difficulty is entirely in <b>proving the local choice is safe</b>.",
 
-  plain: `<p>A greedy algorithm makes the choice that looks best right now, commits to it, and moves on. No memo table, no recursion, no going back. Most of them sort the input by some key and then walk it once, which is why greedy solutions are short enough to write on a whiteboard in under a minute.</p>
-<p>That shortness is a trap. Writing a greedy algorithm is easy, and writing a <i>wrong</i> greedy algorithm is exactly as easy, because nothing about the code tells you which one you have. It runs, it produces an answer, it passes the examples in the problem statement. The honest position is that <b>most greedy ideas you have are simply wrong</b>, and the work is finding out which kind you are holding before you commit to it.</p>
-<p>So the real skill here is not the loop. It is the argument: why does taking this item first never cost you the optimum? There is a standard shape for that argument, and if you cannot make it, you do not have a greedy problem, you have an enumeration problem wearing a disguise.</p>
+  plain: `<p>A greedy algorithm makes the choice that looks best right now, commits to it, and moves on. No memo table, no recursion, no going back. Most of them sort the input by some key and then walk it once. That is why greedy solutions are short enough to write on a whiteboard in under a minute.</p>
+<p>That shortness is a trap. Writing a greedy algorithm is easy, and writing a <i>wrong</i> greedy algorithm is exactly as easy, because nothing about the code tells you which one you have. It runs, it produces an answer, it passes the examples in the problem statement. The honest position is that <b>most greedy ideas you have are simply wrong</b>. The work is finding out which kind you are holding, before you commit to it.</p>
+<p>So the real skill here is not the loop. It is the argument: why does taking this item first never cost you the optimum? There is a standard shape for that argument. If you cannot make it, you do not have a greedy problem. You have an enumeration problem wearing a disguise.</p>
 <p><b>Analogy.</b> Climbing a hill in thick fog by always stepping in whatever direction goes up. You will certainly reach a summit. Whether it is the tallest summit depends entirely on the shape of the landscape, and from inside the fog you cannot tell the difference.</p>`,
 
   why: [
@@ -7977,7 +9668,7 @@ function knapsack(weights, values, cap) {
     { t: "The exchange argument is how you prove the first one",
       d: "Take <b>any</b> optimal solution OPT and let g be the item your rule picks first. If OPT already contains g, there is nothing to prove. Otherwise, swap g into OPT in place of whatever OPT took instead, and show two things: the result is still valid, and it is <b>no worse</b>. Then an optimal solution containing g exists. Note the shape: you never argue that greedy beats OPT, only that it ties it. Ties are all you need." },
     { t: "When the exchange fails, you enumerate, and that is DP or backtracking",
-      d: "If swapping your choice in can make a solution worse, the choice is not safe, and you cannot commit without looking ahead. Looking ahead means trying both branches. If the same state is reached many ways and you want a count or an optimum, that is DP with a memo; if you want the arrangements themselves, that is the <code>backtracking</code> page. Greedy is not a weaker DP, it is a claim you failed to prove." },
+      d: "If swapping your choice in can make a solution worse, the choice is not safe, and you cannot commit without looking ahead. Looking ahead means trying both branches. If the same state is reached many ways and you want a count or a best value, that is DP with a memo. If you want the arrangements themselves, that is the <code>backtracking</code> page. Greedy is not a weaker DP, it is a claim you failed to prove." },
   ],
 
   variants: [
@@ -8022,6 +9713,60 @@ function knapsack(weights, values, cap) {
 <p><b>Aur agar exchange argument ban hi nahi raha?</b> Matlab commit karna safe nahi hai, matlab aage dekhna padega, matlab dono branch try karni padengi. Wahan se ya to <b>DP</b> (same state baar baar aata hai, aur tumhein count ya best value chahiye) ya <b>backtracking</b> (tumhein arrangements khud chahiye). Greedy DP ka chhota bhai nahi hai, greedy ek <b>daava</b> hai jo tumne sabit nahi kiya.</p>`,
 
   viz: ["greedy"],
+
+  math: [
+    { t: "What greedy is being compared against", d: "The gap is the temptation. Five lines that run in n log n against a table or an exponential search is why greedy gets guessed far more often than it gets proved.", w:
+`n items
+
+every subset          2^n
+DP over states        n x W
+greedy: sort + scan   n log2 n + n
+
+n = 40:  1.1 x 10^12   |   n x W   |   40 x 6 = 240
+
+three lines of code, and the only hard part is knowing
+whether the answer is right` },
+    { t: "The counterexample is usually one line away", d: "Greedy being correct is a property of the specific problem, never of the technique. Coins are the fastest way to see that.", w:
+`coins {1, 3, 4}, target 6
+
+greedy takes the largest first:  4 + 1 + 1  =  3 coins
+optimal:                         3 + 3      =  2 coins
+
+with {1, 5, 10, 25} greedy IS optimal
+so the coin system decides it, not the algorithm
+
+"it passed my examples" is not evidence of anything` },
+    { t: "The two properties a problem must have", d: "Both are needed. With only the second you have a DP. With neither you have a search, and no amount of sorting will fix it.", w:
+`greedy choice property
+  some optimal solution contains the greedy first pick
+optimal substructure
+  after fixing that pick, what remains is the same problem
+
+both      -> greedy, and it can be proved
+second    -> dynamic programming
+neither   -> backtracking with pruning` },
+    { t: "The exchange argument, in the shape you actually write", d: "This is the proof for interval scheduling and it is the template for all of them: take any optimal answer, swap your choice in, show nothing got worse.", w:
+`pick the interval with the earliest finishing time
+
+let G be greedy's pick, O any optimal solution,
+X the first interval in O.  finish(G) <= finish(X),
+because G had the earliest finish of all candidates.
+
+swap X for G in O: everything else in O starts after
+finish(X) >= finish(G), so nothing now conflicts.
+|O| is unchanged, so it is still optimal.
+
+an optimal solution containing G exists. Induct on the rest.` },
+    { t: "Interval scheduling, priced", d: "The sort is the algorithm and the scan is bookkeeping, which is the usual shape once a greedy rule has been proved safe.", w:
+`n = 10^5 intervals
+
+check every subset      2^n x n          impossible
+sort by finish, scan    n log2 n + n
+                        1.7 x 10^6 + 10^5
+
+sorting by START instead answers a different question:
+[1,10], [2,3], [4,5] gives 1 interval, not 2` },
+  ],
 
   costs: [
     ["sort by the chosen key", "O(n log n)", "the sort is the algorithm's real cost; the decision loop is trivial"],
@@ -8241,8 +9986,8 @@ function coinChangeGreedy(coins, target) {
   group: "Algorithms",
   one: "The naive scan throws away every character it just matched. <b>Precompute how much of a failed match is still usable</b> and the text pointer never has to go backwards.",
 
-  plain: `<p>Find every place a pattern occurs inside a longer text. The obvious method lines the pattern up at position 0, compares left to right, and on the first mismatch slides one place right and starts over. It is correct, it is three lines, and on adversarial input it is O(n·m).</p>
-<p>Look at what a failed attempt actually learns. If four characters matched before the fifth failed, those four characters are not a mystery: they are the pattern's own first four, and you know them before the text arrives. So you can work out, in advance and from the pattern alone, how far you are allowed to slide without skipping a possible match.</p>
+  plain: `<p>Find every place a pattern occurs inside a longer text. The obvious method lines the pattern up at position 0, compares left to right, and on the first mismatch slides one place right and starts over. It is correct and it is three lines. On the wrong sort of text, where the pattern nearly matches everywhere, it is O(n·m).</p>
+<p>Look at what a failed attempt actually learns. If four characters matched before the fifth failed, those four are not a mystery. They are the pattern's own first four, and you knew them before the text arrived. So you can work out, in advance and from the pattern alone, how far you are allowed to slide without skipping a possible match.</p>
 <p>The answer is the longest piece that is both a <b>prefix and a suffix</b> of what matched. If "abab" matched, it starts and ends with "ab", so sliding by two keeps that "ab" aligned and you resume comparing from the third character. Precompute that number for every prefix of the pattern and the text pointer never moves backwards again, which makes the scan O(n + m).</p>
 <p><b>Analogy.</b> Losing your place while reading a phone number aloud. You do not go back to the first digit; you notice the last few you said are also how it starts, and pick up from there.</p>`,
 
@@ -8260,9 +10005,61 @@ function coinChangeGreedy(coins, target) {
   viz: ["kmp"],
 
   hing: `<p><b>Naive tareeka:</b> pattern ko index 0 par rakho, compare karo, mismatch hote hi ek jagah aage sarka kar dobara shuru. Sahi hai, teen line hai, aur <b>aaaaaaaaab</b> mein <b>aaab</b> dhoondo to har position par poora pattern lagbhag match hota hai phir fail hota hai. Yahi <b>O(n·m)</b> hai, aur interview ke constraints theek yahi input banane ke liye set kiye jaate hain.</p>
-<p><b>Ab socho ki fail hone se kya pata chala.</b> Agar mismatch offset j par hua, to pichhle j characters koi rahasya nahi hain: woh <b>pattern ke hi pehle j characters</b> hain, jo tumhe text aane se pehle se maloom the. Ek jagah sarakna un sab ko phenk dena hai.</p>
+<p><b>Ab socho ki fail hone se kya pata chala.</b> Agar mismatch offset j par hua, to pichhle j characters koi rahasya nahi hain. Woh <b>pattern ke hi pehle j characters</b> hain. Matlab woh tumhein text dekhne se pehle hi maloom the. Ek jagah sarakna un sab ko phenk dena hai.</p>
 <p><b>Asli sawaal pattern ke baare mein hai, text ke baare mein nahi.</b> Kitna sarak sakte ho bina kisi match ko chhode? Utna, jitna neeche wala hissa phir se line mein aa jaaye. Matlab: jo hissa match hua, uska sabse bada <b>prefix jo suffix bhi ho</b>. "abab" ka jawaab "ab" hai, length 2. Yeh sirf pattern par depend karta hai, isliye ek baar pehle hi nikal lo. Yahi <code>lps</code> table hai.</p>
 <p><b>Linear kyun hai, yeh line bolna:</b> text ka index kabhi peeche nahi jaata, zyada se zyada n baar aage badhta hai. Pattern ka index har step mein ek baar hi badhta hai, isliye poore run mein woh kul milakar n baar hi <b>ghat</b> sakta hai. Andar wala while loop dikhne mein nested hai, par uska paisa pehle hi bhara ja chuka hai. Aur haan, interview mein pehle <code>indexOf</code> bol dena, phir KMP: usse pata chalta hai ki tumhe worst case aur practice ka farak samajh aata hai.</p>`,
+
+  math: [
+    { t: "The naive scan, and the input that kills it", d: "On ordinary text it behaves like a single pass, which is exactly why the quadratic case reaches production instead of being caught.", w:
+`text n, pattern m.  worst case (n - m + 1) x m
+
+text    = a a a a ... a          n = 10^6
+pattern = a a a ... a b          m = 1000
+
+every start matches 999 characters, then fails
+  10^6 x 10^3 = 10^9 comparisons
+
+on random text: about n. Your test data is random text.` },
+    { t: "The lps table, built by hand", d: "One number per position: how much of what you just matched is still usable. Everything else about KMP is a consequence of this table.", w:
+`pattern   a  b  a  b  c
+index     0  1  2  3  4
+lps       0  0  1  2  0
+
+lps[i] = longest proper prefix of pattern[0..i] that is
+         also a suffix of pattern[0..i]
+
+lps[3] = 2 because "abab" begins and ends with "ab"
+so after matching 4 and failing, 2 are still matched:
+shift by 4 - 2 = 2, and resume at pattern index 2` },
+    { t: "Why the total is linear, argued on the match counter", d: "The honest proof is not about the shifts. It is about j, the number of characters currently matched, which can only fall as often as it rose.", w:
+`let j = how many characters currently match
+
+i advances once per text character:   at most n times
+j rises by at most 1 per advance:      at most n rises
+j never goes below 0, so total falls <= total rises <= n
+
+comparisons <= 2n. The table is built by the same argument
+against the pattern: <= 2m. Total O(n + m).` },
+    { t: "Rabin-Karp: rolling the hash, and the odds of a lie", d: "The other route to linear. It compares numbers instead of characters, which is O(1) per shift but only probably correct, so every hit is verified.", w:
+`roll one position:
+  h = (h - s[i] x B^(m-1)) x B + s[i+m]      O(1)
+
+false positive chance per window ~ m / M
+M = 10^9 + 7, m = 1000, windows n = 10^6:
+  expected false hits = 10^6 x 10^3 / 10^9 = 1
+
+so verify on a hit: O(m) once, not per window.
+Skip the verification and it is a guess, not an algorithm.` },
+    { t: "What the table gives you besides searching", d: "The single most likely place KMP appears in an interview is not string search at all, it is this one identity about repetition.", w:
+`s of length n, lps built on s itself
+
+k = n - lps[n-1]  is the length of the smallest block
+that could tile s
+
+if n mod k == 0, s is that block repeated n/k times
+  "abcabcabc": n = 9, lps[8] = 6, k = 3, 9 mod 3 = 0
+  "abcabca":   n = 7, lps[6] = 4, k = 3, 7 mod 3 = 1, no` },
+  ],
 
   costs: [
     ["naive scan", "O(n·m) worst, O(n) typical", "each start compares until a mismatch, and on random text that happens within a character or two"],
@@ -8486,7 +10283,7 @@ text.indexOf(p);`,
 
   plain: `<p>The problem: you are asked for the sum of a stretch of the array, and then asked again, and again, with different endpoints. Adding up the stretch each time costs O(n) per question, so q questions cost O(n·q). On an array of 100,000 items with 100,000 queries that is 10 billion additions, which is a timeout with extra steps.</p>
 <p>Instead do the work once. Walk the array left to right and write down the running total at every point. Now the sum of positions l to r is just the total up to r minus the total up to just before l. One subtraction. Every query after the build is free.</p>
-<p>The same trick, run backwards, answers a different question: if you have many <b>updates</b> to ranges and only need to read the array at the end, record each update as a pair of marks and take the running total once, at the finish.</p>
+<p>The same trick, run backwards, answers a different question. Suppose you have many <b>updates</b> to ranges, and only need to read the array at the end. Record each update as a pair of marks, then take the running total once, at the finish.</p>
 <p><b>Analogy.</b> Milestones on a highway. Nobody measures the road between two towns. You read the marker at each town and subtract.</p>`,
 
   why: [
@@ -8503,20 +10300,71 @@ text.indexOf(p);`,
     { t: "Two dimensions, same idea, one more term",
       d: "For a grid, <code>P[i+1][j+1]</code> holds the sum of the whole rectangle above and left. Building it, and querying it, both need inclusion exclusion: add the two overlapping rectangles, then subtract the corner you counted twice. Any rectangle sum is then 4 lookups, O(1)." },
     { t: "Run it backwards for updates, and know when it stops working",
-      d: "A <b>difference array</b> is the mirror image. To add v over l..r, write <code>d[l] += v</code> and <code>d[r+1] -= v</code>, O(1) per update, then take prefix sums once at the end to recover the array. Many updates, one read. What neither version survives is the array <b>changing between queries</b>: one write invalidates the whole tail of the prefix array. That case is what a Fenwick tree or segment tree is for, O(log n) per update and per query." },
+      d: "A <b>difference array</b> is the mirror image. To add v over l..r, write <code>d[l] += v</code> and <code>d[r+1] -= v</code>. That is O(1) per update. Then take prefix sums once at the end to recover the array. Many updates, one read. What neither version survives is the array <b>changing between queries</b>: one write invalidates the whole tail of the prefix array. That case is what a Fenwick tree or segment tree is for, O(log n) per update and per query." },
   ],
 
   hing: `<p><b>Problem ki shakal:</b> baar baar poocha jaa raha hai "l se r tak ka sum kya hai". Har baar loop chalao to O(n) per query, q queries par O(n·q), aur TLE.</p>
 <p><b>Asli idea:</b> ek hi baar left se right chalo aur har point ka <b>running total</b> likh lo. Ab kisi bhi range ka sum ek <b>ghatav</b> hai. Build O(n), phir har query <b>O(1)</b>.</p>
 <p><b>pre array n+1 lambi kyun, aur pehla element 0 kyun?</b> Kyunki <code>pre[0] = 0</code> ka matlab hai "khaali prefix", yaani shuru se pehle kuch nahi. Isse <code>l = 0</code> wala case <b>special case rehta hi nahi</b>. Identity yaad rakho: <code>sum(l..r) = pre[r+1] - pre[l]</code>. Jitne bhi off by one bugs is pattern mein hote hain, sab yahin se aate hain. Pehle identity bolo, phir code likho.</p>
-<p><b>Sabse important part, hash map wala counting trick:</b> "kitne subarrays ka sum k hai" poocha gaya. Seedha likho: <code>pre[r+1] - pre[l] = k</code>, ise ghumao to <code>pre[l] = pre[r+1] - k</code>. Matlab har position par sirf yeh poochna hai: <b>itni value wale kitne purane prefix dekhe hain?</b> Ek map rakho jisme har prefix sum ki count ho, ek hi pass mein kaam khatam. <b>O(n)</b>.</p>
+<p><b>Sabse important part, hash map wala counting trick:</b> "kitne subarrays ka sum k hai" poocha gaya. Seedha likho: <code>pre[r+1] - pre[l] = k</code>, ise ghumao to <code>pre[l] = pre[r+1] - k</code>. Matlab har position par sirf yeh poochna hai: <b>itni value wale kitne purane prefix dekhe hain?</b> Ek map rakho jisme har prefix sum ki count ho. Ek hi pass mein kaam khatam. <b>O(n)</b>.</p>
 <p><b>Map ko <code>{0: 1}</code> se seed karna mat bhoolna.</b> Woh ek entry khaali prefix hai. Uske bina woh saare subarrays chhoot jaate hain jo index 0 se shuru hote hain, aur test case 3 par silently galat answer aata hai.</p>
-<p><b>Sliding window ya prefix sums, kaunsa?</b> Sliding window tab chalta hai jab sab numbers <b>positive</b> hon, kyunki tabhi window badhne se sum badhta hai (monotonic). Negative numbers aate hi woh assumption toot jaata hai. Prefix sums + hash map ko monotonicity chahiye hi nahi, isliye negatives ke saath wahi sahi tool hai. Doosri taraf, agar longest ya shortest window with a condition chahiye aur sab positive hai, to sliding window O(1) space mein kaam kar deta hai jabki prefix sums O(n) memory maangta hai. Constraints padho, phir choose karo.</p>
+<p><b>Sliding window ya prefix sums, kaunsa?</b> Sliding window tab chalta hai jab sab numbers <b>positive</b> hon, kyunki tabhi window badhne se sum badhta hai (monotonic). Negative numbers aate hi woh assumption toot jaata hai. Prefix sums + hash map ko monotonicity chahiye hi nahi, isliye negatives ke saath wahi sahi tool hai. Doosri taraf, agar longest ya shortest window chahiye aur saare numbers positive hain, to sliding window jeet jaata hai. Woh O(1) space mein ho jaata hai, jabki prefix sums O(n) memory maangta hai. Constraints padho, phir choose karo.</p>
 <p><b>2-D version (integral image):</b> grid mein har rectangle ka sum 4 lookups mein. Formula mein do rectangles jodo aur jo corner do baar gin liya use ghatao, yeh inclusion exclusion hai. Sign galat likhna sabse aam galti hai, ek chhoti 2x2 grid par haath se verify kar lo.</p>
 <p><b>Difference array, ulta khel:</b> yahan bahut saare <b>range updates</b> hain aur padhna sirf end mein hai. <code>d[l] += v</code>, <code>d[r+1] -= v</code>, har update O(1), aur last mein ek prefix sum pass se poora array wapas. Array n+1 size ka rakho warna <code>r = n-1</code> par index out of bounds.</p>
 <p><b>Aur agar array beech mein badalta rahe?</b> Tab prefix sums mar jaata hai, ek update poore tail ko invalid kar deta hai. Wahan <b>Fenwick tree ya segment tree</b> chahiye, O(log n) per update aur per query. Interview mein itna bol dena kaafi hai.</p>`,
 
   viz: ["prefix-sums"],
+
+  math: [
+    { t: "The identity, with every term cancelling", d: "One subtraction answers a range because the shared beginning appears in both prefixes with opposite signs.", w:
+`pre[0] = 0,  pre[i+1] = pre[i] + a[i]
+
+pre[r+1] - pre[l]
+  = (a[0] + ... + a[r]) - (a[0] + ... + a[l-1])
+  = a[l] + ... + a[r]
+
+everything before index l cancels.
+pre[0] = 0 is what makes l = 0 work without a branch.` },
+    { t: "What the pre-pass buys, over q queries", d: "The build is one pass. Every query afterwards is a subtraction, so the whole cost is additive rather than multiplicative.", w:
+`q range-sum queries over n items
+
+scan per query:   q x n
+prefix array:     n to build + 1 per query = n + q
+
+n = 10^6, q = 10^6:
+  10^12   vs   2 x 10^6` },
+    { t: "Rearrange the identity and it counts subarrays", d: "This is the version interviews actually ask. The same equation solved for the other unknown becomes a hash-map lookup.", w:
+`want sum(l..r) = k
+
+  pre[r+1] - pre[l] = k
+  pre[l] = pre[r+1] - k
+
+so walk r, and ask how many earlier prefixes equalled
+pre[r+1] - k.  One pass, O(n), and it handles negatives,
+which a sliding window cannot.
+
+seed the map with {0: 1}, or every subarray starting at
+index 0 is missed.` },
+    { t: "Two dimensions, one extra term", d: "The rectangle sum subtracts two strips and adds the corner back, because the corner was removed twice. Inclusion-exclusion, four lookups, any size.", w:
+`sum of rows r1..r2, columns c1..c2:
+
+    P[r2+1][c2+1]
+  - P[r1][c2+1]        the strip above
+  - P[r2+1][c1]        the strip to the left
+  + P[r1][c1]          the overlap, removed twice
+
+build O(R x C), query O(1) with exactly 4 lookups` },
+    { t: "Run it backwards for range updates", d: "A difference array is the same identity with the roles swapped: mark the two edges, and one prefix pass at the end applies every update at once.", w:
+`add v to every index in [l, r):
+  d[l] += v,  d[r] -= v            two writes, O(1)
+
+after all m updates, prefix-sum d once  ->  the array
+
+m updates then one read:   m + n
+applying each update directly:   m x n
+
+n = 10^6, m = 10^6:  2 x 10^6   vs   10^12` },
+  ],
 
   costs: [
     ["build the prefix array", "O(n) time · O(n) space", "paid once, before any query is answered"],
@@ -8783,7 +10631,7 @@ function applyUpdates(n, updates) {
   one: "At each index there are only two candidates: extend the block that ended one step back, or start a new one here. <b>Keep the better; track the best separately.</b>",
 
   plain: `<p>You are given an array with positive and negative numbers and asked for the contiguous stretch with the largest total. Contiguous is the hard word: you cannot pick the good numbers and skip the bad ones, so "take all the positives" is not the answer.</p>
-<p>Checking every stretch means choosing a start and an end, which is about n squared of them. The trick is to stop asking the question that way. Instead of "what is the best block anywhere", ask "what is the best block that <b>ends exactly at index i</b>". There is only one answer per index, so there are only n answers to find, and each one turns out to depend on nothing but the answer before it.</p>
+<p>Checking every stretch means choosing a start and an end, which is about n squared of them. The trick is to stop asking the question that way. Instead of "what is the best block anywhere", ask "what is the best block that <b>ends exactly at index i</b>". There is only one answer per index, so there are only n answers to find. And each one turns out to depend on nothing but the answer before it.</p>
 <p>Because whatever block ends at i, it either includes i-1 or it does not. If it does, it is the best block ending at i-1 with a[i] stuck on the end. If it does not, it is just a[i] on its own. Two candidates, take the larger, move on. That is the entire algorithm, and it fits on two lines.</p>
 <p><b>Analogy.</b> Walking a hilly path, keeping a running altitude. Whenever your accumulated total drops below zero, the ground behind you is a net cost to carry, so you drop it and start measuring from where you stand. You still remember the highest point you ever reached.</p>`,
 
@@ -8830,6 +10678,51 @@ function applyUpdates(n, updates) {
 <p><b>Sawaal badal do.</b> "Sabse achha block kahin bhi" mat poocho. Poocho <b>"sabse achha block jo theek index i par khatam hota hai"</b>. Har index ka sirf ek jawaab hai, to poore problem ke n jawaab hain. Aur jo block i par khatam hota hai, usme ya to i-1 hai ya nahi. Hai to = pichhla best + a[i]. Nahi hai to = sirf a[i]. <b>Do hi candidate</b>, bada wala le lo. Bas, algorithm khatam.</p>
 <p><b>Do variables alag rakho, yeh sabse badi galti hai.</b> <code>cur</code> woh block hai jo yahan khatam hota hai, aur woh <b>ghat sakta hai</b>. <code>best</code> record hai, woh kabhi neeche nahi jaata. Ek hi variable mein dono karoge to aakhir mein ghata hua total return kar doge.</p>
 <p><b>Aur zero se shuru mat karna.</b> Agar saare numbers negative hain, jawaab sabse kam bura ek element hai, khaali block nahi. <code>cur = best = a[0]</code> se shuru karo. Zero waala version har us test mein pass ho jaata hai jisme ek bhi positive number ho, matlab har test jo tum khud banaoge. Interview mein yeh edge case khud bol do, poochne se pehle.</p>`,
+
+  math: [
+    { t: "The recurrence, from the only two candidates there are", d: "Asking for the best subarray ending at i is what makes the choice binary, and a binary choice is a recurrence you can write in one line.", w:
+`best[i] = the best subarray sum ENDING at index i
+
+it either extends the block ending at i-1, or starts here:
+
+  best[i] = max( a[i],  best[i-1] + a[i] )
+          = a[i] + max(0, best[i-1])
+
+answer = max over all i of best[i]
+
+"the best in a[0..i]" has no such recurrence, which is
+why the ending-at-i phrasing is the whole trick` },
+    { t: "Worked on a real array", d: "Six values, one pass. The two decisions that matter are the step that starts fresh and the step that extends.", w:
+`a       = [ -2,  3, -1,  4, -3,  2 ]
+best[i] =   -2,  3,  2,  6,  3,  5
+answer  =   -2,  3,  3,  6,  6,  6
+
+i = 1:  max(3, -2 + 3 = 1)  = 3     start fresh
+i = 2:  max(-1, 3 - 1 = 2)  = 2     extend
+i = 3:  max(4, 2 + 4 = 6)   = 6     extend
+i = 4:  max(-3, 6 - 3 = 3)  = 3     extend, and drop
+                                    below the best so far
+
+answer 6, from the subarray [3, -1, 4]` },
+    { t: "Against the two brute forces", d: "There are two obvious approaches before this one, and both are quadratic or worse. The step from the second to Kadane is the one being tested.", w:
+`all subarrays, summing each:   n(n+1)/2 subarrays,
+                               n^3 / 6 additions
+prefix sums, then all pairs:   n^2 / 2
+Kadane:                        n
+
+n = 10^5:
+  1.7 x 10^14   |   5 x 10^9   |   10^5` },
+    { t: "Seeding with zero, and the input that exposes it", d: "The zero start silently allows the empty subarray. It is correct only if the problem says empty is allowed, and it almost never does.", w:
+`a = [-3, -1, -7]
+
+cur = 0, best = 0   ->  answer 0, an EMPTY subarray
+cur = a[0], best = a[0], loop from i = 1  ->  answer -1
+
+-1 is right: the best non-empty subarray is [-1]
+
+this only shows up when every element is negative,
+which is the case a hand-written test leaves out` },
+  ],
 
   costs: [
     ["Kadane, one pass", "O(n) time, O(1) space", "each index answers its own question from the previous one, so nothing is stored"],
@@ -9039,9 +10932,9 @@ const kadane = (a) => a.slice(1).reduce(([cur, best], x) => {
   group: "Patterns",
   one: "Consecutive windows <b>overlap</b>, so never recompute one from scratch: subtract what leaves, add what joins. O(n·k) becomes O(n).",
 
-  plain: `<p>The problem: find the best contiguous stretch, the largest sum of 3 in a row, the longest substring with no repeats, the shortest subarray reaching a target.</p>
+  plain: `<p>The problem: find the best <b>contiguous</b> stretch, meaning a run of items sitting next to each other with no gaps. The largest sum of 3 in a row. The longest substring with no repeats. The shortest subarray reaching a target.</p>
 <p>The obvious solution examines every stretch and scores it from scratch, O(n·k), or O(n²). But look at what it repeats: the window covering positions 1–3 and the window covering 2–4 <b>share positions 2 and 3</b>. Re-adding them is pure waste.</p>
-<p>So keep a running answer and update it at the edges only: when the window slides right, <b>subtract the element that left and add the one that joined</b>. Two operations per step instead of k, no matter how wide the window is.</p>
+<p>So keep a running answer and update it at the edges only. When the window slides right, <b>subtract the element that left and add the one that joined</b>. Two operations per step instead of k, no matter how wide the window is.</p>
 <p><b>Analogy.</b> Counting people in a moving train carriage. You do not recount all 60 passengers each time the carriage moves. You count who got off and who got on, and adjust.</p>`,
 
   why: [
@@ -9052,7 +10945,7 @@ const kadane = (a) => a.slice(1).reduce(([cur, best], x) => {
     { t: "This only works if the value can be added and removed cheaply",
       d: "Sums, counts and frequency maps can. A <b>maximum</b> cannot, if the item leaving <i>is</i> the maximum, you have to look at everything again. Ask this before you write any code; it is why \"sliding window maximum\" needs an extra structure." },
     { t: "If the size is not given, grow and shrink instead",
-      d: "When the rule is a condition (\"no repeated letters\", \"sum at least target\"), push the right edge out greedily, and whenever the window breaks the rule, pull the left edge in until it holds again." },
+      d: "Sometimes the rule is a condition rather than a size: \"no repeated letters\", or \"sum at least target\". Then push the right edge out greedily. Whenever the window breaks the rule, pull the left edge in until it holds again." },
     { t: "Two loops, and still O(n)",
       d: "The inner loop looks like it makes this O(n²), but the left edge <b>never moves backwards</b>. Across the whole run it can only advance n times, and so can the right edge, at most 2n moves total. Saying this out loud is what the interviewer is waiting for." },
     { t: "Only for contiguous stretches",
@@ -9069,6 +10962,48 @@ const kadane = (a) => a.slice(1).reduce(([cur, best], x) => {
 <p><b>Negative numbers ka trap:</b> "sum ≥ target wala sabse chhota subarray" mein hum maante hain ki window badhne se sum badhta hai. Negative numbers ke saath yeh maan-na galat ho jaata hai, tab prefix sum + monotonic deque chahiye. Constraints padhna zaroori hai.</p>`,
 
   viz: ["sliding-window", "sliding-window-var"],
+
+  math: [
+    { t: "The overlap, counted", d: "Two neighbouring windows differ by two elements out of k. Recomputing means re-adding the k-2 that did not change.", w:
+`window of size k over n items
+
+recompute each window:  (n - k + 1) x k
+slide instead:          n adds + n removes = 2n
+
+n = 10^6, k = 1000:
+  10^9    vs    2 x 10^6
+
+the two windows share k - 1 of their k elements` },
+    { t: "The condition: both edges must be cheap", d: "Sliding works when the value can be repaired at the edges. When removal is expensive, the pattern needs a different structure behind it.", w:
+`sum        add O(1)   remove O(1)   works
+count      add O(1)   remove O(1)   works
+distinct   add O(1)   remove O(1)   with a count map
+max        add O(1)   remove O(k)   does NOT
+                                    -> monotonic deque,
+                                       amortised O(1)
+
+if the remove is O(k) the window is not the answer` },
+    { t: "Two loops, and still linear: the sentence they listen for", d: "A while loop inside a for loop looks quadratic. It is not, because the inner pointer never goes backwards.", w:
+`for r in 0 .. n-1:
+    add a[r]
+    while the window is invalid:
+        remove a[l];  l += 1
+
+l starts at 0, only increases, and stops at n
+so the inner loop body runs at most n times IN TOTAL,
+not n times per r
+
+total pointer moves <= 2n  ->  O(n)` },
+    { t: "The shape it cannot handle", d: "Windows are contiguous and the shrink rule assumes the validity is monotone. Break either assumption and the pattern silently returns the wrong answer.", w:
+`subarrays of n:      n(n+1)/2       contiguous
+subsequences of n:   2^n            not contiguous
+
+with negative numbers, adding an element can make a sum
+smaller, so "shrink while invalid" is no longer monotone
+
+n = 20:  210 subarrays  vs  1,048,576 subsequences
+for the negative case use prefix sums and a hash map` },
+  ],
 
   costs: [
     ["fixed-size window", "O(n) time · O(1) space", "each element enters once, leaves once"],
@@ -9270,16 +11205,16 @@ function minLen(target, a) {
   group: "Patterns",
   one: "A bigger value arriving makes every smaller value behind it <b>dead forever</b>, so pop it. Each index is pushed once and popped once: O(n²) becomes <b>O(n)</b>.",
 
-  plain: `<p>The problem always has the same shape: <b>for each element, find the next element to its right that is bigger</b> (or smaller, or the nearest one to its left). Days until a warmer day. The next larger stock price. How far a bar in a histogram can stretch before a shorter bar stops it.</p>
+  plain: `<p>The problem always has the same shape. <b>For each element, find the next element to its right that is bigger.</b> Or smaller. Or the nearest one to its left. Days until a warmer day. The next larger stock price. How far a bar in a histogram can stretch before a shorter bar stops it.</p>
 <p>The obvious solution walks right from every position until it finds the answer, O(n²), and it re-reads the same tail over and over. The waste is not the scanning, it is that the scan keeps considering elements that <b>cannot possibly be the answer for anybody</b>.</p>
 <p>Here is why. Suppose <code>b</code> sits after <code>a</code> and <code>b</code> is bigger. Then <code>a</code> is finished: for every position further right, <code>b</code> stands in the way and <code>b</code> is the better answer anyway. So <code>a</code> can be thrown away the moment <code>b</code> arrives, permanently. Keep only the elements nothing has blocked yet, and that leftover pile is automatically in decreasing order. Nobody sorted it. The discarding did.</p>
 <p><b>Analogy.</b> A queue of people waiting, seen from the back. Once someone taller joins behind you, nobody further back will ever see you again. The people still visible from the back of the line are always in decreasing height, and no one had to arrange them.</p>`,
 
   why: [
     { t: "Start from the question, not the structure",
-      d: "\"For each element, the next one bigger than it.\" The obvious answer scans right from every index: O(n²) in the worst case, and the worst case is a sorted-descending array, which is not exotic." },
+      d: "\"For each element, the next one bigger than it.\" The obvious answer scans right from every index, which is O(n²) in the worst case. And the worst case is an array sorted downwards, which is not exotic." },
     { t: "One element can kill another, forever",
-      d: "If <code>b</code> comes after <code>a</code> and <code>b</code> is bigger, then <code>a</code> is never anyone's next-greater again: for anything further right, <code>b</code> blocks <code>a</code>, and <code>b</code> is the better candidate anyway. So <code>a</code> is not deferred, it is <b>discarded</b>." },
+      d: "Say <code>b</code> comes after <code>a</code> and <code>b</code> is bigger. Then <code>a</code> is never anyone's next-greater again. For anything further right, <code>b</code> stands in the way, and <code>b</code> is the better candidate anyway. So <code>a</code> is not deferred, it is <b>discarded</b>." },
     { t: "What survives is already sorted",
       d: "Keep only the elements nothing has blocked yet. Every survivor is bigger than everything after it that is still alive, so the pile is in decreasing order by construction. That is where the word <i>monotonic</i> comes from, and it is a consequence, not a rule you enforce." },
     { t: "The newcomer is the answer for everything it kills",
@@ -9289,19 +11224,59 @@ function minLen(target, a) {
     { t: "Four directions, two knobs",
       d: "<b>Next</b> means scan left to right, <b>previous</b> means scan right to left. <b>Greater</b> means pop while the top is smaller, <b>smaller</b> means pop while the top is bigger. That is the whole family. Store <b>indices</b>, not values: the question is usually how far away the answer is, and an index gives you both." },
     { t: "It cannot handle things leaving from the front",
-      d: "A stack only discards from the end you push to. In sliding window maximum the current maximum expires off the <b>front</b> of the window while it is still the largest thing you hold, and a stack has no way to reach it. You need to discard at both ends, which is a <b>deque</b>. Same discarding logic, one extra exit." },
+      d: "A stack only discards from the end you push to. In sliding window maximum, the current maximum expires off the <b>front</b> of the window while it is still the largest thing you hold. A stack has no way to reach it. You need to discard at both ends, which is a <b>deque</b>. Same discarding logic, one extra exit." },
   ],
 
   hing: `<p><b>Sawaal ki shakal hamesha ek hi hoti hai:</b> har element ke liye uske right mein <b>agla bada</b> (ya chhota, ya left wala nazdeeki) element dhoondho. Daily Temperatures, Stock Span, Largest Rectangle, teeno wahi ek sawaal hain alag kapdon mein.</p>
 <p><b>Asli insight (yahi poora topic hai):</b> agar <code>b</code>, <code>a</code> ke baad aaya aur <code>b</code> bada hai, to <code>a</code> ab <b>kisi ka bhi</b> next greater nahi ban sakta. Kyun? Kyunki aage waale har element ke liye <code>b</code> raaste mein khada hai, aur <code>b</code> behtar candidate bhi hai. Matlab <code>a</code> ko baad ke liye rakhna nahi hai, <b>hamesha ke liye phenk dena hai</b>. Stack mein sirf woh log bachte hain jinhe abhi tak kisi ne block nahi kiya, aur isiliye stack apne aap <b>decreasing order</b> mein rehta hai. Kisi ne sort nahi kiya, phenkne se apne aap ho gaya.</p>
 <p><b>Answer kahaan se aata hai?</b> Jab naya <code>x</code> aata hai aur tum chhote elements pop kar rahe ho, to <code>x</code> hi un sab ka answer hai. Pop karte waqt likh do, bas. Ek hi pass mein poora answer array bhar jaata hai.</p>
 <p><b>Interview ka sabse zaroori line:</b> "do loops hain to O(n²) hoga na?" Nahi. <b>Har index ek baar push hota hai aur zyada se zyada ek baar pop</b>. Isliye inner while poore program mein milakar n baar se zyada nahi chalta, har iteration mein n baar nahi. Total ~2n operations, <b>O(n)</b>. Yeh line bolna zaroori hai, sirf "amortised" keh dene se baat nahi banti.</p>
-<p><b>Chaar directions, sirf do knobs:</b><br>next = left se right scan, previous = right se left scan.<br>greater = jab tak top chhota hai pop karo, smaller = jab tak top bada hai pop karo.<br>Aur <b>indices store karo, values nahi</b>, kyunki zyadatar sawaal distance poochhte hain (kitne din baad), aur index se value bhi mil jaati hai.</p>
+<p><b>Chaar directions, sirf do knobs:</b><br>next = left se right scan, previous = right se left scan.<br>greater = jab tak top chhota hai pop karo, smaller = jab tak top bada hai pop karo.</p>
+<p><b>Aur ek aadat: indices store karo, values nahi.</b> Zyadatar sawaal distance poochhte hain, jaise kitne din baad. Index rakha to value bhi mil hi jaayegi.</p>
 <p><b>Ties ka trap:</b> equal elements par pop karoge ya chhod doge, yeh decide karta hai ki answer "strictly greater" hai ya "greater ya equal". Daily Temperatures mein <b>strictly warmer</b> chahiye, to equal ko pop mat karo.</p>
-<p><b>Deque kab chahiye (sliding-window page ne yeh naam liya tha, samjhaya nahi tha):</b> window maximum mein current max <b>window ke aage se</b> bahar nikal jaata hai, jabki woh abhi bhi sabse bada hai. Stack us end tak pahunch hi nahi sakta, kyunki stack sirf ek hi taraf se nikaalta hai. Isliye <b>deque</b>: peeche se chhote elements pop karo (woh chhote bhi hain aur purane bhi, do baar mare hue), aage se woh index nikaalo jo window se bahar ho gaya. Front hamesha window ka maximum hota hai.</p>
+<p><b>Ab deque kab chahiye?</b> Window maximum mein current max <b>window ke aage se</b> bahar nikal jaata hai, jabki woh abhi bhi sabse bada hai. Stack us end tak pahunch hi nahi sakta, kyunki stack sirf ek hi taraf se nikaalta hai. Isliye <b>deque</b>. Peeche se chhote elements pop karo, woh chhote bhi hain aur purane bhi. Aage se woh index nikaal do jo window se bahar ho chuka hai. Front hamesha window ka maximum hota hai.</p>
 <p><b>Largest Rectangle ka sentinel trick:</b> loop khatam hone ke baad stack mein kuch elements bache reh jaate hain jinka rectangle abhi nikala hi nahi gaya. Isliye aakhir mein ek <b>0 height</b> ka fake bar lagao. Woh sabse chhota hai, to sab kuch pop ho jaayega, aur alag se drain karne wala loop likhne ki zaroorat nahi padegi.</p>`,
 
   viz: ["monotonic-stack"],
+
+  math: [
+    { t: "Each index is pushed once and popped once", d: "The inner while loop can run a long time on one step. What matters is its total across the whole scan, and that is bounded by the number of pushes.", w:
+`n elements, one stack
+
+pushes:  exactly n, one per element
+pops:    at most n, since nothing is pushed twice
+
+the inner while may pop n-1 items on a single step,
+but only because n-1 pushes already happened
+
+total stack operations <= 2n   ->   O(n)` },
+    { t: "Against the nested scan", d: "Next-greater-element is the canonical use, and the naive version is the triangular sum that appears everywhere in this file.", w:
+`next greater element for every index
+
+scan right from each i:  (n-1) + (n-2) + ... = n^2 / 2
+monotonic stack:         2n
+
+n = 10^5:   5 x 10^9   vs   2 x 10^5` },
+    { t: "Why popping is safe, stated as a fact about the future", d: "The pop is not a tidy-up. It is a proof that the popped index can never be the answer for anything still to come.", w:
+`the stack holds indices with decreasing values
+a new value v = a[i] arrives and pops index j, a[j] <= v
+
+for any future index k > i:
+  a[j] <= v = a[i],  and  i is closer to k than j is
+
+so j loses to i on both value and distance: j can never
+be the answer for k. Deleting it loses nothing.` },
+    { t: "Largest rectangle, which is the version they ask", d: "Each bar's rectangle is bounded by the nearest strictly smaller bar on each side. Two monotonic passes give both, so the whole thing stays linear.", w:
+`for each bar i:  area = height[i] x (right - left - 1)
+  left  = index of the nearest smaller bar to the left
+  right = index of the nearest smaller bar to the right
+
+both arrays: one monotonic pass each, n pushes, n pops
+total O(n) time, O(n) space
+
+expanding outward from every bar instead: n^2 / 2
+n = 10^5:  5 x 10^9  vs  4 x 10^5` },
+  ],
 
   costs: [
     ["next greater over n elements", "O(n)", "each index pushed once, popped at most once, about 2n ops"],
@@ -9566,10 +11541,11 @@ function largestRectangle(h) {
   group: "Patterns",
   one: "Sorting is the algorithm, and the <b>sort key</b> is the decision: by start to merge, by end to pack the most. Then turn intervals into <b>+1/-1 events</b> and sweep.",
 
-  plain: `<p>An interval is just a pair, a start and an end: a meeting, a booking, a range of house numbers. The questions are always the same three. Which ones overlap? How few can I keep so that none overlap? How many are happening at once at the busiest moment?</p>
-<p>Handed an unsorted pile, you have no choice but to compare every interval with every other one, O(n squared), and you will still get the overlap test slightly wrong. Sorted, the picture changes completely: once intervals are in order, <b>only the neighbour matters</b>, and one left-to-right pass answers the question. The sort costs O(n log n) and buys the whole algorithm.</p>
-<p>Which is why the only real decision on these problems is <b>what to sort by</b>. Sort by start when you are gluing overlapping things together. Sort by end when you are packing as many as possible into a day. Different key, different answer, same four lines of loop.</p>
-<p><b>Analogy.</b> A doorman with a clicker. He does not track who is inside or how long they stay. He clicks up when someone walks in, down when someone walks out, and the highest number he ever sees is the size of room the fire officer will insist on.</p>`,
+  plain: `<p>An interval is a pair: a start and an end. A meeting, a booking, a range of house numbers. The questions asked about them are always the same three. Which ones overlap? How many can I keep if none of them may overlap? How many are happening at once at the busiest moment?</p>
+<p>Handed an unsorted pile, you have to compare every interval against every other one. That is about n² comparisons, and you will still get the overlap test slightly wrong.</p>
+<p>Sorted, the picture changes completely. Once the intervals are in order, <b>only the neighbour matters</b>, and one left-to-right pass answers the question. The sort costs n log n and buys you the whole algorithm.</p>
+<p>So the only real decision on these problems is <b>what to sort by</b>. Sort by start when you are gluing overlapping things together. Sort by end when you are packing as many as possible into a day. Same four lines of loop, different key, different answer.</p>
+<p><b>Analogy.</b> A doorman with a clicker. He does not track who is inside or how long they stay. He clicks up when someone walks in and down when someone walks out. The highest number he ever sees is the size of room the fire officer will insist on.</p>`,
 
   why: [
     { t: "Unsorted, every pair is a candidate",
@@ -9577,15 +11553,15 @@ function largestRectangle(h) {
     { t: "Get the overlap test right by negating the misses",
       d: "Do not enumerate the ways two intervals can overlap, there are four and you will forget one. Enumerate the two ways they can <b>miss</b>: <code>b &lt; c</code> (the first ends before the second starts) or <code>d &lt; a</code> (the other way round). Negate both and you are done: <code>[a,b]</code> and <code>[c,d]</code> overlap when <b><code>a &lt;= d and c &lt;= b</code></b>. Two comparisons, no cases." },
     { t: "Sorting by start makes the neighbour the only thing that matters",
-      d: "Once starts are in order, every interval that could overlap the current one has already been seen. So walk the list holding the block you are building: if the next start is at or before the block's end, <b>extend the end</b>, otherwise there is a real gap and you start a new block. One pass, and the total is O(n log n) because the sort dominates." },
+      d: "Once starts are in order, every interval that could overlap the current one has already been seen. So walk the list, holding the block you are currently building. If the next start is at or before the block's end, <b>extend the end</b>. Otherwise there is a real gap, so close this block and open a new one. One pass, and the total is O(n log n) because the sort dominates." },
     { t: "A different question wants a different key",
-      d: "Now ask for the largest set of intervals that do not overlap. Sorting by start is useless here, a first meeting that runs all day blocks everything. Sort by <b>end</b>: the one that finishes earliest leaves the most room for whatever follows, and greedily taking each interval that starts after the last kept end is optimal. Same shape of loop, different key, and the key is the entire argument." },
+      d: "Now ask for the largest set of intervals that do not overlap. Sorting by start is useless here, a first meeting that runs all day blocks everything. Sort by <b>end</b> instead. The one that finishes earliest leaves the most room for whatever comes next. So take every interval that starts after the last one you kept, and that plain rule is provably optimal. Same shape of loop, different key, and the key is the entire argument." },
     { t: "Now stop thinking about intervals and think about events",
       d: "For counting questions the pairing is a distraction. Split each interval into two things that happen on a number line: <b>+1 at the start</b>, <b>-1 at the end</b>. Sort all 2n of them by position and sweep left to right with a running counter. That counter is how many intervals are live at your current position, and its maximum is the peak concurrency: meeting rooms, overlapping bookings, the height in a skyline." },
     { t: "At equal positions, the tie rule decides what overlap means",
       d: "One meeting ends at 10:00 and another starts at 10:00. Process the <b>-1 before the +1</b> and they do not clash, so one room is enough. Process the +1 first and you have invented a second room. Neither is wrong in general, it depends on whether touching counts as overlapping, but it must be a decision and not an accident of your comparator." },
     { t: "What the sweep will not give you",
-      d: "It reports numbers, not memberships: you learn that four things overlap at position 12, not <i>which</i> four, unless you carry an active set alongside the counter and pay for it. It is also <b>offline</b>, you need every interval before you can sort. Intervals arriving one at a time, with queries in between, is a different problem and wants an interval tree or an ordered map." },
+      d: "It reports numbers, not names. You learn that four things overlap at position 12, not <i>which</i> four. To know which, carry a set of the currently active intervals alongside the counter, and pay for it. It is also <b>offline</b>, you need every interval before you can sort. Intervals arriving one at a time, with queries in between, is a different problem and wants an interval tree or an ordered map." },
   ],
 
   variants: [
@@ -9622,14 +11598,59 @@ function largestRectangle(h) {
 
   hing: `<p><b>Ek line mein:</b> interval problems mein asli algorithm <b>sort</b> hai. Loop to char line ka hai. Poora dimaag sirf ek sawaal par lagao: <b>kis cheez se sort karun, start se ya end se?</b></p>
 <p><b>Pehle overlap test, kyunki yahin sabse zyada log phisalte hain.</b> Overlap ke saare cases mat ginno, char hote hain aur ek zaroor bhool jaaoge. Ulta socho: do interval <b>miss</b> kaise karte hain? Sirf do tareeke, <code>b &lt; c</code> ya <code>d &lt; a</code>. Ab dono ko negate kar do: <code>[a,b]</code> aur <code>[c,d]</code> overlap karte hain jab <b><code>a &lt;= d and c &lt;= b</code></b>. Bas do comparison, koi case analysis nahi. Yeh line yaad rakh lo, interview mein seedha likh dena.</p>
-<p><b>Start se sort kyun merge ke liye?</b> Jab starts sorted hain, to jo bhi interval current wale se overlap kar sakta tha woh <b>pehle hi dekha ja chuka hai</b>. Isliye sirf apne aakhri block ko pakde raho: agla start block ke end tak ya usse pehle hai to end ko <code>max</code> se badha do, warna asli gap hai, naya block shuru. Ek pass. <code>max</code> lagana mat bhoolna, warna ek chhota interval jo poora andar hi samaya hua tha, tumhara block chhota kar dega.</p>
+<p><b>Start se sort kyun merge ke liye?</b> Jab starts sorted hain, to jo bhi interval current wale se overlap kar sakta tha, woh <b>pehle hi dekha ja chuka hai</b>. Aage kuch chhoot nahi sakta. Isliye sirf apne aakhri block ko pakde raho. Agla start block ke end tak ya usse pehle hai, to end ko <code>max</code> se badha do. Warna asli gap hai, naya block shuru karo. Ek pass. <code>max</code> lagana mat bhoolna, warna ek chhota interval jo poora andar hi samaya hua tha, tumhara block chhota kar dega.</p>
 <p><b>End se sort kab?</b> Jab sawaal ho "zyada se zyada kitne non-overlapping rakh sakte ho". Yahan start se sort karna bekaar hai, ek subah shuru hone wali din bhar chalne wali meeting sab kuch block kar degi. <b>Jo sabse pehle khatam hota hai</b> woh baaki sabke liye sabse zyada jagah chhodta hai. Yahi exchange argument hai, aur yahi jawaab interviewer sun-na chahta hai.</p>
 <p><b>Ab asli cheez, sweep line.</b> Interval ke baare mein sochna band karo, <b>events</b> ke baare mein socho. Har interval ko do events mein tod do: start par <b>+1</b>, end par <b>-1</b>. Saare 2n events ko position se sort karo aur left se right chalte hue ek counter chalao. Woh counter batata hai ki is waqt kitni cheezein <b>live</b> hain. Uska maximum hi tumhara jawaab hai: kitne meeting rooms chahiye, kitni cars ek saath, skyline ki height. Ek loop, teen alag alag problems.</p>
 <p><b>Tie ka rule, ise halke mein mat lo.</b> Ek meeting 10:00 par khatam, doosri 10:00 par shuru. Agar <b>-1 pehle</b> process kiya to dono ek hi room mein aa jaayengi. Agar +1 pehle kiya to tumne bina zaroorat ke ek extra room bana diya. Dono sahi ho sakte hain, depend karta hai ki chhoote hue kinare overlap maane jaayenge ya nahi. Par yeh <b>decision</b> hona chahiye, comparator ki galti nahi.</p>
 <p><b>Heap wala tareeka bhi jaan lo.</b> Start se sort karo, aur ek min-heap rakho jisme rooms ke end times hain, sabse pehle khali hone wala upar. Nayi meeting aayi: agar top wala room free ho chuka hai to pop karo, phir apna end push kar do. Heap ka size hi answer hai. <b>Kab kaunsa?</b> Agar sirf "kitne rooms" poocha hai, sweep line saaf aur tez hai. Agar "kaunsi meeting kis room mein" chahiye, tab heap, kyunki wahan rooms sach mein exist karte hain.</p>
-<p><b>Interview line:</b> "Sorting dominates, so it is O(n log n) time and O(n) for the events." Aur agar intervals pehle se sorted diye hain, to bol do ki insert wala case O(n) mein ho jaayega, dobara sort karne ki zaroorat nahi.</p>`,
+<p><b>Interview line:</b> "Sorting dominates, so it is O(n log n) time and O(n) for the events." Aur agar intervals pehle se sorted mile hain, to bol do ki insert wala case O(n) mein ho jaayega. Dobara sort karne ki zaroorat nahi.</p>`,
 
   viz: ["intervals"],
+
+  math: [
+    { t: "What sorting removes", d: "Unsorted, any pair might overlap. Sorted by start, only the immediate neighbour can, and that is the entire saving.", w:
+`n intervals
+
+every pair:      n(n-1)/2
+n = 10^5    ->   5 x 10^9
+
+sort by start:   n log2 n = 1.7 x 10^6, then one pass of n
+
+after sorting, starts are non-decreasing, so anything
+that overlaps the current interval must start before it
+ends, which only the next interval can do` },
+    { t: "The overlap test, derived by negating the two misses", d: "Do not enumerate the arrangements. There are exactly two ways to miss, so overlap is the negation of their union, and it is one line.", w:
+`[a1, b1] and [a2, b2] do NOT overlap when
+   b1 < a2      the first finishes before the second starts
+   b2 < a1      or the other way round
+
+so they DO overlap when
+   a1 <= b2   and   a2 <= b1
+
+two comparisons, no case analysis
+half-open [a, b):  a1 < b2 and a2 < b1` },
+    { t: "The sort key is the algorithm, and the wrong key is a wrong answer", d: "Both questions are solved by sorting and one pass. They are different sorts, and using the merge key for the packing problem loses quietly.", w:
+`merge overlapping intervals     sort by START
+most non-overlapping intervals  sort by END
+minimum rooms needed            sort the endpoints, sweep
+
+sorting by start for the packing problem:
+  [1, 10], [2, 3], [4, 5]
+  by start: take [1,10], reject both others  ->  1
+  by end:   take [2,3], then [4,5]           ->  2` },
+    { t: "Turn intervals into events and the sweep counts for you", d: "Once each interval is two signed events, the question stops being about intervals at all and becomes a running total over a sorted list.", w:
+`[2, 5]  becomes  (2, +1)  and  (5, -1)
+
+sort 2n events by position, walk them, keep a counter
+  counter = intervals covering this point
+  max counter = minimum rooms needed
+
+O(n log n) to sort, O(n) to sweep
+
+ties at the same position:
+  touching ends do NOT overlap  ->  process -1 first
+  touching ends DO overlap      ->  process +1 first` },
+  ],
 
   costs: [
     ["merge overlapping intervals", "O(n log n) time, O(n) output", "the sort is the whole cost, the merging pass is O(n) and free next to it"],
@@ -9908,7 +11929,7 @@ function insert(intervals, nw) {
   plain: `<p>Most patterns are about finding structure in arbitrary data. This one is the opposite: it exploits a constraint the problem hands you, and it only works because of that constraint.</p>
 <p>The constraint is that the array contains the numbers 1 to n, or 0 to n-1, possibly with one missing or one duplicated. That is a peculiar thing to be told, and it is a tell. It means every value has a <b>correct index it belongs at</b>, computable with no lookup: value <code>v</code> belongs at index <code>v-1</code>.</p>
 <p>So walk the array, and whenever the value in front of you is not home, swap it to where it belongs. Do not advance yet, because the swap brought a new stranger into your current slot. Only move on once the slot is correct.</p>
-<p>Once everything that can be home is home, the array is sorted, and more usefully, any index still holding the wrong value is telling you exactly what is missing or duplicated. That second sentence is why the pattern exists at all, because sorting was never the goal.</p>
+<p>Once everything that can be home is home, the array is sorted. More usefully, any index still holding the wrong value is telling you exactly what is missing or duplicated. That second sentence is why the pattern exists at all, because sorting was never the goal.</p>
 <p><b>Analogy.</b> Numbered coats on numbered pegs. You do not sort the coats. You pick one up, hang it on its own peg, pick up whatever was already there, and repeat. At the end, an empty peg names the missing coat.</p>`,
 
   why: [
@@ -9950,13 +11971,55 @@ function insert(intervals, nw) {
   hing: `<p><b>Yeh pattern baaki sabse ulta hai.</b> Zyadatar patterns bikhre hue data mein structure dhoondhte hain. Yeh ek <b>shart (constraint)</b> ka faayda uthata hai jo problem khud tumhe deti hai.</p>
 <p><b>Shart kya hai:</b> array mein numbers <b>1 se n tak</b> hain (ya 0 se n-1), shayad ek missing ya ek duplicate ke saath. Yeh line bekaar mein nahi likhi hoti. Iska matlab hai ki har value ko pata hai ki uski <b>jagah kahan hai</b>: value <code>v</code> ka ghar index <code>v-1</code> hai. Na comparison, na hash, na sorting.</p>
 <p><b>Loop ajeeb kyun dikhta hai?</b> Kyunki index tabhi aage badhta hai jab current slot <b>sahi</b> ho. Swap karne par tumhare slot mein ek naya ajnabi aa jaata hai, aur uska apna ghar hai. Swap ke baad turant aage badh gaye, to cheezein galat jagah reh jaayengi. <b>Yeh sabse common galti hai.</b></p>
-<p><b>Nested loop hai, phir bhi O(n) kaise?</b> Kyunki <b>har swap kam se kam ek value ko hamesha ke liye uski sahi jagah par bitha deta hai</b>, aur woh wahan se kabhi hilti nahi. Isliye poore program mein zyada se zyada n swaps. Yeh wahi amortised argument hai jo monotonic stack mein tha, aur interview mein ise <b>bol kar</b> batana hota hai.</p>
+<p><b>Nested loop hai, phir bhi O(n) kaise?</b> Kyunki <b>har swap kam se kam ek value ko hamesha ke liye uski sahi jagah par bitha deta hai</b>. Wahan se woh kabhi hilti nahi. Isliye poore run mein n se zyada swaps ho hi nahi sakte. Isliye poore program mein zyada se zyada n swaps. Yeh wahi amortised argument hai jo monotonic stack mein tha, aur interview mein ise <b>bol kar</b> batana hota hai.</p>
 <p><b>Ab asli faayda:</b> pass ke baad ek aur sweep maaro. Agar index <code>i</code> par <code>i+1</code> nahi hai, to <code>i+1</code> <b>missing</b> hai aur jo wahan baitha hai woh <b>duplicate</b> hai. Missing number, repeated number, dono ek hi loop se. Sorting to kabhi maqsad thi hi nahi.</p>
 <p><b>Aur sabse important:</b> hash set bhi yeh sab O(n) time mein kar deta hai, aur sabse pehle wahi dimaag mein aata hai. Cyclic sort ka faayda <b>time nahi, SPACE hai</b>: <b>O(1) extra space</b>, kyunki array khud hi record ban jaata hai. Jab problem bole "extra space mat use karo" aur saath mein values ki range bata de, to usne answer do baar bata diya hai.</p>
 <p><b>Kab nahi chalega:</b> agar values 1 se n ke bahar hain, to unka koi ghar hi nahi hai. Swap se pehle range check lagao aur bahar wali values chhod do. "First Missing Positive" bilkul yahi case hai, aur wahi guard use solve karta hai.</p>`,
 
   viz: ["cyclic-sort"],
   see: [["GFG", "https://www.geeksforgeeks.org/cycle-sort/", "GeeksforGeeks, cycle sort"]],
+
+  math: [
+    { t: "The promise, and what it removes", d: "When the values are a permutation of the indices, the destination of every value is known without comparing it to anything.", w:
+`values are exactly 1..n, each appearing once
+
+value v belongs at index v - 1. Known immediately.
+
+so nothing is compared, and the n log n lower bound
+does not apply: it only binds algorithms whose sole
+move is a comparison. This one reads the value.
+
+sorting cost: O(n), and O(1) extra space` },
+    { t: "The nested loop is still linear", d: "A while inside a for looks quadratic and is not, because every swap permanently finishes one element and there are only n of them.", w:
+`for i in 0..n-1:
+    while a[i] != i + 1:
+        swap a[i] with a[a[i] - 1]
+
+every swap places at least one value in its final home
+a value in its final home is never moved again
+so there are at most n swaps in the entire run
+
+outer steps n + swaps <= n  ->  at most 2n operations` },
+    { t: "Then the answer is wherever the pattern breaks", d: "After the pass the array is its own lookup table, and four different interview questions are the same single scan over it.", w:
+`after the pass, a[i] should be i + 1
+
+first missing number   the first i with a[i] != i + 1
+the duplicate          the value found sitting in a slot
+                       whose owner is elsewhere
+all missing numbers    every i with a[i] != i + 1
+first missing positive the same scan, having ignored
+                       values outside 1..n` },
+    { t: "The point is the space, not the speed", d: "A hash set also answers these in O(n) time. What it cannot do is answer them in no extra memory, which is the constraint the question is really about.", w:
+`n = 10^6 values in 1..n
+
+hash set of seen values   ~10^6 entries, tens of MB
+boolean array             10^6 bytes = 1 MB
+cyclic sort               0 extra bytes
+
+the input array is already n slots of exactly the right
+size, so it is used as the table. The cost is that the
+original order is destroyed.` },
+  ],
 
   costs: [
     ["the placement pass", "O(n) time", "at most n swaps, because each one is permanent"],
@@ -10178,19 +12241,73 @@ function findDisappeared(a) {
     { t: "They only move toward each other, so the sweep is O(n)",
       d: "Each step advances exactly one pointer, and they never turn back. They meet after at most n steps, <b>O(n) time and O(1) extra space</b>. That O(1) is often the real reason to choose this over a map." },
     { t: "Three shapes cover almost everything",
-      d: "<b>From both ends</b>, moving inward: sorted pair sums, container with most water, palindromes. <b>Both from the left</b>, one writing behind the other: removing duplicates in place. <b>Different speeds</b>, one moving twice as fast: finding the middle of a list, or detecting a loop, inside a loop the gap shrinks by one each step, so they must meet." },
+      d: "<b>From both ends</b>, moving inward: sorted pair sums, container with most water, palindromes. <b>Both from the left</b>, one writing behind the other: removing duplicates in place. <b>Different speeds</b>, one moving twice as fast. This finds the middle of a list, and it detects a loop. Inside a loop the gap shrinks by one each step, so the two must meet." },
     { t: "Choosing between this and a hash map",
       d: "A map needs no order and keeps the original positions, but costs O(n) memory. Two pointers costs almost no memory but needs sorted input. Pick on whichever the problem constrains." },
   ],
 
   hing: `<p><b>Problem ki shakal:</b> aksar sawaal ek <b>jodi (pair)</b> ke baare mein hota hai. Do numbers ka sum target, sabse bada container, palindrome ke do sire. Saari jodiyaan check karo to O(n²).</p>
 <p><b>Two pointers ka asli funda:</b> do index rakho aur ek <b>niyam</b> banao ki agla kaun aage badhega. Niyam aisa hona chahiye ki har move sirf <b>un candidates ko hataaye jo answer ho hi nahi sakte</b>.</p>
-<p><b>Proof (yeh samajh liya to pattern pakka):</b> sorted array hai, <code>a[L] + a[R] > target</code>. Iska matlab <code>a[R]</code> kisi bhi bache hue element ke saath aur bada hi sum dega, kyunki <code>a[L]</code> to already sabse chhota hai. To <code>a[R]</code> <b>poori tarah hata do</b>. Ek comparison mein n candidates gaye. Agar tum apni problem ke liye aisa argument nahi bana pa rahe, to two pointers <b>valid nahi hai</b>.</p>
+<p><b>Ab woh argument, jise samajh liya to pattern pakka.</b> Array lo <code>[1, 3, 4, 6, 8, 11]</code>, target <b>10</b>. L pehle par (1), R aakhri par (11). Sum <code>1 + 11 = 12</code>, target se bada.</p>
+<p>Ab dhyan do: <b>1 to sabse chhota element hai</b>. Jab 11 ka sabse chhote saathi ke saath bhi sum 12 aa gaya, to baaki kisi ke saath, yaani 3, 4, 6, 8, aur bhi bada aayega. Matlab <b>11 kisi ke bhi saath jodi nahi banayega</b>. Use poora hata do: ek hi comparison mein <b>paanch jodiyan</b> khatam. Ulta case bhi wahi hai, sum chhota hua to <code>a[L]</code> apne sabse bade saathi ke saath bhi kam pad raha hai, to L aage badhao.</p>
+<p>Har move ek poori line kaatta hai, ek jodi nahi. Agar tum apni problem ke liye aisa argument nahi bana pa rahe, to two pointers <b>valid nahi hai</b>.</p>
 <p><b>O(n) kyun?</b> Har step mein ek pointer aage badhta hai aur dono ek doosre ki taraf hi aate hain, to milne se pehle zyada se zyada n steps. Time O(n), <b>space O(1)</b>. Yeh O(1) space hi asli jeet hai.</p>
 <p><b>Teen variants yaad rakho:</b><br>1. <b>Dono sire se</b> (converging), sorted two-sum, container with most water, palindrome, 3Sum.<br>2. <b>Ek hi taraf, fast aur slow</b>, duplicates hatana, zeroes ko peeche bhejna. Slow pointer batata hai "agla rakha jaane wala element kahan jaayega". In-place O(1) space ka kaam yahi se hota hai.<br>3. <b>Alag speed</b> (Floyd), ek 1 kadam, doosra 2 kadam. Cycle hai to milna <b>pakka</b> hai, kyunki loop ke andar dono ka fasla har step 1 se ghatta hai. Linked list ka cycle <b>O(1) space</b> mein pakda jaata hai, aur middle node bhi ek hi pass mein mil jaata hai.</p>
 <p><b>Hash map lein ya two pointers?</b> Hash map: O(n) time, <b>O(n) space</b>, unsorted par bhi chalta hai, original indices milte hain. Two pointers: sort ke baad O(n), <b>O(1) space</b>, par order chahiye. Agar array already sorted hai ya interviewer "O(1) space" bole → two pointers. Agar original index chahiye → hash map.</p>`,
 
   viz: ["two-pointers"],
+
+  math: [
+    { t: "The pair count being beaten", d: "Every pair is quadratic. Two pointers is one pass, and the whole question is what licenses skipping all those pairs.", w:
+`all pairs:      n(n-1)/2
+n = 10^5   ->   5 x 10^9
+
+two pointers:   L and R only move toward each other,
+                so at most n moves between them: O(n)
+
+plus n log2 n if the input has to be sorted first` },
+    { t: "The elimination argument, written out in full", d: "Each move must discard only candidates that provably cannot be the answer. For sorted two-sum, that proof is two lines and it is what the interviewer is asking for.", w:
+`sorted array, L at the front, R at the back, target t
+
+if a[L] + a[R] > t:
+  for every i with L <= i < R,  a[i] >= a[L]
+  so  a[i] + a[R] >= a[L] + a[R] > t
+  a[R] is too large for EVERY remaining partner. Drop it.
+
+if a[L] + a[R] < t, symmetrically a[L] is too small for
+every remaining partner. Drop it.
+
+each move deletes a whole row or column of the pair table,
+not a single pair` },
+    { t: "Why the sweep is n steps", d: "A shrinking gap that falls by at least one per step is the same termination measure as a loop invariant, and it bounds the pass immediately.", w:
+`L = 0, R = n - 1, gap = R - L = n - 1
+
+each step moves exactly one pointer inward,
+so the gap falls by at least 1 and never rises
+
+it reaches 0 in at most n - 1 steps  ->  O(n), one pass` },
+    { t: "Fast and slow, and the two facts it gives you", d: "The same two-pointer idea on a list, where the rule is a difference in speed rather than a difference in direction.", w:
+`slow +1, fast +2
+
+inside a cycle of length L:
+  fast gains exactly 1 on slow per step, so the gap
+  falls to 0 within L steps. They cannot pass each other.
+
+no cycle:
+  fast reaches the end after n/2 steps, and slow is at
+  n/2: the middle, in one pass, O(1) space` },
+    { t: "Two pointers or a hash map, decided on two axes", d: "Both solve two-sum in linear time after the setup. They differ on memory and on whether the original positions survive.", w:
+`Two Sum, n = 10^5
+
+hash map      O(n) time, O(n) space
+              unsorted input is fine
+              original indices preserved
+two pointers  O(1) extra space
+              needs sorted input: n log2 n if not
+              sorting destroys the original indices
+
+so: do you need the indices, or do you need the space?` },
+  ],
 
   costs: [
     ["converging pointers on sorted input", "O(n) time · O(1) space", "each step eliminates a whole row/column of pairs"],

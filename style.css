@@ -5,13 +5,13 @@
   --bg:#fcfcfa; --bg-soft:#f4f4f0;
   --text:#1c1c1a; --text-2:#38382f; --muted:#6e6e66; --faint:#9a9a91;
   --rule:#e4e3dd; --rule-2:#d6d5cd;
-  --accent:#35506b;
+  --accent:#F0540C;
 }
 [data-theme="dark"]{
   --bg:#131315; --bg-soft:#1a1b1d;
   --text:#e4e3de; --text-2:#cfcec8; --muted:#96958d; --faint:#6e6e68;
   --rule:#292a2d; --rule-2:#35363a;
-  --accent:#9ab4d2;
+  --accent:#F5A623;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -29,6 +29,7 @@ a{color:var(--accent);text-underline-offset:2px}
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
 .nav-in{max-width:760px;margin:0 auto;padding:11px 22px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
 .brand{text-decoration:none;color:var(--text);font-weight:600;font-size:.95rem;letter-spacing:-.01em}
+.brand-mark span{color:var(--accent)}
 .brand-sub{font-size:.8rem;color:var(--muted);font-weight:400}
 .sp{flex:1}
 .btn{background:none;border:0;padding:2px 0;font-family:inherit;font-size:.82rem;

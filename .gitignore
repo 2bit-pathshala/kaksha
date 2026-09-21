@@ -4,3 +4,6 @@ Thumbs.db
 .vscode/
 .idea/
 node_modules/
+
+# Local-only brand reference, not published
+PALETTE.md

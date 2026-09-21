@@ -1108,6 +1108,28 @@ Object.assign(VIZ, {
     cap: "The cost is famously <b>O(n log log n)</b>. Quote it, do not attempt to prove it, and move on. Space is O(n), which is the real constraint when the limit is large." },
 ]},
 
+"mod-inverse": { kind: "cells", arr: ["0", "1", "2", "3", "4", "5", "6"], frames: [
+  { out: "working mod 7, these seven values are every number there is",
+    cap: "A modulus collapses every integer onto one of m values. Addition, subtraction and multiplication all survive that collapse, because remainders add and multiply the way you hope." },
+  { hot: [3], bad: [5], out: "so what is 3 / 5, mod 7?",
+    cap: "Division does not survive. <b>3 / 5 is not an integer</b>, so there is no value to reduce and nothing to look up. The operation has to be rebuilt rather than repaired." },
+  { arr: ["0", "5", "3", "1", "6", "4", "2"], on: [0, 1, 2, 3, 4, 5, 6],
+    out: "cell k = where you stand after k jumps of 5, on a clock of 7 hours",
+    cap: "So ask a different question. Jump <b>5 hours at a time</b> around a 7-hour clock: 0, 5, 3, 1, 6, 4, 2, and back to 0. Because <b>5 and 7 share no factor</b>, the walk stands on every hour there is before it repeats." },
+  { arr: ["0", "5", "3", "1", "6", "4", "2"], hot: [3], ptr: { "inv(5)": 3 },
+    out: "1 is reached after 3 jumps, so inv(5) = 3",
+    cap: "A walk that stands on every hour must stand on <b>1</b>, and it does so once. The number of jumps that took is the inverse: <code>5 × 3 = 15 = 1 (mod 7)</code>." },
+  { arr: ["0", "5", "3", "1", "6", "4", "2"], on: [3], hot: [2],
+    out: "3 / 5 becomes 3 × 3 = 9 = 2 (mod 7). Check: 2 × 5 = 10 = 3.",
+    cap: "Dividing is now multiplying by that number, and the check is the definition itself. Multiply the answer back by 5 and the original value returns, which is all division ever promised." },
+  { arr: ["0", "2", "4", "0", "2", "4"], bad: [0, 1, 2, 3, 4, 5],
+    out: "mod 6, jumping 2: the walk is 0, 2, 4 and straight back to 0",
+    cap: "Now a 6-hour clock, jumping 2. You land on 0, 2, 4, and you are home again after three jumps, not six. Every hour you reach is even, because 2 is and 6 is. <b>1 is odd, so you never stand on it</b>, however long you walk." },
+  { arr: ["0", "5", "3", "1", "6", "4", "2"], on: [3],
+    out: "prime m: inv(b) = b^(m-2) mod m, one fast power, O(log m)",
+    cap: "Nobody actually walks the clock. For a prime modulus Fermat names the answer outright; for any m coprime to b the extended Euclidean algorithm finds it, both in <b>O(log m)</b>. You walk it once, by hand, to see why the answer is there at all." },
+]},
+
 "segment-tree": {
   kind: "tree", w: 600, h: 260,
   nodes: {

@@ -1,11 +1,11 @@
-# Mindstack
+# 2BIT Pathshala
 
 Interview prep notes. Two ways in:
 
 - **Concepts** (`concept.html`), one concept per page, in a fixed order: a stepped visual,
   plain words, why it works from first principles, the same hard part again in Hinglish,
-  costs and traps, pseudocode plus Python / Java / C++ / JavaScript, questions to check
-  yourself, and practice. The explanations are language-agnostic; language specifics live in
+  the maths worked step by step with real numbers, costs and traps, pseudocode plus
+  Python / Java / C++ / JavaScript, questions to check yourself, and practice. The explanations are language-agnostic; language specifics live in
   their own table.
 - **Revision** (`revise.html`), every concept as the one line worth remembering, with its
   questions. Answer them out loud, then open them.

@@ -16,7 +16,7 @@
   <header class="bar">
     <div class="bar-in">
       <button class="nav menu-btn" id="menuBtn" aria-label="Concept list">Contents</button>
-      <a class="logo" href="index.html">Mindstack</a>
+      <a class="logo" href="index.html">2BIT Pathshala</a>
       <span class="here">Concepts</span>
       <div class="sp"></div>
       <a class="nav" href="revise.html">Revision</a>
@@ -35,7 +35,7 @@
     <main id="main"></main>
   </div>
 
-  <footer><a href="index.html">Mindstack</a> · <a href="revise.html">Revision</a></footer>
+  <footer><a href="index.html">2BIT Pathshala</a> · <a href="revise.html">Revision</a></footer>
 
   <script src="viz.js"></script>
   <script src="concept-data.js"></script>
@@ -86,6 +86,7 @@
       { k: "why",   id: "why",      t: "Why it works" },
       { k: "variants", id: "family", t: "Which one, and when" },
       { k: "hing",  id: "hinglish", t: "In Hinglish" },
+      { k: "math",  id: "maths",    t: "The maths, step by step" },
       { k: "costs", id: "costs",    t: "Costs and traps" },
       { k: "code",  id: "code",     t: "The template" },
       { k: "q",     id: "check",    t: "Check yourself" },
@@ -157,6 +158,15 @@
       });
 
       if (s.k === "hing") return section(s, b => { b.appendChild(el("div", "hing", v)); });
+
+      // the derivation: prose sets up the line, the monospace block does the working
+      if (s.k === "math") return section(s, b => {
+        b.appendChild(el("ol", "chain maths", v.map(step =>
+          `<li><b>${esc(step.t)}</b>` +
+          (step.d ? `<div>${step.d}</div>` : "") +
+          (step.w ? `<pre class="derive">${esc(step.w)}</pre>` : "") +
+          `</li>`).join("")));
+      });
 
       if (s.k === "costs") return section(s, b => {
         table(b,
