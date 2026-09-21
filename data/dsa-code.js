@@ -1184,16 +1184,69 @@ function twoSum(nums, target) {
   return [-1, -1];
 }`,
       },
-      "Frequency & Grouping":
-`# O(n·k log k) time · O(n·k) space — sorted word is the group key
+      "Frequency & Grouping": {
+        pseudo:
+`group words that are anagrams of each other.
+  g = map from a key to a list of words
+  for each word w
+    key = the sorted letters of w     # anagrams share this key
+    append w to g[key]
+  return all the lists in g`,
+        py:
+`# O(n·k log k) time · O(n·k) space, sorted word is the group key
 from collections import defaultdict
 def group_anagrams(words):
     g = defaultdict(list)
     for w in words:
         g["".join(sorted(w))].append(w)   # sorted = key
     return list(g.values())`,
-      "Index / Set tricks":
-`# O(n) time · O(n) space — only expand runs from their start element
+        java:
+`// O(n*k log k) time, O(n*k) space: the sorted word is the group key
+List<List<String>> groupAnagrams(String[] words) {
+    Map<String,List<String>> g = new HashMap<>();
+    for (String w : words) {
+        char[] c = w.toCharArray(); Arrays.sort(c);
+        g.computeIfAbsent(new String(c), z -> new ArrayList<>()).add(w);
+    }
+    return new ArrayList<>(g.values());
+}`,
+        cpp:
+`// O(n*k log k) time, O(n*k) space: the sorted word is the group key
+vector<vector<string>> groupAnagrams(vector<string>& words) {
+    unordered_map<string, vector<string>> g;
+    for (auto& w : words) {
+        string key = w; sort(key.begin(), key.end());
+        g[key].push_back(w);
+    }
+    vector<vector<string>> res;
+    for (auto& [k, v] : g) res.push_back(v);
+    return res;
+}`,
+        js:
+`// O(n*k log k) time, O(n*k) space: the sorted word is the group key
+function groupAnagrams(words) {
+  const g = new Map();
+  for (const w of words) {
+    const key = [...w].sort().join("");
+    if (!g.has(key)) g.set(key, []);
+    g.get(key).push(w);
+  }
+  return [...g.values()];
+}`,
+      },
+      "Index / Set tricks": {
+        pseudo:
+`longest run of consecutive integers. O(n) using a set.
+  s = set of all numbers
+  best = 0
+  for x in s
+    if x-1 is not in s           # x starts a fresh run
+      y = x
+      while y+1 in s -> y = y + 1
+      best = max(best, y - x + 1)
+  return best`,
+        py:
+`# O(n) time · O(n) space, only expand runs from their start element
 def longest_consecutive(nums):
     s = set(nums); best = 0
     for x in s:
@@ -1202,6 +1255,50 @@ def longest_consecutive(nums):
             while y+1 in s: y += 1
             best = max(best, y-x+1)
     return best`,
+        java:
+`// O(n) time, O(n) space: only expand a run from its start element
+int longestConsecutive(int[] nums) {
+    Set<Integer> s = new HashSet<>();
+    for (int x : nums) s.add(x);
+    int best = 0;
+    for (int x : s) {
+        if (!s.contains(x - 1)) {          // start of a run
+            int y = x;
+            while (s.contains(y + 1)) y++;
+            best = Math.max(best, y - x + 1);
+        }
+    }
+    return best;
+}`,
+        cpp:
+`// O(n) time, O(n) space: only expand a run from its start element
+int longestConsecutive(vector<int>& nums) {
+    unordered_set<int> s(nums.begin(), nums.end());
+    int best = 0;
+    for (int x : s) {
+        if (!s.count(x - 1)) {             // start of a run
+            int y = x;
+            while (s.count(y + 1)) y++;
+            best = max(best, y - x + 1);
+        }
+    }
+    return best;
+}`,
+        js:
+`// O(n) time, O(n) space: only expand a run from its start element
+function longestConsecutive(nums) {
+  const s = new Set(nums);
+  let best = 0;
+  for (const x of s) {
+    if (!s.has(x - 1)) {                  // start of a run
+      let y = x;
+      while (s.has(y + 1)) y++;
+      best = Math.max(best, y - x + 1);
+    }
+  }
+  return best;
+}`,
+      },
 
       "Next Greater / Smaller":
 `# O(n) time · O(n) space — monotonic stack; each index pushed/popped once
