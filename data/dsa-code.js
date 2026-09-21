@@ -2503,8 +2503,17 @@ function solveNQueens(n) {
 }`,
       },
 
-      "Interval Greedy":
-`# O(n log n) time · O(1) space — sort by END, keep earliest-finishing
+      "Interval Greedy": {
+        pseudo:
+`min intervals to remove so none overlap. O(n log n).
+  sort intervals by END
+  end = -infinity, removed = 0
+  for [s, e] in intervals
+    if s >= end -> keep it, end = e
+    else -> removed += 1    # overlaps the last kept one
+  return removed`,
+        py:
+`# O(n log n) time · O(1) space, sort by END, keep earliest-finishing
 def erase_overlap(intervals):    # min removals
     intervals.sort(key=lambda x: x[1])   # sort by END
     end = float('-inf'); removed = 0
@@ -2512,8 +2521,52 @@ def erase_overlap(intervals):    # min removals
         if s >= end: end = e             # keep
         else: removed += 1               # drop overlap
     return removed`,
-      "Scheduling / Profit (heap)":
-`# O(n log n) time · O(n) space — heap of affordable projects, take max
+        java:
+`// O(n log n) time, O(1) space: sort by END, keep earliest-finishing
+int eraseOverlap(int[][] intervals) {
+    Arrays.sort(intervals, (a, b) -> Integer.compare(a[1], b[1]));  // by end
+    long end = Long.MIN_VALUE; int removed = 0;
+    for (int[] iv : intervals) {
+        if (iv[0] >= end) end = iv[1];      // keep
+        else removed++;                     // drop overlap
+    }
+    return removed;
+}`,
+        cpp:
+`// O(n log n) time, O(1) space: sort by END, keep earliest-finishing
+int eraseOverlap(vector<vector<int>>& intervals) {
+    sort(intervals.begin(), intervals.end(),
+         [](auto& a, auto& b){ return a[1] < b[1]; });   // by end
+    long long end = LLONG_MIN; int removed = 0;
+    for (auto& iv : intervals) {
+        if (iv[0] >= end) end = iv[1];      // keep
+        else removed++;                     // drop overlap
+    }
+    return removed;
+}`,
+        js:
+`// O(n log n) time, O(1) space: sort by END, keep earliest-finishing
+function eraseOverlap(intervals) {
+  intervals.sort((a, b) => a[1] - b[1]);    // by end
+  let end = -Infinity, removed = 0;
+  for (const [s, e] of intervals) {
+    if (s >= end) end = e;                  // keep
+    else removed++;                         // drop overlap
+  }
+  return removed;
+}`,
+      },
+      "Scheduling / Profit (heap)": {
+        pseudo:
+`do at most k projects to maximize capital. O(n log n).
+  sort projects by the capital they need.
+  for each of k rounds:
+    push every project you can now afford into a max-heap by profit
+    if the heap is empty -> stop
+    take the most profitable affordable project; add its profit to w
+  return w`,
+        py:
+`# O(n log n) time · O(n) space, heap of affordable projects, take max
 import heapq
 def max_capital(k, w, profits, capital):
     projs = sorted(zip(capital, profits)); h = []; i = 0
@@ -2523,17 +2576,122 @@ def max_capital(k, w, profits, capital):
         if not h: break
         w += -heapq.heappop(h)           # take max profit affordable
     return w`,
-      "Jump / Reach":
-`# O(n) time · O(1) space — track farthest reachable index
+        java:
+`// O(n log n) time: max-heap of affordable profits, take the best each round
+int maxCapital(int k, int w, int[] profits, int[] capital) {
+    int n = profits.length;
+    int[][] projs = new int[n][2];
+    for (int i = 0; i < n; i++) projs[i] = new int[]{capital[i], profits[i]};
+    Arrays.sort(projs, (a, b) -> Integer.compare(a[0], b[0]));   // by capital
+    PriorityQueue<Integer> pq = new PriorityQueue<>(Collections.reverseOrder());
+    int i = 0;
+    for (int round = 0; round < k; round++) {
+        while (i < n && projs[i][0] <= w) pq.add(projs[i++][1]);  // affordable
+        if (pq.isEmpty()) break;
+        w += pq.poll();                                          // take max profit
+    }
+    return w;
+}`,
+        cpp:
+`// O(n log n) time: max-heap of affordable profits, take the best each round
+int maxCapital(int k, int w, vector<int>& profits, vector<int>& capital) {
+    int n = profits.size();
+    vector<pair<int,int>> projs;
+    for (int i = 0; i < n; i++) projs.push_back({capital[i], profits[i]});
+    sort(projs.begin(), projs.end());                 // by capital
+    priority_queue<int> pq;                            // max-heap of profits
+    int i = 0;
+    for (int round = 0; round < k; round++) {
+        while (i < n && projs[i].first <= w) pq.push(projs[i++].second);
+        if (pq.empty()) break;
+        w += pq.top(); pq.pop();                       // take max profit
+    }
+    return w;
+}`,
+        js:
+`// O(n log n): max-heap of affordable profits, take the best each round
+function maxCapital(k, w, profits, capital) {
+  const projs = capital.map((c, i) => [c, profits[i]]).sort((a, b) => a[0] - b[0]);
+  const pq = new MaxHeap();                   // by profit
+  let i = 0;
+  for (let round = 0; round < k; round++) {
+    while (i < projs.length && projs[i][0] <= w) pq.push(projs[i++][1]);
+    if (!pq.size) break;
+    w += pq.pop();                            // take max profit affordable
+  }
+  return w;
+}
+// minimal binary max-heap of numbers
+class MaxHeap {
+  constructor() { this.a = []; }
+  get size() { return this.a.length; }
+  push(x) { const a = this.a; a.push(x); let i = a.length - 1;
+    while (i && a[(i-1)>>1] < a[i]) { [a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]]; i=(i-1)>>1; } }
+  pop() { const a = this.a, top = a[0], last = a.pop();
+    if (a.length) { a[0]=last; let i=0,n=a.length;
+      for(;;){ let l=2*i+1,r=2*i+2,m=i;
+        if(l<n&&a[l]>a[m])m=l; if(r<n&&a[r]>a[m])m=r;
+        if(m===i)break; [a[m],a[i]]=[a[i],a[m]]; i=m; } }
+    return top; }
+}`,
+      },
+      "Jump / Reach": {
+        pseudo:
+`can you reach the last index? O(n). Track farthest reachable.
+  reach = 0
+  for i, x in nums
+    if i > reach -> return false   # stuck before this index
+    reach = max(reach, i + x)
+  return true`,
+        py:
+`# O(n) time · O(1) space, track farthest reachable index
 def can_jump(nums):
     reach = 0
     for i, x in enumerate(nums):
         if i > reach: return False       # stuck
         reach = max(reach, i + x)
     return True`,
+        java:
+`// O(n) time, O(1) space: track the farthest reachable index
+boolean canJump(int[] nums) {
+    int reach = 0;
+    for (int i = 0; i < nums.length; i++) {
+        if (i > reach) return false;        // stuck
+        reach = Math.max(reach, i + nums[i]);
+    }
+    return true;
+}`,
+        cpp:
+`// O(n) time, O(1) space: track the farthest reachable index
+bool canJump(vector<int>& nums) {
+    int reach = 0;
+    for (int i = 0; i < (int)nums.size(); i++) {
+        if (i > reach) return false;        // stuck
+        reach = max(reach, i + nums[i]);
+    }
+    return true;
+}`,
+        js:
+`// O(n) time, O(1) space: track the farthest reachable index
+function canJump(nums) {
+  let reach = 0;
+  for (let i = 0; i < nums.length; i++) {
+    if (i > reach) return false;            // stuck
+    reach = Math.max(reach, i + nums[i]);
+  }
+  return true;
+}`,
+      },
 
-      "Top-K / Kth":
-`# O(n log k) time · O(k) space — min-heap of size k keeps top-k
+      "Top-K / Kth": {
+        pseudo:
+`kth largest: keep a min-heap of size k. O(n log k).
+  for x in nums
+    push x
+    if heap size > k -> pop the smallest
+  the heap root is the kth largest`,
+        py:
+`# O(n log k) time · O(k) space, min-heap of size k keeps top-k
 import heapq
 def kth_largest(nums, k):
     h = []                          # min-heap of size k
@@ -2541,8 +2699,60 @@ def kth_largest(nums, k):
         heapq.heappush(h, x)
         if len(h) > k: heapq.heappop(h)
     return h[0]`,
-      "Two Heaps (median)":
-`# O(log n) add · O(1) median · O(n) space — balance max-heap & min-heap
+        java:
+`// O(n log k) time, O(k) space: a size-k min-heap keeps the top k
+int kthLargest(int[] nums, int k) {
+    PriorityQueue<Integer> h = new PriorityQueue<>();   // min-heap
+    for (int x : nums) {
+        h.add(x);
+        if (h.size() > k) h.poll();
+    }
+    return h.peek();
+}`,
+        cpp:
+`// O(n log k) time, O(k) space: a size-k min-heap keeps the top k
+int kthLargest(vector<int>& nums, int k) {
+    priority_queue<int, vector<int>, greater<int>> h;   // min-heap
+    for (int x : nums) {
+        h.push(x);
+        if ((int)h.size() > k) h.pop();
+    }
+    return h.top();
+}`,
+        js:
+`// O(n log k) time, O(k) space: a size-k min-heap keeps the top k
+function kthLargest(nums, k) {
+  const h = new MinHeap();
+  for (const x of nums) {
+    h.push(x);
+    if (h.size > k) h.pop();
+  }
+  return h.peek();
+}
+// minimal binary min-heap of numbers
+class MinHeap {
+  constructor() { this.a = []; }
+  get size() { return this.a.length; }
+  peek() { return this.a[0]; }
+  push(x) { const a = this.a; a.push(x); let i = a.length - 1;
+    while (i && a[(i-1)>>1] > a[i]) { [a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]]; i=(i-1)>>1; } }
+  pop() { const a = this.a, top = a[0], last = a.pop();
+    if (a.length) { a[0]=last; let i=0,n=a.length;
+      for(;;){ let l=2*i+1,r=2*i+2,m=i;
+        if(l<n&&a[l]<a[m])m=l; if(r<n&&a[r]<a[m])m=r;
+        if(m===i)break; [a[m],a[i]]=[a[i],a[m]]; i=m; } }
+    return top; }
+}`,
+      },
+      "Two Heaps (median)": {
+        pseudo:
+`running median with two heaps. add O(log n), median O(1).
+  lo = max-heap (lower half), hi = min-heap (upper half)
+  add(x): push x into hi, move hi's min into lo,
+          if lo is bigger than hi, move lo's max back into hi
+  median: if hi bigger -> hi.top; else average of hi.top and lo.top`,
+        py:
+`# O(log n) add · O(1) median · O(n) space, balance max-heap & min-heap
 import heapq
 class MedianFinder:
     def __init__(self): self.lo=[]; self.hi=[]   # lo=max-heap(neg), hi=min-heap
@@ -2552,8 +2762,64 @@ class MedianFinder:
             heapq.heappush(self.hi, -heapq.heappop(self.lo))
     def median(self):
         return self.hi[0] if len(self.hi)>len(self.lo) else (self.hi[0]-self.lo[0])/2`,
-      "K-way Merge":
-`# O(N log k) time · O(k) space — heap holds one head per list
+        java:
+`// add O(log n), median O(1): max-heap (low half) + min-heap (high half)
+class MedianFinder {
+    PriorityQueue<Integer> lo = new PriorityQueue<>(Collections.reverseOrder());
+    PriorityQueue<Integer> hi = new PriorityQueue<>();
+    void add(int x) {
+        hi.add(x); lo.add(hi.poll());           // funnel through to keep order
+        if (lo.size() > hi.size()) hi.add(lo.poll());
+    }
+    double median() {
+        return hi.size() > lo.size() ? hi.peek() : (hi.peek() + lo.peek()) / 2.0;
+    }
+}`,
+        cpp:
+`// add O(log n), median O(1): max-heap (low half) + min-heap (high half)
+class MedianFinder {
+    priority_queue<int> lo;                                // max-heap
+    priority_queue<int, vector<int>, greater<int>> hi;     // min-heap
+public:
+    void add(int x) {
+        hi.push(x); lo.push(hi.top()); hi.pop();
+        if (lo.size() > hi.size()) { hi.push(lo.top()); lo.pop(); }
+    }
+    double median() {
+        return hi.size() > lo.size() ? hi.top() : (hi.top() + lo.top()) / 2.0;
+    }
+};`,
+        js:
+`// add O(log n), median O(1): max-heap (low half) + min-heap (high half)
+class MedianFinder {
+  constructor() { this.lo = new MaxHeap(); this.hi = new MinHeap(); }
+  add(x) {
+    this.hi.push(x); this.lo.push(this.hi.pop());
+    if (this.lo.size > this.hi.size) this.hi.push(this.lo.pop());
+  }
+  median() {
+    return this.hi.size > this.lo.size
+      ? this.hi.peek()
+      : (this.hi.peek() + this.lo.peek()) / 2;
+  }
+}
+// minimal number heaps
+class MinHeap { constructor(){this.a=[];} get size(){return this.a.length;} peek(){return this.a[0];}
+  push(x){const a=this.a;a.push(x);let i=a.length-1;while(i&&a[(i-1)>>1]>a[i]){[a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]];i=(i-1)>>1;}}
+  pop(){const a=this.a,t=a[0],l=a.pop();if(a.length){a[0]=l;let i=0,n=a.length;for(;;){let x=2*i+1,y=2*i+2,m=i;if(x<n&&a[x]<a[m])m=x;if(y<n&&a[y]<a[m])m=y;if(m===i)break;[a[m],a[i]]=[a[i],a[m]];i=m;}}return t;} }
+class MaxHeap { constructor(){this.a=[];} get size(){return this.a.length;} peek(){return this.a[0];}
+  push(x){const a=this.a;a.push(x);let i=a.length-1;while(i&&a[(i-1)>>1]<a[i]){[a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]];i=(i-1)>>1;}}
+  pop(){const a=this.a,t=a[0],l=a.pop();if(a.length){a[0]=l;let i=0,n=a.length;for(;;){let x=2*i+1,y=2*i+2,m=i;if(x<n&&a[x]>a[m])m=x;if(y<n&&a[y]>a[m])m=y;if(m===i)break;[a[m],a[i]]=[a[i],a[m]];i=m;}}return t;} }`,
+      },
+      "K-way Merge": {
+        pseudo:
+`merge k sorted lists. O(N log k). Heap holds one head per list.
+  push (list[i][0], i, 0) for each non-empty list
+  while heap not empty:
+    pop the smallest (val, li, ei); append val
+    if that list has a next element -> push (list[li][ei+1], li, ei+1)`,
+        py:
+`# O(N log k) time · O(k) space, heap holds one head per list
 import heapq
 def merge_k(lists):
     h = [(l[0], i, 0) for i, l in enumerate(lists) if l]
@@ -2563,6 +2829,60 @@ def merge_k(lists):
         if ei+1 < len(lists[li]):
             heapq.heappush(h, (lists[li][ei+1], li, ei+1))
     return out`,
+        java:
+`// O(N log k) time, O(k) space: heap holds one head per list
+List<Integer> mergeK(int[][] lists) {
+    PriorityQueue<int[]> h = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));
+    for (int i = 0; i < lists.length; i++)
+        if (lists[i].length > 0) h.add(new int[]{lists[i][0], i, 0});  // {val, li, ei}
+    List<Integer> out = new ArrayList<>();
+    while (!h.isEmpty()) {
+        int[] top = h.poll(); out.add(top[0]);
+        int li = top[1], ei = top[2];
+        if (ei + 1 < lists[li].length) h.add(new int[]{lists[li][ei + 1], li, ei + 1});
+    }
+    return out;
+}`,
+        cpp:
+`// O(N log k) time, O(k) space: heap holds one head per list
+vector<int> mergeK(vector<vector<int>>& lists) {
+    // {val, li, ei}, min-heap by val
+    priority_queue<array<int,3>, vector<array<int,3>>, greater<array<int,3>>> h;
+    for (int i = 0; i < (int)lists.size(); i++)
+        if (!lists[i].empty()) h.push({lists[i][0], i, 0});
+    vector<int> out;
+    while (!h.empty()) {
+        auto [val, li, ei] = h.top(); h.pop(); out.push_back(val);
+        if (ei + 1 < (int)lists[li].size()) h.push({lists[li][ei + 1], li, ei + 1});
+    }
+    return out;
+}`,
+        js:
+`// O(N log k) time, O(k) space: heap holds one head per list
+function mergeK(lists) {
+  const h = new MinHeap(x => x[0]);          // compare by value
+  lists.forEach((l, i) => { if (l.length) h.push([l[0], i, 0]); });  // [val, li, ei]
+  const out = [];
+  while (h.size) {
+    const [val, li, ei] = h.pop(); out.push(val);
+    if (ei + 1 < lists[li].length) h.push([lists[li][ei + 1], li, ei + 1]);
+  }
+  return out;
+}
+// minimal binary min-heap with a key function
+class MinHeap {
+  constructor(key = x => x) { this.a = []; this.key = key; }
+  get size() { return this.a.length; }
+  push(x) { const a = this.a, k = this.key; a.push(x); let i = a.length - 1;
+    while (i && k(a[(i-1)>>1]) > k(a[i])) { [a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]]; i=(i-1)>>1; } }
+  pop() { const a = this.a, k = this.key, t = a[0], l = a.pop();
+    if (a.length) { a[0]=l; let i=0,n=a.length;
+      for(;;){ let x=2*i+1,y=2*i+2,m=i;
+        if(x<n&&k(a[x])<k(a[m]))m=x; if(y<n&&k(a[y])<k(a[m]))m=y;
+        if(m===i)break; [a[m],a[i]]=[a[i],a[m]]; i=m; } }
+    return t; }
+}`,
+      },
 
       "Traversal (BFS / DFS)":
 `# O(V+E) time · O(V) space — visit each vertex/edge once
