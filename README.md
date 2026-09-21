@@ -35,7 +35,7 @@ Pages stay in the root so their URLs are stable; everything else is grouped by k
 
 ```
 /                     the HTML pages, served as-is by GitHub Pages
-  index.html          hub
+  index.html          landing page, links to every section
   concept.html        the deep page for one concept
   revise.html         recall lines and questions
   dsa-notes.html      DSA notes (topic notes + practice)
@@ -45,8 +45,10 @@ Pages stay in the root so their URLs are stable; everything else is grouped by k
   design.html         Design Lab, systems grown stage by stage
   hr.html  ai.html    HR notes; AI placeholder
   study.html dsa.html dsa-cheatsheet.html   redirects to the above
-css/                  learn.css (concept/revise), style.css (hub)
-js/                   viz.js (stepped visuals), script.js (hub)
+css/                  learn.css (concept/revise), style.css (landing)
+js/                   viz.js (stepped visuals), script.js (landing theme toggle)
+fonts/                Inter, self-hosted for the landing page (OFL)
+img/                  logo (logo-512.png is the master) and the icon sizes cut from it
 data/                 *-data.js, the single source of content per section
 docs/                 CONTENT-GUIDE.md, how to write a new concept
 check.js              build check: run before every commit

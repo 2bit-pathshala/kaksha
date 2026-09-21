@@ -3,152 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2BIT Pathshala · Interview Prep Hub</title>
-  <meta name="description" content="Interview prep notes: concepts from first principles, DSA, system design, and HR." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=2" />
+  <title>2BIT Pathshala · Interview prep from first principles</title>
+  <meta name="description" content="Free interview prep: 41 DSA concepts explained from first principles with visuals, Hinglish deep-dives and code in 5 languages, ten-minute revision, nine real system designs, LLD, HLD and HR notes." />
+  <meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#131315" media="(prefers-color-scheme: dark)" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="2BIT Pathshala" />
+  <meta property="og:title" content="2BIT Pathshala · Interview prep from first principles" />
+  <meta property="og:description" content="Understand a concept once, from first principles. Revise it in ten minutes. DSA, system design and HR, all free." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <script>
+    /* set the theme before first paint so dark mode never flashes light */
+    (function () { try { var s = localStorage.getItem("dsa-theme");
+      if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
+        document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
+  </script>
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/style.css?v=4" />
 </head>
-<body>
-  <nav class="nav">
-    <div class="nav-in">
-      <a href="index.html" class="brand">
-        <div class="brand-mark">2BIT <span>Pathshala</span></div>
-        <div class="brand-sub">interview prep</div>
+<body class="landing">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav">
+    <div class="nav-in wide">
+      <a href="index.html" class="brand" aria-label="2BIT Pathshala home">
+        <img class="brand-logo" src="img/logo-64.png" alt="" width="32" height="32" />
+        <span class="brand-mark">2BIT <span>Pathshala</span></span>
       </a>
-      <div class="sp"></div>
-      <button class="btn" id="themeToggle" aria-label="Toggle dark mode">Dark</button>
+      <nav class="nav-links" aria-label="Main">
+        <a href="concept.html">Concepts</a>
+        <a href="revise.html">Revision</a>
+        <a href="design.html">Design Lab</a>
+        <a href="#inside">All sections</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button" aria-label="Switch to dark theme">Dark</button>
     </div>
-  </nav>
+  </header>
 
-  <div class="wrap">
-    <header class="hero">
-      <h1>Interview prep</h1>
-      <p>Two ways in: <b>Concept Lab</b> to actually understand something from first principles, <b>Rapid Revision</b> to keep it. Plus the DSA, LLD, HLD and HR sheets.</p>
-    </header>
-
-    <div class="index">
-      <details class="section" open>
-        <summary>
-          <span class="chev">▶</span>
-          <div class="sec-copy">
-            <h2>Learn &amp; Revise</h2>
-            <p>Understand a concept from first principles in a day, then revise it in ten minutes</p>
-          </div>
-        </summary>
-        <div class="kids">
-          <a class="item" href="concept.html">
-            <div class="item-copy">
-              <strong>Concept Lab</strong>
-              <span>One concept per page: animated visual → plain words → first-principles derivation → Hinglish deep-dive → the maths worked step by step → costs, traps, code in 5 languages, self-test</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-          <a class="item" href="revise.html">
-            <div class="item-copy">
-              <strong>Rapid Revision</strong>
-              <span>Every concept as one recall line plus flip cards, mark what is shaky and revise only that</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
+  <main id="main">
+    <section class="hero wide">
+      <div class="hero-copy">
+        <p class="eyebrow">Free interview prep · DSA · System design · HR</p>
+        <h1>Understand it once.<br /><span class="grad">Remember it <span class="nw">on the day.</span></span></h1>
+        <p class="lede">
+          Every concept is built up from first principles: a stepped visual, plain words, the
+          reasoning, a Hinglish deep-dive, the maths with real numbers, and code in five
+          languages. Then one line to revise it in ten minutes.
+        </p>
+        <div class="cta">
+          <a class="button primary" href="concept.html">Start learning</a>
+          <a class="button ghost" href="revise.html">Revise in 10 minutes</a>
         </div>
-      </details>
+        <ul class="stats" aria-label="What is on the site">
+          <li><b>41</b><span>concepts</span></li>
+          <li><b>9</b><span>systems designed</span></li>
+          <li><b>18</b><span>DSA topics</span></li>
+          <li><b>5</b><span>languages per snippet</span></li>
+        </ul>
+      </div>
 
-      <details class="section">
-        <summary>
-          <span class="chev">▶</span>
-          <div class="sec-copy">
-            <h2>DSA</h2>
-            <p>Topic notes, a one-day revision sheet, and the patterns roadmap</p>
-          </div>
-        </summary>
-        <div class="kids">
-          <a class="item" href="dsa-notes.html">
-            <div class="item-copy">
-              <strong>DSA Notes</strong>
-              <span>Study one topic at a time, brief notes, short code, practice questions</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-          <a class="item" href="dsa-sheet.html">
-            <div class="item-copy">
-              <strong>DSA one day sheet</strong>
-              <span>Deep revision: properties, Python templates, diagrams, must-know algorithms</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-          <a class="item" href="dsa-patterns.html">
-            <div class="item-copy">
-              <strong>Pattern</strong>
-              <span>Patterns roadmap with curated Easy / Medium / Hard LeetCode problems</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-        </div>
-      </details>
+      <figure class="flow" aria-label="How one concept page is laid out">
+        <figcaption>One concept, eight steps</figcaption>
+        <ol>
+          <li><span class="n">01</span><div><b>See it</b><small>A stepped visual you click through</small></div></li>
+          <li><span class="n">02</span><div><b>Plain words</b><small>What it is, with no jargon</small></div></li>
+          <li><span class="n">03</span><div><b>Why it works</b><small>Derived from first principles</small></div></li>
+          <li><span class="n">04</span><div><b>Hinglish</b><small>The hard part again, the way you would explain it to a friend</small></div></li>
+          <li><span class="n">05</span><div><b>The maths</b><small>Worked step by step with real numbers</small></div></li>
+          <li><span class="n">06</span><div><b>Costs and traps</b><small>Where it breaks in interviews</small></div></li>
+          <li><span class="n">07</span><div><b>Code</b><small>Pseudocode, Python, Java, C++, JavaScript</small></div></li>
+          <li><span class="n">08</span><div><b>Check yourself</b><small>Questions and practice problems</small></div></li>
+        </ol>
+      </figure>
+    </section>
 
-      <details class="section">
-        <summary>
-          <span class="chev">▶</span>
-          <div class="sec-copy">
-            <h2>System Design</h2>
-            <p>Low-level and high-level design notes, plus worked examples of real systems</p>
-          </div>
-        </summary>
-        <div class="kids">
-          <a class="item" href="lld.html">
-            <div class="item-copy">
-              <strong>LLD</strong>
-              <span>OOP, concurrency, patterns, machine coding, and LeetCode Design</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-          <a class="item" href="hld.html">
-            <div class="item-copy">
-              <strong>HLD</strong>
-              <span>Scalability, databases, caching, APIs, and interview problems</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-          <a class="item" href="design.html">
-            <div class="item-copy">
-              <strong>Design Lab</strong>
-              <span>Nine real systems grown box by box: each stage adds a component because something specific broke, and every box carries its reasoning, rejected alternatives, costs and failure mode</span>
-            </div>
-            <span class="arrow">→</span>
-          </a>
-        </div>
-      </details>
+    <section class="band" aria-labelledby="how-h">
+      <div class="wide">
+        <h2 id="how-h" class="sec-h">How to use it</h2>
+        <ol class="steps">
+          <li>
+            <span class="step-n">1</span>
+            <h3>Learn</h3>
+            <p>Open a concept in the <a href="concept.html">Concept Lab</a> and read it top to bottom once.</p>
+          </li>
+          <li>
+            <span class="step-n">2</span>
+            <h3>Revise</h3>
+            <p><a href="revise.html">Rapid Revision</a> gives you each concept as the one line worth remembering. Answer the questions out loud, then open them.</p>
+          </li>
+          <li>
+            <span class="step-n">3</span>
+            <h3>Practice</h3>
+            <p>Work through the <a href="dsa-patterns.html">pattern roadmap</a> and <a href="dsa-notes.html">DSA notes</a>, then grow real systems in the <a href="design.html">Design Lab</a>.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
 
-      <a class="section solo" href="hr.html">
-        <div class="leaf-row">
-          <div class="sec-copy">
-            <h2>HR</h2>
-            <p>STAR, CAR, HERO, résumé stories, why leaving, salary, what to ask</p>
-          </div>
-          
-          <span class="arrow">→</span>
-        </div>
-      </a>
+    <section id="inside" class="wide inside" aria-labelledby="inside-h">
+      <h2 id="inside-h" class="sec-h">Everything inside</h2>
 
-      <a class="section solo" href="ai.html">
-        <div class="leaf-row">
-          <div class="sec-copy">
-            <h2>AI</h2>
-            <p>ML / LLM interview notes and practical building blocks</p>
-          </div>
-          <span class="badge">not yet</span>
-          <span class="arrow">→</span>
-        </div>
-      </a>
+      <h3 class="group-h">Learn and revise</h3>
+      <div class="cards">
+        <a class="card feature" href="concept.html">
+          <span class="tag">Start here</span>
+          <strong>Concept Lab</strong>
+          <span>One concept per page, from the visual to the code. Language-agnostic explanations, with language specifics in their own table.</span>
+        </a>
+        <a class="card feature" href="revise.html">
+          <span class="tag">10 minutes</span>
+          <strong>Rapid Revision</strong>
+          <span>Every concept as a single recall line, with the questions that prove you still know it.</span>
+        </a>
+      </div>
+
+      <h3 class="group-h">DSA</h3>
+      <div class="cards three">
+        <a class="card" href="dsa-notes.html"><strong>DSA Notes</strong><span>One topic at a time: brief notes, short code, practice questions.</span></a>
+        <a class="card" href="dsa-sheet.html"><strong>One-day sheet</strong><span>Deep revision: properties, templates, diagrams, must-know algorithms.</span></a>
+        <a class="card" href="dsa-patterns.html"><strong>Pattern roadmap</strong><span>Patterns with curated Easy, Medium and Hard LeetCode problems.</span></a>
+      </div>
+
+      <h3 class="group-h">System design</h3>
+      <div class="cards three">
+        <a class="card" href="design.html"><strong>Design Lab</strong><span>Bitly, WhatsApp, Instagram, Uber, BookMyShow and more, grown box by box. Every box says why it exists.</span></a>
+        <a class="card" href="lld.html"><strong>LLD</strong><span>OOP, concurrency, design patterns, machine coding, LeetCode design.</span></a>
+        <a class="card" href="hld.html"><strong>HLD</strong><span>Scalability, databases, caching, APIs and interview problems.</span></a>
+      </div>
+
+      <h3 class="group-h">The rest of the loop</h3>
+      <div class="cards">
+        <a class="card" href="hr.html"><strong>HR</strong><span>STAR, CAR, HERO, résumé stories, why you are leaving, salary, what to ask.</span></a>
+        <a class="card muted" href="ai.html"><strong>AI <em class="soon">coming soon</em></strong><span>ML and LLM interview notes and practical building blocks.</span></a>
+      </div>
+    </section>
+
+    <section class="band" aria-labelledby="why-h">
+      <div class="wide">
+        <h2 id="why-h" class="sec-h">Why it is built this way</h2>
+        <ul class="principles">
+          <li><h3>Reasons, not recipes</h3><p>Anything you can derive, you cannot forget under pressure. So every page derives before it states.</p></li>
+          <li><h3>Every box earns its place</h3><p>In the Design Lab, a component only appears once something specific breaks without it.</p></li>
+          <li><h3>Your language, your pace</h3><p>Explanations do not assume a language, and the hardest step is repeated in Hinglish.</p></li>
+          <li><h3>Nothing to sign up for</h3><p>No accounts, no tracking, no progress meters. The only thing remembered is your theme.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="wide closer">
+      <h2>Pick one concept and start now.</h2>
+      <p>Read it once top to bottom, then come back to the one-line version whenever you need it.</p>
+      <a class="button primary" href="concept.html">Open the Concept Lab</a>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wide foot-in">
+      <span class="brand foot-brand"><img class="brand-logo" src="img/logo-64.png" alt="" width="24" height="24" loading="lazy" /><span class="brand-mark">2BIT <span>Pathshala</span></span></span>
+      <nav aria-label="Footer">
+        <a href="concept.html">Concepts</a>
+        <a href="revise.html">Revision</a>
+        <a href="dsa-notes.html">DSA</a>
+        <a href="design.html">Design Lab</a>
+        <a href="hr.html">HR</a>
+      </nav>
+      <small>© <span id="year">2026</span> 2BIT Pathshala</small>
     </div>
-  </div>
-
-  <footer>
-    <a href="concept.html">Concepts</a> · <a href="revise.html">Revision</a>
   </footer>
 
-  <script src="js/script.js"></script>
+  <script src="js/script.js" defer></script>
 </body>
 </html>

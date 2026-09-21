@@ -25,7 +25,7 @@ const VIZ = {};
    stage scrolls sideways instead of shrinking further. Small drawings still
    fit a phone outright, so only the wide ones ever scroll. */
 const svgWrap = (w, h, inner) =>
-  `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img" ` +
+  `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagram for this step, described in the caption" ` +
   `style="--vw:${Math.min(Math.round(w * 0.72), 620)}px">${inner}</svg>`;
 
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -129,7 +129,7 @@ function drawCurve(spec, f) {
     s += `<polyline class="v-curve" points="${pts.join(" ")}" style="stroke:${cv.c}"/>`;
     const last = pts[pts.length - 1].split(",");
     s += `<text x="${Math.min(+last[0] + 7, R - 4)}" y="${clearOf(+last[1])}" ` +
-         `style="fill:${cv.c};font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600">${esc(name)}</text>`;
+         `style="fill:${cv.c};font-family:'JetBrains Mono','JetBrains Mono Fallback',monospace;font-size:12px;font-weight:600">${esc(name)}</text>`;
   });
   return svgWrap(W, H, s);
 }

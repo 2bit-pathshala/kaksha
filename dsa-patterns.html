@@ -3,32 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <script>
+    /* set the theme before first paint so dark mode never flashes light */
+    (function () { try { var s = localStorage.getItem("dsa-theme");
+      if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
+        document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
+  </script>
   <title>DSA Patterns — LeetCode Roadmap</title>
   <meta name="description" content="A structured DSA patterns roadmap: topics, patterns, and curated Easy/Medium/Hard LeetCode problems." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" />
-  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
+  <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
   <style>
     :root {
-      --bg:#f4f5fb; --surface:#ffffff; --surface-2:#f0f2f9; --text:#1e2230; --muted:#6b7280;
-      --primary:#F0540C; --primary-2:#F5A623; --primary-soft:#FDECE1; --border:#e7e9f2;
-      --accent:#0ea5b7; --accent-soft:#e2f6f8;
+      --bg:#f4f5fb; --surface:#ffffff; --surface-2:#f0f2f9; --text:#1e2230; --muted:#666d7a;
+      --primary:#F0540C; --primary-ink:#bc4209; --primary-2:#F5A623; --primary-soft:#FDECE1; --border:#e7e9f2;
+      --accent:#0ea5b7; --accent-ink:#0a7683; --accent-soft:#e2f6f8;
       --e:#15a349; --e-bg:#e4f8ec; --m:#e08600; --m-bg:#fdf1dc; --h:#e23b52; --h-bg:#fdeaed;
       --shadow:0 10px 30px rgba(30,34,48,.08); --shadow-sm:0 2px 8px rgba(30,34,48,.05);
       --code-bg:#0d1117; --code-bar:#161b22; --radius:16px;
     }
     [data-theme="dark"] {
       --bg:#0a0b11; --surface:#14161f; --surface-2:#1a1d28; --text:#e7eaf3; --muted:#9aa2b6;
-      --primary:#F5A623; --primary-2:#F7B84E; --primary-soft:#2A180E; --border:#252938;
-      --accent:#2dd4d4; --accent-soft:#0e2a2c;
+      --primary:#F5A623; --primary-ink:var(--primary); --primary-2:#F7B84E; --primary-soft:#2A180E; --border:#252938;
+      --accent:#2dd4d4; --accent-ink:var(--accent); --accent-soft:#0e2a2c;
       --e:#4ade80; --e-bg:#0f3320; --m:#fbbf24; --m-bg:#392b07; --h:#fb7185; --h-bg:#3a1520;
       --shadow:0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 2px 10px rgba(0,0,0,.4);
       --code-bg:#0d1117; --code-bar:#161b22;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15.5px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+    body { font-family: "Inter", "Inter Fallback", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15.5px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
 
     header.top {
       position: sticky; top: 0; z-index: 20;
@@ -38,7 +45,7 @@
     }
     .top-row { max-width: 980px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .brand { font-weight: 800; font-size: 1.2rem; letter-spacing: -.01em; }
-    .brand span { color: var(--primary); }
+    .brand span { color: var(--primary-ink); }
     .credit { font-size: .78rem; color: var(--muted); }
     .spacer { flex: 1; }
     .search { flex: 1 1 220px; min-width: 180px; position: relative; }
@@ -53,7 +60,7 @@
       color: var(--text); font-size: .84rem; font-weight: 600; cursor: pointer; white-space: nowrap; text-decoration: none;
       transition: border-color .15s, color .15s, transform .15s;
     }
-    .btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+    .btn:hover { border-color: var(--primary); color: var(--primary-ink); transform: translateY(-1px); }
 
     .wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px; }
     .intro { color: var(--muted); font-size: .95rem; margin-bottom: 18px; line-height: 1.7; }
@@ -72,7 +79,7 @@
     .topic > summary::after { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 4px; background: linear-gradient(var(--primary), var(--accent)); }
     .topic > summary { padding-left: 22px; }
     .count { font-size: .72rem; color: var(--muted); font-weight: 500; margin-left: auto; }
-    .study-link { margin-left: auto; font-size: .76rem; font-weight: 700; color: var(--primary); text-decoration: none; padding: 5px 13px; border: 1px solid var(--border); border-radius: 99px; transition: background .15s, border-color .15s; }
+    .study-link { margin-left: auto; font-size: .76rem; font-weight: 700; color: var(--primary-ink); text-decoration: none; padding: 5px 13px; border: 1px solid var(--border); border-radius: 99px; transition: background .15s, border-color .15s; }
     .study-link:hover { border-color: var(--primary); background: var(--primary-soft); }
 
     /* nested patterns */
@@ -94,39 +101,41 @@
       background: var(--surface); font-size: .86rem; color: var(--text); transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
     }
     .prob:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: var(--shadow-sm); }
-    .tag { font-family: "JetBrains Mono", monospace; font-size: .66rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
+    .tag { font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace; font-size: .66rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
     .tag.E { color: var(--e); background: var(--e-bg); }
     .tag.M { color: var(--m); background: var(--m-bg); }
     .tag.H { color: var(--h); background: var(--h-bg); }
-    .p-num { font-family: "JetBrains Mono", monospace; font-size: .74rem; color: var(--muted); }
-    .p-num.gfg { color: #2f8d46; font-weight: 700; }
-    .p-num.am { color: #22c55e; font-weight: 700; }
+    .p-num { font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace; font-size: .74rem; color: var(--muted); }
+    .p-num.gfg { color: #297b3d; font-weight: 700; }
+    .p-num.am { color: #167d3c; font-weight: 700; }
 
     /* hints, notes, code */
     .hint { font-size: .9rem; color: var(--text); background: var(--accent-soft); border-radius: 10px; padding: 11px 14px; margin: 6px 0 12px; line-height: 1.6; }
     .hint b { font-weight: 700; }
     .note { font-size: .9rem; color: var(--muted); margin: 6px 0 10px; line-height: 1.7; }
     .note b { color: var(--text); }
-    .note code, .inline-code { font-family: "JetBrains Mono", monospace; font-size: .82rem; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; color: var(--primary); }
+    .note code, .inline-code { font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace; font-size: .82rem; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; color: var(--primary-ink); }
     .codewrap { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 8px 0 14px; box-shadow: var(--shadow-sm); }
     .codebar { display: flex; align-items: center; gap: 7px; padding: 9px 14px; background: var(--code-bar); border-bottom: 1px solid #21262d; }
     .codebar .dot { width: 11px; height: 11px; border-radius: 50%; }
-    .codebar .lang { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: .7rem; color: #8b949e; letter-spacing: .04em; }
-    pre.code { margin: 0; background: var(--code-bg); color: #c9d1d9; padding: 15px 17px; font-family: "JetBrains Mono", monospace; font-size: .82rem; line-height: 1.7; overflow-x: auto; white-space: pre; }
+    .codebar .lang { margin-left: auto; font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace; font-size: .7rem; color: #8b949e; letter-spacing: .04em; }
+    pre.code { margin: 0; background: var(--code-bg); color: #c9d1d9; padding: 15px 17px; font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace; font-size: .82rem; line-height: 1.7; overflow-x: auto; white-space: pre; }
     pre.code code { background: none !important; padding: 0; font-size: inherit; }
 
     .hidden { display: none !important; }
     footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 32px 20px 54px; }
-    footer a { color: var(--primary); }
+    footer a { color: var(--primary-ink); }
     @media (max-width: 560px) { body { font-size: 15px; } }
       header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
+      /* site badges: each colour nudged until it clears 4.5:1, darker on light, lighter on dark */
+    [data-theme="dark"] .p-num.gfg{color:#419756} [data-theme="dark"] .p-num.am{color:#22c55e}
   </style>
 </head>
 <body>
   <header class="top">
     <div class="top-row">
       <div>
-        <div class="brand">DSA <span>Patterns</span></div>
+        <h1 class="brand">DSA <span>Patterns</span></h1>
         <div class="credit">Roadmap · curated LeetCode problems</div>
       </div>
       <div class="spacer"></div>
@@ -140,13 +149,13 @@
     </div>
   </header>
 
-  <div class="wrap">
+  <main class="wrap">
     <p class="intro">
       Click a topic to expand. Each pattern lists a curated <strong>Easy</strong>, <strong>Medium</strong>, and <strong>Hard</strong>
       problem linking directly to LeetCode.
     </p>
     <div id="tree"></div>
-  </div>
+  </main>
 
   <footer>
     Built for focused DSA prep · problems open on <a href="https://leetcode.com" target="_blank" rel="noopener">LeetCode</a> · <a href="index.html">2BIT Pathshala</a>

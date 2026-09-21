@@ -3,36 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <script>
+    /* set the theme before first paint so dark mode never flashes light */
+    (function () { try { var s = localStorage.getItem("dsa-theme");
+      if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
+        document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
+  </script>
   <title>DSA one-day sheet — Deep Revision Notes</title>
   <meta name="description" content="In-depth DSA revision: key properties, sub-topics, Python templates, diagrams, and must-know algorithms." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="css/fonts.css" />
   <style>
     :root{
       --bg:#f5f6fa; --surface:#fff; --surface2:#eef1f7; --text:#161a23; --muted:#5a6273;
-      --primary:#F0540C; --primary-soft:#FDECE1; --border:#e5e8f0; --accent:#0ea5e9; --accent-soft:#e0f2fe;
+      --primary:#F0540C; --primary-ink:#bc4209; --primary-soft:#FDECE1; --border:#e5e8f0; --accent:#0ea5e9; --accent-ink:#0a71a0; --accent-soft:#e0f2fe;
       --e:#16a34a; --m:#d97706; --h:#dc2626; --shadow:0 6px 22px rgba(16,19,28,.07);
     }
     [data-theme="dark"]{
       --bg:#0b0d13; --surface:#14171f; --surface2:#1b1f2b; --text:#e4e8f1; --muted:#98a1b4;
-      --primary:#F5A623; --primary-soft:#2A180E; --border:#242a38; --accent:#38bdf8; --accent-soft:#0c2b3a;
+      --primary:#F5A623; --primary-ink:var(--primary); --primary-soft:#2A180E; --border:#242a38; --accent:#38bdf8; --accent-ink:var(--accent); --accent-soft:#0c2b3a;
       --e:#4ade80; --m:#fbbf24; --h:#f87171; --shadow:0 6px 22px rgba(0,0,0,.4);
     }
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;scroll-padding-top:96px}
-    body{font-family:"Inter",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+    body{font-family:"Inter","Inter Fallback",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
 
     header.bar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
     .bar-in{max-width:1120px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .logo{font-weight:800;font-size:1.05rem}.logo span{color:var(--primary)}
+    .logo{font-weight:800;font-size:1.05rem}.logo span{color:var(--primary-ink)}
     .sub{font-size:.75rem;color:var(--muted)}
     .bar .sp{flex:1}
     .btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.8rem;font-weight:600;cursor:pointer;text-decoration:none}
-    .btn:hover{border-color:var(--primary);color:var(--primary)}
+    .btn:hover{border-color:var(--primary);color:var(--primary-ink)}
     .toc{max-width:1120px;margin:0 auto;padding:6px 18px 12px;display:flex;flex-wrap:wrap;gap:6px}
     .toc a{font-size:.75rem;padding:4px 10px;border-radius:99px;background:var(--surface2);color:var(--muted);text-decoration:none;border:1px solid transparent}
-    .toc a:hover{color:var(--primary);border-color:var(--primary)}
+    .toc a:hover{color:var(--primary-ink);border-color:var(--primary)}
 
     main{max-width:1120px;margin:0 auto;padding:18px}
     .hero{padding:10px 4px 16px}
@@ -46,39 +53,39 @@
 
     .prop{font-size:.85rem;background:var(--accent-soft);border-left:3px solid var(--accent);padding:8px 11px;border-radius:7px;margin:10px 0}
     .prop b{color:var(--text)}
-    .prop .lbl{display:inline-block;font-weight:700;color:var(--accent);margin-right:6px}
+    .prop .lbl{display:inline-block;font-weight:700;color:var(--accent-ink);margin-right:6px}
 
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
     /* a grid item is min-width:auto, so a wide table inside one would refuse
        to shrink and drag the whole page past the viewport */
     .grid>*{min-width:0}
     @media(max-width:820px){.grid{grid-template-columns:1fr}}
-    h3.blk{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin:14px 0 8px}
+    h3.blk{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--primary-ink);margin:14px 0 8px}
     h3.blk:first-child{margin-top:2px}
 
     ul.pts{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:.88rem}
     ul.pts li{padding-left:16px;position:relative}
-    ul.pts li::before{content:"▹";position:absolute;left:0;color:var(--accent)}
+    ul.pts li::before{content:"▹";position:absolute;left:0;color:var(--accent-ink)}
     ul.pts b{color:var(--text)}
     .muted{color:var(--muted)}
 
-    pre{font-family:"JetBrains Mono",monospace;font-size:.75rem;line-height:1.5;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 13px;overflow-x:auto;white-space:pre;color:var(--text)}
+    pre{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.75rem;line-height:1.5;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 13px;overflow-x:auto;white-space:pre;color:var(--text)}
     pre.dia{color:var(--muted);font-size:.72rem}
-    code.k{font-family:"JetBrains Mono",monospace;font-size:.82rem;background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--primary)}
+    code.k{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.82rem;background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--primary-ink)}
 
     /* fixed layout so the columns come from the container, not from the widest
        cell, and long identifiers break instead of pushing the table wider */
     table.cx{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px;table-layout:fixed}
     table.cx th,table.cx td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;overflow-wrap:break-word}
     table.cx th{color:var(--muted);font-weight:600}
-    .tag{font-family:"JetBrains Mono",monospace;font-size:.68rem;padding:2px 6px;border-radius:5px;font-weight:600}
-    .tag.O{background:var(--primary-soft);color:var(--primary)}
+    .tag{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.68rem;padding:2px 6px;border-radius:5px;font-weight:600}
+    .tag.O{background:var(--primary-soft);color:var(--primary-ink)}
 
     .tip{font-size:.85rem;background:var(--surface2);border-radius:9px;padding:10px 12px;margin-top:10px}
-    .tip b{color:var(--accent)}
+    .tip b{color:var(--accent-ink)}
 
     footer{text-align:center;color:var(--muted);font-size:.8rem;padding:26px 18px 50px}
-    footer a{color:var(--primary)}
+    footer a{color:var(--primary-ink)}
 
     @media print{
       header.bar,.toc,.btn{display:none}
