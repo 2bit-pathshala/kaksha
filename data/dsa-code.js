@@ -1300,8 +1300,18 @@ function longestConsecutive(nums) {
 }`,
       },
 
-      "Next Greater / Smaller":
-`# O(n) time · O(n) space — monotonic stack; each index pushed/popped once
+      "Next Greater / Smaller": {
+        pseudo:
+`next greater element to the right of each item. O(n).
+  res = all -1
+  st = stack of indices, values decreasing
+  for i, x in the array
+    while st not empty and a[st.top] < x
+      res[st.pop] = x        # x is the next greater for that index
+    push i
+  return res`,
+        py:
+`# O(n) time · O(n) space, monotonic stack; each index pushed/popped once
 def next_greater(a):
     res = [-1]*len(a); st = []       # indices, decreasing
     for i, x in enumerate(a):
@@ -1309,8 +1319,55 @@ def next_greater(a):
             res[st.pop()] = x
         st.append(i)
     return res`,
-      "Histogram / Spans":
-`# O(n) time · O(n) space — stack gives nearest-smaller left/right bounds
+        java:
+`// O(n) time, O(n) space: each index is pushed and popped once
+int[] nextGreater(int[] a) {
+    int n = a.length; int[] res = new int[n];
+    Arrays.fill(res, -1);
+    Deque<Integer> st = new ArrayDeque<>();   // indices, decreasing
+    for (int i = 0; i < n; i++) {
+        while (!st.isEmpty() && a[st.peek()] < a[i]) res[st.pop()] = a[i];
+        st.push(i);
+    }
+    return res;
+}`,
+        cpp:
+`// O(n) time, O(n) space: each index is pushed and popped once
+vector<int> nextGreater(vector<int>& a) {
+    int n = a.size(); vector<int> res(n, -1);
+    stack<int> st;                            // indices, decreasing
+    for (int i = 0; i < n; i++) {
+        while (!st.empty() && a[st.top()] < a[i]) { res[st.top()] = a[i]; st.pop(); }
+        st.push(i);
+    }
+    return res;
+}`,
+        js:
+`// O(n) time, O(n) space: each index is pushed and popped once
+function nextGreater(a) {
+  const res = new Array(a.length).fill(-1);
+  const st = [];                            // indices, decreasing
+  for (let i = 0; i < a.length; i++) {
+    while (st.length && a[st[st.length - 1]] < a[i]) res[st.pop()] = a[i];
+    st.push(i);
+  }
+  return res;
+}`,
+      },
+      "Histogram / Spans": {
+        pseudo:
+`largest rectangle in a histogram. O(n) with a stack.
+  append a 0-height bar to flush the stack at the end
+  st = stack of indices, heights increasing
+  for i, x in heights
+    while st and h[st.top] >= x
+      height = h[st.pop]
+      width = i if st empty else i - st.top - 1
+      best = max(best, height * width)
+    push i
+  return best`,
+        py:
+`# O(n) time · O(n) space, stack gives nearest-smaller left/right bounds
 def largest_rectangle(h):
     h.append(0); st = []; best = 0
     for i, x in enumerate(h):
@@ -1320,8 +1377,64 @@ def largest_rectangle(h):
             best = max(best, ht*w)
         st.append(i)
     return best`,
-      "Design (Min/Max stack, queues, cache)":
-`# O(1) per op · O(n) space — store running min alongside each value
+        java:
+`// O(n) time, O(n) space: stack gives nearest-smaller bounds each side
+int largestRectangle(int[] h0) {
+    int n = h0.length;
+    int[] h = Arrays.copyOf(h0, n + 1);       // trailing 0 flushes stack
+    Deque<Integer> st = new ArrayDeque<>();
+    int best = 0;
+    for (int i = 0; i <= n; i++) {
+        while (!st.isEmpty() && h[st.peek()] >= h[i]) {
+            int ht = h[st.pop()];
+            int w = st.isEmpty() ? i : i - st.peek() - 1;
+            best = Math.max(best, ht * w);
+        }
+        st.push(i);
+    }
+    return best;
+}`,
+        cpp:
+`// O(n) time, O(n) space: stack gives nearest-smaller bounds each side
+int largestRectangle(vector<int> h) {
+    h.push_back(0);                           // trailing 0 flushes stack
+    stack<int> st; int best = 0;
+    for (int i = 0; i < (int)h.size(); i++) {
+        while (!st.empty() && h[st.top()] >= h[i]) {
+            int ht = h[st.top()]; st.pop();
+            int w = st.empty() ? i : i - st.top() - 1;
+            best = max(best, ht * w);
+        }
+        st.push(i);
+    }
+    return best;
+}`,
+        js:
+`// O(n) time, O(n) space: stack gives nearest-smaller bounds each side
+function largestRectangle(h) {
+  h = [...h, 0];                             // trailing 0 flushes stack
+  const st = []; let best = 0;
+  for (let i = 0; i < h.length; i++) {
+    while (st.length && h[st[st.length - 1]] >= h[i]) {
+      const ht = h[st.pop()];
+      const w = st.length ? i - st[st.length - 1] - 1 : i;
+      best = Math.max(best, ht * w);
+    }
+    st.push(i);
+  }
+  return best;
+}`,
+      },
+      "Design (Min/Max stack, queues, cache)": {
+        pseudo:
+`a stack that also returns its minimum in O(1).
+  each entry stores (value, min-so-far)
+  push x -> m = min(x, current min); push (x, m)
+  pop    -> remove the top entry
+  top    -> value of the top entry
+  getMin -> min-so-far of the top entry`,
+        py:
+`# O(1) per op · O(n) space, store running min alongside each value
 class MinStack:                  # push (val, running_min)
     def __init__(self): self.st = []
     def push(self, x):
@@ -1330,8 +1443,55 @@ class MinStack:                  # push (val, running_min)
     def pop(self): self.st.pop()
     def top(self): return self.st[-1][0]
     def getMin(self): return self.st[-1][1]`,
-      "Expression Handling":
-`# O(n) time · O(n) space — stack matches each closer to its opener
+        java:
+`// O(1) per op, O(n) space: store the running min beside each value
+class MinStack {
+    private Deque<int[]> st = new ArrayDeque<>();  // {value, runningMin}
+    void push(int x) {
+        int m = st.isEmpty() ? x : Math.min(x, st.peek()[1]);
+        st.push(new int[]{x, m});
+    }
+    void pop() { st.pop(); }
+    int top() { return st.peek()[0]; }
+    int getMin() { return st.peek()[1]; }
+}`,
+        cpp:
+`// O(1) per op, O(n) space: store the running min beside each value
+class MinStack {
+    stack<pair<int,int>> st;   // {value, runningMin}
+public:
+    void push(int x) {
+        int m = st.empty() ? x : min(x, st.top().second);
+        st.push({x, m});
+    }
+    void pop() { st.pop(); }
+    int top() { return st.top().first; }
+    int getMin() { return st.top().second; }
+};`,
+        js:
+`// O(1) per op, O(n) space: store the running min beside each value
+class MinStack {
+  constructor() { this.st = []; }            // [value, runningMin]
+  push(x) {
+    const m = this.st.length ? Math.min(x, this.st.at(-1)[1]) : x;
+    this.st.push([x, m]);
+  }
+  pop() { this.st.pop(); }
+  top() { return this.st.at(-1)[0]; }
+  getMin() { return this.st.at(-1)[1]; }
+}`,
+      },
+      "Expression Handling": {
+        pseudo:
+`valid parentheses? Every closer matches the latest opener. O(n).
+  st = empty stack; pairs = { ')':'(' , ']':'[' , '}':'{' }
+  for c in s
+    if c is a closer
+      if st empty or st.pop != pairs[c] -> return false
+    else push c
+  return st is empty`,
+        py:
+`# O(n) time · O(n) space, stack matches each closer to its opener
 def valid(s):
     st = []; pair = {')':'(', ']':'[', '}':'{'}
     for c in s:
@@ -1339,8 +1499,55 @@ def valid(s):
             if not st or st.pop() != pair[c]: return False
         else: st.append(c)
     return not st`,
-      "Monotonic Deque (window extremes)":
-`# O(n) time · O(k) space — deque keeps indices in decreasing value order
+        java:
+`// O(n) time, O(n) space: stack matches each closer to its opener
+boolean valid(String s) {
+    Deque<Character> st = new ArrayDeque<>();
+    Map<Character,Character> pair = Map.of(')','(', ']','[', '}','{');
+    for (char c : s.toCharArray()) {
+        if (pair.containsKey(c)) {
+            if (st.isEmpty() || st.pop() != pair.get(c)) return false;
+        } else st.push(c);
+    }
+    return st.isEmpty();
+}`,
+        cpp:
+`// O(n) time, O(n) space: stack matches each closer to its opener
+bool valid(string s) {
+    stack<char> st;
+    unordered_map<char,char> pair{{')','('},{']','['},{'}','{'}};
+    for (char c : s) {
+        if (pair.count(c)) {
+            if (st.empty() || st.top() != pair[c]) return false;
+            st.pop();
+        } else st.push(c);
+    }
+    return st.empty();
+}`,
+        js:
+`// O(n) time, O(n) space: stack matches each closer to its opener
+function valid(s) {
+  const st = [];
+  const pair = { ')': '(', ']': '[', '}': '{' };
+  for (const c of s) {
+    if (c in pair) {
+      if (!st.length || st.pop() !== pair[c]) return false;
+    } else st.push(c);
+  }
+  return st.length === 0;
+}`,
+      },
+      "Monotonic Deque (window extremes)": {
+        pseudo:
+`maximum of every window of size k. O(n) with a deque of indices.
+  dq = deque of indices, values decreasing
+  for i, x in the array
+    while dq and a[dq.back] <= x -> pop back    # smaller, useless
+    push i to the back
+    if dq.front <= i-k -> pop front              # slid out of window
+    if i >= k-1 -> record a[dq.front] as this window's max`,
+        py:
+`# O(n) time · O(k) space, deque keeps indices in decreasing value order
 from collections import deque
 def window_max(a, k):
     dq, res = deque(), []           # indices, decreasing
@@ -1350,6 +1557,44 @@ def window_max(a, k):
         if dq[0] <= i-k: dq.popleft()
         if i >= k-1: res.append(a[dq[0]])
     return res`,
+        java:
+`// O(n) time, O(k) space: deque holds indices in decreasing value order
+int[] windowMax(int[] a, int k) {
+    Deque<Integer> dq = new ArrayDeque<>();   // indices, decreasing
+    int[] res = new int[a.length - k + 1];
+    for (int i = 0; i < a.length; i++) {
+        while (!dq.isEmpty() && a[dq.peekLast()] <= a[i]) dq.pollLast();
+        dq.addLast(i);
+        if (dq.peekFirst() <= i - k) dq.pollFirst();
+        if (i >= k - 1) res[i - k + 1] = a[dq.peekFirst()];
+    }
+    return res;
+}`,
+        cpp:
+`// O(n) time, O(k) space: deque holds indices in decreasing value order
+vector<int> windowMax(vector<int>& a, int k) {
+    deque<int> dq; vector<int> res;           // indices, decreasing
+    for (int i = 0; i < (int)a.size(); i++) {
+        while (!dq.empty() && a[dq.back()] <= a[i]) dq.pop_back();
+        dq.push_back(i);
+        if (dq.front() <= i - k) dq.pop_front();
+        if (i >= k - 1) res.push_back(a[dq.front()]);
+    }
+    return res;
+}`,
+        js:
+`// O(n) time, O(k) space: deque holds indices in decreasing value order
+function windowMax(a, k) {
+  const dq = [], res = [];                   // indices, decreasing
+  for (let i = 0; i < a.length; i++) {
+    while (dq.length && a[dq[dq.length - 1]] <= a[i]) dq.pop();
+    dq.push(i);
+    if (dq[0] <= i - k) dq.shift();
+    if (i >= k - 1) res.push(a[dq[0]]);
+  }
+  return res;
+}`,
+      },
 
       "Fast-Slow Pointers":
 `# O(n) time · O(1) space — fast moves 2x, slow 1x
