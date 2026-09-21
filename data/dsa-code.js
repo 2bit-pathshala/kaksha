@@ -1801,13 +1801,55 @@ function removeNthFromEnd(head, n) {
 }`,
       },
 
-      "Traversals":
+      "Traversals": {
+        pseudo:
+`inorder traversal: Left, Node, Right. O(n) time, O(h) space.
+  visit(node):
+    if node is null -> return
+    visit(node.left)
+    output node.val        # a BST visited inorder comes out sorted
+    visit(node.right)`,
+        py:
 `# O(n) time · O(h) space (recursion stack, h = height)
 def inorder(n, out):            # L, Node, R  (BST -> sorted)
     if not n: return
     inorder(n.left, out); out.append(n.val); inorder(n.right, out)`,
-      "BFS / Views":
-`# O(n) time · O(w) space (w = max level width) — level-order BFS
+        java:
+`// O(n) time, O(h) space (recursion stack, h = height)
+void inorder(TreeNode n, List<Integer> out) {   // L, Node, R
+    if (n == null) return;
+    inorder(n.left, out);
+    out.add(n.val);
+    inorder(n.right, out);
+}`,
+        cpp:
+`// O(n) time, O(h) space (recursion stack, h = height)
+void inorder(TreeNode* n, vector<int>& out) {    // L, Node, R
+    if (!n) return;
+    inorder(n->left, out);
+    out.push_back(n->val);
+    inorder(n->right, out);
+}`,
+        js:
+`// O(n) time, O(h) space (recursion stack, h = height)
+function inorder(n, out) {                        // L, Node, R
+  if (!n) return;
+  inorder(n.left, out);
+  out.push(n.val);
+  inorder(n.right, out);
+}`,
+      },
+      "BFS / Views": {
+        pseudo:
+`right side view: the last node on each level. O(n).
+  q = queue holding the root
+  while q not empty
+    take the current level size
+    pop that many, pushing each node's children
+    the last one popped is the one visible from the right
+  collect those`,
+        py:
+`# O(n) time · O(w) space (w = max level width), level-order BFS
 from collections import deque
 def right_view(root):
     res, q = [], deque([root] if root else [])
@@ -1819,8 +1861,67 @@ def right_view(root):
             if n.right: q.append(n.right)
         res.append(n.val)           # last node of the level
     return res`,
-      "Properties (height/diameter/balanced)":
-`# O(n) time · O(h) space — post-order returns depth, updates best
+        java:
+`// O(n) time, O(w) space (w = max level width): last node per level
+List<Integer> rightView(TreeNode root) {
+    List<Integer> res = new ArrayList<>();
+    Queue<TreeNode> q = new LinkedList<>();
+    if (root != null) q.add(root);
+    while (!q.isEmpty()) {
+        int size = q.size(); TreeNode n = null;
+        for (int i = 0; i < size; i++) {
+            n = q.poll();
+            if (n.left != null) q.add(n.left);
+            if (n.right != null) q.add(n.right);
+        }
+        res.add(n.val);       // last node of the level
+    }
+    return res;
+}`,
+        cpp:
+`// O(n) time, O(w) space (w = max level width): last node per level
+vector<int> rightView(TreeNode* root) {
+    vector<int> res; queue<TreeNode*> q;
+    if (root) q.push(root);
+    while (!q.empty()) {
+        int size = q.size(); TreeNode* n = nullptr;
+        for (int i = 0; i < size; i++) {
+            n = q.front(); q.pop();
+            if (n->left) q.push(n->left);
+            if (n->right) q.push(n->right);
+        }
+        res.push_back(n->val);   // last node of the level
+    }
+    return res;
+}`,
+        js:
+`// O(n) time, O(w) space (w = max level width): last node per level
+function rightView(root) {
+  const res = [], q = root ? [root] : [];
+  while (q.length) {
+    const size = q.length; let n = null;
+    for (let i = 0; i < size; i++) {
+      n = q.shift();
+      if (n.left) q.push(n.left);
+      if (n.right) q.push(n.right);
+    }
+    res.push(n.val);            // last node of the level
+  }
+  return res;
+}`,
+      },
+      "Properties (height/diameter/balanced)": {
+        pseudo:
+`diameter: the longest path in edges between any two nodes.
+  best = 0
+  depth(node):
+    if null -> return 0
+    L = depth(node.left), R = depth(node.right)
+    best = max(best, L + R)      # a path bending at this node
+    return 1 + max(L, R)         # depth handed up to the parent
+  run depth(root); return best`,
+        py:
+`# O(n) time · O(h) space, post-order returns depth, updates best
 def diameter(root):
     best = 0
     def depth(n):
@@ -1830,8 +1931,53 @@ def diameter(root):
         best = max(best, L + R)
         return 1 + max(L, R)
     depth(root); return best`,
-      "Path Problems":
-`# O(n) time · O(h) space — each node returns best downward gain
+        java:
+`// O(n) time, O(h) space: post-order returns depth, updates best
+int best = 0;
+int diameter(TreeNode root) { best = 0; depth(root); return best; }
+int depth(TreeNode n) {
+    if (n == null) return 0;
+    int L = depth(n.left), R = depth(n.right);
+    best = Math.max(best, L + R);
+    return 1 + Math.max(L, R);
+}`,
+        cpp:
+`// O(n) time, O(h) space: post-order returns depth, updates best
+int best = 0;
+int depth(TreeNode* n) {
+    if (!n) return 0;
+    int L = depth(n->left), R = depth(n->right);
+    best = max(best, L + R);
+    return 1 + max(L, R);
+}
+int diameter(TreeNode* root) { best = 0; depth(root); return best; }`,
+        js:
+`// O(n) time, O(h) space: post-order returns depth, updates best
+function diameter(root) {
+  let best = 0;
+  const depth = n => {
+    if (!n) return 0;
+    const L = depth(n.left), R = depth(n.right);
+    best = Math.max(best, L + R);
+    return 1 + Math.max(L, R);
+  };
+  depth(root);
+  return best;
+}`,
+      },
+      "Path Problems": {
+        pseudo:
+`max path sum: a path may bend once, at its highest node.
+  best = -infinity
+  gain(node):
+    if null -> return 0
+    L = max(gain(node.left), 0)      # drop negative branches
+    R = max(gain(node.right), 0)
+    best = max(best, node.val + L + R)   # path bending here
+    return node.val + max(L, R)          # straight gain for parent
+  run gain(root); return best`,
+        py:
+`# O(n) time · O(h) space, each node returns best downward gain
 def max_path_sum(root):
     best = float('-inf')
     def gain(n):
@@ -1841,12 +1987,82 @@ def max_path_sum(root):
         best = max(best, n.val + L + R)  # path through n
         return n.val + max(L, R)         # best downward
     gain(root); return best`,
-      "Structure (symmetry / invert / connect)":
-`# O(n) time · O(h) space — swap children recursively
+        java:
+`// O(n) time, O(h) space: each node returns its best downward gain
+int best = Integer.MIN_VALUE;
+int maxPathSum(TreeNode root) { best = Integer.MIN_VALUE; gain(root); return best; }
+int gain(TreeNode n) {
+    if (n == null) return 0;
+    int L = Math.max(gain(n.left), 0), R = Math.max(gain(n.right), 0);
+    best = Math.max(best, n.val + L + R);   // path through n
+    return n.val + Math.max(L, R);          // best straight-down
+}`,
+        cpp:
+`// O(n) time, O(h) space: each node returns its best downward gain
+int best = INT_MIN;
+int gain(TreeNode* n) {
+    if (!n) return 0;
+    int L = max(gain(n->left), 0), R = max(gain(n->right), 0);
+    best = max(best, n->val + L + R);       // path through n
+    return n->val + max(L, R);              // best straight-down
+}
+int maxPathSum(TreeNode* root) { best = INT_MIN; gain(root); return best; }`,
+        js:
+`// O(n) time, O(h) space: each node returns its best downward gain
+function maxPathSum(root) {
+  let best = -Infinity;
+  const gain = n => {
+    if (!n) return 0;
+    const L = Math.max(gain(n.left), 0), R = Math.max(gain(n.right), 0);
+    best = Math.max(best, n.val + L + R);   // path through n
+    return n.val + Math.max(L, R);          // best straight-down
+  };
+  gain(root);
+  return best;
+}`,
+      },
+      "Structure (symmetry / invert / connect)": {
+        pseudo:
+`invert a binary tree (mirror it left-to-right). O(n).
+  invert(node):
+    if null -> return null
+    swap node.left and node.right
+    invert both children
+    return node`,
+        py:
+`# O(n) time · O(h) space, swap children recursively
 def invert(n):
     if not n: return None
     n.left, n.right = invert(n.right), invert(n.left)
     return n`,
+        java:
+`// O(n) time, O(h) space: swap children recursively
+TreeNode invert(TreeNode n) {
+    if (n == null) return null;
+    TreeNode t = n.left;
+    n.left = invert(n.right);
+    n.right = invert(t);
+    return n;
+}`,
+        cpp:
+`// O(n) time, O(h) space: swap children recursively
+TreeNode* invert(TreeNode* n) {
+    if (!n) return nullptr;
+    TreeNode* t = n->left;
+    n->left = invert(n->right);
+    n->right = invert(t);
+    return n;
+}`,
+        js:
+`// O(n) time, O(h) space: swap children recursively
+function invert(n) {
+  if (!n) return null;
+  const t = n.left;
+  n.left = invert(n.right);
+  n.right = invert(t);
+  return n;
+}`,
+      },
       "Construction & Serialize (Striver)":
 `# O(n) time · O(n) space — index map avoids rescanning inorder
 def build(preorder, inorder):
