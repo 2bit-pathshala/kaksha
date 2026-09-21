@@ -4058,8 +4058,14 @@ function countingSort(a, k) {
 }`,
       },
 
-      "Fenwick Tree (BIT)":
-`# O(log n) per update/query · O(n) space — i & -i jumps by lowest set bit
+      "Fenwick Tree (BIT)": {
+        pseudo:
+`Fenwick tree (BIT): O(log n) prefix sums with point updates. 1-indexed.
+  i & -i isolates the lowest set bit (the jump size).
+  update(i, delta): add delta at i, then i += i & -i  (walk up)
+  query(i): running sum, then i -= i & -i  (walk down to 0)`,
+        py:
+`# O(log n) per update/query · O(n) space, i & -i jumps by lowest set bit
 class BIT:                      # 1-indexed
     def __init__(self, n): self.t = [0]*(n+1)
     def update(self, i, delta):
@@ -4068,8 +4074,57 @@ class BIT:                      # 1-indexed
         s = 0
         while i > 0: s += self.t[i]; i -= i & -i
         return s`,
-      "Segment Tree (+ Lazy)":
-`# O(n) build · O(log n) update/query · O(n) space — iterative, 2n array
+        java:
+`// O(log n) per op: i & -i jumps by the lowest set bit. 1-indexed.
+class BIT {
+    int[] t;
+    BIT(int n) { t = new int[n + 1]; }
+    void update(int i, int delta) {
+        for (; i < t.length; i += i & -i) t[i] += delta;
+    }
+    int query(int i) {                     // prefix sum [1..i]
+        int s = 0;
+        for (; i > 0; i -= i & -i) s += t[i];
+        return s;
+    }
+}`,
+        cpp:
+`// O(log n) per op: i & -i jumps by the lowest set bit. 1-indexed.
+struct BIT {
+    vector<int> t;
+    BIT(int n) : t(n + 1, 0) {}
+    void update(int i, int delta) {
+        for (; i < (int)t.size(); i += i & -i) t[i] += delta;
+    }
+    int query(int i) {                     // prefix sum [1..i]
+        int s = 0;
+        for (; i > 0; i -= i & -i) s += t[i];
+        return s;
+    }
+};`,
+        js:
+`// O(log n) per op: i & -i jumps by the lowest set bit. 1-indexed.
+class BIT {
+  constructor(n) { this.t = new Array(n + 1).fill(0); }
+  update(i, delta) {
+    for (; i < this.t.length; i += i & -i) this.t[i] += delta;
+  }
+  query(i) {                               // prefix sum [1..i]
+    let s = 0;
+    for (; i > 0; i -= i & -i) s += this.t[i];
+    return s;
+  }
+}`,
+      },
+      "Segment Tree (+ Lazy)": {
+        pseudo:
+`iterative segment tree: build O(n), update/query O(log n). Range sum.
+  leaves sit at [n, 2n); each internal node = sum of its two children.
+  build: fill the leaves, then set t[i] = t[2i] + t[2i+1] downward.
+  update(i, val): set the leaf, then walk to the root recomputing parents.
+  query(l, r) over [l, r): climb, add the odd boundaries, halve l and r.`,
+        py:
+`# O(n) build · O(log n) update/query · O(n) space, iterative, 2n array
 class SegTree:                  # range sum, point update
     def __init__(self, a):
         self.n = len(a); self.t = [0]*(2*self.n)
@@ -4085,4 +4140,68 @@ class SegTree:                  # range sum, point update
             if r & 1: r -= 1; s += self.t[r]
             l //= 2; r //= 2
         return s`,
+        java:
+`// build O(n), update/query O(log n): 2n array, range sum + point update
+class SegTree {
+    int n; int[] t;
+    SegTree(int[] a) {
+        n = a.length; t = new int[2 * n];
+        for (int i = 0; i < n; i++) t[n + i] = a[i];
+        for (int i = n - 1; i > 0; i--) t[i] = t[2*i] + t[2*i+1];
+    }
+    void update(int i, int val) {
+        for (t[i += n] = val; i > 1; i >>= 1) t[i>>1] = t[i] + t[i^1];
+    }
+    int query(int l, int r) {              // [l, r)
+        int s = 0;
+        for (l += n, r += n; l < r; l >>= 1, r >>= 1) {
+            if ((l & 1) == 1) s += t[l++];
+            if ((r & 1) == 1) s += t[--r];
+        }
+        return s;
+    }
+}`,
+        cpp:
+`// build O(n), update/query O(log n): 2n array, range sum + point update
+struct SegTree {
+    int n; vector<int> t;
+    SegTree(vector<int>& a) : n(a.size()), t(2 * a.size(), 0) {
+        for (int i = 0; i < n; i++) t[n + i] = a[i];
+        for (int i = n - 1; i > 0; i--) t[i] = t[2*i] + t[2*i+1];
+    }
+    void update(int i, int val) {
+        for (t[i += n] = val; i > 1; i >>= 1) t[i>>1] = t[i] + t[i^1];
+    }
+    int query(int l, int r) {              // [l, r)
+        int s = 0;
+        for (l += n, r += n; l < r; l >>= 1, r >>= 1) {
+            if (l & 1) s += t[l++];
+            if (r & 1) s += t[--r];
+        }
+        return s;
+    }
+};`,
+        js:
+`// build O(n), update/query O(log n): 2n array, range sum + point update
+class SegTree {
+  constructor(a) {
+    this.n = a.length;
+    this.t = new Array(2 * this.n).fill(0);
+    for (let i = 0; i < this.n; i++) this.t[this.n + i] = a[i];
+    for (let i = this.n - 1; i > 0; i--) this.t[i] = this.t[2*i] + this.t[2*i+1];
+  }
+  update(i, val) {
+    const t = this.t;
+    for (t[i += this.n] = val; i > 1; i >>= 1) t[i>>1] = t[i] + t[i^1];
+  }
+  query(l, r) {                            // [l, r)
+    const t = this.t; let s = 0;
+    for (l += this.n, r += this.n; l < r; l >>= 1, r >>= 1) {
+      if (l & 1) s += t[l++];
+      if (r & 1) s += t[--r];
+    }
+    return s;
+  }
+}`,
+      },
     };
