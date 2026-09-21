@@ -2884,8 +2884,14 @@ class MinHeap {
 }`,
       },
 
-      "Traversal (BFS / DFS)":
-`# O(V+E) time · O(V) space — visit each vertex/edge once
+      "Traversal (BFS / DFS)": {
+        pseudo:
+`graph traversal. O(V+E). Works directed or undirected.
+  BFS(start): seen = {start}, queue = [start]
+    pop u, for each neighbor v not seen -> mark and enqueue
+  DFS(u, seen): mark u, for each neighbor v not seen -> DFS(v)`,
+        py:
+`# O(V+E) time · O(V) space, visit each vertex/edge once
 # Works on DIRECTED & UNDIRECTED graphs (adjacency list either way).
 from collections import deque
 def bfs(start, adj):
@@ -2899,6 +2905,56 @@ def dfs(u, adj, seen):
     seen.add(u)
     for v in adj[u]:
         if v not in seen: dfs(v, adj, seen)`,
+        java:
+`// O(V+E): visit each vertex and edge once. adj = adjacency list.
+void bfs(int start, List<List<Integer>> adj) {
+    boolean[] seen = new boolean[adj.size()];
+    Queue<Integer> q = new LinkedList<>();
+    seen[start] = true; q.add(start);
+    while (!q.isEmpty()) {
+        int u = q.poll();
+        for (int v : adj.get(u))
+            if (!seen[v]) { seen[v] = true; q.add(v); }
+    }
+}
+void dfs(int u, List<List<Integer>> adj, boolean[] seen) {
+    seen[u] = true;
+    for (int v : adj.get(u))
+        if (!seen[v]) dfs(v, adj, seen);
+}`,
+        cpp:
+`// O(V+E): visit each vertex and edge once. adj = adjacency list.
+void bfs(int start, vector<vector<int>>& adj) {
+    vector<bool> seen(adj.size(), false);
+    queue<int> q; seen[start] = true; q.push(start);
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        for (int v : adj[u])
+            if (!seen[v]) { seen[v] = true; q.push(v); }
+    }
+}
+void dfs(int u, vector<vector<int>>& adj, vector<bool>& seen) {
+    seen[u] = true;
+    for (int v : adj[u])
+        if (!seen[v]) dfs(v, adj, seen);
+}`,
+        js:
+`// O(V+E): visit each vertex and edge once. adj = adjacency list.
+function bfs(start, adj) {
+  const seen = new Array(adj.length).fill(false);
+  const q = [start]; seen[start] = true;
+  for (let i = 0; i < q.length; i++) {
+    const u = q[i];
+    for (const v of adj[u])
+      if (!seen[v]) { seen[v] = true; q.push(v); }
+  }
+}
+function dfs(u, adj, seen) {
+  seen[u] = true;
+  for (const v of adj[u])
+    if (!seen[v]) dfs(v, adj, seen);
+}`,
+      },
       "Cycle Detection":
 `# O(V+E) time · O(V) space (state + recursion). Method DIFFERS by graph type!
 
@@ -2942,7 +2998,17 @@ def topo(n, edges):
             indeg[v] -= 1
             if indeg[v] == 0: q.append(v)
     return order if len(order)==n else []   # [] => cycle`,
-      "Shortest Path":
+      "Shortest Path": {
+        pseudo:
+`shortest paths, four tools:
+  unweighted -> BFS, each edge = 1. dist[src]=0, expand level by level.
+  non-negative weights -> Dijkstra: pop the closest node, relax its edges
+    (a min-heap gives the closest; skip stale heap entries).
+  negative edges -> Bellman-Ford: relax every edge V-1 times;
+    if any edge still relaxes afterwards, a negative cycle is reachable.
+  all pairs -> Floyd-Warshall: for each k,
+    d[i][j] = min(d[i][j], d[i][k] + d[k][j]).`,
+        py:
 `# BFS O(V+E) · Dijkstra O(E log V) · Bellman-Ford O(V*E) · Floyd O(V^3)
 # O(V) for BFS/Dijkstra/Bellman-Ford (+heap), O(V^2) for Floyd's matrix.
 # ALL four work on DIRECTED & UNDIRECTED graphs
@@ -2992,6 +3058,162 @@ def floyd(d, n):
                 d[i][j] = min(d[i][j], d[i][k] + d[k][j])
     # NEGATIVE-CYCLE CHECK: any d[i][i] < 0 means a negative cycle through i
     return d`,
+        java:
+`// Unweighted -> BFS (each edge costs 1)
+int[] bfsDist(int src, List<List<Integer>> adj, int n) {
+    int[] dist = new int[n]; Arrays.fill(dist, -1);
+    Queue<Integer> q = new LinkedList<>(); dist[src] = 0; q.add(src);
+    while (!q.isEmpty()) {
+        int u = q.poll();
+        for (int v : adj.get(u))
+            if (dist[v] == -1) { dist[v] = dist[u] + 1; q.add(v); }
+    }
+    return dist;
+}
+
+// Non-negative weights -> Dijkstra. adj[u] = list of {v, w}. Fails if w < 0.
+int[] dijkstra(int src, List<List<int[]>> adj, int n) {
+    int[] dist = new int[n]; Arrays.fill(dist, Integer.MAX_VALUE);
+    dist[src] = 0;
+    PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));
+    pq.add(new int[]{0, src});
+    while (!pq.isEmpty()) {
+        int[] top = pq.poll(); int d = top[0], u = top[1];
+        if (d > dist[u]) continue;                 // stale, skip
+        for (int[] e : adj.get(u)) {
+            int v = e[0], w = e[1];
+            if (d + w < dist[v]) { dist[v] = d + w; pq.add(new int[]{dist[v], v}); }
+        }
+    }
+    return dist;
+}
+
+// Negative edges -> Bellman-Ford. edges = {u, v, w}. null if negative cycle.
+int[] bellmanFord(int[][] edges, int n, int src) {
+    int[] dist = new int[n]; Arrays.fill(dist, Integer.MAX_VALUE / 2);
+    dist[src] = 0;
+    for (int i = 0; i < n - 1; i++)
+        for (int[] e : edges)
+            if (dist[e[0]] + e[2] < dist[e[1]]) dist[e[1]] = dist[e[0]] + e[2];
+    for (int[] e : edges)
+        if (dist[e[0]] + e[2] < dist[e[1]]) return null;   // negative cycle
+    return dist;
+}
+
+// All pairs -> Floyd-Warshall. d = n x n matrix (INF if no edge).
+void floyd(int[][] d, int n) {
+    for (int k = 0; k < n; k++)
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                d[i][j] = Math.min(d[i][j], d[i][k] + d[k][j]);
+    // any d[i][i] < 0 means a negative cycle through i
+}`,
+        cpp:
+`// Unweighted -> BFS (each edge costs 1)
+vector<int> bfsDist(int src, vector<vector<int>>& adj, int n) {
+    vector<int> dist(n, -1); queue<int> q;
+    dist[src] = 0; q.push(src);
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        for (int v : adj[u])
+            if (dist[v] == -1) { dist[v] = dist[u] + 1; q.push(v); }
+    }
+    return dist;
+}
+
+// Non-negative weights -> Dijkstra. adj[u] = {v, w}. Fails if w < 0.
+vector<int> dijkstra(int src, vector<vector<pair<int,int>>>& adj, int n) {
+    vector<int> dist(n, INT_MAX); dist[src] = 0;
+    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;
+    pq.push({0, src});
+    while (!pq.empty()) {
+        auto [d, u] = pq.top(); pq.pop();
+        if (d > dist[u]) continue;                 // stale, skip
+        for (auto [v, w] : adj[u])
+            if (d + w < dist[v]) { dist[v] = d + w; pq.push({dist[v], v}); }
+    }
+    return dist;
+}
+
+// Negative edges -> Bellman-Ford. edges = {u, v, w}. empty if negative cycle.
+vector<int> bellmanFord(vector<array<int,3>>& edges, int n, int src) {
+    vector<int> dist(n, INT_MAX / 2); dist[src] = 0;
+    for (int i = 0; i < n - 1; i++)
+        for (auto& e : edges)
+            if (dist[e[0]] + e[2] < dist[e[1]]) dist[e[1]] = dist[e[0]] + e[2];
+    for (auto& e : edges)
+        if (dist[e[0]] + e[2] < dist[e[1]]) return {};   // negative cycle
+    return dist;
+}
+
+// All pairs -> Floyd-Warshall. d = n x n matrix (INF if no edge).
+void floyd(vector<vector<int>>& d, int n) {
+    for (int k = 0; k < n; k++)
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                d[i][j] = min(d[i][j], d[i][k] + d[k][j]);
+    // any d[i][i] < 0 means a negative cycle through i
+}`,
+        js:
+`// Unweighted -> BFS (each edge costs 1)
+function bfsDist(src, adj, n) {
+  const dist = new Array(n).fill(-1);
+  const q = [src]; dist[src] = 0;
+  for (let i = 0; i < q.length; i++) {
+    const u = q[i];
+    for (const v of adj[u])
+      if (dist[v] === -1) { dist[v] = dist[u] + 1; q.push(v); }
+  }
+  return dist;
+}
+
+// Non-negative weights -> Dijkstra. adj[u] = [[v, w], ...]. Fails if w < 0.
+function dijkstra(src, adj, n) {
+  const dist = new Array(n).fill(Infinity); dist[src] = 0;
+  const pq = new MinHeap(x => x[0]);          // [d, u]
+  pq.push([0, src]);
+  while (pq.size) {
+    const [d, u] = pq.pop();
+    if (d > dist[u]) continue;                // stale, skip
+    for (const [v, w] of adj[u])
+      if (d + w < dist[v]) { dist[v] = d + w; pq.push([dist[v], v]); }
+  }
+  return dist;
+}
+
+// Negative edges -> Bellman-Ford. edges = [[u, v, w], ...]. null if neg cycle.
+function bellmanFord(edges, n, src) {
+  const dist = new Array(n).fill(Infinity); dist[src] = 0;
+  for (let i = 0; i < n - 1; i++)
+    for (const [u, v, w] of edges)
+      if (dist[u] + w < dist[v]) dist[v] = dist[u] + w;
+  for (const [u, v, w] of edges)
+    if (dist[u] + w < dist[v]) return null;   // negative cycle reachable
+  return dist;
+}
+
+// All pairs -> Floyd-Warshall. d = n x n matrix (Infinity if no edge).
+function floyd(d, n) {
+  for (let k = 0; k < n; k++)
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++)
+        d[i][j] = Math.min(d[i][j], d[i][k] + d[k][j]);
+  // any d[i][i] < 0 means a negative cycle through i
+}
+// minimal binary min-heap with a key function
+class MinHeap {
+  constructor(key = x => x) { this.a = []; this.key = key; }
+  get size() { return this.a.length; }
+  push(x) { const a = this.a, k = this.key; a.push(x); let i = a.length - 1;
+    while (i && k(a[(i-1)>>1]) > k(a[i])) { [a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]]; i=(i-1)>>1; } }
+  pop() { const a = this.a, k = this.key, t = a[0], l = a.pop();
+    if (a.length) { a[0]=l; let i=0,n=a.length;
+      for(;;){ let x=2*i+1,y=2*i+2,m=i;
+        if(x<n&&k(a[x])<k(a[m]))m=x; if(y<n&&k(a[y])<k(a[m]))m=y;
+        if(m===i)break; [a[m],a[i]]=[a[i],a[m]]; i=m; } }
+    return t; }
+}`,
+      },
       "MST & Union-Find (DSU)":
 `# ~O(α(n)) ≈ O(1) per find/union · Kruskal O(E log E) · O(V) space
 # DSU on an UNDIRECTED graph: union() returning False (same set) = a cycle.
