@@ -1682,7 +1682,22 @@ function search(node, key) {
       [417, "pacific-atlantic-water-flow", "Pacific Atlantic Water Flow", "M"],
     ]},
     { n: "Cycle Detection", h: "<b>Undirected:</b> DFS/BFS tracking the <b>parent</b> — a visited neighbor that isn't the parent = cycle (or use DSU). <b>Directed:</b> DFS with <b>visited + rec_stack</b> — an edge back to a node in the current path = cycle (or Kahn's: if processed ≠ V, there's a cycle).",
-      code:
+      code: {
+        pseudo:
+`UNDIRECTED (visited + parent): a visited neighbor that is not the
+parent means a cycle.
+  DFS(u, parent): mark u; for each neighbor v:
+    v unseen -> recurse with parent u; if it found a cycle, return true
+    else if v != parent -> cycle
+  BFS: same idea, the queue stores (node, parent).
+  DSU: for each edge, if both ends already share a root -> cycle.
+
+DIRECTED (visited + recursion-stack):
+  DFS: rec[u] marks nodes on the current path;
+    an edge to a node with rec = true is a back-edge = cycle.
+    (3-color variant: 0 unseen, 1 in path, 2 done.)
+  Kahn (BFS): if the number of processed nodes != V, a cycle exists.`,
+        py:
 `from collections import deque
 
 # ============ UNDIRECTED ============
@@ -1768,13 +1783,307 @@ def cyc_directed_bfs(n, adj):
             indeg[v] -= 1
             if indeg[v] == 0: q.append(v)
     return processed != n`,
+        java:
+`// ===== UNDIRECTED: a visited non-parent neighbor means a cycle =====
+boolean cycUndirectedDfs(int n, List<List<Integer>> adj) {
+    boolean[] seen = new boolean[n];
+    for (int i = 0; i < n; i++)
+        if (!seen[i] && udfs(i, -1, adj, seen)) return true;
+    return false;
+}
+boolean udfs(int u, int parent, List<List<Integer>> adj, boolean[] seen) {
+    seen[u] = true;
+    for (int v : adj.get(u)) {
+        if (!seen[v]) { if (udfs(v, u, adj, seen)) return true; }
+        else if (v != parent) return true;      // visited & not parent -> cycle
+    }
+    return false;
+}
+
+boolean cycUndirectedBfs(int n, List<List<Integer>> adj) {
+    boolean[] seen = new boolean[n];
+    for (int s = 0; s < n; s++) {
+        if (seen[s]) continue;
+        seen[s] = true;
+        Queue<int[]> q = new LinkedList<>(); q.add(new int[]{s, -1});
+        while (!q.isEmpty()) {
+            int[] cur = q.poll(); int u = cur[0], par = cur[1];
+            for (int v : adj.get(u)) {
+                if (!seen[v]) { seen[v] = true; q.add(new int[]{v, u}); }
+                else if (v != par) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Union-Find: an edge whose ends already share a root closes a cycle
+boolean cycUndirectedDsu(int n, int[][] edges) {
+    int[] parent = new int[n];
+    for (int i = 0; i < n; i++) parent[i] = i;
+    for (int[] e : edges) {
+        int ru = find(parent, e[0]), rv = find(parent, e[1]);
+        if (ru == rv) return true;
+        parent[ru] = rv;
+    }
+    return false;
+}
+int find(int[] parent, int x) {
+    while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+}
+
+// ===== DIRECTED: a back-edge to a node on the current path is a cycle =====
+boolean cycDirectedDfs(int n, List<List<Integer>> adj) {
+    boolean[] visited = new boolean[n], rec = new boolean[n];  // rec = in path
+    for (int i = 0; i < n; i++)
+        if (!visited[i] && ddfs(i, adj, visited, rec)) return true;
+    return false;
+}
+boolean ddfs(int u, List<List<Integer>> adj, boolean[] visited, boolean[] rec) {
+    visited[u] = rec[u] = true;
+    for (int v : adj.get(u)) {
+        if (!visited[v] && ddfs(v, adj, visited, rec)) return true;
+        else if (rec[v]) return true;           // back-edge to current path
+    }
+    rec[u] = false;                             // pop from recursion stack
+    return false;
+}
+
+// 3-color variant: 0 = unseen, 1 = in path, 2 = done
+boolean cycDirectedColor(int n, List<List<Integer>> adj) {
+    int[] state = new int[n];
+    for (int i = 0; i < n; i++)
+        if (state[i] == 0 && cdfs(i, adj, state)) return true;
+    return false;
+}
+boolean cdfs(int u, List<List<Integer>> adj, int[] state) {
+    state[u] = 1;
+    for (int v : adj.get(u)) {
+        if (state[v] == 1) return true;         // back-edge -> cycle
+        if (state[v] == 0 && cdfs(v, adj, state)) return true;
+    }
+    state[u] = 2;
+    return false;
+}
+
+// Kahn's: if the processed count != V, a cycle exists
+boolean cycDirectedBfs(int n, List<List<Integer>> adj) {
+    int[] indeg = new int[n];
+    for (int u = 0; u < n; u++) for (int v : adj.get(u)) indeg[v]++;
+    Queue<Integer> q = new LinkedList<>();
+    for (int i = 0; i < n; i++) if (indeg[i] == 0) q.add(i);
+    int processed = 0;
+    while (!q.isEmpty()) {
+        int u = q.poll(); processed++;
+        for (int v : adj.get(u)) if (--indeg[v] == 0) q.add(v);
+    }
+    return processed != n;
+}`,
+        cpp:
+`// ===== UNDIRECTED: a visited non-parent neighbor means a cycle =====
+bool udfs(int u, int parent, vector<vector<int>>& adj, vector<bool>& seen) {
+    seen[u] = true;
+    for (int v : adj[u]) {
+        if (!seen[v]) { if (udfs(v, u, adj, seen)) return true; }
+        else if (v != parent) return true;      // visited & not parent -> cycle
+    }
+    return false;
+}
+bool cycUndirectedDfs(int n, vector<vector<int>>& adj) {
+    vector<bool> seen(n, false);
+    for (int i = 0; i < n; i++)
+        if (!seen[i] && udfs(i, -1, adj, seen)) return true;
+    return false;
+}
+
+bool cycUndirectedBfs(int n, vector<vector<int>>& adj) {
+    vector<bool> seen(n, false);
+    for (int s = 0; s < n; s++) {
+        if (seen[s]) continue;
+        seen[s] = true;
+        queue<pair<int,int>> q; q.push({s, -1});
+        while (!q.empty()) {
+            auto [u, par] = q.front(); q.pop();
+            for (int v : adj[u]) {
+                if (!seen[v]) { seen[v] = true; q.push({v, u}); }
+                else if (v != par) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Union-Find: an edge whose ends already share a root closes a cycle
+int find(vector<int>& parent, int x) {
+    while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+}
+bool cycUndirectedDsu(int n, vector<pair<int,int>>& edges) {
+    vector<int> parent(n);
+    for (int i = 0; i < n; i++) parent[i] = i;
+    for (auto& [u, v] : edges) {
+        int ru = find(parent, u), rv = find(parent, v);
+        if (ru == rv) return true;
+        parent[ru] = rv;
+    }
+    return false;
+}
+
+// ===== DIRECTED: a back-edge to a node on the current path is a cycle =====
+bool ddfs(int u, vector<vector<int>>& adj, vector<bool>& visited, vector<bool>& rec) {
+    visited[u] = rec[u] = true;
+    for (int v : adj[u]) {
+        if (!visited[v] && ddfs(v, adj, visited, rec)) return true;
+        else if (rec[v]) return true;           // back-edge to current path
+    }
+    rec[u] = false;                             // pop from recursion stack
+    return false;
+}
+bool cycDirectedDfs(int n, vector<vector<int>>& adj) {
+    vector<bool> visited(n, false), rec(n, false);
+    for (int i = 0; i < n; i++)
+        if (!visited[i] && ddfs(i, adj, visited, rec)) return true;
+    return false;
+}
+
+// 3-color variant: 0 = unseen, 1 = in path, 2 = done
+bool cdfs(int u, vector<vector<int>>& adj, vector<int>& state) {
+    state[u] = 1;
+    for (int v : adj[u]) {
+        if (state[v] == 1) return true;         // back-edge -> cycle
+        if (state[v] == 0 && cdfs(v, adj, state)) return true;
+    }
+    state[u] = 2;
+    return false;
+}
+bool cycDirectedColor(int n, vector<vector<int>>& adj) {
+    vector<int> state(n, 0);
+    for (int i = 0; i < n; i++)
+        if (state[i] == 0 && cdfs(i, adj, state)) return true;
+    return false;
+}
+
+// Kahn's: if the processed count != V, a cycle exists
+bool cycDirectedBfs(int n, vector<vector<int>>& adj) {
+    vector<int> indeg(n, 0);
+    for (int u = 0; u < n; u++) for (int v : adj[u]) indeg[v]++;
+    queue<int> q;
+    for (int i = 0; i < n; i++) if (indeg[i] == 0) q.push(i);
+    int processed = 0;
+    while (!q.empty()) {
+        int u = q.front(); q.pop(); processed++;
+        for (int v : adj[u]) if (--indeg[v] == 0) q.push(v);
+    }
+    return processed != n;
+}`,
+        js:
+`// ===== UNDIRECTED: a visited non-parent neighbor means a cycle =====
+function cycUndirectedDfs(n, adj) {
+  const seen = new Array(n).fill(false);
+  const dfs = (u, parent) => {
+    seen[u] = true;
+    for (const v of adj[u]) {
+      if (!seen[v]) { if (dfs(v, u)) return true; }
+      else if (v !== parent) return true;       // visited & not parent -> cycle
+    }
+    return false;
+  };
+  for (let i = 0; i < n; i++) if (!seen[i] && dfs(i, -1)) return true;
+  return false;
+}
+
+function cycUndirectedBfs(n, adj) {
+  const seen = new Array(n).fill(false);
+  for (let s = 0; s < n; s++) {
+    if (seen[s]) continue;
+    seen[s] = true;
+    const q = [[s, -1]];
+    for (let i = 0; i < q.length; i++) {
+      const [u, par] = q[i];
+      for (const v of adj[u]) {
+        if (!seen[v]) { seen[v] = true; q.push([v, u]); }
+        else if (v !== par) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Union-Find: an edge whose ends already share a root closes a cycle
+function cycUndirectedDsu(n, edges) {
+  const parent = Array.from({length: n}, (_, i) => i);
+  const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  for (const [u, v] of edges) {
+    const ru = find(u), rv = find(v);
+    if (ru === rv) return true;
+    parent[ru] = rv;
+  }
+  return false;
+}
+
+// ===== DIRECTED: a back-edge to a node on the current path is a cycle =====
+function cycDirectedDfs(n, adj) {
+  const visited = new Array(n).fill(false), rec = new Array(n).fill(false);
+  const dfs = u => {
+    visited[u] = rec[u] = true;
+    for (const v of adj[u]) {
+      if (!visited[v] && dfs(v)) return true;
+      else if (rec[v]) return true;             // back-edge to current path
+    }
+    rec[u] = false;                             // pop from recursion stack
+    return false;
+  };
+  for (let i = 0; i < n; i++) if (!visited[i] && dfs(i)) return true;
+  return false;
+}
+
+// 3-color variant: 0 = unseen, 1 = in path, 2 = done
+function cycDirectedColor(n, adj) {
+  const state = new Array(n).fill(0);
+  const dfs = u => {
+    state[u] = 1;
+    for (const v of adj[u]) {
+      if (state[v] === 1) return true;          // back-edge -> cycle
+      if (state[v] === 0 && dfs(v)) return true;
+    }
+    state[u] = 2;
+    return false;
+  };
+  for (let i = 0; i < n; i++) if (state[i] === 0 && dfs(i)) return true;
+  return false;
+}
+
+// Kahn's: if the processed count != V, a cycle exists
+function cycDirectedBfs(n, adj) {
+  const indeg = new Array(n).fill(0);
+  for (let u = 0; u < n; u++) for (const v of adj[u]) indeg[v]++;
+  const q = [];
+  for (let i = 0; i < n; i++) if (indeg[i] === 0) q.push(i);
+  let processed = 0;
+  for (let i = 0; i < q.length; i++) {
+    const u = q[i]; processed++;
+    for (const v of adj[u]) if (--indeg[v] === 0) q.push(v);
+  }
+  return processed !== n;
+}` },
       p: [
       [207, "course-schedule", "Course Schedule (directed)", "M"],
       [684, "redundant-connection", "Redundant Connection (undirected)", "M"],
       [802, "find-eventual-safe-states", "Find Eventual Safe States", "M"],
     ]},
     { n: "Topological Sort", h: "Only for DAGs. Two ways: <b>Kahn's (BFS)</b> — repeatedly remove 0 in-degree nodes; <b>DFS</b> — push a node after visiting all its children, then reverse.",
-      code:
+      code: {
+        pseudo:
+`topological order of a DAG (every edge points forward).
+  Kahn (BFS): compute the in-degree of each node.
+    start the queue with all in-degree 0 nodes.
+    pop u, append to order, decrement neighbors' in-degree,
+    enqueue any that reach 0.
+    if order has fewer than n nodes -> a cycle existed (not a DAG).
+  DFS: visit all children first, then push the node;
+    reverse the push order = topological order.`,
+        py:
 `from collections import deque, defaultdict
 
 # Topological Sort — Kahn's (BFS on in-degree)
@@ -1801,6 +2110,88 @@ def topo_dfs(n, adj):
     for i in range(n):
         if not seen[i]: dfs(i)
     return stack[::-1]                             # reverse = topological order`,
+        java:
+`// Kahn's (BFS on in-degree); empty result => a cycle existed
+List<Integer> topoBfs(int n, List<List<Integer>> adj) {
+    int[] indeg = new int[n];
+    for (int u = 0; u < n; u++) for (int v : adj.get(u)) indeg[v]++;
+    Queue<Integer> q = new LinkedList<>();
+    for (int i = 0; i < n; i++) if (indeg[i] == 0) q.add(i);
+    List<Integer> order = new ArrayList<>();
+    while (!q.isEmpty()) {
+        int u = q.poll(); order.add(u);
+        for (int v : adj.get(u)) if (--indeg[v] == 0) q.add(v);
+    }
+    return order.size() == n ? order : new ArrayList<>();   // [] => cycle
+}
+
+// DFS: push a node after its children, then reverse
+List<Integer> topoDfs(int n, List<List<Integer>> adj) {
+    boolean[] seen = new boolean[n];
+    Deque<Integer> stack = new ArrayDeque<>();
+    for (int i = 0; i < n; i++) if (!seen[i]) tdfs(i, adj, seen, stack);
+    List<Integer> order = new ArrayList<>();
+    while (!stack.isEmpty()) order.add(stack.pop());        // reverse post-order
+    return order;
+}
+void tdfs(int u, List<List<Integer>> adj, boolean[] seen, Deque<Integer> stack) {
+    seen[u] = true;
+    for (int v : adj.get(u)) if (!seen[v]) tdfs(v, adj, seen, stack);
+    stack.push(u);                                          // done with u
+}`,
+        cpp:
+`// Kahn's (BFS on in-degree); empty result => a cycle existed
+vector<int> topoBfs(int n, vector<vector<int>>& adj) {
+    vector<int> indeg(n, 0);
+    for (int u = 0; u < n; u++) for (int v : adj[u]) indeg[v]++;
+    queue<int> q;
+    for (int i = 0; i < n; i++) if (indeg[i] == 0) q.push(i);
+    vector<int> order;
+    while (!q.empty()) {
+        int u = q.front(); q.pop(); order.push_back(u);
+        for (int v : adj[u]) if (--indeg[v] == 0) q.push(v);
+    }
+    return (int)order.size() == n ? order : vector<int>{};   // {} => cycle
+}
+
+// DFS: push a node after its children, then reverse
+void tdfs(int u, vector<vector<int>>& adj, vector<bool>& seen, vector<int>& post) {
+    seen[u] = true;
+    for (int v : adj[u]) if (!seen[v]) tdfs(v, adj, seen, post);
+    post.push_back(u);                                       // done with u
+}
+vector<int> topoDfs(int n, vector<vector<int>>& adj) {
+    vector<bool> seen(n, false); vector<int> post;
+    for (int i = 0; i < n; i++) if (!seen[i]) tdfs(i, adj, seen, post);
+    reverse(post.begin(), post.end());                       // reverse post-order
+    return post;
+}`,
+        js:
+`// Kahn's (BFS on in-degree); empty result => a cycle existed
+function topoBfs(n, adj) {
+  const indeg = new Array(n).fill(0);
+  for (let u = 0; u < n; u++) for (const v of adj[u]) indeg[v]++;
+  const q = [];
+  for (let i = 0; i < n; i++) if (indeg[i] === 0) q.push(i);
+  const order = [];
+  for (let i = 0; i < q.length; i++) {
+    const u = q[i]; order.push(u);
+    for (const v of adj[u]) if (--indeg[v] === 0) q.push(v);
+  }
+  return order.length === n ? order : [];        // [] => cycle
+}
+
+// DFS: push a node after its children, then reverse
+function topoDfs(n, adj) {
+  const seen = new Array(n).fill(false), post = [];
+  const dfs = u => {
+    seen[u] = true;
+    for (const v of adj[u]) if (!seen[v]) dfs(v);
+    post.push(u);                                // done with u
+  };
+  for (let i = 0; i < n; i++) if (!seen[i]) dfs(i);
+  return post.reverse();                         // reverse = topological order
+}` },
       p: [
       [210, "course-schedule-ii", "Course Schedule II", "M"],
       [269, "alien-dictionary", "Alien Dictionary", "H"],
@@ -1812,7 +2203,16 @@ def topo_dfs(n, adj):
       [787, "cheapest-flights-within-k-stops", "Cheapest Flights K Stops", "M"],
     ]},
     { n: "MST & Union-Find (DSU)", h: "DSU: union by rank + path compression → ~O(1). <b>Kruskal</b> = sort edges + DSU (add edge if it joins two sets). <b>Prim</b> = grow the tree with a min-heap of crossing edges.",
-      code:
+      code: {
+        pseudo:
+`Union-Find (DSU): near O(1) with path compression + union by rank.
+  find(x): follow parents to the root, halving the path on the way.
+  union(a, b): join the two roots, hang the smaller rank under the larger.
+Kruskal's MST: sort edges by weight; add an edge only if it joins two
+  different sets; stop after n-1 edges.
+Prim's MST: grow from a start node; a min-heap of crossing edges gives
+  the cheapest edge that reaches a new node.`,
+        py:
 `# ---- Disjoint Set Union (DSU) ----
 parent = list(range(n)); rank = [0] * n
 def find(x):
@@ -1847,13 +2247,183 @@ def prim(n, adj, start=0):
         for v, wt in adj[u]:
             if not seen[v]: heapq.heappush(pq, (wt, v))
     return total`,
+        java:
+`// DSU: path compression + union by rank
+class DSU {
+    int[] parent, rank;
+    DSU(int n) {
+        parent = new int[n]; rank = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+    }
+    int find(int x) {
+        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+        return x;
+    }
+    boolean union(int a, int b) {
+        int ra = find(a), rb = find(b);
+        if (ra == rb) return false;              // already connected
+        if (rank[ra] < rank[rb]) { int t = ra; ra = rb; rb = t; }
+        parent[rb] = ra;
+        if (rank[ra] == rank[rb]) rank[ra]++;
+        return true;
+    }
+}
+
+// Kruskal: sort edges {w, u, v}, add an edge only if it joins two sets
+int kruskal(int n, int[][] edges) {
+    Arrays.sort(edges, (a, b) -> Integer.compare(a[0], b[0]));
+    DSU dsu = new DSU(n);
+    int total = 0, used = 0;
+    for (int[] e : edges)
+        if (dsu.union(e[1], e[2])) {
+            total += e[0];
+            if (++used == n - 1) break;
+        }
+    return total;
+}
+
+// Prim: grow the tree with a min-heap of crossing edges. adj[u] = {v, w}
+int prim(int n, List<List<int[]>> adj, int start) {
+    boolean[] seen = new boolean[n];
+    PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));
+    pq.add(new int[]{0, start});
+    int total = 0;
+    while (!pq.isEmpty()) {
+        int[] top = pq.poll(); int w = top[0], u = top[1];
+        if (seen[u]) continue;
+        seen[u] = true; total += w;              // add cheapest crossing edge
+        for (int[] e : adj.get(u))
+            if (!seen[e[0]]) pq.add(new int[]{e[1], e[0]});
+    }
+    return total;
+}`,
+        cpp:
+`// DSU: path compression + union by rank
+struct DSU {
+    vector<int> parent, rnk;
+    DSU(int n) : parent(n), rnk(n, 0) { for (int i = 0; i < n; i++) parent[i] = i; }
+    int find(int x) {
+        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+        return x;
+    }
+    bool unite(int a, int b) {
+        int ra = find(a), rb = find(b);
+        if (ra == rb) return false;              // already connected
+        if (rnk[ra] < rnk[rb]) swap(ra, rb);
+        parent[rb] = ra;
+        if (rnk[ra] == rnk[rb]) rnk[ra]++;
+        return true;
+    }
+};
+
+// Kruskal: edges = {w, u, v}, add an edge only if it joins two sets
+int kruskal(int n, vector<array<int,3>>& edges) {
+    sort(edges.begin(), edges.end());
+    DSU dsu(n); int total = 0, used = 0;
+    for (auto& e : edges)
+        if (dsu.unite(e[1], e[2])) {
+            total += e[0];
+            if (++used == n - 1) break;
+        }
+    return total;
+}
+
+// Prim: grow the tree with a min-heap of crossing edges. adj[u] = {v, w}
+int prim(int n, vector<vector<pair<int,int>>>& adj, int start) {
+    vector<bool> seen(n, false);
+    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;
+    pq.push({0, start});
+    int total = 0;
+    while (!pq.empty()) {
+        auto [w, u] = pq.top(); pq.pop();
+        if (seen[u]) continue;
+        seen[u] = true; total += w;              // add cheapest crossing edge
+        for (auto [v, wt] : adj[u])
+            if (!seen[v]) pq.push({wt, v});
+    }
+    return total;
+}`,
+        js:
+`// DSU: path compression + union by rank
+class DSU {
+  constructor(n) {
+    this.parent = Array.from({length: n}, (_, i) => i);
+    this.rank = new Array(n).fill(0);
+  }
+  find(x) {
+    while (this.parent[x] !== x) { this.parent[x] = this.parent[this.parent[x]]; x = this.parent[x]; }
+    return x;
+  }
+  union(a, b) {
+    let ra = this.find(a), rb = this.find(b);
+    if (ra === rb) return false;               // already connected
+    if (this.rank[ra] < this.rank[rb]) [ra, rb] = [rb, ra];
+    this.parent[rb] = ra;
+    if (this.rank[ra] === this.rank[rb]) this.rank[ra]++;
+    return true;
+  }
+}
+
+// Kruskal: edges = [[w, u, v], ...], add an edge only if it joins two sets
+function kruskal(n, edges) {
+  edges.sort((a, b) => a[0] - b[0]);
+  const dsu = new DSU(n);
+  let total = 0, used = 0;
+  for (const [w, u, v] of edges)
+    if (dsu.union(u, v)) {
+      total += w;
+      if (++used === n - 1) break;
+    }
+  return total;
+}
+
+// Prim: grow the tree with a min-heap of crossing edges. adj[u] = [[v, w], ...]
+function prim(n, adj, start = 0) {
+  const seen = new Array(n).fill(false);
+  const pq = new MinHeap(x => x[0]);           // [w, u]
+  pq.push([0, start]);
+  let total = 0;
+  while (pq.size) {
+    const [w, u] = pq.pop();
+    if (seen[u]) continue;
+    seen[u] = true; total += w;                // add cheapest crossing edge
+    for (const [v, wt] of adj[u])
+      if (!seen[v]) pq.push([wt, v]);
+  }
+  return total;
+}
+// minimal binary min-heap with a key function
+class MinHeap {
+  constructor(key = x => x) { this.a = []; this.key = key; }
+  get size() { return this.a.length; }
+  push(x) { const a = this.a, k = this.key; a.push(x); let i = a.length - 1;
+    while (i && k(a[(i-1)>>1]) > k(a[i])) { [a[(i-1)>>1],a[i]]=[a[i],a[(i-1)>>1]]; i=(i-1)>>1; } }
+  pop() { const a = this.a, k = this.key, t = a[0], l = a.pop();
+    if (a.length) { a[0]=l; let i=0,n=a.length;
+      for(;;){ let x=2*i+1,y=2*i+2,m=i;
+        if(x<n&&k(a[x])<k(a[m]))m=x; if(y<n&&k(a[y])<k(a[m]))m=y;
+        if(m===i)break; [a[m],a[i]]=[a[i],a[m]]; i=m; } }
+    return t; }
+}` },
       p: [
       [547, "number-of-provinces", "Number of Provinces", "M"],
       [1584, "min-cost-to-connect-all-points", "Min Cost Connect Points (MST)", "M"],
       [1319, "number-of-operations-to-make-network-connected", "Make Network Connected", "M"],
     ]},
     { n: "Advanced (bridges / SCC / bipartite)", h: "<b>Bipartite</b> = 2-coloring (BFS or DFS); conflict → not bipartite. <b>Kosaraju</b> finds SCCs with 2 passes (topo sort by finish time, then DFS the transposed graph in reverse topo order).",
-      code:
+      code: {
+        pseudo:
+`Bipartite check (2-coloring): color the graph +1 / -1.
+  BFS: color the start +1, color each neighbor the opposite;
+       if a neighbor already has your color -> not bipartite.
+  DFS: same idea, recursively.
+
+Kosaraju's SCC (two DFS passes):
+  1) DFS the graph, push each node when finished (finish-time order).
+  2) transpose the graph (reverse every edge).
+  3) DFS the transpose in reverse finish order;
+     each DFS tree is one strongly connected component.`,
+        py:
 `from collections import deque
 
 # ---- Bipartite check — BFS (2-coloring) ----
@@ -1902,6 +2472,185 @@ def kosaraju(n, adj):
         if not seen[u]:
             comp = []; dfs(u, comp); sccs.append(comp)
     return sccs`,
+        java:
+`// Bipartite BFS: color +1 / -1; a same-color neighbor breaks it
+boolean isBipartiteBfs(int n, List<List<Integer>> adj) {
+    int[] color = new int[n];
+    for (int s = 0; s < n; s++) {
+        if (color[s] != 0) continue;
+        color[s] = 1;
+        Queue<Integer> q = new LinkedList<>(); q.add(s);
+        while (!q.isEmpty()) {
+            int u = q.poll();
+            for (int v : adj.get(u)) {
+                if (color[v] == color[u]) return false;   // conflict
+                if (color[v] == 0) { color[v] = -color[u]; q.add(v); }
+            }
+        }
+    }
+    return true;
+}
+
+// Bipartite DFS: same idea, recursive
+int[] color;
+boolean isBipartiteDfs(int n, List<List<Integer>> adj) {
+    color = new int[n];
+    for (int i = 0; i < n; i++)
+        if (color[i] == 0 && !bdfs(i, 1, adj)) return false;
+    return true;
+}
+boolean bdfs(int u, int c, List<List<Integer>> adj) {
+    color[u] = c;
+    for (int v : adj.get(u)) {
+        if (color[v] == c) return false;
+        if (color[v] == 0 && !bdfs(v, -c, adj)) return false;
+    }
+    return true;
+}
+
+// Kosaraju's SCC: finish-order DFS, transpose, DFS transpose in reverse
+List<List<Integer>> kosaraju(int n, List<List<Integer>> adj) {
+    boolean[] seen = new boolean[n];
+    Deque<Integer> order = new ArrayDeque<>();
+    for (int i = 0; i < n; i++) if (!seen[i]) fillOrder(i, adj, seen, order);
+    List<List<Integer>> radj = new ArrayList<>();
+    for (int i = 0; i < n; i++) radj.add(new ArrayList<>());
+    for (int u = 0; u < n; u++) for (int v : adj.get(u)) radj.get(v).add(u);
+    boolean[] seen2 = new boolean[n];
+    List<List<Integer>> sccs = new ArrayList<>();
+    while (!order.isEmpty()) {
+        int u = order.pop();
+        if (!seen2[u]) {
+            List<Integer> comp = new ArrayList<>();
+            collect(u, radj, seen2, comp);
+            sccs.add(comp);
+        }
+    }
+    return sccs;
+}
+void fillOrder(int u, List<List<Integer>> adj, boolean[] seen, Deque<Integer> order) {
+    seen[u] = true;
+    for (int v : adj.get(u)) if (!seen[v]) fillOrder(v, adj, seen, order);
+    order.push(u);                              // finished -> push
+}
+void collect(int u, List<List<Integer>> radj, boolean[] seen, List<Integer> comp) {
+    seen[u] = true; comp.add(u);
+    for (int v : radj.get(u)) if (!seen[v]) collect(v, radj, seen, comp);
+}`,
+        cpp:
+`// Bipartite BFS: color +1 / -1; a same-color neighbor breaks it
+bool isBipartiteBfs(int n, vector<vector<int>>& adj) {
+    vector<int> color(n, 0);
+    for (int s = 0; s < n; s++) {
+        if (color[s] != 0) continue;
+        color[s] = 1; queue<int> q; q.push(s);
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            for (int v : adj[u]) {
+                if (color[v] == color[u]) return false;   // conflict
+                if (color[v] == 0) { color[v] = -color[u]; q.push(v); }
+            }
+        }
+    }
+    return true;
+}
+
+// Bipartite DFS: same idea, recursive
+bool bdfs(int u, int c, vector<vector<int>>& adj, vector<int>& color) {
+    color[u] = c;
+    for (int v : adj[u]) {
+        if (color[v] == c) return false;
+        if (color[v] == 0 && !bdfs(v, -c, adj, color)) return false;
+    }
+    return true;
+}
+bool isBipartiteDfs(int n, vector<vector<int>>& adj) {
+    vector<int> color(n, 0);
+    for (int i = 0; i < n; i++)
+        if (color[i] == 0 && !bdfs(i, 1, adj, color)) return false;
+    return true;
+}
+
+// Kosaraju's SCC: finish-order DFS, transpose, DFS transpose in reverse
+void fillOrder(int u, vector<vector<int>>& adj, vector<bool>& seen, vector<int>& order) {
+    seen[u] = true;
+    for (int v : adj[u]) if (!seen[v]) fillOrder(v, adj, seen, order);
+    order.push_back(u);                         // finished -> push
+}
+void collect(int u, vector<vector<int>>& radj, vector<bool>& seen, vector<int>& comp) {
+    seen[u] = true; comp.push_back(u);
+    for (int v : radj[u]) if (!seen[v]) collect(v, radj, seen, comp);
+}
+vector<vector<int>> kosaraju(int n, vector<vector<int>>& adj) {
+    vector<bool> seen(n, false); vector<int> order;
+    for (int i = 0; i < n; i++) if (!seen[i]) fillOrder(i, adj, seen, order);
+    vector<vector<int>> radj(n);
+    for (int u = 0; u < n; u++) for (int v : adj[u]) radj[v].push_back(u);
+    vector<bool> seen2(n, false); vector<vector<int>> sccs;
+    for (int i = (int)order.size() - 1; i >= 0; i--) {
+        int u = order[i];
+        if (!seen2[u]) {
+            vector<int> comp; collect(u, radj, seen2, comp); sccs.push_back(comp);
+        }
+    }
+    return sccs;
+}`,
+        js:
+`// Bipartite BFS: color +1 / -1; a same-color neighbor breaks it
+function isBipartiteBfs(n, adj) {
+  const color = new Array(n).fill(0);
+  for (let s = 0; s < n; s++) {
+    if (color[s] !== 0) continue;
+    color[s] = 1;
+    const q = [s];
+    for (let i = 0; i < q.length; i++) {
+      const u = q[i];
+      for (const v of adj[u]) {
+        if (color[v] === color[u]) return false;   // conflict
+        if (color[v] === 0) { color[v] = -color[u]; q.push(v); }
+      }
+    }
+  }
+  return true;
+}
+
+// Bipartite DFS: same idea, recursive
+function isBipartiteDfs(n, adj) {
+  const color = new Array(n).fill(0);
+  const dfs = (u, c) => {
+    color[u] = c;
+    for (const v of adj[u]) {
+      if (color[v] === c) return false;
+      if (color[v] === 0 && !dfs(v, -c)) return false;
+    }
+    return true;
+  };
+  for (let i = 0; i < n; i++) if (color[i] === 0 && !dfs(i, 1)) return false;
+  return true;
+}
+
+// Kosaraju's SCC: finish-order DFS, transpose, DFS transpose in reverse
+function kosaraju(n, adj) {
+  const seen = new Array(n).fill(false), order = [];
+  const fill = u => {
+    seen[u] = true;
+    for (const v of adj[u]) if (!seen[v]) fill(v);
+    order.push(u);                              // finished -> push
+  };
+  for (let i = 0; i < n; i++) if (!seen[i]) fill(i);
+  const radj = Array.from({length: n}, () => []);
+  for (let u = 0; u < n; u++) for (const v of adj[u]) radj[v].push(u);
+  const seen2 = new Array(n).fill(false), sccs = [];
+  const collect = (u, comp) => {
+    seen2[u] = true; comp.push(u);
+    for (const v of radj[u]) if (!seen2[v]) collect(v, comp);
+  };
+  for (let i = order.length - 1; i >= 0; i--) {
+    const u = order[i];
+    if (!seen2[u]) { const comp = []; collect(u, comp); sccs.push(comp); }
+  }
+  return sccs;
+}` },
       p: [
       [785, "is-graph-bipartite", "Is Graph Bipartite?", "M"],
       [1192, "critical-connections-in-a-network", "Critical Connections (bridges)", "H"],
