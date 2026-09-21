@@ -285,7 +285,7 @@ map.get(k) / set.has(k)   // O(1) average`,
   one: "A variable does not contain your object. It holds the <b>address</b> of one. So <code>b = a</code> copies the address, not the thing, and now two names can change one object.",
 
   plain: `<p>Memory is one long strip of numbered slots. A variable is a name for one slot. A small fixed-size value like an integer fits in that slot directly. A list, an object or a string has no size known in advance, so it cannot.</p>
-<p>Instead the object is built somewhere else in memory, and the slot holds its <b>address</b>. That address is what a pointer is. A reference is the same idea with the dereferencing hidden from you.</p>
+<p>Instead the object is built somewhere else in memory, and the slot holds its <b>address</b>. That address is what a pointer is. A reference is the same idea, with the step of following the address (dereferencing) hidden from you.</p>
 <p>Everything surprising follows from that one fact. <code>b = a</code> copies the slot, which means it copies the address, so both names now describe the same object. Change it through one and the other sees the change, because there was only ever one object.</p>
 <p><b>Analogy.</b> A slip of paper with a house address on it. Photocopy the slip and you have two slips, not two houses. Anyone who follows either slip walks into the same living room and can move the furniture.</p>`,
 
@@ -517,7 +517,7 @@ res.push([...path]);`,
   one: "Integer arithmetic is not school arithmetic: a fixed-width integer <b>wraps silently</b> past its limit, and division rounds a different way in Python than in Java or C++.",
 
   plain: `<p>Three things about numbers cause real bugs, and none of them are obvious until they bite.</p>
-<p><b>Integers have edges.</b> A 32-bit <code>int</code> stops at about 2.1 billion. Go past it and it does not raise an error or saturate. It <b>wraps around to a large negative number</b> and carries on as if nothing happened.</p>
+<p><b>Integers have edges.</b> A 32-bit <code>int</code> stops at about 2.1 billion. Go past it and it does not warn you, and it does not stop at the maximum. It <b>wraps around to a large negative number</b> and carries on as if nothing happened.</p>
 <p><b>Integer division has to choose a direction</b>, and languages disagree. <code>-7 / 2</code> is <code>-3</code> in Java, C++ and JavaScript, but <code>-4</code> in Python. Modulo inherits the disagreement, so <code>-7 % 3</code> is <code>-1</code> in one family and <code>2</code> in the other.</p>
 <p><b>Floats are binary fractions.</b> 0.1 cannot be written exactly in binary, any more than 1/3 can be written exactly in decimal. So <code>0.1 + 0.2</code> is not <code>0.3</code>.</p>
 <p><b>Analogy.</b> A car odometer with five digits. At 99999 the next mile does not read 100000 and it does not refuse. It reads 00000, and nothing anywhere records that it happened.</p>`,
@@ -2464,7 +2464,7 @@ function isPal(s) {
   one: "A hash map <b>computes the address from the key</b> instead of searching for it. That is the entire idea, and it is why \"have I seen this before?\" costs O(1) instead of O(n).",
 
   plain: `<p>Suppose you must answer "is 47 in this collection?" thousands of times. With a list you scan, O(n) each time. With a sorted array you binary search, O(log n). A hash map does something different in kind: it <b>calculates where 47 would live</b> and looks only there.</p>
-<p>The recipe is three steps. Run the key through a hash function to get a big integer. Take that number modulo the table size to get a slot. Use the slot directly. No comparisons with other keys, no scanning. Insert, lookup and delete are all one computation → O(1) average.</p>
+<p>The recipe is three steps. Run the key through a hash function to get a big integer. Take that number modulo the table size, meaning the remainder after dividing by it, to get a slot. Use the slot directly. No comparisons with other keys, no scanning. Insert, lookup and delete are all one computation → O(1) average.</p>
 <p><b>Analogy.</b> A library where a book's shelf is <i>derived from its title</i> by a fixed rule, instead of being recorded in a catalogue. You never search the catalogue. You apply the rule and walk straight to the shelf. Occasionally two books land on the same shelf (a <b>collision</b>), so you glance through the two or three books there. Keep the library big enough and that glance is always tiny.</p>`,
 
   why: [
@@ -2725,7 +2725,7 @@ groups.get(key).push(w);
 
   plain: `<p>Three questions look similar and are not: are these the same object, are they equal, and which one comes first. Languages answer them with different operators, and disagreeing with your language about which question you asked is a fine way to spend an afternoon.</p>
 <p><b>Identity</b> asks whether two names point at one object. <b>Equality</b> asks whether two objects have the same contents. For built-in values the distinction rarely bites. For your own types it decides whether a hash set can find them at all.</p>
-<p>Then there is <b>ordering</b>, which is what sorting needs. A comparator is a promise about a total order, and the promise has rules. Break them and the standard library is entitled to do anything it likes, up to and including crashing, and C++ takes that entitlement seriously.</p>
+<p>Then there is <b>ordering</b>, which is what sorting needs. A comparator is a promise about a total order, one consistent ranking of every item, and the promise has rules. Break them and the standard library is entitled to do anything it likes, up to and including crashing, and C++ takes that entitlement seriously.</p>
 <p><b>Analogy.</b> Two identical twins. Same appearance, so equal. Different people, so not identical. If the school files them by appearance alone, one of them is going to get the other's report card.</p>`,
 
   why: [
@@ -3247,8 +3247,8 @@ function nextGreater(a) {
   one: "A heap promises <b>only that the minimum is on top</b>, not a sorted order. That weaker promise is why push and pop are O(log n), and why top-K costs O(n log k) instead of O(n log n).",
 
   plain: `<p>You need the smallest item repeatedly, and new items keep arriving. Sorting gives you that, but it orders <i>everything</i> when you only ever look at <b>one</b> element. You paid for information you never used.</p>
-<p>A heap makes a deliberately weaker promise: <b>every parent is ≤ its children</b>. Siblings are unordered, the underlying array is not sorted. All you are guaranteed is that the root is the minimum, which is all you asked for.</p>
-<p>Because the promise is <i>local</i>, repairing it after a change is local too. A new item swaps upward along one path from root to leaf. That is about log n swaps, not n.</p>
+<p>Picture the items as a pyramid, one on top, each item sitting above two others lower down. The item above is a <b>parent</b>, the two below are its <b>children</b>, and the very top one is the <b>root</b>. A heap makes a deliberately weaker promise: <b>every parent is ≤ its children</b>. Siblings are unordered, the underlying array is not sorted. All you are guaranteed is that the root is the minimum, which is all you asked for.</p>
+<p>Because the promise is <i>local</i>, repairing it after a change is local too. A new item swaps upward along one path toward the root. That is about log n swaps, not n.</p>
 <p><b>Analogy.</b> A hospital waiting room. Nobody ranks all 200 patients; they only need to know who is treated <b>next</b>. A new critical case is moved up past a few people, not inserted into a full ranking of everyone.</p>`,
 
   why: [
@@ -3796,7 +3796,7 @@ function subsets(nums) {
   group: "Fundamentals",
   one: "Write every range as half-open <b>[lo, hi)</b> and say your invariant out loud before the loop. Almost every off-by-one bug is one of those two habits missing.",
 
-  plain: `<p>Off-by-one errors are not carelessness. They come from ambiguity: when you say "from 2 to 5", nobody, including you, three lines later. Is certain whether 5 is included.</p>
+  plain: `<p>Off-by-one errors are not carelessness. They come from ambiguity: when you say "from 2 to 5", nobody is certain whether 5 is included, including you three lines later.</p>
 <p>The fix is a convention, applied everywhere without exception: <b>the low end is included, the high end is not</b>. That is what <code>[lo, hi)</code> means, and it is why array indices start at 0 and why slices and iterators stop one past the end.</p>
 <p>Adopt it and the arithmetic becomes free. The size is <code>hi − lo</code>, with no +1 to remember. An empty range is <code>lo == hi</code>, with no special case. Splitting at <code>mid</code> gives <code>[lo, mid)</code> and <code>[mid, hi)</code>. Nothing shared, nothing skipped, no adjustment.</p>
 <p>The second habit is the <b>invariant</b>: one sentence that is true before the loop and still true after every pass. Write it in a comment first. Then each branch has an obvious job, keep it true, and the questions about <code>&lt;</code> versus <code>&lt;=</code> answer themselves.</p>
@@ -4883,7 +4883,7 @@ function levelOrder(root) {
 
   plain: `<p>Binary search is wonderful and needs a sorted array, which is wonderful until something needs inserting, at which point half the array shuffles along to make room.</p>
 <p>A search tree keeps the halving and drops the shuffling. Put a middling value at the root, everything smaller in the left subtree, everything larger in the right, and repeat. Now finding a value is the same sequence of decisions binary search makes, except the decisions are baked into the shape instead of recomputed from indices.</p>
-<p>Insert costs the same walk, and nothing moves afterwards, because there is no single unbroken block of memory to keep tidy. You have traded array locality for the ability to insert in the middle without apologising to everything after it.</p>
+<p>Insert costs the same walk, and nothing moves afterwards, because there is no single unbroken block of memory to keep tidy. You have traded array locality, values sitting side by side in memory, for the ability to insert in the middle without apologising to everything after it.</p>
 <p>There is one condition, and the whole page hinges on it: the tree has to stay bushy. Nothing in a plain search tree makes that happen.</p>
 <p><b>Analogy.</b> A pub quiz where every question is "higher or lower". You get there in about twenty guesses out of a million, provided the person answering is picking sensible midpoints and not counting up from one.</p>`,
 

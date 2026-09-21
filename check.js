@@ -295,7 +295,7 @@ if (!JSDOM) {
       .replace(/<script src="([^"]+)"><\/script>/g, (m, src) =>
         src.startsWith("http") ? "" : "<script>\n" + fs.readFileSync(P + src, "utf8") + "\n</script>")
       .replace(/<link rel="stylesheet" href="([^"]+)" \/>/g, (m, href) =>
-        href.startsWith("http") ? "" : "<style>\n" + fs.readFileSync(P + href, "utf8") + "\n</style>");
+        href.startsWith("http") ? "" : "<style>\n" + fs.readFileSync(P + href.split("?")[0], "utf8") + "\n</style>");
     const errs = [];
     const { VirtualConsole } = require("jsdom");
     const vc = new VirtualConsole();
