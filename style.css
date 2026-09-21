@@ -27,6 +27,8 @@ a{color:var(--accent);text-underline-offset:2px}
 
 .nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.nav::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
 .nav-in{max-width:760px;margin:0 auto;padding:11px 22px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
 .brand{text-decoration:none;color:var(--text);font-weight:600;font-size:.95rem;letter-spacing:-.01em}
 .brand-mark span{color:var(--accent)}
@@ -39,7 +41,10 @@ a{color:var(--accent);text-underline-offset:2px}
 .wrap{max-width:760px;margin:0 auto;padding:52px 22px 80px;width:100%;flex:1}
 
 .hero{margin-bottom:44px}
-.hero h1{font-size:2rem;letter-spacing:-.024em;margin-bottom:12px}
+.hero h1{font-size:2rem;letter-spacing:-.024em;margin-bottom:12px;
+  background:linear-gradient(90deg,#F2C31E 0%,#F0540C 52%,#D82424 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  width:fit-content}
 .hero p{
   color:var(--muted);font-size:1.06rem;max-width:60ch;line-height:1.7;
   font-family:"Source Serif 4","Iowan Old Style",Georgia,serif;
