@@ -3560,6 +3560,17 @@ class MinHeap {
         ["DOC", "https://docs.python.org/3/library/functools.html#functools.lru_cache", "Python docs, functools.lru_cache"]],
 
   math: [
+    { t: "Watch one answer build up and come back", d: "The leap of faith is easier to trust once you have seen it resolve. Here is factorial(4) in full, with nothing assumed.", w:
+`factorial(4) = 4 x factorial(3)      needs the smaller call
+  factorial(3) = 3 x factorial(2)    needs it
+    factorial(2) = 2 x factorial(1)  needs it
+      factorial(1) = 1               base case, no more calls
+
+the answers now come back up the chain:
+      factorial(1) = 1
+    factorial(2) = 2 x 1 = 2
+  factorial(3) = 3 x 2 = 6
+factorial(4) = 4 x 6 = 24` },
     { t: "Depth is memory, and the memory runs out at a specific number", d: "Every pending call is a frame on the stack. Multiply frames by bytes and you can predict the overflow instead of discovering it.", w:
 `one frame: return address, saved registers, locals
             roughly 50 to 100 bytes
@@ -6195,6 +6206,20 @@ const pushFront = (head, n) => {
   viz: ["segment-tree"],
 
   math: [
+    { t: "Build a tiny tree, then one query and one update", d: "Array [3, 1, 4, 1]. Each node holds the sum of its two children. Then ask one range, and change one value.", w:
+`array [3, 1, 4, 1], each node = sum of its two children:
+
+  root      [9]              = 3+1+4+1, the whole range
+  next    [4]   [5]          = 3+1  and  4+1
+  leaves [3][1] [4][1]       the four original values
+
+query sum of indices 1..3:
+  take [1] then the whole block [5]:  1 + 5 = 6
+  two nodes read, not three values
+
+update index 0 from 3 to 8:
+  fix only its ancestors: [3]->8, [4]->9, [9]->14
+  three nodes touched, the rest still correct` },
     { t: "The two structures you already have are both extreme", d: "Neither is bad. They are optimal at opposite ends, and a workload with both operations in it lands in the worst case of whichever you picked.", w:
 `n = 10^6, q = 10^6 operations, mixed updates and queries
 
@@ -9366,6 +9391,16 @@ Interview mein: top-down se derive karo, phir bolo "isse bottom-up mein convert 
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, the recursion tree that DP collapses"]],
 
   math: [
+    { t: "Fill a tiny table by hand, left to right", d: "Climbing stairs, 1 or 2 at a time: each step is reached from one or two below, so ways(i) = ways(i-1) + ways(i-2).", w:
+`ways(i) = ways to climb i stairs, taking 1 or 2 each move
+base:  ways(0) = 1        ways(1) = 1
+
+ways(2) = ways(1) + ways(0) = 1 + 1 = 2
+ways(3) = ways(2) + ways(1) = 2 + 1 = 3
+ways(4) = ways(3) + ways(2) = 3 + 2 = 5
+ways(5) = ways(4) + ways(3) = 5 + 3 = 8
+
+every cell reads two cells already final: one pass, O(n)` },
     { t: "Why memoising works: count the labels on the tree", d: "The recursion tree is exponential and the set of distinct arguments is tiny. Everything past that set is a repeat, and a repeat can be looked up.", w:
 `naive fib(n):  2 fib(n+1) - 1 calls,  growth ~ 1.618^n
 distinct subproblems:  n + 1
