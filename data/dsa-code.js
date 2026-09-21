@@ -2197,8 +2197,17 @@ function lcaBst(root, p, q) {
 }`,
       },
 
-      "Subsets / Power set":
-`# O(n·2^n) time · O(n) space (excl. output) — include/exclude each item
+      "Subsets / Power set": {
+        pseudo:
+`all subsets (power set). O(n·2^n). Include/exclude each item.
+  bt(start, path):
+    record a copy of path        # every prefix is a valid subset
+    for i from start to n-1
+      add nums[i] to path
+      bt(i+1, path)
+      remove nums[i] (backtrack)`,
+        py:
+`# O(n·2^n) time · O(n) space (excl. output), include/exclude each item
 def subsets(nums):
     res = []
     def bt(start, path):
@@ -2206,8 +2215,64 @@ def subsets(nums):
         for i in range(start, len(nums)):
             path.append(nums[i]); bt(i+1, path); path.pop()
     bt(0, []); return res`,
-      "Permutations / Combinations":
-`# O(n·n!) time · O(n) space (excl. output) — used[] tracks picked items
+        java:
+`// O(n * 2^n) time: at each step, take or skip the next item
+List<List<Integer>> subsets(int[] nums) {
+    List<List<Integer>> res = new ArrayList<>();
+    bt(nums, 0, new ArrayList<>(), res);
+    return res;
+}
+void bt(int[] nums, int start, List<Integer> path, List<List<Integer>> res) {
+    res.add(new ArrayList<>(path));           // record a copy
+    for (int i = start; i < nums.length; i++) {
+        path.add(nums[i]);
+        bt(nums, i + 1, path, res);
+        path.remove(path.size() - 1);         // backtrack
+    }
+}`,
+        cpp:
+`// O(n * 2^n) time: at each step, take or skip the next item
+void bt(vector<int>& nums, int start, vector<int>& path, vector<vector<int>>& res) {
+    res.push_back(path);                      // record a copy
+    for (int i = start; i < (int)nums.size(); i++) {
+        path.push_back(nums[i]);
+        bt(nums, i + 1, path, res);
+        path.pop_back();                      // backtrack
+    }
+}
+vector<vector<int>> subsets(vector<int>& nums) {
+    vector<vector<int>> res; vector<int> path;
+    bt(nums, 0, path, res);
+    return res;
+}`,
+        js:
+`// O(n * 2^n) time: at each step, take or skip the next item
+function subsets(nums) {
+  const res = [];
+  const bt = (start, path) => {
+    res.push([...path]);                      // record a copy
+    for (let i = start; i < nums.length; i++) {
+      path.push(nums[i]);
+      bt(i + 1, path);
+      path.pop();                             // backtrack
+    }
+  };
+  bt(0, []);
+  return res;
+}`,
+      },
+      "Permutations / Combinations": {
+        pseudo:
+`all permutations. O(n·n!). used[] marks picked items.
+  bt(path, used):
+    if path is full -> record a copy; return
+    for i, x in nums
+      if used[i] -> skip
+      mark used[i], add x
+      bt(path, used)
+      remove x, unmark used[i]    # backtrack`,
+        py:
+`# O(n·n!) time · O(n) space (excl. output), used[] tracks picked items
 def permute(nums):
     res = []
     def bt(path, used):
@@ -2218,8 +2283,69 @@ def permute(nums):
             bt(path, used)
             path.pop(); used[i] = False
     bt([], [False]*len(nums)); return res`,
-      "Grid / Partition backtracking":
-`# O(R·C·4^L) time · O(L) space — DFS, mark cell then restore (backtrack)
+        java:
+`// O(n * n!) time: used[] tracks which items are already picked
+List<List<Integer>> permute(int[] nums) {
+    List<List<Integer>> res = new ArrayList<>();
+    bt(nums, new ArrayList<>(), new boolean[nums.length], res);
+    return res;
+}
+void bt(int[] nums, List<Integer> path, boolean[] used, List<List<Integer>> res) {
+    if (path.size() == nums.length) { res.add(new ArrayList<>(path)); return; }
+    for (int i = 0; i < nums.length; i++) {
+        if (used[i]) continue;
+        used[i] = true; path.add(nums[i]);
+        bt(nums, path, used, res);
+        path.remove(path.size() - 1); used[i] = false;   // backtrack
+    }
+}`,
+        cpp:
+`// O(n * n!) time: used[] tracks which items are already picked
+void bt(vector<int>& nums, vector<int>& path, vector<bool>& used,
+        vector<vector<int>>& res) {
+    if (path.size() == nums.size()) { res.push_back(path); return; }
+    for (int i = 0; i < (int)nums.size(); i++) {
+        if (used[i]) continue;
+        used[i] = true; path.push_back(nums[i]);
+        bt(nums, path, used, res);
+        path.pop_back(); used[i] = false;      // backtrack
+    }
+}
+vector<vector<int>> permute(vector<int>& nums) {
+    vector<vector<int>> res; vector<int> path; vector<bool> used(nums.size(), false);
+    bt(nums, path, used, res);
+    return res;
+}`,
+        js:
+`// O(n * n!) time: used[] tracks which items are already picked
+function permute(nums) {
+  const res = [], used = new Array(nums.length).fill(false);
+  const bt = (path) => {
+    if (path.length === nums.length) { res.push([...path]); return; }
+    for (let i = 0; i < nums.length; i++) {
+      if (used[i]) continue;
+      used[i] = true; path.push(nums[i]);
+      bt(path);
+      path.pop(); used[i] = false;             // backtrack
+    }
+  };
+  bt([]);
+  return res;
+}`,
+      },
+      "Grid / Partition backtracking": {
+        pseudo:
+`word search in a grid: DFS, mark a cell, then restore it. O(R·C·4^L).
+  dfs(r, c, i):
+    if i == len(word) -> found the whole word
+    if out of bounds or board[r][c] != word[i] -> false
+    temp = board[r][c]; mark board[r][c] visited
+    try all 4 directions with i+1
+    restore board[r][c] = temp (backtrack)
+    return whether any direction found it
+  start dfs from every cell`,
+        py:
+`# O(R·C·4^L) time · O(L) space, DFS, mark cell then restore (backtrack)
 def exist(board, word):
     R, C = len(board), len(board[0])
     def dfs(r, c, i):
@@ -2230,8 +2356,80 @@ def exist(board, word):
         board[r][c] = word[i]      # unmark
         return found
     return any(dfs(r,c,0) for r in range(R) for c in range(C))`,
-      "Constraint solving (pruning)":
-`# O(n!) time · O(n) space — sets prune column & both diagonals in O(1)
+        java:
+`// O(R*C*4^L): DFS, mark the cell, then restore it (backtrack)
+int[][] DIRS = {{1,0},{-1,0},{0,1},{0,-1}};
+boolean exist(char[][] board, String word) {
+    for (int r = 0; r < board.length; r++)
+        for (int c = 0; c < board[0].length; c++)
+            if (dfs(board, word, r, c, 0)) return true;
+    return false;
+}
+boolean dfs(char[][] b, String w, int r, int c, int i) {
+    if (i == w.length()) return true;
+    if (r < 0 || c < 0 || r >= b.length || c >= b[0].length || b[r][c] != w.charAt(i))
+        return false;
+    char tmp = b[r][c]; b[r][c] = '#';         // mark visited
+    boolean found = false;
+    for (int[] d : DIRS)
+        if (dfs(b, w, r + d[0], c + d[1], i + 1)) { found = true; break; }
+    b[r][c] = tmp;                             // unmark (backtrack)
+    return found;
+}`,
+        cpp:
+`// O(R*C*4^L): DFS, mark the cell, then restore it (backtrack)
+int DR[4] = {1,-1,0,0}, DC[4] = {0,0,1,-1};
+bool dfs(vector<vector<char>>& b, string& w, int r, int c, int i) {
+    if (i == (int)w.size()) return true;
+    if (r < 0 || c < 0 || r >= (int)b.size() || c >= (int)b[0].size() || b[r][c] != w[i])
+        return false;
+    char tmp = b[r][c]; b[r][c] = '#';         // mark visited
+    bool found = false;
+    for (int d = 0; d < 4 && !found; d++)
+        found = dfs(b, w, r + DR[d], c + DC[d], i + 1);
+    b[r][c] = tmp;                             // unmark (backtrack)
+    return found;
+}
+bool exist(vector<vector<char>>& board, string word) {
+    for (int r = 0; r < (int)board.size(); r++)
+        for (int c = 0; c < (int)board[0].size(); c++)
+            if (dfs(board, word, r, c, 0)) return true;
+    return false;
+}`,
+        js:
+`// O(R*C*4^L): DFS, mark the cell, then restore it (backtrack)
+function exist(board, word) {
+  const R = board.length, C = board[0].length;
+  const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+  const dfs = (r, c, i) => {
+    if (i === word.length) return true;
+    if (r < 0 || c < 0 || r >= R || c >= C || board[r][c] !== word[i]) return false;
+    const tmp = board[r][c]; board[r][c] = '#';   // mark visited
+    let found = false;
+    for (const [dr, dc] of DIRS)
+      if (dfs(r + dr, c + dc, i + 1)) { found = true; break; }
+    board[r][c] = tmp;                            // unmark (backtrack)
+    return found;
+  };
+  for (let r = 0; r < R; r++)
+    for (let c = 0; c < C; c++)
+      if (dfs(r, c, 0)) return true;
+  return false;
+}`,
+      },
+      "Constraint solving (pruning)": {
+        pseudo:
+`N-Queens: place one queen per row, prune with sets. O(n!).
+  cols, diag (r-c), anti (r+c) are the occupied sets.
+  bt(r):
+    if r == n -> record the board; return
+    for c in 0..n-1
+      if c in cols or (r-c) in diag or (r+c) in anti -> skip
+      place queen: add to the 3 sets, board[r][c]='Q'
+      bt(r+1)
+      remove queen from the 3 sets, board[r][c]='.'  # backtrack`,
+        py:
+`# O(n!) time · O(n) space, sets prune column & both diagonals in O(1)
 def solve_n_queens(n):
     res = []; cols=set(); diag=set(); anti=set()
     def bt(r, board):
@@ -2242,6 +2440,68 @@ def solve_n_queens(n):
             board[r][c]='Q'; bt(r+1, board); board[r][c]='.'
             cols.discard(c); diag.discard(r-c); anti.discard(r+c)
     bt(0, [['.']*n for _ in range(n)]); return res`,
+        java:
+`// O(n!): the three sets prune column and both diagonals in O(1)
+List<List<String>> solveNQueens(int n) {
+    List<List<String>> res = new ArrayList<>();
+    char[][] board = new char[n][n];
+    for (char[] row : board) Arrays.fill(row, '.');
+    Set<Integer> cols = new HashSet<>(), diag = new HashSet<>(), anti = new HashSet<>();
+    bt(0, n, board, cols, diag, anti, res);
+    return res;
+}
+void bt(int r, int n, char[][] board, Set<Integer> cols, Set<Integer> diag,
+        Set<Integer> anti, List<List<String>> res) {
+    if (r == n) {
+        List<String> b = new ArrayList<>();
+        for (char[] row : board) b.add(new String(row));
+        res.add(b); return;
+    }
+    for (int c = 0; c < n; c++) {
+        if (cols.contains(c) || diag.contains(r - c) || anti.contains(r + c)) continue;
+        cols.add(c); diag.add(r - c); anti.add(r + c); board[r][c] = 'Q';
+        bt(r + 1, n, board, cols, diag, anti, res);
+        cols.remove(c); diag.remove(r - c); anti.remove(r + c); board[r][c] = '.';
+    }
+}`,
+        cpp:
+`// O(n!): the three sets prune column and both diagonals in O(1)
+void bt(int r, int n, vector<string>& board, set<int>& cols,
+        set<int>& diag, set<int>& anti, vector<vector<string>>& res) {
+    if (r == n) { res.push_back(board); return; }
+    for (int c = 0; c < n; c++) {
+        if (cols.count(c) || diag.count(r - c) || anti.count(r + c)) continue;
+        cols.insert(c); diag.insert(r - c); anti.insert(r + c); board[r][c] = 'Q';
+        bt(r + 1, n, board, cols, diag, anti, res);
+        cols.erase(c); diag.erase(r - c); anti.erase(r + c); board[r][c] = '.';
+    }
+}
+vector<vector<string>> solveNQueens(int n) {
+    vector<vector<string>> res;
+    vector<string> board(n, string(n, '.'));
+    set<int> cols, diag, anti;
+    bt(0, n, board, cols, diag, anti, res);
+    return res;
+}`,
+        js:
+`// O(n!): the three sets prune column and both diagonals in O(1)
+function solveNQueens(n) {
+  const res = [];
+  const board = Array.from({length: n}, () => Array(n).fill('.'));
+  const cols = new Set(), diag = new Set(), anti = new Set();
+  const bt = (r) => {
+    if (r === n) { res.push(board.map(row => row.join(''))); return; }
+    for (let c = 0; c < n; c++) {
+      if (cols.has(c) || diag.has(r - c) || anti.has(r + c)) continue;
+      cols.add(c); diag.add(r - c); anti.add(r + c); board[r][c] = 'Q';
+      bt(r + 1);
+      cols.delete(c); diag.delete(r - c); anti.delete(r + c); board[r][c] = '.';
+    }
+  };
+  bt(0);
+  return res;
+}`,
+      },
 
       "Interval Greedy":
 `# O(n log n) time · O(1) space — sort by END, keep earliest-finishing
