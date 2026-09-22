@@ -9144,138 +9144,153 @@ class SegTree {
   id: "graphs",
   n: "Graphs: representation and traversal",
   group: "Graphs",
+  need: {
+    ask: `<p>A social network has <b>10⁶ users</b> and a few million friendships. A feature needs the fewest introductions between two people: “you are 3 steps from Priya”. There is no top user, no order, and friendships loop back on each other.</p>
+<p>The small version: six people. A knows B and D. B knows C and E. D knows E. C knows F. E knows F. How many steps from A to F? And from A to D, which is 1?</p>`,
+    tries: [
+      ["Store it as a grid: a yes/no for every pair", "Asking “do these two know each other?” is instant. But 10⁶ users need 10¹² cells, about 125 GB even as bits, for a network that has a few million friendships."],
+      ["Just follow friends outward, without keeping track", "A to B to E to D, and D knows A: you are back where you started, and the walk goes round forever."],
+      ["Go as deep as possible first, and take the first route found", "From A, recursive DFS visits B, C, F, E, and only then D. That says D is 5 steps away. D is A's friend: 1 step."],
+    ],
+    so: `<p>That is a <b>graph</b>: things (nodes) and connections (edges), with no root and no rules. Store each person's friend list, an <b>adjacency list</b>: space proportional to the friendships, not the pairs. Keep a <b>visited</b> set, so no one is processed twice and loops end.</p>
+<p>Then expand in rings with a queue, <b>breadth-first search</b>: A, then A's friends, then theirs. The first time you reach someone is by the fewest steps. The page uses this six-person network throughout.</p>`,
+  },
+
   one: "A graph is things and connections, with no root and no rules. DFS and BFS are the same walk with a different container, and the visited set is the only thing between you and an infinite loop.",
 
-  plain: `<p>Everything so far has been a graph wearing a uniform. A linked list is a graph where each node has exactly one exit. A tree is a graph with one root and no way back. Take away those restrictions and you are left with the general case: some things, and some connections between them.</p>
-<p>Two consequences follow immediately. First, there is no root, so "where do I start" becomes a real question and one traversal may not reach everything. Second, and much more importantly, <b>paths can loop</b>. In a tree you can walk forever without meeting yourself. In a graph you can, and you will, and your program will not stop.</p>
-<p>Hence the visited set, which is not an optimisation. It is the thing keeping the program finite.</p>
-<p>Once that is handled, traversal is almost anticlimactic. Take a node, look at its neighbours, add the unvisited ones to a container, repeat. Make the container a stack and you have depth-first search. Make it a queue and you have breadth-first search. That is the entire difference.</p>
-<p><b>Analogy.</b> A city with one-way and two-way streets. There is no "first" junction, plenty of ways to drive in circles, and the only way to survey the place is to write down where you have been.</p>`,
+  plain: `<p>Everything so far has been a graph with rules attached. A linked list is a graph where each node has one exit. A tree is a graph with one root and no way back. Take the rules away and you have the general case: some <b>nodes</b>, and some <b>edges</b> joining them.</p>
+<p>Two things change at once. There is no root, so where to start is a real question, and one walk may not reach everyone. And, more importantly, <b>paths can loop</b>. In the six-person network, A, B, E, D and back to A is a loop. Walk it without care and your program never stops.</p>
+<p>Hence the <b>visited set</b>, which is not an optimisation. It is what keeps the program finite.</p>
+<p>After that, a walk is almost dull. Take a node, look at its neighbours, add the unvisited ones to a container, repeat. A stack gives <b>depth-first search</b> (DFS); a queue gives <b>breadth-first search</b> (BFS). That is the entire difference.</p>
+<p><b>Analogy.</b> A city of one-way and two-way streets. There is no first junction, many ways to drive in circles, and the only way to survey it is to write down where you have been.</p>`,
 
   why: [
-    { t: "A graph is what is left after you remove the promises", d: "A tree guarantees one root, no cycles, and exactly one path between any two nodes. Every one of those guarantees is something an algorithm can lean on. Remove them and the algorithms have to carry their own guarantees instead, which is what the visited set is." },
-    { t: "So the visited set is correctness, not performance", d: "Without it a cycle makes traversal run forever. With it, every node is processed once, and the cost becomes <b>O(V + E)</b>: every node once, every edge considered once from each end. That formula is not a coincidence, it is the visited set being counted." },
-    { t: "Adjacency list, unless you have a reason", d: "The list stores each node's neighbours: <b>O(V + E)</b> space, and listing a node's neighbours takes time proportional to how many it has. A matrix answers \"is there an edge between these two\" in one lookup, but costs <b>O(V squared)</b> whether or not the edges exist. Real graphs are sparse, and traversal spends its life listing neighbours rather than testing specific pairs, so the list wins nearly always." },
-    { t: "DFS and BFS differ only in which end of the container you take from", d: "Take the most recently added node and you go deep, following one path to its conclusion before backing up. Take the oldest and you expand in rings. Same loop, same visited set, same complexity. Recursion is just DFS with the call stack playing the part of the stack." },
-    { t: "Which is why BFS finds shortest paths and DFS does not", d: "BFS finishes everything at distance 1 before anything at distance 2, so the <b>first time</b> it reaches a node is by the fewest edges. DFS reaches nodes in whatever order its commitments led to, so its first arrival means nothing. This holds only while every edge counts the same, which is exactly where the next page starts." },
-    { t: "Direction is a modelling decision you make twice", d: "Undirected means adding both <code>adj[u].add(v)</code> and <code>adj[v].add(u)</code>. Forget the second and you have quietly built a directed graph and will spend an hour wondering why half your edges vanished. Directed graphs also permit cycles that are not obvious, which is why cycle detection there needs a recursion-stack marker rather than a plain visited flag." },
-    { t: "One traversal is one component", d: "A graph need not be connected. Loop over all nodes and start a fresh traversal from each one not yet visited. The number of starts is the number of <b>connected components</b>. The total cost is still O(V + E), because the visited set stops any node being processed twice." },
+    { t: "A graph is what is left when you remove the promises",
+      d: "A tree promises one root, no loops, and exactly one path between any two nodes. Each promise is something an algorithm can lean on. Remove them and the algorithm must bring its own guarantees, which is what the visited set is." },
+    { t: "So the visited set is about correctness, not speed",
+      d: "Without it, the loop A, B, E, D, A runs forever. With it, every node is processed once, and the cost becomes <b>O(<var>V</var> + <var>E</var>)</b>, for <var>V</var> nodes and <var>E</var> edges: each node once, each edge looked at from each end." },
+    { t: "Adjacency list, unless you have a reason",
+      d: "The list stores each node's neighbours: A's list is B, D. It costs <b>O(<var>V</var> + <var>E</var>)</b> space, and listing a node's neighbours takes time in proportion to how many it has. A grid of yes/no per pair answers “is there an edge?” in one lookup, but costs <b>O(<var>V</var>²)</b> however few edges exist. Real graphs are sparse, so the list nearly always wins." },
+    { t: "DFS and BFS differ only in which end you take from",
+      d: "Take the most recently added node and you go deep; recursive DFS from A visits A, B, C, F, E, D. Take the oldest and you expand in rings: A, then B and D, then C and E, then F. Same loop, same visited set, same cost. Recursion is DFS with the call stack as the stack." },
+    { t: "Which is why BFS finds shortest paths and DFS does not",
+      d: "BFS finishes everything 1 step away before anything 2 steps away, so its <b>first</b> arrival at a node uses the fewest edges: D at 1, F at 3. Recursive DFS first reaches D after 5 steps, because it followed B, C, F and E first. This holds only while every edge counts the same, which is where the next page starts." },
+    { t: "Direction is a decision you make twice",
+      d: "A friendship goes both ways, so adding it means <code>adj[u].add(v)</code> <i>and</i> <code>adj[v].add(u)</code>. Forget the second and you have built a one-way graph, and half your edges seem to vanish. One-way graphs also hide loops, so cycle detection there needs more than a visited flag." },
+    { t: "One walk covers one component",
+      d: "A graph need not be connected. Loop over all nodes, and start a fresh walk from each one not yet visited. The number of starts is the number of <b>connected components</b>. The total cost stays O(<var>V</var> + <var>E</var>), because the visited set never lets a node be processed twice." },
   ],
 
   variants: [
     { n: "Connected components", cost: "O(V + E)",
-      idea: "Loop over every node and start a fresh traversal from any you have not visited. The number of starts is the number of components.",
-      when: "Counting islands, provinces, friend circles, or any \"how many separate groups\" question.",
-      watch: "Union-find does this too, and beats traversal when edges arrive over time rather than all at once." },
-
+      idea: "Loop over every node and start a fresh walk from any you have not visited. The number of starts is the number of components.",
+      when: "Counting islands, provinces, friend circles, or any “how many separate groups” question.",
+      watch: "Union-find does this too, and beats a walk when edges arrive over time rather than all at once." },
     { n: "Cycle detection, undirected", cost: "O(V + E)",
-      idea: "During DFS, an edge to an already visited node means a cycle, unless that node is simply the parent you just came from.",
-      when: "Validating that a graph is a tree, which needs exactly V-1 edges and no cycle.",
-      watch: "The parent check is the whole difficulty. Forget it and every single edge looks like a two-node cycle." },
-
+      idea: "During DFS, an edge to an already visited node means a loop, unless that node is simply the parent you came from.",
+      when: "Checking that a graph is a tree, which needs exactly <var>V</var> − 1 edges and no loop.",
+      watch: "The parent check is the whole difficulty. Forget it and every edge looks like a two-node loop." },
     { n: "Cycle detection, directed", cost: "O(V + E)",
-      idea: "A plain visited set is not enough. You need to know whether a node is on the CURRENT path, which means three states rather than two.",
+      idea: "A plain visited set is not enough. You need to know whether a node is on the <i>current</i> path, which means three states, not two.",
       when: "Deadlock detection, build dependency checks, course prerequisites.",
-      watch: "See the topological sort page, where Kahn's algorithm reports the cycle for free by counting what it failed to emit." },
-
+      watch: "See the topological sort page, where Kahn's algorithm reports the loop for free by counting what it failed to output." },
     { n: "Bipartite check, two-colouring", cost: "O(V + E)",
-      idea: "Traverse and colour each node the opposite of whoever reached it. An edge joining two nodes of the same colour proves the graph is not bipartite.",
-      when: "Splitting into two hostile groups, matching problems, or checking a graph is free of odd-length cycles.",
-      watch: "A graph is bipartite exactly when it has no odd cycle. Remember to run it from every component, since one bad component ruins it." },
-
+      idea: "Walk and colour each node the opposite of whoever reached it. An edge joining two nodes of the same colour proves the graph is not bipartite.",
+      when: "Splitting into two opposing groups, matching problems, or checking for odd-length loops.",
+      watch: "A graph is bipartite exactly when it has no odd loop. Run it from every component: one bad component ruins it." },
     { n: "Multi-source BFS", cost: "O(V + E)",
-      idea: "Seed the queue with every source at once rather than one. The first arrival at any node is then its distance to the nearest source.",
+      idea: "Start the queue with every source at once. The first arrival at any node is then its distance to the nearest source.",
       when: "Rotting oranges, nearest exit, distance to the closest water cell.",
-      watch: "Feels like it needs one BFS per source, which would be O(V(V+E)). Seeding them together is one traversal and the same answer." },
-
+      watch: "It feels like it needs one BFS per source, which would be O(<var>V</var>(<var>V</var> + <var>E</var>)). Starting them together is one walk and the same answer." },
     { n: "Bridges and articulation points", cost: "O(V + E)",
-      idea: "One DFS tracking discovery times and the earliest reachable ancestor finds every edge or node whose removal disconnects the graph.",
-      when: "Network reliability, single points of failure.",
+      idea: "One DFS, tracking discovery times and the earliest ancestor each subtree can reach, finds every edge or node whose removal splits the graph.",
+      when: "Network reliability: single points of failure.",
       watch: "Tarjan's low-link machinery. Worth naming, rarely worth writing under time pressure." },
   ],
 
   hing: `<p><b>Ab tak jo padha, sab graph hi tha, alag kapdon mein.</b> Linked list = graph jisme har node ka ek hi raasta bahar jaata hai. Tree = graph jisme ek root hai aur peeche laut-ne ka raasta nahi. Yeh saari <b>paabandiyan</b> hata do, to jo bachta hai wahi graph hai: kuch cheezein, aur unke beech connections.</p>
-<p><b>Do baatein turant badal jaati hain.</b> Pehli, koi <b>root nahi</b> hai. To "shuru kahan se karein" khud ek sawaal ban jaata hai, aur ek traversal se poora graph cover ho hi nahi sakta. Doosri, aur zyada important: <b>raaste ghoom kar wapas aa sakte hain</b>. Tree mein tum kabhi apne aap se nahi milte. Graph mein miloge, aur program kabhi rukega nahi.</p>
+<p><b>Do baatein turant badal jaati hain.</b> Pehli, koi <b>root nahi</b> hai. To "shuru kahan se karein" khud ek sawaal ban jaata hai, aur ek traversal se poora graph cover ho hi nahi sakta. Doosri, aur zyada important: <b>raaste ghoom kar wapas aa sakte hain</b>. Graph mein apne aap se miloge, aur program kabhi rukega nahi.</p>
 <p><b>Isliye visited set koi optimisation nahi hai.</b> Woh wahi cheez hai jo program ko <b>khatam</b> hone deti hai. Yeh line interview mein bolna: "visited set correctness ke liye hai, speed ke liye nahi".</p>
 <p><b>Uske baad traversal bilkul boring hai:</b> node lo, uske padosi dekho, jo visit nahi hue unhe container mein daalo, dohrao. Container <b>stack</b> hai to <b>DFS</b>, <b>queue</b> hai to <b>BFS</b>. Bas itna hi farak hai. Recursion bhi DFS hi hai, bas stack ka kaam call stack kar raha hai.</p>
-<p><b>Aur isiliye BFS shortest path deta hai, DFS nahi.</b> BFS pehle distance 1 ke saare nodes khatam karta hai, phir distance 2. Isliye jab woh kisi node par <b>pehli baar</b> pahunchta hai, wahi sabse kam edges wala raasta hota hai. DFS jahan mann kiya wahan chala jaata hai, to uski "pehli baar" ka koi matlab nahi. <b>Par yeh sirf tab tak sach hai jab har edge ki cost barabar ho</b>, aur wahin se agla page shuru hota hai.</p>
-<p><b>Representation:</b> <b>adjacency list</b> lo. Space <b>O(V + E)</b>, aur padosi ginwana sasta. Matrix se "in do ke beech edge hai kya" ek lookup mein pata chal jaata hai, par space <b>O(V²)</b> lagta hai chahe edges ho ya na ho. Asli graphs sparse hote hain aur traversal din bhar padosi hi ginwaata hai, to list hi jeetegi.</p>
-<p><b>Undirected graph mein edge do baar daalni hoti hai:</b> <code>adj[u].add(v)</code> aur <code>adj[v].add(u)</code>. Doosri bhool gaye to tumne chupke se directed graph bana diya, aur ek ghanta yeh sochne mein jaayega ki aadhe edges kahan gaye.</p>
-<p><b>Ek aur cheez: graph juda hua (connected) ho, zaroori nahi.</b> Saare nodes par loop chalao aur har un-visited node se naya traversal shuru karo. Kitni baar shuru karna pada, utne hi <b>connected components</b> hain. Total cost phir bhi O(V + E), kyunki visited set kisi node ko do baar process hone hi nahi deta.</p>`,
+<p><b>Aur isiliye BFS shortest path deta hai, DFS nahi.</b> BFS pehle distance 1 ke saare nodes khatam karta hai, phir distance 2. Isliye jab woh kisi node par <b>pehli baar</b> pahunchta hai, wahi sabse kam edges wala raasta hota hai. <b>Par yeh sirf tab tak sach hai jab har edge ki cost barabar ho</b>, aur wahin se agla page shuru hota hai.</p>
+<p><b>Representation:</b> <b>adjacency list</b> lo. Space <b>O(<var>V</var> + <var>E</var>)</b>, aur padosi ginwana sasta. Matrix se "in do ke beech edge hai kya" ek lookup mein pata chal jaata hai. Par space <b>O(<var>V</var>²)</b> lagta hai, chahe edges ho ya na ho.</p>
+<p><b>Undirected graph mein edge do baar daalni hoti hai:</b> <code>adj[u].add(v)</code> aur <code>adj[v].add(u)</code>. Doosri bhool gaye to tumne chupke se directed graph bana diya.</p>
+<p><b>Ek aur cheez: graph juda hua (connected) ho, zaroori nahi.</b> Saare nodes par loop chalao aur har un-visited node se naya traversal shuru karo. Kitni baar shuru karna pada, utne hi <b>connected components</b> hain. Total cost phir bhi O(<var>V</var> + <var>E</var>).</p>`,
 
   viz: ["graph-basics", "adjacency"],
   see: [["VA", "https://visualgo.net/en/dfsbfs", "VisuAlgo, DFS and BFS side by side"]],
 
   math: [
-    { t: "List or matrix, decided by density and nothing else", d: "Both are correct. The choice is memory, and on the sparse graphs interviews actually give you the difference is four orders of magnitude.", w:
-`V vertices, E edges
+    { t: "DFS and BFS from A on the six-person network", d: "Same graph, same visited set, different container. Only BFS's first arrival at each person is the fewest steps.", w:
+`A: B D    B: A C E    C: B F    D: A E    E: B D F    F: C E
 
-matrix:  V^2 memory, edge test O(1),    neighbours O(V)
-list:    V + E memory, edge test O(deg), neighbours O(deg)
+DFS (recursive):        A  B  C  F  E  D
+  D first reached via  A-B-C-F-E-D   = 5 steps
+
+BFS (queue, rings):     A | B D | C E | F
+  steps from A:         B 1, D 1, C 2, E 2, F 3
+
+visited stops the loop A-B-E-D-A from running for ever` },
+    { t: "List or grid, decided by density and nothing else", d: "Both are correct. The choice is memory, and on the sparse graphs you actually meet, the difference is four orders of magnitude.", w:
+`V nodes, E edges
+
+grid:  V^2 memory,   edge test O(1),   neighbours O(V)
+list:  V + E memory, edge test O(deg), neighbours O(deg)
 
 V = 10^5, E = 2 x 10^5 (sparse):
-  matrix  10^10 cells  = 10 GB
-  list    3 x 10^5 entries = a few MB
+  grid    10^10 cells  = 10 GB
+  list    5 x 10^5 entries = a few MB
 
-the matrix wins only as E approaches V^2 / 2` },
-    { t: "Where O(V + E) comes from", d: "The loop over neighbours does not run V times per node. It runs deg(v) times, and the degrees add up to twice the edge count.", w:
-`sum of all degrees = 2E   (undirected)
-                   = E    (directed, out-degrees)
+the grid wins only as E approaches V^2 / 2` },
+    { t: "Where O(V + E) comes from", d: "The loop over neighbours does not run <var>V</var> times per node. It runs once per neighbour, and the neighbour counts add up to twice the edge count.", w:
+`the six-person network: degrees 2 3 2 2 3 2, sum 14 = 2 x 7 edges
 
+sum of all degrees = 2E   (undirected)
 so all the inner loops together run 2E times, not V^2
 plus V pushes and V pops
 
 V = 10^5, E = 2 x 10^5  ->  about 5 x 10^5 steps
-scanning a matrix for the same graph: 10^10 cells` },
-    { t: "The visited set is correctness, and here is the difference", d: "On a tree you could leave it out and still terminate. On anything with a cycle it is the only thing between you and a loop that never ends.", w:
-`a tree has exactly V - 1 edges and no cycle
-any graph with E >= V contains at least one cycle
-
-with visited:     each node entered once, each edge
-                  examined twice   ->  O(V + E)
-without visited:  a 3-cycle revisits for ever
-
-it is not a speed-up. It is the termination argument.` },
-    { t: "The edge counts worth having memorised", d: "These four lines answer most of the modelling questions in one step, including whether the thing in front of you is secretly a tree.", w:
+scanning a grid for the same graph: 10^10 cells` },
+    { t: "The edge counts worth having memorised", d: "These lines answer most modelling questions in one step, including whether the graph in front of you is secretly a tree.", w:
 `undirected simple:  E <= V(V-1)/2
 directed simple:    E <= V(V-1)
 a tree:             E = V - 1 exactly, and connected
 connected:          E >= V - 1
 
-connected AND E = V - 1  =>  it is a tree
+six people, 7 edges: 7 > 6 - 1, so it has a loop
 V = 1,000  ->  at most 499,500 undirected edges` },
-    { t: "One traversal is one component", d: "Nothing extra is needed to count components, and the total cost does not change, because the traversals partition the graph between them.", w:
+    { t: "One walk is one component", d: "Counting components needs nothing extra, and the total cost does not change, because the walks split the graph between them.", w:
 `for v in all V nodes:
-    if v not visited: traverse(v), components += 1
+    if v not visited: walk(v), components += 1
 
-each node is visited exactly once across all traversals
-each edge is examined exactly twice
+each node is visited exactly once across all walks
+each edge is looked at exactly twice
 so the whole sweep is still O(V + E), not components x (V+E)` },
   ],
 
   costs: [
     ["build an adjacency list", "O(V + E) time and space", "the default representation"],
-    ["adjacency matrix", "O(V²) space", "regardless of how few edges exist"],
-    ["is there an edge u to v?", "O(1) matrix, O(degree) list", "the one thing the matrix is genuinely better at"],
-    ["list a node's neighbours", "O(degree) list, O(V) matrix", "and this is what traversal does constantly"],
+    ["adjacency matrix", "O(V²) space", "however few edges exist"],
+    ["is there an edge u to v?", "O(1) matrix, O(degree) list", "the one thing the matrix is really better at"],
+    ["list a node's neighbours", "O(degree) list, O(V) matrix", "and this is what a walk does constantly"],
     ["DFS or BFS", "O(V + E) time, O(V) space", "each node once, each edge from each end"],
-    ["shortest path, unweighted", "O(V + E) with BFS", "first arrival is the fewest edges"],
+    ["shortest path, unweighted", "O(V + E) with BFS", "the first arrival is the fewest edges"],
     ["connected components", "O(V + E)", "restart from every unvisited node; the visited set keeps it linear"],
   ],
 
   traps: [
-    "<b>No visited set.</b> A cycle turns traversal into an infinite loop. This is not a slow program, it is a hung one.",
-    "<b>Marking visited on pop instead of on push.</b> The same node gets queued once per neighbour, so the queue swells and O(V + E) quietly becomes something much worse.",
-    "<b>Adding only one direction for an undirected edge.</b> You have built a different graph than the one in the problem statement.",
-    "<b>Recursive DFS on 10⁵ nodes.</b> That is 10⁵ stack frames and a stack overflow. Use an explicit stack when the graph is large or possibly a long path.",
-    "<b>Detecting cycles in a directed graph with a plain visited set.</b> You need to know whether a node is on the <i>current</i> path, which is a recursion-stack marker, not a been-there flag.",
-    "<b>Assuming one traversal covers the graph.</b> It covers one component. There may be many.",
+    "<b>No visited set.</b> A loop turns the walk into an infinite loop. Not a slow program: a hung one.",
+    "<b>Marking visited when you take a node out instead of when you add it.</b> The same node gets queued once per neighbour: E would be queued from both B and D. The queue swells and linear time quietly stops being linear.",
+    "<b>Adding only one direction for a two-way edge.</b> You have built a different graph from the one in the problem.",
+    "<b>Recursive DFS on 10⁵ nodes.</b> That is 10⁵ stack frames and a stack overflow. Use an explicit stack when the graph is large or may be one long path.",
+    "<b>Detecting loops in a one-way graph with a plain visited set.</b> You need to know whether a node is on the <i>current</i> path: a recursion-stack marker, not a been-there flag.",
+    "<b>Assuming one walk covers the graph.</b> It covers one component. There may be many.",
   ],
 
   impl: [
     ["Python", "defaultdict(list) · deque for BFS", "Recursion limit around 1000, so deep DFS needs an explicit stack."],
-    ["Java", "Map<Integer,List<Integer>> · ArrayDeque", "computeIfAbsent to build the list. visited.add() returns false if already present, which is a neat guard."],
-    ["C++", "vector<vector<int>> adj(V) · queue", "Index by node id directly when nodes are 0..V-1, which is the usual case and much faster than a map."],
+    ["Java", "Map<Integer,List<Integer>> · ArrayDeque", "computeIfAbsent builds the list. visited.add() returns false if already present, which makes a neat guard."],
+    ["C++", "vector<vector<int>> adj(V) · queue", "Index by node id directly when nodes are 0..V-1, the usual case, and much faster than a map."],
     ["JavaScript", "Map of arrays, or an array of arrays", "Array.shift() is O(n), so keep a head index for the BFS queue."],
   ],
 
@@ -9462,152 +9477,279 @@ function bfsShortest(start, goal) {
   return -1;
 }`,
   },
-  codecap: "One loop, one visited set, and a choice of container. Everything else on this page is a consequence of that choice.",
+  codecap: "One loop, one visited set, and a choice of container. Everything else on this page follows from that choice.",
 
   q: [
-    ["What does a graph give up compared to a tree, and what does that cost you?", "One root, no cycles, and a unique path between nodes. Losing the no-cycles guarantee is the expensive one: traversal must carry a visited set or it never terminates."],
-    ["Why is the visited set a correctness issue rather than a performance one?", "A cycle makes an unguarded traversal loop forever. The set is what makes the program finite; the fact that it also makes it O(V + E) is a bonus."],
-    ["Adjacency list or matrix, and why?", "List, almost always. It is O(V + E) space and lists neighbours in time proportional to the degree, which is what traversal needs. A matrix costs O(V²) regardless of edge count and only wins when you repeatedly test specific pairs in a dense graph."],
-    ["What is the only difference between DFS and BFS?", "Which end of the container you take from. Stack gives depth-first, queue gives breadth-first. The loop, the visited set and the complexity are identical."],
-    ["Why does BFS give shortest paths when DFS does not?", "BFS exhausts distance 1 before distance 2, so its first arrival at a node uses the fewest edges. DFS arrives in whatever order its commitments produced. This holds only while all edges cost the same."],
-    ["Why does one traversal not necessarily cover the graph?", "The graph may be disconnected. Restart from each unvisited node; the number of restarts is the number of connected components, and the total stays O(V + E)."],
+    ["What does a graph give up compared to a tree, and what does that cost you?", "One root, no loops, and a single path between nodes. Losing the no-loops promise is the expensive one: a walk must carry a visited set, or it never ends."],
+    ["Why is the visited set a correctness issue rather than a performance one?", "A loop makes an unguarded walk run forever. The set is what makes the program finite. That it also makes the walk O(V + E) is a bonus."],
+    ["Adjacency list or matrix, and why?", "List, almost always. It is O(V + E) space and lists neighbours in time proportional to the degree, which is what a walk needs. A matrix costs O(V²) whatever the edge count, and only wins when you keep testing specific pairs in a dense graph."],
+    ["What is the only difference between DFS and BFS?", "Which end of the container you take from. A stack gives depth-first, a queue gives breadth-first. The loop, the visited set and the cost are identical."],
+    ["Why does BFS give shortest paths when DFS does not?", "BFS finishes distance 1 before distance 2, so its first arrival at a node uses the fewest edges. DFS arrives in whatever order its choices produced. This holds only while all edges cost the same."],
+    ["Why does one walk not necessarily cover the graph?", "The graph may be disconnected. Restart from each unvisited node. The number of restarts is the number of connected components, and the total stays O(V + E)."],
   ],
 
   p: [
-    [733, "flood-fill", "Flood Fill, a graph traversal in disguise", "E"],
+    [733, "flood-fill", "Flood Fill, a graph walk in disguise", "E"],
     [200, "number-of-islands", "Number of Islands, counting components", "M"],
-    [133, "clone-graph", "Clone Graph, traversal plus a map", "M"],
+    [133, "clone-graph", "Clone Graph, a walk plus a map", "M"],
     [547, "number-of-provinces", "Number of Provinces, components from a matrix", "M"],
     [994, "rotting-oranges", "Rotting Oranges, multi-source BFS", "M"],
+    [417, "pacific-atlantic-water-flow", "Pacific Atlantic, walk backwards from the edges", "M"],
     [127, "word-ladder", "Word Ladder, BFS where the graph is implicit", "H"],
-    [417, "pacific-atlantic-water-flow", "Pacific Atlantic, traverse backwards from the edges", "M"],
   ],
+
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek social network mein <b>10⁶ users</b> aur kuch million dostiyan hain. Ek feature ko do logon ke beech sabse kam introductions chahiye: “aap Priya se 3 steps door ho”. Koi top user nahi, koi order nahi, aur dostiyan ghoom kar wapas judti hain.</p>
+<p>Chhota version: chhe log. A, B aur D ko jaanta hai. B, C aur E ko. D, E ko. C, F ko. E, F ko. A se F kitne steps? Aur A se D, jo 1 hai?</p>`,
+      tries: [
+        ["Grid ki tarah rakho: har pair ke liye haan/na", "“Kya yeh do ek doosre ko jaante hain?” turant. Par 10⁶ users ko 10¹² cells chahiye, bits mein bhi lagbhag 125 GB, us network ke liye jisme kuch million dostiyan hain."],
+        ["Bas doston ke peeche chalo, bina hisaab rakhe", "A se B, B se E, E se D, aur D A ko jaanta hai: wapas wahin jahan se chale the, aur walk hamesha ghoomti rehti hai."],
+        ["Jitna gehra ho sake pehle jao, aur pehla mila raasta lo", "A se recursive DFS B, C, F, E dekhta hai, aur tab jaake D. Yeh kehta hai D 5 steps door hai. D to A ka dost hai: 1 step."],
+      ],
+      so: `<p>Yahi <b>graph</b> hai: cheezein (nodes) aur connections (edges), na root, na niyam. Har insaan ki friend list rakho, <b>adjacency list</b>: space dostiyon ke hisaab se, pairs ke nahi. Ek <b>visited</b> set rakho, taaki koi do baar process na ho aur loops khatam hon.</p>
+<p>Phir queue ke saath rings mein phailo, <b>breadth-first search</b>: A, phir A ke dost, phir unke. Kisi tak pehli baar pahunchna sabse kam steps se hota hai. Page poore mein yahi chhe logon ka network use karta hai.</p>`,
+    },
+
+    one: "Graph cheezein aur connections hai, na root na niyam. DFS aur BFS ek hi walk hain alag container ke saath, aur visited set hi aapke aur infinite loop ke beech hai.",
+
+    plain: `<p>Ab tak ka sab niyamon wala graph tha. Linked list aisa graph hai jisme har node ka ek raasta bahar. Tree aisa graph hai jisme ek root aur wapas aane ka raasta nahi. Niyam hata do to general case bachta hai: kuch <b>nodes</b>, aur unhe jodne wale kuch <b>edges</b>.</p>
+<p>Do cheezein ek saath badalti hain. Koi root nahi, to kahan se shuru karein yeh asli sawaal hai, aur ek walk shayad sab tak na pahunche. Aur, zyada zaroori, <b>raaste loop kar sakte hain</b>. Chhe logon ke network mein A, B, E, D aur wapas A ek loop hai. Bina dhyan diye chalo to program kabhi nahi rukta.</p>
+<p>Isliye <b>visited set</b>, jo optimisation nahi. Wahi program ko khatam hone deta hai.</p>
+<p>Uske baad walk lagbhag boring hai. Node lo, padosi dekho, jo visit nahi hue unhe container mein daalo, dohrao. Stack se <b>depth-first search</b> (DFS); queue se <b>breadth-first search</b> (BFS). Poora farak bas yahi.</p>
+<p><b>Analogy.</b> One-way aur two-way sadkon ka shehar. Koi pehla chauraha nahi, gol ghoomne ke kai raaste, aur survey karne ka ek hi tareeka hai ki likhte jao kahan kahan gaye.</p>`,
+
+    why: [
+      { t: "Graph woh hai jo vaade hataane ke baad bachta hai",
+        d: "Tree ek root, koi loop nahi, aur kisi do nodes ke beech theek ek raasta ka vaada karta hai. Har vaada algorithm ka sahara hai. Hata do to algorithm ko apni guarantees laani padti hain, aur visited set wahi hai." },
+      { t: "To visited set correctness ke liye hai, speed ke liye nahi",
+        d: "Iske bina loop A, B, E, D, A hamesha chalta hai. Iske saath har node ek baar process hota hai, aur cost <b>O(<var>V</var> + <var>E</var>)</b> banti hai, <var>V</var> nodes aur <var>E</var> edges ke liye: har node ek baar, har edge dono siron se dekha." },
+      { t: "Adjacency list, jab tak wajah na ho",
+        d: "List har node ke padosi rakhti hai: A ki list B, D hai. Space <b>O(<var>V</var> + <var>E</var>)</b>, aur padosi ginwana utna time leta hai jitne padosi hain. Har pair ka haan/na grid “edge hai?” ek lookup mein batata hai, par <b>O(<var>V</var>²)</b> leta hai chahe kitne kam edges hon. Asli graphs sparse hote hain, to list lagbhag hamesha jeet-ti hai." },
+      { t: "DFS aur BFS mein farak sirf kis sire se lete ho",
+        d: "Sabse naya daala node lo aur gehre jao; A se recursive DFS A, B, C, F, E, D dekhta hai. Sabse purana lo aur rings mein phailo: A, phir B aur D, phir C aur E, phir F. Wahi loop, wahi visited set, wahi cost. Recursion call stack ko stack bana kar DFS hai." },
+      { t: "Isiliye BFS shortest path deta hai aur DFS nahi",
+        d: "BFS 1 step door ka sab 2 step door se pehle nipta-ta hai, to kisi node tak <b>pehli</b> pahunch sabse kam edges se hai: D 1 par, F 3 par. Recursive DFS D tak pehli baar 5 steps mein pahunchta hai, kyunki pehle B, C, F aur E ke peeche gaya. Yeh tabhi tak sach hai jab har edge barabar gine, aur wahin se agla page shuru hota hai." },
+      { t: "Direction ek faisla hai jo do baar lete ho",
+        d: "Dosti dono taraf hai, to jodna matlab <code>adj[u].add(v)</code> <i>aur</i> <code>adj[v].add(u)</code>. Doosra bhoole to one-way graph ban gaya, aur aadhe edges gayab lagte hain. One-way graphs loops bhi chhupaate hain, to wahan cycle detection ko visited flag se zyada chahiye." },
+      { t: "Ek walk ek component cover karti hai",
+        d: "Graph ka juda hona zaroori nahi. Saare nodes par loop chalao, aur har abhi-tak-na-dekhe node se nayi walk shuru karo. Shuruaton ki ginti <b>connected components</b> ki ginti hai. Total cost O(<var>V</var> + <var>E</var>) hi rehti hai, kyunki visited set kisi node ko do baar process nahi hone deta." },
+    ],
+
+    variants: [
+      { n: "Connected components", cost: "O(V + E)",
+        idea: "Har node par loop chalao aur har na-dekhe node se nayi walk shuru karo. Shuruaton ki ginti components ki ginti hai.",
+        when: "Islands, provinces, friend circles ginna, ya koi bhi “kitne alag groups” sawaal.",
+        watch: "Union-find bhi yahi karta hai, aur walk se behtar hai jab edges ek saath nahi, samay ke saath aayein." },
+      { n: "Cycle detection, undirected", cost: "O(V + E)",
+        idea: "DFS ke dauraan pehle se visited node tak edge matlab loop, jab tak woh node bas woh parent na ho jahan se aaye.",
+        when: "Check karna ki graph tree hai, jise theek <var>V</var> − 1 edges aur koi loop nahi chahiye.",
+        watch: "Parent check hi poori mushkil hai. Bhoole to har edge do-node ka loop dikhta hai." },
+      { n: "Cycle detection, directed", cost: "O(V + E)",
+        idea: "Simple visited set kaafi nahi. Jaanna hai ki node <i>current</i> raaste par hai ya nahi, matlab teen states, do nahi.",
+        when: "Deadlock detection, build dependency checks, course prerequisites.",
+        watch: "Topological sort page dekho, jahan Kahn ka algorithm jo output nahi kar paaya use gin kar loop muft mein batata hai." },
+      { n: "Bipartite check, two-colouring", cost: "O(V + E)",
+        idea: "Chalo aur har node ko pahunchne wale ka ulta rang do. Same rang ke do nodes jodne wala edge saabit karta hai ki graph bipartite nahi.",
+        when: "Do virodhi groups mein baantna, matching problems, ya odd-length loops check karna.",
+        watch: "Graph tabhi bipartite hai jab usme koi odd loop na ho. Har component se chalao: ek kharab component sab bigaadta hai." },
+      { n: "Multi-source BFS", cost: "O(V + E)",
+        idea: "Queue ko har source ke saath ek saath shuru karo. Kisi node tak pehli pahunch tab uski sabse paas ke source se doori hai.",
+        when: "Rotting oranges, sabse paas ka exit, sabse paas ke paani wale cell ki doori.",
+        watch: "Lagta hai har source ke liye ek BFS chahiye, jo O(<var>V</var>(<var>V</var> + <var>E</var>)) hota. Saath shuru karna ek walk aur wahi answer." },
+      { n: "Bridges and articulation points", cost: "O(V + E)",
+        idea: "Ek DFS, discovery times aur har subtree ka sabse pehla pahunchne layak ancestor track karke, har woh edge ya node dhoondhta hai jiske hatne se graph toote.",
+        when: "Network reliability: single points of failure.",
+        watch: "Tarjan ki low-link mashinari. Naam lene layak, time pressure mein likhne layak kam hi." },
+    ],
+
+    math: [
+      { t: "Chhe logon ke network par A se DFS aur BFS", d: "Wahi graph, wahi visited set, alag container. Sirf BFS ki har insaan tak pehli pahunch sabse kam steps ki hai." },
+      { t: "List ya grid, sirf density se tay", d: "Dono sahi hain. Chunaav memory ka hai, aur jo sparse graphs asal mein milte hain unpar farak chaar orders of magnitude hai." },
+      { t: "O(V + E) kahan se aata hai", d: "Padosiyon ka loop har node par <var>V</var> baar nahi chalta. Har padosi par ek baar chalta hai, aur padosiyon ki ginti milkar edges ki ginti ka dugna hai." },
+      { t: "Edge counts jo yaad hone chahiye", d: "Yeh lines zyadatar modelling sawaal ek step mein answer karti hain, yeh bhi ki saamne wala graph chupke se tree hai ya nahi." },
+      { t: "Ek walk ek component hai", d: "Components ginne ko kuch extra nahi chahiye, aur total cost nahi badalti, kyunki walks graph ko aapas mein baant leti hain." },
+    ],
+
+    costs: [
+      ["adjacency list banana", "O(V + E) time and space", "default representation"],
+      ["adjacency matrix", "O(V²) space", "chahe kitne kam edges hon"],
+      ["kya u se v edge hai?", "O(1) matrix, O(degree) list", "ek hi cheez jisme matrix sach mein behtar hai"],
+      ["node ke padosi ginwana", "O(degree) list, O(V) matrix", "aur walk yahi baar baar karti hai"],
+      ["DFS ya BFS", "O(V + E) time, O(V) space", "har node ek baar, har edge dono siron se"],
+      ["shortest path, unweighted", "O(V + E) with BFS", "pehli pahunch sabse kam edges"],
+      ["connected components", "O(V + E)", "har na-dekhe node se dobara shuru; visited set ise linear rakhta hai"],
+    ],
+
+    traps: [
+      "<b>Visited set nahi.</b> Loop walk ko infinite loop bana deta hai. Slow program nahi: ataka hua program.",
+      "<b>Node jodte waqt ki jagah nikaalte waqt visited mark karna.</b> Ek hi node har padosi se queue hota hai: E, B aur D dono se queue hota. Queue phoolti hai aur linear time chupchaap linear nahi rehta.",
+      "<b>Do-taraf edge ki sirf ek direction jodna.</b> Aapne problem wale se alag graph bana diya.",
+      "<b>10⁵ nodes par recursive DFS.</b> Yeh 10⁵ stack frames aur stack overflow. Graph bada ho ya ek lamba raasta ho sakta ho, to explicit stack lo.",
+      "<b>One-way graph mein simple visited set se loops dhoondhna.</b> Jaanna hai ki node <i>current</i> raaste par hai: recursion-stack marker, been-there flag nahi.",
+      "<b>Maan lena ki ek walk poora graph cover karti hai.</b> Woh ek component cover karti hai. Kai ho sakte hain.",
+    ],
+
+    impl: [
+      ["Python", "defaultdict(list) · deque for BFS", "Recursion limit lagbhag 1000, to gehre DFS ko explicit stack chahiye."],
+      ["Java", "Map<Integer,List<Integer>> · ArrayDeque", "computeIfAbsent list banata hai. visited.add() pehle se ho to false lautata hai, jo accha guard hai."],
+      ["C++", "vector<vector<int>> adj(V) · queue", "Nodes 0..V-1 hon, jo aam case hai, to seedhe node id se index karo, map se kahin tez."],
+      ["JavaScript", "Map of arrays, or an array of arrays", "Array.shift() O(n) hai, to BFS queue ke liye head index rakho."],
+    ],
+
+    codecap: "Ek loop, ek visited set, aur container ka chunaav. Is page ki baaki har baat usi chunaav se nikalti hai.",
+
+    q: [
+      ["Tree ke mukable graph kya chhodta hai, aur iski keemat kya hai?", "Ek root, koi loop nahi, aur nodes ke beech ek raasta. No-loops vaada khona mehenga hai: walk ko visited set le jaana padta hai, warna kabhi khatam nahi hoti."],
+      ["Visited set performance ki nahi, correctness ki baat kyun hai?", "Loop bina guard wali walk ko hamesha chalata hai. Set hi program ko finite banata hai. Yeh walk ko O(V + E) bhi banata hai, woh bonus hai."],
+      ["Adjacency list ya matrix, aur kyun?", "List, lagbhag hamesha. O(V + E) space aur degree ke hisaab se padosi ginwaati hai, jo walk ko chahiye. Matrix edges chahe jitne hon O(V²) leta hai, aur tabhi jeet-ta hai jab dense graph mein baar baar khaas pairs test karo."],
+      ["DFS aur BFS mein ek hi farak kya hai?", "Container ke kis sire se lete ho. Stack depth-first deta hai, queue breadth-first. Loop, visited set aur cost same."],
+      ["BFS shortest paths kyun deta hai jab DFS nahi?", "BFS distance 2 se pehle distance 1 khatam karta hai, to kisi node tak pehli pahunch sabse kam edges se. DFS us order mein pahunchta hai jo uske chunaavon ne banaya. Yeh tabhi sach hai jab saare edges barabar keemat ke hon."],
+      ["Ek walk poora graph cover kyun nahi karti zaroori taur par?", "Graph disconnected ho sakta hai. Har na-dekhe node se dobara shuru karo. Dobara shuru karne ki ginti connected components ki ginti hai, aur total O(V + E) rehta hai."],
+    ],
+  },
 },
 /* ==================================================================== */
 {
   id: "shortest-paths",
   n: "Shortest paths",
   group: "Graphs",
+  need: {
+    ask: `<p>A delivery firm needs the fastest travel time from its depot to every stop, in a city of <b>10⁵ junctions</b> and <b>5 × 10⁵ roads</b>. Each road has a travel time in minutes, and they differ.</p>
+<p>The small version: depot A, stops B to E. Roads: A–B 4, A–C 1, C–B 2, B–D 5, C–D 8, D–E 3. The fastest time to B is <b>3</b>, via C, not the direct road's 4.</p>`,
+    tries: [
+      ["Breadth-first search, fewest roads first", "BFS reaches B in one road and stops: it says 4 minutes. But A to C to B takes 1 + 2 = 3. Fewest roads is not fastest."],
+      ["Try every route and keep the cheapest", "On a 20 × 20 street grid, the shortest-length routes between two corners alone number C(40, 20) ≈ 1.4 × 10¹¹. A city has far more."],
+      ["Each round, scan every junction for the nearest unfinished one", "This is correct. But each scan reads all 10⁵ junctions, 10⁵ times: 10¹⁰ steps."],
+    ],
+    so: `<p>Keep a best-known time for every junction: 0 for the depot, infinity elsewhere. Repeatedly take the <b>nearest unfinished</b> junction, and check whether going through it improves any neighbour. That check is <b>relaxation</b>. A heap hands you the nearest in O(log <var>V</var>), so the whole city costs about 10⁷ steps.</p>
+<p>That is <b>Dijkstra's algorithm</b>, for travel times that are never negative. The page follows the five-stop map throughout.</p>`,
+  },
+
   one: "BFS finds the fewest edges, which stops meaning cheapest the moment edges have costs. Then you always expand the <b>cheapest known node</b>, and a heap is what makes that affordable.",
 
-  plain: `<p>BFS gets shortest paths right for a reason that is easy to miss. Every edge costs exactly one, so the queue already happens to hold nodes in order of distance. The algorithm is not being clever, it is being handed the ordering for free.</p>
-<p>Put a cost on each edge and that free ordering evaporates. A route of one expensive edge can cost more than a route of five cheap ones. So "fewest edges" and "cheapest" stop meaning the same thing, and BFS confidently returns the wrong answer.</p>
-<p>The repair is small in principle. Keep the best distance known so far for every node. Always work on the <b>cheapest unfinished node</b>. Each time you pick one, check whether going through it improves any of its neighbours. That check is called relaxation and it is the entire algorithm. The priority queue exists solely to answer "which is cheapest" without rescanning everything.</p>
-<p>There is one assumption hiding in there, and it is worth naming now: this only works if edges add cost. Allow a negative edge and a settled answer can turn out to be wrong later, which Dijkstra will never notice.</p>
-<p><b>Analogy.</b> Planning a drive by always extending the cheapest route you have so far. It works beautifully, right up until someone opens a road that pays you to drive down it.</p>`,
+  plain: `<p>BFS gets shortest paths right for a reason that is easy to miss. Every edge costs exactly one, so its queue already holds nodes in order of distance. It is not being clever; it is handed the order for free.</p>
+<p>Put a cost on each edge and that free order is gone. The direct road A–B costs 4, but A–C–B costs 1 + 2 = 3. So “fewest edges” and “cheapest” stop meaning the same thing, and BFS confidently returns the wrong answer.</p>
+<p>The repair is small. Keep the best distance known so far for every node. Always work on the <b>cheapest unfinished node</b>. When you take one, check whether going through it improves any neighbour. That check, called <b>relaxation</b>, is the whole algorithm. The heap only exists to answer “which is cheapest?” without rescanning everything.</p>
+<p>One assumption hides in there: every edge must add cost, never subtract. Allow a negative edge and a finished answer can turn out wrong later.</p>
+<p><b>Analogy.</b> Planning a drive by always extending the cheapest route you have so far. It works well, until someone opens a road that pays you to drive down it.</p>`,
 
   why: [
-    { t: "See why BFS worked, and the rest follows", d: "With unit edges, everything at distance 1 is discovered before anything at distance 2, so the queue is sorted by distance without anyone sorting it. Distance and edge count are the same number. Give edges different costs and those two quantities separate, and the queue's ordering becomes meaningless." },
-    { t: "So restore the ordering by hand", d: "Keep a tentative best distance for every node, all infinite except the source. Repeatedly take the <b>cheapest unfinished node</b> and process it. That is the only structural change from BFS, and it is what a priority queue is for: BFS with a heap instead of a queue is Dijkstra." },
-    { t: "Relaxation is the whole operation", d: "For each neighbour, ask whether <code>dist[u] + weight(u, v)</code> beats <code>dist[v]</code>. If it does, write down the better number. Nothing else happens. The algorithm is one comparison repeated until nothing improves." },
-    { t: "Why a settled node is final, which is also the assumption", d: "When you pull the cheapest unfinished node u, every other unfinished node already costs at least as much. Any alternative route to u must pass through one of them, and since weights are non-negative, going further can only add cost. So no cheaper route can exist and u is done. <b>That argument is load-bearing, and it consumes the non-negativity as fuel.</b>" },
-    { t: "Negative edges break the argument, not just the answer", d: "With a negative edge, going further can make a path cheaper, so a node you already settled might have been wrong. Dijkstra has no mechanism to revisit it and will not tell you. <b>Bellman-Ford</b> gives up the greedy shortcut and simply relaxes every edge V-1 times, which is O(V·E) and slower, but correct with negatives. A V-th pass that still improves something proves a negative cycle, at which point \"shortest path\" is not a well-posed question." },
-    { t: "Pick the algorithm from the shape of the problem", d: "Unit weights: BFS, O(V + E), and do not reach for a heap out of habit. Non-negative weights: Dijkstra, O((V + E) log V). Negative weights: Bellman-Ford, O(V·E). Every pair of nodes on a small graph: Floyd-Warshall, three nested loops and O(V³), which is worth it only when V is a few hundred. Interviewers ask which one and why far more often than they ask you to type any of them." },
-    { t: "A* is Dijkstra that has been told where it is going", d: "Dijkstra expands outward in every direction because it has no idea where the target is. Give it an estimate of remaining distance and let it prefer nodes that look closer to the goal, and it stops exploring the wrong half of the map. If that estimate never overstates the true remaining cost, the answer is still exactly correct." },
+    { t: "See why BFS worked, and the rest follows",
+      d: "With edges that all cost one, everything 1 edge away is found before anything 2 edges away, so the queue is sorted by distance without anyone sorting it. Give edges different costs and distance and edge count separate: B is 1 edge from A, but its cheapest route has 2." },
+    { t: "So restore the order by hand",
+      d: "Keep a tentative best distance for every node: 0 for A, infinity elsewhere. Repeatedly take the <b>cheapest unfinished node</b> and process it. That is the only change from BFS, and it is what a heap is for. BFS with a heap instead of a queue is Dijkstra." },
+    { t: "Relaxation is the whole operation",
+      d: "For each neighbour, ask whether <code>dist[u] + weight(u, v)</code> beats <code>dist[v]</code>. If so, write down the better number. From C, the road to B gives 1 + 2 = 3, which beats 4, so B becomes 3. Nothing else ever happens." },
+    { t: "Why a finished node is final, and the assumption inside",
+      d: "When you take the cheapest unfinished node <var>u</var>, every other unfinished node costs at least as much. Any other route to <var>u</var> passes through one of them, and with no negative edges, going further only adds cost. So nothing cheaper exists. <b>That argument runs on non-negative weights.</b>" },
+    { t: "Negative edges break the argument, not just the answer",
+      d: "With a negative edge, going further can make a path cheaper, so a finished node might be wrong. Dijkstra never revisits and never warns. <b>Bellman-Ford</b> drops the shortcut and relaxes every edge <var>V</var> − 1 times: O(<var>V</var>·<var>E</var>), slower, and correct. If a <var>V</var>-th round still improves something, there is a negative loop, and “shortest” has no meaning." },
+    { t: "Pick the algorithm from the shape of the problem",
+      d: "Equal weights: BFS, O(<var>V</var> + <var>E</var>). Non-negative weights: Dijkstra, O((<var>V</var> + <var>E</var>) log <var>V</var>). Negative weights: Bellman-Ford, O(<var>V</var>·<var>E</var>). Every pair on a small graph: Floyd-Warshall, O(<var>V</var>³). Interviews ask which one and why more often than they ask you to type one." },
+    { t: "A* is Dijkstra that knows where it is going",
+      d: "Dijkstra spreads out in every direction, because it has no idea where the target is. Give it an estimate of the distance remaining, and let it prefer nodes that look closer. It stops exploring the wrong half of the map. If the estimate never overstates the true distance, the answer is still exact." },
   ],
 
   variants: [
-    { n: "BFS", cost: "O(V + E) \u00b7 unweighted only",
-      idea: "A queue. The first time you reach a node is by the fewest edges, because distance and edge count are the same number here.",
-      when: "Every edge costs the same. Grids, word ladders, social distance.",
+    { n: "BFS", cost: "O(V + E) · unweighted only",
+      idea: "A queue. The first time you reach a node is by the fewest edges, because here distance and edge count are the same number.",
+      when: "Every edge costs the same: grids, word ladders, social distance.",
       watch: "Reaching for a heap out of habit adds a log factor and buys nothing." },
-
-    { n: "0-1 BFS", cost: "O(V + E) \u00b7 weights of 0 or 1 only",
-      idea: "A deque instead of a queue: push a zero-weight edge to the <i>front</i> and a one-weight edge to the back, and the deque stays sorted by distance without a heap.",
-      when: "Every edge costs 0 or 1, which happens more often than you would expect once you model a problem well.",
-      watch: "It is exact only for those two weights. Anything else and you need Dijkstra." },
-
-    { n: "Dijkstra", cost: "O((V + E) log V) \u00b7 non-negative weights",
-      idea: "BFS with a priority queue. Always expand the cheapest unsettled node, relaxing its edges as you go.",
-      when: "Weighted graph, all weights non-negative, one source.",
-      watch: "Silently wrong with a negative edge. Skip stale heap entries on pop, and settle a node when you pop it, not when you push it." },
-
-    { n: "Bellman-Ford", cost: "O(V \u00b7 E) \u00b7 negatives allowed",
-      idea: "Give up the greedy shortcut and simply relax every edge V-1 times. Slow, and it does not care what sign the weights are.",
-      when: "Any edge may be negative, or you need to <i>detect</i> a negative cycle.",
-      watch: "A V-th pass that still improves something proves a negative cycle, at which point shortest path is not a well-posed question." },
-
-    { n: "Floyd-Warshall", cost: "O(V\u00b3) time \u00b7 O(V\u00b2) space \u00b7 all pairs",
-      idea: "Three nested loops. For every intermediate node k, ask whether routing through k improves any pair.",
-      when: "You need every pair of distances and V is a few hundred at most. Ten lines and no data structures.",
-      watch: "k must be the OUTER loop. Put it inside and you compute something confidently meaningless. V = 1000 is 10\u2079 operations." },
-
+    { n: "0-1 BFS", cost: "O(V + E) · weights of 0 or 1 only",
+      idea: "A deque instead of a queue: push a 0-cost edge to the <i>front</i> and a 1-cost edge to the back. The deque stays sorted by distance without a heap.",
+      when: "Every edge costs 0 or 1, which happens more often than you would expect once a problem is modelled well.",
+      watch: "It is exact only for those two weights. Anything else needs Dijkstra." },
+    { n: "Dijkstra", cost: "O((V + E) log V) · non-negative weights",
+      idea: "BFS with a heap. Always expand the cheapest unfinished node, relaxing its edges as you go.",
+      when: "A weighted graph, all weights non-negative, one source.",
+      watch: "Silently wrong with a negative edge. Skip stale heap entries when you pop, and finish a node when you pop it, not when you push it." },
+    { n: "Bellman-Ford", cost: "O(V · E) · negatives allowed",
+      idea: "Drop the greedy shortcut and relax every edge <var>V</var> − 1 times. Slow, and it does not care about the sign of the weights.",
+      when: "Some edge may be negative, or you need to <i>detect</i> a negative loop.",
+      watch: "A <var>V</var>-th round that still improves something proves a negative loop. Then “shortest path” has no meaning." },
+    { n: "Floyd-Warshall", cost: "O(V³) time · O(V²) space · all pairs",
+      idea: "Three nested loops. For every middle node <var>k</var>, ask whether routing through <var>k</var> improves any pair.",
+      when: "You need every pair of distances, and <var>V</var> is a few hundred at most. Ten lines, no data structures.",
+      watch: "<var>k</var> must be the OUTER loop. Put it inside and you compute something meaningless. <var>V</var> = 1,000 is 10⁹ operations." },
     { n: "A*", cost: "O((V + E) log V) worst, usually far better",
-      idea: "Dijkstra that has been told where it is going: order the queue by cost-so-far plus an estimate of cost-remaining, so it stops exploring the wrong half of the map.",
-      when: "One specific target, and you have an honest distance estimate, such as straight-line distance on a map.",
+      idea: "Dijkstra told where it is going: order the heap by cost so far plus an estimate of cost remaining, so it stops exploring the wrong half of the map.",
+      when: "One specific target, and an honest distance estimate, such as straight-line distance on a map.",
       watch: "The estimate must never overstate the true remaining cost. Overstate it and A* is fast and wrong." },
-
-    { n: "Topological order first", cost: "O(V + E) \u00b7 DAGs only",
-      idea: "On a directed acyclic graph, process nodes in topological order and relax forwards. No priority queue is needed because the order already guarantees you never revisit.",
-      when: "The graph is a DAG, such as build steps or course prerequisites. Also handles negative weights, unlike Dijkstra.",
-      watch: "Only valid without cycles. If one exists, the topological sort will tell you by failing to produce a full ordering." },
+    { n: "Topological order first", cost: "O(V + E) · DAGs only",
+      idea: "On a directed graph with no loops, process nodes in topological order and relax forwards. No heap: the order already guarantees nothing is revisited.",
+      when: "The graph has no loops, such as build steps or course prerequisites. It also handles negative weights, unlike Dijkstra.",
+      watch: "Only valid without loops. If one exists, the topological sort tells you by failing to order every node." },
   ],
 
   hing: `<p><b>Pehle samjho BFS kaam kyun karta tha.</b> Har edge ki cost 1 thi, isliye distance 1 wale saare nodes distance 2 se pehle nikal jaate the. Matlab queue apne aap distance ke order mein thi. BFS chalaak nahi tha, use order <b>muft</b> mil raha tha.</p>
 <p><b>Ab edges par cost daal do.</b> Ek mehnga edge paanch saste edges se zyada mehnga ho sakta hai. Yani "sabse kam edges" aur "sabse sasta" ab do alag cheezein hain, aur BFS poore aatmvishwas ke saath <b>galat</b> jawaab dega.</p>
 <p><b>Theek karne ka tarika:</b> har node ke liye "ab tak ka best distance" rakho (shuru mein sab infinity, source 0). Baar-baar <b>sabse saste bache hue node</b> ko uthao aur uske padosiyon ko check karo. Bas yahi ek badlav hai BFS se, aur isi ke liye <b>priority queue</b> chahiye. <b>Dijkstra = BFS with a heap.</b></p>
 <p><b>Relaxation kya hai?</b> Sirf ek sawaal: <code>dist[u] + weight(u,v)</code> kya <code>dist[v]</code> se behtar hai? Agar haan, to naya number likh do. Poora algorithm bas yahi ek line hai, baar-baar.</p>
-<p><b>Ab woh baat jo interview mein poochi jaati hai: settled node final kyun hota hai?</b> Jab tum sabse sasta bacha hua node u uthate ho, to baaki bache hue saare nodes usse mehnge ya barabar hain. Yahi poori guarantee hai. u tak koi doosra raasta unhi mein se kisi se hoke aayega, aur weights <b>non-negative</b> hain, to aage badhne se cost sirf badhegi. Isliye koi sasta raasta ho hi nahi sakta. <b>Yeh poora argument non-negative weights par tika hua hai.</b></p>
-<p><b>Isliye negative edge sab tod deta hai.</b> Negative edge ke saath aage badhne par raasta <b>sasta</b> ho sakta hai. Matlab jo node tum settle kar chuke the, woh galat nikal sakta hai. Dijkstra ke paas wapas jaane ka koi tarika nahi hai, aur woh tumhe batayega bhi nahi. Tab <b>Bellman-Ford</b> chahiye: greedy shortcut chhod do aur saare edges ko V-1 baar relax karo. <b>O(V·E)</b>, dheema par sahi. Aur agar V-vi baar mein bhi kuch improve ho raha hai, to graph mein <b>negative cycle</b> hai, jahan "shortest path" ka matlab hi khatam ho jaata hai.</p>
+<p><b>Settled node final kyun hota hai?</b> Jab tum sabse sasta bacha hua node <var>u</var> uthate ho, to baaki bache hue saare nodes usse mehnge ya barabar hain. <var>u</var> tak koi doosra raasta unhi mein se kisi se hoke aayega, aur weights <b>non-negative</b> hain, to aage badhne se cost sirf badhegi. <b>Yeh poora argument non-negative weights par tika hua hai.</b></p>
+<p><b>Isliye negative edge sab tod deta hai.</b> Negative edge ke saath aage badhne par raasta <b>sasta</b> ho sakta hai, aur jo node settle kar chuke the woh galat nikal sakta hai. Dijkstra wapas nahi jaata, aur batata bhi nahi. Tab <b>Bellman-Ford</b> chahiye: saare edges ko <var>V</var>-1 baar relax karo. <b>O(<var>V</var>·<var>E</var>)</b>, dheema par sahi.</p>
 <p><b>Kaun sa algorithm kab (yeh yaad rakho):</b><br>
-Sab edges ki cost barabar → <b>BFS</b>, O(V + E). Heap lagane ki zaroorat nahi.<br>
-Non-negative weights → <b>Dijkstra</b>, O((V + E) log V).<br>
-Negative weights → <b>Bellman-Ford</b>, O(V·E).<br>
-Har jodi ka distance, chhota graph → <b>Floyd-Warshall</b>, teen loops, O(V³).<br>
-Interview mein "kaun sa aur kyun" zyada poocha jaata hai, code likhwaane se.</p>`,
+Sab edges ki cost barabar: <b>BFS</b>, O(<var>V</var> + <var>E</var>).<br>
+Non-negative weights: <b>Dijkstra</b>, O((<var>V</var> + <var>E</var>) log <var>V</var>).<br>
+Negative weights: <b>Bellman-Ford</b>, O(<var>V</var>·<var>E</var>).<br>
+Har jodi ka distance, chhota graph: <b>Floyd-Warshall</b>, teen loops, O(<var>V</var>³).</p>`,
 
   viz: ["dijkstra"],
   see: [["VA", "https://visualgo.net/en/sssp", "VisuAlgo, Dijkstra and Bellman-Ford running side by side"]],
 
   math: [
-    { t: "Why BFS stops being correct the moment weights appear", d: "BFS counts edges. With weights, the path with fewest edges and the path with least cost are different questions, and a three-node example separates them.", w:
-`A --1--> B --1--> D          two edges, cost 2
-A --5--> D                   one edge,  cost 5
+    { t: "Dijkstra on the five-stop map, every step", d: "Take the cheapest unfinished stop, relax its roads, repeat. B and D both improve after their first value, which BFS could never do.", w:
+`roads: A-B 4, A-C 1, C-B 2, B-D 5, C-D 8, D-E 3
 
-BFS reaches D at depth 1 and stops: it reports 5
-the cheapest path costs 2
+take   time   relax                       best times after
+A      0      B = 4, C = 1                B 4  C 1  D -  E -
+C      1      B: 1+2 = 3 < 4, D: 1+8 = 9  B 3  C 1  D 9  E -
+B      3      D: 3+5 = 8 < 9              B 3  C 1  D 8  E -
+D      8      E: 8+3 = 11                 B 3  C 1  D 8  E 11
+E      11     nothing left
 
-BFS is exactly Dijkstra with every weight equal to 1` },
-    { t: "Dijkstra's cost, term by term", d: "Two numbers multiply here: how many times an edge can cause a heap push, and what a heap operation costs. Neither is V.", w:
-`each edge relaxed once                E
+BFS would have said B = 4 and D = 9: fewest roads, not fastest` },
+    { t: "Dijkstra's cost, term by term", d: "Two numbers multiply here: how many times an edge can cause a heap push, and what a heap operation costs. Neither is <var>V</var>².", w:
+`each edge relaxed once                 E
 each relaxation may push               E pushes
 each push or pop                       log(heap) <= 2 log V
 
 total  O((V + E) log V)
 
 V = 10^5, E = 5 x 10^5:
-  5 x 10^5 x 17  =  8.5 x 10^6 heap operations
-scanning an array for the minimum instead: V^2 = 10^10` },
-    { t: "Why a popped node is final, and exactly where the proof breaks", d: "The argument is three lines, and one of those lines quietly assumes every weight is non-negative. That line is the whole restriction.", w:
-`pop u, the smallest tentative distance in the heap
-suppose some shorter path to u exists. It leaves the
-settled set on an edge into y, so
+  (6 x 10^5) x 17  =  about 10^7 heap operations
+scanning every junction for the minimum instead: 10^10` },
+    { t: "Why a taken node is final, and exactly where the proof breaks", d: "The argument is three lines, and one of them quietly assumes every weight is non-negative. That line is the whole restriction.", w:
+`take u, the smallest tentative time in the heap
+suppose some cheaper route to u exists. It leaves the
+finished set on an edge into y, so
 
-  d[u] > d[y] + (the rest of that path)
+  d[u] > d[y] + (the rest of that route)
 and the rest is >= 0             <-- the assumption
 so  d[u] > d[y]
 
 but u was the smallest, so d[u] <= d[y]. Contradiction.
 one negative edge and the marked line fails.` },
-    { t: "Bellman-Ford: why V-1 rounds, exactly", d: "The round count is not a safety margin. It is the longest a shortest path can be, and one extra round is what detects a negative cycle.", w:
-`a shortest path visits no vertex twice, so it uses
-at most V - 1 edges
+    { t: "Bellman-Ford: why V - 1 rounds, exactly", d: "The round count is not a safety margin. It is the longest a shortest path can be, and one extra round detects a negative loop.", w:
+`a shortest path visits no node twice, so it uses
+at most V - 1 edges: at most 4 on the five-stop map
 
 after round k, every shortest path of <= k edges is final
 so V - 1 rounds settle all of them:  O(V x E)
 
-round V: if any distance still improves, no shortest path
-exists, because a negative cycle is reachable
+round V: if any time still improves, there is a
+reachable negative loop, and no shortest path exists
 
-V = 10^3, E = 10^4  ->  10^7  fine
-V = 10^5, E = 5 x 10^5  ->  5 x 10^10  not fine` },
-    { t: "Reading the algorithm off the constraints", d: "The shape of the input decides this, not preference. Two lines of arithmetic rule out most of the table before you start.", w:
+V = 10^3, E = 10^4       ->  10^7        fine
+V = 10^5, E = 5 x 10^5   ->  5 x 10^10   not fine` },
+    { t: "Reading the algorithm off the constraints", d: "The shape of the input decides this, not taste. A line of arithmetic rules out most of the table before you start.", w:
 `unweighted             BFS               O(V + E)
 weights 0 or 1         0-1 BFS, deque    O(V + E)
 non-negative           Dijkstra          O((V+E) log V)
 any weights            Bellman-Ford      O(V x E)
 all pairs, dense       Floyd-Warshall    O(V^3)
-DAG, any weights       topological DP    O(V + E)
+no loops, any weights  topological DP    O(V + E)
 
 Floyd at V = 400:  6.4 x 10^7, fine
 Floyd at V = 2000: 8 x 10^9, not` },
@@ -9617,26 +9759,26 @@ Floyd at V = 2000: 8 x 10^9, not` },
     ["BFS, unit weights", "O(V + E)", "the queue is already in distance order"],
     ["Dijkstra with a binary heap", "O((V + E) log V)", "the log is the price of always knowing the cheapest"],
     ["Dijkstra with a plain array", "O(V²)", "better on a dense graph, where E approaches V²"],
-    ["Bellman-Ford", "O(V · E)", "handles negative weights, and detects negative cycles"],
-    ["Floyd-Warshall, all pairs", "O(V³) time, O(V²) space", "three nested loops; fine to a few hundred nodes"],
-    ["A*", "O((V + E) log V) worst", "usually far better in practice, if the heuristic is honest"],
-    ["reconstruct the path", "O(path length)", "store a parent pointer as you relax, then walk it backwards"],
+    ["Bellman-Ford", "O(V · E)", "handles negative weights, and detects negative loops"],
+    ["Floyd-Warshall, all pairs", "O(V³) time, O(V²) space", "three nested loops; fine up to a few hundred nodes"],
+    ["A*", "O((V + E) log V) worst", "usually far better in practice, if the estimate is honest"],
+    ["rebuild the path", "O(path length)", "store a parent as you relax, then walk it backwards"],
   ],
 
   traps: [
-    "<b>Running Dijkstra on a graph with negative edges.</b> It does not error, it does not warn, it just returns a wrong answer. Use Bellman-Ford.",
-    "<b>Using a heap when every edge costs the same.</b> BFS is O(V + E) and simpler; the heap adds a log factor for no benefit.",
-    "<b>Not skipping stale heap entries.</b> Most implementations push a node several times, so pop and then check whether the recorded distance is worse than the best known, and if so continue.",
-    "<b>Marking a node settled when you push it</b> rather than when you pop it. Its distance can still improve while it sits in the heap.",
-    "<b>Forgetting the tie-break in the heap.</b> Pushing raw tuples of (distance, node) is fine for integers, but a comparable second field is needed the moment the node is an object.",
-    "<b>Assuming Floyd-Warshall will scale.</b> O(V³) at V = 1000 is 10⁹ operations, which is a different kind of afternoon.",
+    "<b>Running Dijkstra on a graph with negative edges.</b> It does not error or warn; it just returns a wrong answer. Use Bellman-Ford.",
+    "<b>Using a heap when every edge costs the same.</b> BFS is O(<var>V</var> + <var>E</var>) and simpler; the heap adds a log factor for nothing.",
+    "<b>Not skipping stale heap entries.</b> B is pushed twice, at 4 and then at 3. When the 4 is popped later, check it against the best known time, and skip it.",
+    "<b>Finishing a node when you push it</b> rather than when you pop it. Its time can still improve while it waits in the heap, as B's did.",
+    "<b>Forgetting the tie-break in the heap.</b> (time, node) tuples are fine for integer ids, but a comparable second field is needed once nodes are objects.",
+    "<b>Assuming Floyd-Warshall scales.</b> O(<var>V</var>³) at <var>V</var> = 1,000 is 10⁹ operations: a different kind of afternoon.",
   ],
 
   impl: [
-    ["Python", "heapq with (dist, node) tuples", "Min-heap by default, which is what you want. Push duplicates and skip stale pops."],
+    ["Python", "heapq with (dist, node) tuples", "A min-heap by default, which is what you want. Push duplicates and skip stale pops."],
     ["Java", "PriorityQueue<int[]> with a comparator", "No decrease-key, so push duplicates and skip stale entries on poll."],
-    ["C++", "priority_queue with greater<> for a min-heap", "The default is a MAX-heap, so this is the one place people quietly build the wrong thing."],
-    ["JavaScript", "no heap at all", "Hand-roll one, or for small graphs scan the unsettled set in O(V²) and admit it."],
+    ["C++", "priority_queue with greater<> for a min-heap", "The default is a MAX-heap, so this is where people quietly build the wrong thing."],
+    ["JavaScript", "no heap at all", "Write one, or for small graphs scan the unfinished set in O(V²) and admit it."],
   ],
 
   code: {
@@ -9808,11 +9950,11 @@ function dijkstra(adj, source, n, MinHeap) {
   codecap: "Relax, take the cheapest, skip stale entries. And check the weights before you assume Dijkstra applies.",
 
   q: [
-    ["Why does BFS give shortest paths on an unweighted graph, and why does that stop working with weights?", "With unit edges, distance equals edge count, so the queue is already ordered by distance. With varying weights those two quantities separate: a single expensive edge can cost more than several cheap ones, and the queue's order means nothing."],
-    ["What is relaxation?", "Checking whether dist[u] + weight(u, v) beats dist[v], and writing down the better value if it does. Dijkstra and Bellman-Ford are both just that operation, applied in different orders."],
-    ["Why is a node's distance final once it is popped from the heap?", "Every other unfinished node already costs at least as much, and any alternative route must go through one of them. With non-negative weights, continuing can only add cost, so nothing cheaper can exist."],
-    ["What exactly breaks when an edge is negative?", "The finality argument. Going further can now reduce a total, so a settled node may turn out to be wrong. Dijkstra cannot revisit it and will not report a problem, so use Bellman-Ford, which also detects negative cycles."],
-    ["Why do Dijkstra implementations push duplicates and skip on pop?", "Binary heaps have no cheap decrease-key, so improving a distance is done by pushing a new entry. On pop, if the recorded distance is worse than the best known, that entry is stale and is skipped."],
+    ["Why does BFS give shortest paths on an unweighted graph, and why does that stop working with weights?", "With unit edges, distance equals edge count, so the queue is already ordered by distance. With varying weights the two separate: one expensive edge can cost more than several cheap ones, and the queue's order means nothing."],
+    ["What is relaxation?", "Checking whether dist[u] + weight(u, v) beats dist[v], and writing down the better value if it does. Dijkstra and Bellman-Ford are both that one operation, applied in different orders."],
+    ["Why is a node's distance final once it is popped from the heap?", "Every other unfinished node already costs at least as much, and any other route must go through one of them. With non-negative weights, going further can only add cost, so nothing cheaper can exist."],
+    ["What exactly breaks when an edge is negative?", "The finality argument. Going further can now lower a total, so a finished node may be wrong. Dijkstra cannot revisit it and will not report a problem. Use Bellman-Ford, which also detects negative loops."],
+    ["Why do Dijkstra implementations push duplicates and skip on pop?", "Binary heaps have no cheap decrease-key, so an improved distance is pushed as a new entry. On pop, if the entry's distance is worse than the best known, it is stale and skipped."],
     ["Which algorithm for which situation?", "Unit weights: BFS, O(V + E). Non-negative weights: Dijkstra, O((V + E) log V). Any negative weight: Bellman-Ford, O(V·E). All pairs on a small graph: Floyd-Warshall, O(V³)."],
   ],
 
@@ -9821,56 +9963,204 @@ function dijkstra(adj, source, n, MinHeap) {
     [743, "network-delay-time", "Network Delay Time, textbook Dijkstra", "M"],
     [787, "cheapest-flights-within-k-stops", "Cheapest Flights, where plain Dijkstra is not enough", "M"],
     [1631, "path-with-minimum-effort", "Path With Minimum Effort, a different cost function", "M"],
-    [778, "swim-in-rising-water", "Swim in Rising Water, Dijkstra on a grid", "H"],
     [399, "evaluate-division", "Evaluate Division, weights that multiply", "M"],
+    [778, "swim-in-rising-water", "Swim in Rising Water, Dijkstra on a grid", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek delivery firm ko depot se har stop tak sabse tez travel time chahiye, <b>10⁵ junctions</b> aur <b>5 × 10⁵ sadkon</b> wale shehar mein. Har sadak ka travel time minutes mein hai, aur woh alag alag hain.</p>
+<p>Chhota version: depot A, stops B se E. Sadkein: A–B 4, A–C 1, C–B 2, B–D 5, C–D 8, D–E 3. B tak sabse tez time <b>3</b> hai, C se hokar, seedhi sadak ka 4 nahi.</p>`,
+      tries: [
+        ["Breadth-first search, sabse kam sadkein pehle", "BFS B tak ek sadak mein pahunch kar ruk jaata hai: 4 minute kehta hai. Par A se C se B 1 + 2 = 3 hai. Sabse kam sadkein sabse tez nahi."],
+        ["Har raasta try karo aur sabse sasta rakho", "20 × 20 street grid par do kono ke beech sirf sabse chhoti length wale raaste C(40, 20) ≈ 1.4 × 10¹¹ hain. Shehar mein kahin zyada."],
+        ["Har round mein sabse paas ke adhoore junction ke liye sab scan karo", "Yeh sahi hai. Par har scan saare 10⁵ junctions padhta hai, 10⁵ baar: 10¹⁰ steps."],
+      ],
+      so: `<p>Har junction ka best-known time rakho: depot ka 0, baaki infinity. Baar baar <b>sabse paas ka adhoora</b> junction lo, aur check karo ki usse hokar jaana kisi padosi ko behtar karta hai kya. Yeh check <b>relaxation</b> hai. Heap sabse paas wala O(log <var>V</var>) mein deta hai, to poore shehar ki cost lagbhag 10⁷ steps.</p>
+<p>Yahi <b>Dijkstra ka algorithm</b> hai, un travel times ke liye jo kabhi negative na hon. Page poore mein paanch stop wala map follow karta hai.</p>`,
+    },
+
+    one: "BFS sabse kam edges dhoondhta hai, jiska matlab sabse sasta nahi rehta jaise hi edges par cost ho. Tab hamesha <b>sabse sasta jaana hua node</b> aage badhao, aur heap ise afford karne layak banata hai.",
+
+    plain: `<p>BFS shortest paths ek aisi wajah se sahi karta hai jo aasaani se chhoot jaati hai. Har edge ki cost theek ek hai, to uski queue pehle se nodes ko doori ke order mein rakhti hai. Woh chalaak nahi; use order muft milta hai.</p>
+<p>Har edge par cost daalo aur woh muft order gaya. Seedhi sadak A–B 4 ki hai, par A–C–B 1 + 2 = 3 ki. To “sabse kam edges” aur “sabse sasta” ek nahi rehte, aur BFS bharose se galat answer deta hai.</p>
+<p>Theek karna chhota hai. Har node ki ab tak ki best doori rakho. Hamesha <b>sabse saste adhoore node</b> par kaam karo. Jab ek lo, check karo ki usse hokar jaana kisi padosi ko behtar karta hai. Yeh check, <b>relaxation</b>, poora algorithm hai. Heap bas “sabse sasta kaun?” ka jawab sab dobara scan kiye bina dene ke liye hai.</p>
+<p>Isme ek maanyata chhupi hai: har edge cost jode, kabhi ghataaye nahi. Negative edge aane do aur khatam hua answer baad mein galat nikal sakta hai.</p>
+<p><b>Analogy.</b> Drive plan karna, hamesha ab tak ke sabse saste raaste ko badhakar. Achha chalta hai, jab tak koi aisi sadak na khol de jo us par chalne ke paise de.</p>`,
+
+    why: [
+      { t: "Dekho BFS kyun chala, baaki apne aap aata hai",
+        d: "Jab saare edges ek ki cost ke hon, 1 edge door ka sab 2 edge door se pehle milta hai. To queue bina kisi ke sort kiye doori se sorted hai. Edges ko alag cost do aur doori aur edge count alag ho jaate hain: B A se 1 edge door hai, par uske saste raaste mein 2 hain." },
+      { t: "To order haath se wapas lao",
+        d: "Har node ki kaamchalaau best doori rakho: A ki 0, baaki infinity. Baar baar <b>sabse sasta adhoora node</b> lo aur process karo. BFS se bas yahi badlav hai, aur heap isi ke liye hai. Queue ki jagah heap wala BFS hi Dijkstra hai." },
+      { t: "Relaxation hi poora operation hai",
+        d: "Har padosi ke liye poocho <code>dist[u] + weight(u, v)</code> kya <code>dist[v]</code> se behtar hai. Haan, to behtar number likho. C se B ki sadak 1 + 2 = 3 deti hai, jo 4 se behtar, to B 3 ban jaata hai. Aur kuch nahi hota." },
+      { t: "Khatam node final kyun hai, aur andar ki maanyata",
+        d: "Jab sabse sasta adhoora node <var>u</var> lete ho, baaki har adhoora node utna ya zyada mehenga hai. <var>u</var> tak koi aur raasta unme se kisi se hokar aata hai, aur negative edges na hon to aage jaana sirf cost jodta hai. To kuch sasta nahi. <b>Yeh argument non-negative weights par chalta hai.</b>" },
+      { t: "Negative edges argument todte hain, sirf answer nahi",
+        d: "Negative edge ke saath aage jaana raasta sasta kar sakta hai, to khatam node galat ho sakta hai. Dijkstra kabhi wapas nahi jaata aur chetaata nahi. <b>Bellman-Ford</b> shortcut chhod kar har edge <var>V</var> − 1 baar relax karta hai: O(<var>V</var>·<var>E</var>), dheema aur sahi. <var>V</var>-va round bhi kuch sudhaare, to negative loop hai, aur “shortest” ka matlab nahi." },
+      { t: "Problem ki shape se algorithm chuno",
+        d: "Barabar weights: BFS, O(<var>V</var> + <var>E</var>). Non-negative weights: Dijkstra, O((<var>V</var> + <var>E</var>) log <var>V</var>). Negative weights: Bellman-Ford, O(<var>V</var>·<var>E</var>). Chhote graph par har jodi: Floyd-Warshall, O(<var>V</var>³). Interviews kaunsa aur kyun zyada poochte hain, type karwaana kam." },
+      { t: "A* woh Dijkstra hai jise pata hai kahan jaana hai",
+        d: "Dijkstra har disha mein phailta hai, kyunki use target ka pata nahi. Use bachi doori ka andaaza do, aur paas lagne wale nodes ko pehle lene do. Woh map ke galat aadhe ko explore karna band karta hai. Andaaza asli doori se kabhi zyada na bataaye, to answer ab bhi exact hai." },
+    ],
+
+    variants: [
+      { n: "BFS", cost: "O(V + E) · sirf unweighted",
+        idea: "Ek queue. Kisi node tak pehli baar pahunchna sabse kam edges se hai, kyunki yahan doori aur edge count ek hi number hain.",
+        when: "Har edge ki cost same: grids, word ladders, social doori.",
+        watch: "Aadat se heap lena log factor jodta hai aur kuch nahi deta." },
+      { n: "0-1 BFS", cost: "O(V + E) · sirf 0 ya 1 weights",
+        idea: "Queue ki jagah deque: 0-cost edge <i>aage</i> push karo aur 1-cost edge peeche. Deque bina heap ke doori se sorted rehta hai.",
+        when: "Har edge 0 ya 1 ka ho, jo problem achhe se model karne par ummeed se zyada hota hai.",
+        watch: "Sirf in do weights ke liye exact. Kuch aur ho to Dijkstra chahiye." },
+      { n: "Dijkstra", cost: "O((V + E) log V) · non-negative weights",
+        idea: "Heap wala BFS. Hamesha sabse sasta adhoora node badhao, chalte chalte uske edges relax karke.",
+        when: "Weighted graph, saare weights non-negative, ek source.",
+        watch: "Negative edge par chupchaap galat. Pop par purani heap entries chhodo, aur node pop karte waqt khatam karo, push par nahi." },
+      { n: "Bellman-Ford", cost: "O(V · E) · negatives allowed",
+        idea: "Greedy shortcut chhodo aur har edge <var>V</var> − 1 baar relax karo. Dheema, aur weights ke sign ki parwah nahi.",
+        when: "Koi edge negative ho sakta hai, ya negative loop <i>pakadna</i> hai.",
+        watch: "<var>V</var>-va round bhi kuch sudhaare to negative loop saabit. Tab “shortest path” ka koi matlab nahi." },
+      { n: "Floyd-Warshall", cost: "O(V³) time · O(V²) space · all pairs",
+        idea: "Teen nested loops. Har beech wale node <var>k</var> ke liye poocho kya <var>k</var> se hokar jaana kisi jodi ko behtar karta hai.",
+        when: "Har jodi ki doori chahiye, aur <var>V</var> zyada se zyada kuch sau. Das lines, koi data structure nahi.",
+        watch: "<var>k</var> BAHAR ka loop hona chahiye. Andar rakha to kuch bematlab compute hota hai. <var>V</var> = 1,000 matlab 10⁹ operations." },
+      { n: "A*", cost: "O((V + E) log V) worst, aam taur par kahin behtar",
+        idea: "Dijkstra jise pata hai kahan jaana: heap ko ab tak ki cost plus bachi cost ke andaaze se order karo, taaki map ka galat aadha explore na ho.",
+        when: "Ek khaas target, aur doori ka imaandaar andaaza, jaise map par seedhi rekha ki doori.",
+        watch: "Andaaza bachi asli cost se kabhi zyada na ho. Zyada bataya to A* tez aur galat." },
+      { n: "Topological order first", cost: "O(V + E) · sirf DAGs",
+        idea: "Bina loops wale directed graph par nodes ko topological order mein process karo aur aage relax karo. Heap nahi: order pehle se guarantee karta hai ki kuch dobara nahi dekha jaata.",
+        when: "Graph mein loops na hon, jaise build steps ya course prerequisites. Dijkstra ke ulat negative weights bhi sambhalta hai.",
+        watch: "Sirf bina loops ke valid. Loop ho to topological sort har node ko order na kar paakar batata hai." },
+    ],
+
+    math: [
+      { t: "Paanch stop wale map par Dijkstra, har step", d: "Sabse sasta adhoora stop lo, uski sadkein relax karo, dohrao. B aur D dono apni pehli value ke baad sudharte hain, jo BFS kabhi nahi kar sakta." },
+      { t: "Dijkstra ki cost, term by term", d: "Yahan do numbers guna hote hain: ek edge kitni baar heap push karwa sakta hai, aur heap operation ki keemat. Dono mein se koi <var>V</var>² nahi." },
+      { t: "Liya gaya node final kyun hai, aur saboot theek kahan tootta hai", d: "Argument teen lines ka hai, aur unme se ek chupchaap maanta hai ki har weight non-negative hai. Poori rok wahi line hai." },
+      { t: "Bellman-Ford: theek V - 1 rounds kyun", d: "Rounds ki ginti safety margin nahi. Yeh shortest path ki zyada se zyada lambai hai, aur ek extra round negative loop pakadta hai." },
+      { t: "Constraints se algorithm padhna", d: "Input ki shape yeh tay karti hai, pasand nahi. Ek line ka hisaab shuru karne se pehle hi zyadatar table hata deta hai." },
+    ],
+
+    costs: [
+      ["BFS, unit weights", "O(V + E)", "queue pehle se doori ke order mein"],
+      ["binary heap ke saath Dijkstra", "O((V + E) log V)", "log hamesha sabse sasta jaanne ki keemat hai"],
+      ["plain array ke saath Dijkstra", "O(V²)", "dense graph par behtar, jahan E, V² ke paas ho"],
+      ["Bellman-Ford", "O(V · E)", "negative weights sambhalta hai, aur negative loops pakadta hai"],
+      ["Floyd-Warshall, all pairs", "O(V³) time, O(V²) space", "teen nested loops; kuch sau nodes tak theek"],
+      ["A*", "O((V + E) log V) worst", "practice mein aksar kahin behtar, agar andaaza imaandaar ho"],
+      ["raasta dobara banana", "O(path length)", "relax karte waqt parent rakho, phir peeche chalo"],
+    ],
+
+    traps: [
+      "<b>Negative edges wale graph par Dijkstra.</b> Na error, na warning; bas galat answer. Bellman-Ford lo.",
+      "<b>Har edge same cost ka ho aur heap lena.</b> BFS O(<var>V</var> + <var>E</var>) aur simple hai; heap bekaar log factor jodta hai.",
+      "<b>Purani heap entries na chhodna.</b> B do baar push hota hai, 4 par aur phir 3 par. Baad mein 4 pop ho to best known time se check karo, aur chhod do.",
+      "<b>Node push karte waqt khatam karna</b>, pop par nahi. Heap mein intezaar karte hue uska time sudhar sakta hai, jaise B ka sudhra.",
+      "<b>Heap mein tie-break bhoolna.</b> (time, node) tuples integer ids ke liye theek hain, par nodes objects hon to comparable doosra field chahiye.",
+      "<b>Maan lena ki Floyd-Warshall scale karega.</b> <var>V</var> = 1,000 par O(<var>V</var>³) 10⁹ operations hai: alag hi tarah ki dopahar.",
+    ],
+
+    impl: [
+      ["Python", "heapq with (dist, node) tuples", "Default min-heap, jo chahiye. Duplicates push karo aur purane pops chhodo."],
+      ["Java", "PriorityQueue<int[]> with a comparator", "Decrease-key nahi, to duplicates push karo aur poll par purani entries chhodo."],
+      ["C++", "priority_queue with greater<> for a min-heap", "Default MAX-heap hai, to yahin log chupchaap galat cheez banaate hain."],
+      ["JavaScript", "no heap at all", "Ek likho, ya chhote graphs par adhoore set ko O(V²) mein scan karo aur maan lo."],
+    ],
+
+    codecap: "Relax karo, sabse sasta lo, purani entries chhodo. Aur Dijkstra lagu maanne se pehle weights check karo.",
+
+    q: [
+      ["Unweighted graph par BFS shortest paths kyun deta hai, aur weights ke saath kyun nahi?", "Unit edges par doori aur edge count ek hain, to queue pehle se doori ke order mein hai. Alag weights par dono alag ho jaate hain: ek mehenga edge kai saste edges se zyada ka ho sakta hai, aur queue ke order ka matlab nahi rehta."],
+      ["Relaxation kya hai?", "Check karna ki dist[u] + weight(u, v) kya dist[v] se behtar hai, aur ho to behtar value likhna. Dijkstra aur Bellman-Ford dono yahi ek operation hain, alag order mein."],
+      ["Heap se pop hone ke baad node ki doori final kyun hai?", "Baaki har adhoora node utna ya zyada mehenga hai, aur koi aur raasta unme se kisi se hokar jaata hai. Non-negative weights par aage jaana sirf cost jodta hai, to kuch sasta ho hi nahi sakta."],
+      ["Edge negative ho to exactly kya tootta hai?", "Finality ka argument. Aage jaana ab total ghata sakta hai, to khatam node galat ho sakta hai. Dijkstra use dobara nahi dekh sakta aur problem nahi batata. Bellman-Ford lo, jo negative loops bhi pakadta hai."],
+      ["Dijkstra implementations duplicates push karke pop par kyun chhodte hain?", "Binary heaps mein sasta decrease-key nahi, to sudhri doori nayi entry ki tarah push hoti hai. Pop par agar entry ki doori best known se buri hai, to woh purani hai aur chhod di jaati hai."],
+      ["Kis situation mein kaunsa algorithm?", "Unit weights: BFS, O(V + E). Non-negative weights: Dijkstra, O((V + E) log V). Koi bhi negative weight: Bellman-Ford, O(V·E). Chhote graph par all pairs: Floyd-Warshall, O(V³)."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "union-find",
   n: "Union-Find (disjoint sets)",
   group: "Graphs",
+  need: {
+    ask: `<p>A data centre has <b>10⁵ machines</b>. Cables are plugged in one at a time, <b>2 × 10⁵</b> of them, and in between, operators ask <b>10⁵ times</b>: “can machine <var>u</var> reach machine <var>v</var> yet?” Only yes or no; nobody wants the route.</p>
+<p>The small version: machines 0 to 4. Cables arrive 0–1, then 2–3, then 1–3. After the third cable, can 0 reach 2? Yes: 0–1, 1–3, 3–2. Can 4 reach anything? No.</p>`,
+    tries: [
+      ["Run a BFS for each question", "Each BFS walks the whole network: about 3 × 10⁵ steps. 10⁵ questions make 3 × 10¹⁰, and every new cable throws the old answers away."],
+      ["Look the pair up in the list of cables", "There is no cable 0–2, so the answer comes back “no”. It should be yes, through 1 and 3. A cable list answers “directly linked?”, not “connected?”."],
+      ["Give each machine a group label, and relabel a whole group on every merge", "Correct, but a merge rewrites every label in one group. Merge in an unlucky order and the rewrites total 1 + 2 + … + 10⁵, about 5 × 10⁹."],
+    ],
+    so: `<p>Throw the cables away and keep only <b>which group each machine is in</b>. Each group has one <b>leader</b>, and each machine points towards it. “Connected?” is “same leader?”. Joining two groups is one write: point one leader at the other.</p>
+<p>Two small habits keep the pointer chains short: hang the smaller group under the bigger, and flatten any chain you walk. Then every operation is near constant. That is <b>union-find</b>. The page follows machines 0 to 4 through the three cables.</p>`,
+  },
+
   one: "Stop storing the edges and store only <b>which group each node is in</b>. Connectivity becomes \"same representative?\", and two small fixes make that answer near constant.",
 
-  plain: `<p>You have a pile of things and you keep being told "these two are connected". Later you are asked "are these two connected?" Not by what route, just yes or no.</p>
-<p>The obvious way is to keep the list of connections and search through it each time someone asks. That search is a fresh walk over the whole pile, and if a hundred thousand people ask, you do a hundred thousand walks.</p>
-<p>So stop storing the connections. Store the <b>answer</b> instead. Give every group one member who speaks for it, call it the leader, and have every thing remember its leader. "Are these two connected?" becomes "do these two have the same leader?", which is a lookup, not a search. Joining two groups is one line: point one leader at the other.</p>
-<p>Done carelessly this gets slow, because the chains of "my leader is him, his leader is her" grow long. Two small habits fix it, and together they make every question cost almost nothing.</p>
-<p><b>Analogy.</b> Asking whether two people are in the same company. You could trace the org chart every time. Or everyone just knows the name of their CEO, and you compare two names.</p>`,
+  plain: `<p>You keep being told “these two are connected”, and later asked “are these two connected?”. Not by what route: just yes or no.</p>
+<p>The obvious way keeps the list of connections and searches it each time. That search is a fresh walk over everything, and 10⁵ questions mean 10⁵ walks.</p>
+<p>So store the <b>answer</b> instead. Give every group one member who speaks for it, the <b>leader</b>, and have each member point towards its leader. After cables 0–1, 2–3 and 1–3, machines 0, 1, 2 and 3 share leader 0; machine 4 is its own leader. “Are 0 and 2 connected?” is “do they have the same leader?”: a lookup, not a search. Joining two groups is one line: point one leader at the other.</p>
+<p>Done carelessly, the chains of “my leader is him, his leader is her” grow long. Two small habits fix that, and make every question cost almost nothing.</p>
+<p><b>Analogy.</b> Asking whether two people work at the same company. You could trace the org chart every time. Or everyone knows their CEO's name, and you compare two names.</p>`,
 
   why: [
-    { t: "The question being asked is not the one traversal is good at", d: "A traversal answers \"is there a path from A to B\" by walking until it finds one. That is fine once. But connectivity is usually asked over and over, with new connections arriving in between, and each question starts the walk from scratch. A hundred thousand questions on a hundred thousand nodes is about 10^10 steps." },
-    { t: "So do not store the connections. Store the answer", d: "Nobody asked for the route. They asked yes or no. So throw the edges away and keep one fact per thing: which group it is in. Name each group after one of its members, the <b>leader</b>. Now \"connected?\" is \"same leader?\", which is two lookups and a comparison." },
-    { t: "One array holds all of it", d: "<code>parent[x]</code> is the thing x points at on the way to its leader. A leader points at itself, which is how you recognise one. To find x's leader, follow the pointers until one points at itself. To join two groups, find both leaders and point one at the other. That is the entire structure: one array, two short functions." },
-    { t: "Done carelessly, it quietly becomes a linked list", d: "Nothing above said which leader should point at which. Join 1 to 2, then 2 to 3, then 3 to 4, always hanging the old leader under the new one. What you get is a single chain of length n. Finding a leader now walks the whole chain. A hundred thousand joins done this way cost about 5 x 10^9 steps, which is the thing you were trying to avoid." },
-    { t: "Fix one: always hang the smaller group under the bigger one", d: "Keep each group's size. When joining, the smaller leader points at the bigger. Now think about how deep a thing can get. Its depth only grows when its whole group gets attached under a bigger one, which means its group at least <b>doubled</b>. A group can double at most <code>log n</code> times before it runs out of members. So no chain is ever longer than about 20 at a million things." },
-    { t: "Fix two: on the way back, point everything straight at the leader", d: "When you walk from x up to the leader, you have just learned the answer for <b>every thing you passed</b>. So on the way back, point each of them directly at the leader. That path is now length one and can never be walked again. This is called path compression, and it costs one extra line." },
-    { t: "Together they make it near constant, and there is a name for how near", d: "With both fixes, m operations cost <code>O(m x alpha(n))</code> in total. Alpha grows so slowly that it stays below 5 for any n that could fit in a computer. In an interview say \"near constant, amortised\", which means averaged over the whole run of operations rather than promised for any single one. Do not say O(1), because it is not, and the difference is the thing being checked." },
-    { t: "What it refuses to do, and what falls out free", d: "It cannot tell you the route between two things, it cannot list the edges, and it cannot un-join a group, because the edges were thrown away on purpose. What it does give free: the number of groups, by starting at n and subtracting one per successful join. Also each group's size, since you were keeping that anyway. Cycle detection in an undirected graph is one pass: for each edge, if both ends already share a leader, that edge closes a cycle." },
+    { t: "The question asked is not the one a walk is good at",
+      d: "A BFS answers “is there a path from A to B?” by walking until it finds one. Fine once. But connectivity is usually asked again and again, with new cables arriving in between, and each question starts from scratch. 10⁵ questions on 10⁵ machines is about 10¹⁰ steps." },
+    { t: "So do not store the connections: store the answer",
+      d: "Nobody asked for the route, only yes or no. So throw the cables away and keep one fact per machine: its group. Name each group after one member, the <b>leader</b>. “Connected?” becomes “same leader?”: two lookups and a comparison." },
+    { t: "One array holds all of it",
+      d: "<code>parent[x]</code> is what <var>x</var> points at on the way to its leader. A leader points at itself, which is how you recognise one. To find <var>x</var>'s leader, follow the pointers until one points at itself. To join two groups, find both leaders and point one at the other. One array, two short functions." },
+    { t: "Done carelessly, it quietly becomes a linked list",
+      d: "Nothing above says which leader points at which. Join 1 to 2, then 2 to 3, then 3 to 4, always hanging the old leader under the new. You get one chain of length <var>n</var>. Finding a leader walks the whole chain. 10⁵ joins done this way cost about 5 × 10⁹ steps." },
+    { t: "Fix one: hang the smaller group under the bigger",
+      d: "Keep each group's size, and point the smaller leader at the bigger. A machine gets deeper only when its whole group is hung under a bigger one, so its group at least <b>doubles</b>. A group can double at most log₂ <var>n</var> times, so no chain passes about 20 at 10⁶ machines." },
+    { t: "Fix two: on the way back, point everything straight at the leader",
+      d: "Walking from 3 up to leader 0 through 2, you learn the answer for <b>every machine you passed</b>. So on the way back, point 3 and 2 directly at 0. That path is now one step long and is never walked again. This is <b>path compression</b>, one extra line." },
+    { t: "Together they are near constant, and there is a name for how near",
+      d: "With both fixes, <var>m</var> operations cost O(<var>m</var>·α(<var>n</var>)) in total. α grows so slowly that it stays below 5 for any <var>n</var> a computer could hold. Say “near constant, amortised”, meaning averaged over the whole run. Do not say O(1): it is not, and that difference is what is being checked." },
+    { t: "What it refuses to do, and what falls out free",
+      d: "It cannot give the route, list the cables, or split a group: the cables were thrown away on purpose. Free extras: the number of groups, by starting at <var>n</var> and subtracting one per real join, here 5 − 3 = 2. And cycle detection: a cable whose ends already share a leader closes a loop." },
   ],
+
   hing: `<p><b>Sawaal se shuru karo:</b> "kya u aur v jude hue hain?" DFS yeh ek baar bahut acche se bata deta hai. Par yeh sawaal baar-baar aata hai, aur beech mein nayi edges bhi judti rehti hain. Har baar poora traversal dobara chalana padega.</p>
 <p><b>Dikkat walk mein nahi hai.</b> Dikkat yeh hai ki pichhli mehnat ka kuch bachta hi nahi. To jo cheez store kar rahe ho, wahi badal do.</p>
 <p><b>Edges ki zaroorat hi nahi hai.</b> Bas itna yaad rakho ki kaun sa node kis group mein hai. Har group ka ek <b>leader</b> chun lo. Ab sawaal ban gaya: "dono ka leader same hai kya?" Aur nayi edge ka matlab ban gaya: do groups ko jod do.</p>
-<p><b>Ek array kaafi hai.</b> <code>parent[i]</code> batata hai ki i kiski taraf ishara kar raha hai. Shuru mein sab apne aap ko point karte hain. <code>find(x)</code> upar chalta jaata hai jab tak koi node khud ko point na kare, wahi leader hai. <code>union(a, b)</code> dono ke leader nikaalta hai aur ek ko doosre par laga deta hai.</p>
-<p><b>Ab sabse zaroori baat, kyunki naive version dhoka de deta hai.</b> <code>union(1,2)</code>, phir <code>union(2,3)</code>, phir <code>union(3,4)</code>. Aise karte jao to tree ek seedhi chain ban jaata hai. find wapas O(n) ho gaya. Jisse bhaag rahe the, wahi dobara bana diya.</p>
-<p><b>Fix 1, union by size.</b> Hamesha chhota tree bade ke neeche lagao. Ab socho kisi node ki depth kab badhti hai. Sirf tab, jab uska poora tree kisi bade tree ke neeche jude. Aur us waqt uska tree kam se kam <b>double</b> ho jaata hai. Double karte-karte n tak pahunchne mein sirf <code>log n</code> kadam lagte hain. Isliye depth log n se zyada ho hi nahi sakti: 10 lakh nodes par sirf 20.</p>
-<p><b>Fix 2, path compression.</b> find ne x se leader tak ka raasta chal to liya hai. Matlab raaste ke har node ka jawab usko ab pata hai. To wapas aate waqt un sab ko <b>seedha leader par</b> point kara do. Jo raasta ek baar chal liye, woh dobara chalna hi nahi padega.</p>
-<p><b>Dono saath lagao to per operation cost α(n) reh jaati hai, inverse Ackermann.</b> Yeh function itna dheere badhta hai ki kisi bhi practical n ke liye <b>5 se kam</b> hai. Interview mein "O(1)" mat bolo. Bolo <b>"near constant, amortised"</b>, matlab poore run ka average, kisi ek call ka waada nahi.</p>
-<p><b>Jo yeh nahi kar sakta:</b> undo nahi hota, ek edge hatani hai to poora dobara banao. Kisi group ke saare members nahi gina sakta, uske liye alag map chahiye. Path aur distance ke baare mein kuch nahi jaanta. Sirf membership.</p>
-<p><b>Kahan pakadna hai:</b> edges aate ja rahe hain aur components ginne hain. Ya undirected graph mein cycle dhoondhni hai, jis edge ke dono sire pehle se ek hi leader par hain wahi cycle band karti hai. Ya Kruskal MST banana hai: edges weight se sort karo, sasti se shuru karo, aur edge tabhi rakho jab union true lautaaye.</p>`,
+<p><b>Ek array kaafi hai.</b> <code>parent[i]</code> batata hai ki <var>i</var> kiski taraf ishara kar raha hai. Shuru mein sab apne aap ko point karte hain. <code>find(x)</code> upar chalta jaata hai jab tak koi node khud ko point na kare, wahi leader hai. <code>union(a, b)</code> dono ke leader nikaalta hai aur ek ko doosre par laga deta hai.</p>
+<p><b>Naive version dhoka de deta hai.</b> <code>union(1,2)</code>, phir <code>union(2,3)</code>, phir <code>union(3,4)</code>. Aise karte jao to tree ek seedhi chain ban jaata hai. find wapas O(<var>n</var>) ho gaya.</p>
+<p><b>Fix 1, union by size.</b> Hamesha chhota tree bade ke neeche lagao. Kisi node ki depth sirf tab badhti hai jab uska poora tree kisi bade tree ke neeche jude. Us waqt uska tree kam se kam <b>double</b> ho jaata hai. Isliye depth log <var>n</var> se zyada ho hi nahi sakti: 10 lakh nodes par sirf 20.</p>
+<p><b>Fix 2, path compression.</b> find ne <var>x</var> se leader tak ka raasta chal to liya hai. To wapas aate waqt raaste ke sab nodes ko <b>seedha leader par</b> point kara do. Jo raasta ek baar chal liye, woh dobara chalna hi nahi padega.</p>
+<p><b>Dono saath lagao to per operation cost α(<var>n</var>) reh jaati hai, inverse Ackermann.</b> Yeh function kisi bhi practical <var>n</var> ke liye <b>5 se kam</b> hai. Interview mein "O(1)" mat bolo. Bolo <b>"near constant, amortised"</b>.</p>
+<p><b>Jo yeh nahi kar sakta:</b> undo nahi hota, kisi group ke saare members nahi gina sakta, aur path ya distance ke baare mein kuch nahi jaanta. Sirf membership.</p>`,
 
   viz: ["union-find"],
 
   math: [
-    { t: "Why traversal is the wrong tool for a repeated question", d: "One connectivity query is a traversal. A hundred thousand of them is a hundred thousand traversals, and that multiplication is the entire motivation.", w:
-`V = 10^5, E = 2 x 10^5, q = 10^5 connectivity queries
+    { t: "Machines 0 to 4, cable by cable", d: "Each union finds two leaders and points one at the other. The group count starts at 5 and drops by one per real merge.", w:
+`start          parent = [0, 1, 2, 3, 4]      5 groups
 
-BFS per query:  q x (V + E)  =  3 x 10^10
-union-find:     (V + E + q) x alpha  ~  4 x 10^5
+union(0, 1)    leaders 0 and 1: point 1 at 0
+               parent = [0, 0, 2, 3, 4]      4 groups
+union(2, 3)    leaders 2 and 3: point 3 at 2
+               parent = [0, 0, 2, 2, 4]      3 groups
+union(1, 3)    find(1) = 0, find(3) = 2: point 2 at 0
+               parent = [0, 0, 0, 2, 4]      2 groups
+
+connected(0, 2)?  find(0) = 0, find(2): 2 -> 0        yes
+connected(1, 4)?  find(1) = 0, find(4) = 4            no
+find(3) walks 3 -> 2 -> 0: two steps, which is what grows` },
+    { t: "Why a walk per question is the wrong tool", d: "One connectivity question is one BFS. 10^5 of them is 10^5 walks, and that multiplication is the whole motivation.", w:
+`V = 10^5 machines, E = 2 x 10^5 cables, q = 10^5 questions
+
+BFS per question:  q x (V + E)  =  3 x 10^10
+union-find:        (V + E + q) x alpha  ~  4 x 10^5
 
 five orders of magnitude, for the same answers` },
-    { t: "The naive version turns into a linked list", d: "Attach trees carelessly and every union adds a level. The structure still works, it has just become the thing it was meant to replace.", w:
+    { t: "The careless version turns into a linked list", d: "Attach trees carelessly and every union adds a level. The structure still works; it has just become the thing it was meant to replace.", w:
 `union(1,2), union(2,3), ... union(n-1,n), no rules:
 
 each union hangs the existing tree under a new root
@@ -9878,7 +10168,7 @@ depth after k unions: k
 find costs the depth, so n finds cost 1 + 2 + ... + n
 
 n = 100,000  ->  5 x 10^9 pointer hops` },
-    { t: "Union by size: the depth cannot pass log2 n", d: "Attach the smaller tree under the larger and a node's depth can only grow when its whole tree doubles. Doubling has a limit.", w:
+    { t: "Union by size: the depth cannot pass log2 n", d: "Hang the smaller tree under the larger, and a node's depth grows only when its whole tree doubles. Doubling has a limit.", w:
 `a node's depth increases only when its tree is attached
 under a bigger one, so its tree at least DOUBLES
 
@@ -9886,53 +10176,41 @@ therefore a tree of depth d holds at least 2^d nodes
   2^d <= n   ->   d <= log2 n
 
 n = 10^6  ->  depth at most 20, with no compression at all` },
-    { t: "Path compression, and the constant nobody can write down", d: "A find that walks k steps rewires all k nodes to the root, so that walk can never happen again. Together with union by size the amortised cost stops being a log.", w:
-`find(x) walking k steps: k nodes repointed at the root
-that path is now length 1, for ever
+    { t: "Path compression, and the constant nobody writes down", d: "A find that walks k steps points all k nodes at the root, so that walk never happens again. With union by size too, the cost stops being a log.", w:
+`find(3) walks 3 -> 2 -> 0: point 3 and 2 at 0
+parent = [0, 0, 0, 0, 4]; the next find(3) is one step
 
 both fixes together: m operations cost O(m x alpha(n))
-
-alpha is the inverse Ackermann function
   alpha(n) <= 4 for n up to 2^2^2^16
 so it is under 5 for any n that can be stored
 
 say "near constant, amortised". Not O(1).` },
-    { t: "What falls out free, and what is not there at all", d: "The structure keeps one fact per node. Anything that needs the edges back is not merely slow, it is unavailable.", w:
-`free:
-  component count   start at V, decrement per real union
-  component sizes   the size array you already maintain
-  undirected cycle  for each edge, find(a) == find(b)
-                    one pass, E finds
-
-absent:
-  the path between two nodes, the edge list,
-  deletion or splitting, anything about direction` },
   ],
 
   costs: [
     ["build for n nodes", "O(n) time and space", "two arrays; the graph itself is never stored"],
-    ["find, no optimisations", "O(n)", "unions can build a chain, and then find has to walk it"],
-    ["find, union by size only", "O(log n)", "depth grows only when a tree at least doubles, and that is log n times"],
-    ["find, path compression only", "O(log n) amortised", "each walk flattens the path it paid for, so the next one is shorter"],
+    ["find, no fixes", "O(n)", "unions can build a chain, and then find has to walk it"],
+    ["find, union by size only", "O(log n)", "depth grows only when a tree at least doubles, which happens log n times"],
+    ["find, path compression only", "O(log n) amortised", "each walk flattens the path it paid for"],
     ["find or union, both fixes", "O(α(n)) amortised", "α is the inverse Ackermann function, under 5 for any real n"],
-    ["m operations on n nodes", "O(n + m α(n))", "effectively linear, which is why it beats one DFS per query"],
+    ["m operations on n nodes", "O(n + m α(n))", "effectively linear, which is why it beats one BFS per question"],
     ["Kruskal's MST", "O(E log E)", "the sort dominates; the union-find part is close to free"],
   ],
 
   traps: [
-    "<b>Comparing <code>parent[a] == parent[b]</code> instead of <code>find(a) == find(b)</code>.</b> Two nodes deep in the same tree have different parents and the same root. This passes the small test case and fails the big one.",
-    "<b>Union by size using the size of a non-root.</b> <code>size[]</code> is only meaningful at a root, because nothing updates it for the nodes underneath. Compare <code>size[ra]</code> and <code>size[rb]</code>, never <code>size[a]</code> and <code>size[b]</code>.",
-    "<b>Recursive <code>find</code> on a chain of 10⁵ nodes.</b> Path compression flattens the tree only <i>after</i> the recursion has already gone all the way down, so the stack overflows first. Write it iteratively.",
-    "<b>Counting components by counting distinct <code>parent[i]</code> values.</b> Count the roots (<code>i == parent[i]</code>), or better, keep a counter and decrement it on every successful union.",
-    "<b>Reaching for it on a directed graph.</b> Union-find has no notion of direction, so its cycle detection is an undirected statement. Directed cycles need DFS with a recursion-stack marker.",
-    "<b>Assuming you can remove an edge later.</b> There is no undo. If the problem deletes edges, reverse the timeline and process the deletions as additions instead.",
+    "<b>Comparing <code>parent[a] == parent[b]</code> instead of <code>find(a) == find(b)</code>.</b> Before compression, parent[3] is 2 and parent[1] is 0, yet both have leader 0. This passes small tests and fails big ones.",
+    "<b>Union by size using a non-leader's size.</b> <code>size[]</code> is only kept up to date at a leader. Compare <code>size[ra]</code> and <code>size[rb]</code>, never <code>size[a]</code> and <code>size[b]</code>.",
+    "<b>Recursive <code>find</code> on a chain of 10⁵ nodes.</b> Compression flattens the tree only <i>after</i> the recursion has gone all the way down, so the stack overflows first. Write it as a loop.",
+    "<b>Counting groups by counting distinct <code>parent[i]</code> values.</b> Count the leaders (<code>i == parent[i]</code>), or better, keep a counter and subtract one on every real union.",
+    "<b>Reaching for it on a one-way graph.</b> Union-find has no idea of direction, so its cycle detection is about two-way graphs. One-way loops need DFS with a recursion-stack marker.",
+    "<b>Assuming you can remove a cable later.</b> There is no undo. If the problem deletes edges, reverse the timeline and process deletions as additions.",
   ],
 
   impl: [
-    ["Python", "no stdlib class; a list for parent, or a dict for arbitrary keys", "Write find iteratively. Raising the recursion limit is not a fix, it just moves the crash."],
-    ["Java", "no java.util class either; two int[] arrays", "Do not use HashMap<Integer,Integer> out of habit, boxing makes it several times slower."],
-    ["C++", "vector<int> with iota to fill 0..n-1", "union is a keyword, so name the method unite or join. Boost has disjoint_sets if it is allowed."],
-    ["JavaScript", "Array or Int32Array for parent", "For non-integer ids use a Map, not an object: object keys are coerced to strings and inherit prototype keys."],
+    ["Python", "no stdlib class; a list for parent, or a dict for arbitrary keys", "Write find as a loop. Raising the recursion limit is not a fix; it just moves the crash."],
+    ["Java", "no java.util class either; two int[] arrays", "Do not use HashMap<Integer,Integer> out of habit: boxing makes it several times slower."],
+    ["C++", "vector<int> with iota to fill 0..n-1", "union is a keyword, so name the method unite or join. Boost has disjoint_sets if allowed."],
+    ["JavaScript", "Array or Int32Array for parent", "For non-integer ids use a Map, not an object: object keys become strings and inherit prototype keys."],
   ],
 
   code: {
@@ -9977,9 +10255,9 @@ find(x):                                # compressed, and iterative
 union(a, b):                            # by size, returns "did it merge?"
     ra <- find(a); rb <- find(b)
     if ra == rb: return false           # same root: this edge is redundant
-    if size[ra] > size[rb]: swap(ra, rb)
-    parent[ra] <- rb                    # smaller root hangs under larger
-    size[rb] <- size[rb] + size[ra]
+    if size[ra] < size[rb]: swap(ra, rb)
+    parent[rb] <- ra                    # smaller root hangs under larger
+    size[ra] <- size[ra] + size[rb]
     count <- count - 1
     return true
 
@@ -10008,10 +10286,10 @@ union(a, b):                            # by size, returns "did it merge?"
         ra, rb = self.find(a), self.find(b)
         if ra == rb:
             return False                 # already together: redundant edge
-        if self.size[ra] > self.size[rb]:
+        if self.size[ra] < self.size[rb]:
             ra, rb = rb, ra              # smaller tree hangs under larger
-        self.parent[ra] = rb
-        self.size[rb] += self.size[ra]
+        self.parent[rb] = ra
+        self.size[ra] += self.size[rb]
         self.count -= 1
         return True
 
@@ -10055,9 +10333,9 @@ def kruskal(n, edges):                   # edges as (weight, u, v)
     boolean union(int a, int b) {            // true only if it merged
         int ra = find(a), rb = find(b);
         if (ra == rb) return false;          // redundant edge, closes a cycle
-        if (size[ra] > size[rb]) { int t = ra; ra = rb; rb = t; }
-        parent[ra] = rb;
-        size[rb] += size[ra];
+        if (size[ra] < size[rb]) { int t = ra; ra = rb; rb = t; }
+        parent[rb] = ra;
+        size[ra] += size[rb];
         count--;
         return true;
     }
@@ -10095,9 +10373,9 @@ for (int[] e : edges) if (dsu.union(e[0], e[1])) total += e[2];
     bool unite(int a, int b) {
         int ra = find(a), rb = find(b);
         if (ra == rb) return false;      // redundant edge, closes a cycle
-        if (sz[ra] > sz[rb]) swap(ra, rb);
-        parent[ra] = rb;
-        sz[rb] += sz[ra];
+        if (sz[ra] < sz[rb]) swap(ra, rb);
+        parent[rb] = ra;
+        sz[ra] += sz[rb];
         --count;
         return true;
     }
@@ -10132,9 +10410,9 @@ for (auto& [w, u, v] : edges)
   union(a, b) {                         // true only if it merged two sets
     let ra = this.find(a), rb = this.find(b);
     if (ra === rb) return false;        // redundant edge, closes a cycle
-    if (this.size[ra] > this.size[rb]) [ra, rb] = [rb, ra];
-    this.parent[ra] = rb;
-    this.size[rb] += this.size[ra];
+    if (this.size[ra] < this.size[rb]) [ra, rb] = [rb, ra];
+    this.parent[rb] = ra;
+    this.size[ra] += this.size[rb];
     this.count--;
     return true;
   }
@@ -10157,123 +10435,229 @@ function kruskal(n, edges) {
   codecap: "One array, one find, one union, and a boolean that says whether anything actually merged. Components, cycles and Kruskal are all built on that boolean.",
 
   q: [
-    ["Why not just run a DFS for each connectivity query?", "Each DFS is O(V + E) and discards what it learned, so k queries cost k traversals, and every new edge invalidates the previous answers. Union-find keeps the grouping between queries, so a query is two finds and an edge is one union."],
-    ["What does find return, and why is that enough to answer connectivity?", "The representative of the set, the root of the chain of parent pointers. Every node in a set reaches the same root, so u and v are connected exactly when find(u) == find(v). The edges themselves are never consulted."],
-    ["How does the naive version degenerate, and what are the two fixes?", "Unioning 1-2, 2-3, 3-4 and so on can build a chain of length n, making find O(n). Union by size or rank always hangs the smaller tree under the larger; path compression points every node on a find path straight at the root. They are independent, and either one alone already helps."],
-    ["Why does union by size bound the depth at log n?", "A node only gets deeper when its tree is hung under one at least as big, and at that moment the tree containing it at least doubles in size. A tree can double at most log n times before it holds all n nodes, so no node can be pushed down more than log n times."],
-    ["What is the real complexity with both optimisations, and what is α(n)?", "O(α(n)) amortised per operation, where α is the inverse Ackermann function. It grows so slowly that it is below 5 for any n that could be stored, so it is near constant in practice, but it is not O(1) and the amortised part matters."],
-    ["Name three things union-find cannot do.", "It cannot un-union, since nothing records which merge created which root. It cannot list the members of a set without a separate root-to-list map, because the pointers only go up. And it knows nothing about paths or distances, only about membership."],
+    ["Why not just run a DFS for each connectivity query?", "Each DFS is O(V + E) and throws away what it learned, so k queries cost k walks, and every new edge spoils earlier answers. Union-find keeps the grouping between queries: a query is two finds, and an edge is one union."],
+    ["What does find return, and why is that enough to answer connectivity?", "The leader of the set: the root of the chain of parent pointers. Every node in a set reaches the same root, so u and v are connected exactly when find(u) == find(v). The edges are never consulted."],
+    ["How does the careless version break down, and what are the two fixes?", "Unioning 1-2, 2-3, 3-4 and so on can build a chain of length n, making find O(n). Union by size hangs the smaller tree under the larger. Path compression points every node on a find path straight at the root. Either alone already helps."],
+    ["Why does union by size bound the depth at log n?", "A node only gets deeper when its tree is hung under one at least as big, and then its tree at least doubles. A tree can double at most log n times before it holds all n nodes, so no node sinks more than log n times."],
+    ["What is the real complexity with both fixes, and what is α(n)?", "O(α(n)) amortised per operation, where α is the inverse Ackermann function. It is below 5 for any n that could be stored, so near constant in practice. But it is not O(1), and the amortised part matters."],
+    ["Name three things union-find cannot do.", "It cannot undo a union, since nothing records which merge made which root. It cannot list a set's members without a separate map, because pointers only go up. And it knows nothing about paths or distances, only membership."],
   ],
 
   p: [
-    [547, "number-of-provinces", "Number of Provinces, components without a traversal", "M"],
+    [547, "number-of-provinces", "Number of Provinces, components without a walk", "M"],
     [200, "number-of-islands", "Number of Islands, the same count with unions instead of BFS", "M"],
     [684, "redundant-connection", "Redundant Connection, the edge whose union returns false", "M"],
     [721, "accounts-merge", "Accounts Merge, union by a shared email", "M"],
     [990, "satisfiability-of-equality-equations", "Equality Equations, union the equals then test the not-equals", "M"],
-    [1319, "number-of-operations-to-make-network-connected", "components minus one, if you have spare cables", "M"],
+    [1319, "number-of-operations-to-make-network-connected", "Network Connected, components minus one, if you have spare cables", "M"],
     [305, "number-of-islands-ii", "Number of Islands II, land arriving one cell at a time", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek data centre mein <b>10⁵ machines</b> hain. Cables ek ek karke lagti hain, <b>2 × 10⁵</b>, aur beech beech mein operators <b>10⁵ baar</b> poochhte hain: “kya machine <var>u</var> ab machine <var>v</var> tak pahunch sakti hai?” Sirf haan ya na; raasta kisi ko nahi chahiye.</p>
+<p>Chhota version: machines 0 se 4. Cables aati hain 0–1, phir 2–3, phir 1–3. Teesri cable ke baad kya 0, 2 tak pahunch sakti hai? Haan: 0–1, 1–3, 3–2. Kya 4 kahin pahunch sakti hai? Nahi.</p>`,
+      tries: [
+        ["Har sawaal par BFS chalao", "Har BFS poora network chalta hai: lagbhag 3 × 10⁵ steps. 10⁵ sawaal 3 × 10¹⁰, aur har nayi cable purane answers phenk deti hai."],
+        ["Cables ki list mein pair dhoondho", "0–2 cable nahi hai, to answer “nahi” aata hai. Hona haan chahiye, 1 aur 3 se hokar. Cable list “seedha juda?” batati hai, “jude?” nahi."],
+        ["Har machine ko group label do, aur har merge par poore group ka label badlo", "Sahi hai, par merge ek group ka har label dobara likhta hai. Badkismat order mein merge karo to rewrites milkar 1 + 2 + … + 10⁵, lagbhag 5 × 10⁹."],
+      ],
+      so: `<p>Cables phenk do aur sirf yeh rakho ki <b>har machine kis group mein hai</b>. Har group ka ek <b>leader</b>, aur har machine uski taraf point karti hai. “Jude?” matlab “same leader?”. Do groups jodna ek write hai: ek leader ko doosre par point karo.</p>
+<p>Do chhoti aadatein pointer chains chhoti rakhti hain: chhota group bade ke neeche latkao, aur jo chain chalo use seedha karo. Tab har operation lagbhag constant. Yahi <b>union-find</b> hai. Page machines 0 se 4 ko teen cables ke saath follow karta hai.</p>`,
+    },
+
+    one: "Edges store karna chhodo aur sirf <b>har node kis group mein hai</b> rakho. Connectivity ban jaati hai \"same representative?\", aur do chhote fixes us answer ko lagbhag constant banaate hain.",
+
+    plain: `<p>Aapko baar baar bataya jaata hai “yeh do jude hain”, aur baad mein poocha jaata hai “kya yeh do jude hain?”. Kis raaste se nahi: bas haan ya na.</p>
+<p>Obvious tareeka connections ki list rakhta hai aur har baar dhoondhta hai. Woh dhoondhna sab kuch par ek nayi walk hai, aur 10⁵ sawaal matlab 10⁵ walks.</p>
+<p>To iski jagah <b>answer</b> store karo. Har group ko ek member do jo uski taraf se bole, <b>leader</b>, aur har member use leader ki taraf point karwao. Cables 0–1, 2–3 aur 1–3 ke baad machines 0, 1, 2 aur 3 ka leader 0; machine 4 apni leader khud. “Kya 0 aur 2 jude hain?” matlab “kya unka leader same hai?”: lookup, search nahi. Do groups jodna ek line: ek leader ko doosre par point karo.</p>
+<p>Laaparwahi se karo to “mera leader woh, uska leader woh” ki chains lambi hoti hain. Do chhoti aadatein ise theek karti hain, aur har sawaal ki keemat lagbhag kuch nahi reh jaati.</p>
+<p><b>Analogy.</b> Poochna ki do log same company mein hain ya nahi. Har baar org chart trace kar sakte ho. Ya har koi apne CEO ka naam jaanta hai, aur tum do naam compare karte ho.</p>`,
+
+    why: [
+      { t: "Poocha gaya sawaal walk ke kaam ka nahi",
+        d: "BFS “A se B tak raasta hai?” ka answer ek milne tak chal kar deta hai. Ek baar theek. Par connectivity baar baar poochi jaati hai, beech mein nayi cables aati hain, aur har sawaal zero se shuru hota hai. 10⁵ machines par 10⁵ sawaal lagbhag 10¹⁰ steps." },
+      { t: "To connections nahi: answer store karo",
+        d: "Kisi ne raasta nahi maanga, sirf haan ya na. To cables phenk do aur har machine ka ek fact rakho: uska group. Har group ka naam ek member par, <b>leader</b>. “Jude?” ban jaata hai “same leader?”: do lookups aur ek comparison." },
+      { t: "Ek array sab rakhta hai",
+        d: "<code>parent[x]</code> woh hai jise <var>x</var> leader ke raaste mein point karta hai. Leader khud ko point karta hai, isi se pehchana jaata hai. <var>x</var> ka leader dhoondhne ke liye pointers follow karo jab tak koi khud ko point na kare. Do groups jodne ke liye dono leaders dhoondho aur ek ko doosre par point karo. Ek array, do chhote functions." },
+      { t: "Laaparwahi se karo to chupchaap linked list ban jaata hai",
+        d: "Upar kahin nahi likha kaunsa leader kise point kare. 1 ko 2 se jodo, phir 2 ko 3 se, phir 3 ko 4 se, hamesha purane leader ko naye ke neeche latka kar. <var>n</var> lambi ek chain milti hai. Leader dhoondhna poori chain chalna hai. Aise 10⁵ joins lagbhag 5 × 10⁹ steps." },
+      { t: "Fix ek: chhota group bade ke neeche latkao",
+        d: "Har group ka size rakho, aur chhote leader ko bade par point karo. Machine tabhi gehri hoti hai jab uska poora group kisi bade ke neeche latke, to uska group kam se kam <b>dugna</b> hota hai. Group zyada se zyada log₂ <var>n</var> baar dugna ho sakta hai, to 10⁶ machines par koi chain lagbhag 20 se lambi nahi." },
+      { t: "Fix do: wapas aate hue sabko seedha leader par point karo",
+        d: "3 se 2 hokar leader 0 tak chalte hue aapko <b>har guzri machine</b> ka answer pata chal gaya. To wapas aate waqt 3 aur 2 ko seedha 0 par point karo. Woh raasta ab ek step ka hai aur dobara kabhi nahi chalna. Yeh <b>path compression</b> hai, ek extra line." },
+      { t: "Dono saath lagbhag constant hain, aur kitna lagbhag, iska naam hai",
+        d: "Dono fixes ke saath <var>m</var> operations kul O(<var>m</var>·α(<var>n</var>)). α itna dheere badhta hai ki computer mein aa sakne wale kisi bhi <var>n</var> ke liye 5 se neeche rehta hai. Bolo “near constant, amortised”, matlab poore run ka average. O(1) mat bolo: yeh nahi hai, aur yahi farak check hota hai." },
+      { t: "Yeh kya mana karta hai, aur kya muft milta hai",
+        d: "Raasta nahi de sakta, cables list nahi kar sakta, group tod nahi sakta: cables jaan-boojh kar phenki gayi thi. Muft extras: groups ki ginti, <var>n</var> se shuru karke har asli join par ek ghata kar, yahan 5 − 3 = 2. Aur cycle detection: jis cable ke dono sire pehle se same leader par hon woh loop band karti hai." },
+    ],
+
+    math: [
+      { t: "Machines 0 se 4, cable by cable", d: "Har union do leaders dhoondhta hai aur ek ko doosre par point karta hai. Group count 5 se shuru hota hai aur har asli merge par ek ghat-ta hai." },
+      { t: "Har sawaal par walk galat tool kyun hai", d: "Ek connectivity sawaal ek BFS hai. 10^5 sawaal 10^5 walks, aur yahi guna poori wajah hai." },
+      { t: "Laaparwah version linked list ban jaata hai", d: "Trees laaparwahi se jodo aur har union ek level jodta hai. Structure ab bhi chalta hai; bas woh cheez ban gaya jiski jagah lene ke liye tha." },
+      { t: "Union by size: depth log2 n ke paar nahi ja sakti", d: "Chhote tree ko bade ke neeche latkao, aur node ki depth tabhi badhti hai jab uska poora tree dugna ho. Dugna hone ki hadd hai." },
+      { t: "Path compression, aur woh constant jo koi nahi likhta", d: "k steps chalne wala find saare k nodes ko root par point karta hai, to woh walk dobara nahi hoti. Union by size ke saath cost log nahi rehti." },
+    ],
+
+    costs: [
+      ["n nodes ke liye build", "O(n) time and space", "do arrays; graph khud kabhi store nahi hota"],
+      ["find, bina fixes", "O(n)", "unions chain bana sakte hain, phir find use chalta hai"],
+      ["find, sirf union by size", "O(log n)", "depth tabhi badhti hai jab tree kam se kam dugna ho, jo log n baar hota hai"],
+      ["find, sirf path compression", "O(log n) amortised", "har walk apne raaste ko seedha kar deti hai"],
+      ["find ya union, dono fixes", "O(α(n)) amortised", "α inverse Ackermann hai, kisi bhi asli n ke liye 5 se kam"],
+      ["n nodes par m operations", "O(n + m α(n))", "lagbhag linear, isiliye har sawaal par ek BFS se behtar"],
+      ["Kruskal's MST", "O(E log E)", "sort haavi hai; union-find hissa lagbhag muft"],
+    ],
+
+    traps: [
+      "<b><code>find(a) == find(b)</code> ki jagah <code>parent[a] == parent[b]</code> compare karna.</b> Compression se pehle parent[3] 2 hai aur parent[1] 0, phir bhi dono ka leader 0. Chhote tests pass, bade fail.",
+      "<b>Non-leader ka size lekar union by size.</b> <code>size[]</code> sirf leader par up to date rehta hai. <code>size[ra]</code> aur <code>size[rb]</code> compare karo, kabhi <code>size[a]</code> aur <code>size[b]</code> nahi.",
+      "<b>10⁵ nodes ki chain par recursive <code>find</code>.</b> Compression tree ko tabhi seedha karta hai jab recursion poora neeche ja chuki, to stack pehle overflow hota hai. Loop ki tarah likho.",
+      "<b>Alag <code>parent[i]</code> values gin kar groups ginna.</b> Leaders gino (<code>i == parent[i]</code>), ya behtar, ek counter rakho aur har asli union par ek ghatao.",
+      "<b>One-way graph par ise lagana.</b> Union-find ko direction ka pata nahi, to iska cycle detection two-way graphs ke liye hai. One-way loops ko recursion-stack marker wala DFS chahiye.",
+      "<b>Maan lena ki cable baad mein hata sakte ho.</b> Undo nahi hai. Problem edges delete kare, to timeline ulat do aur deletions ko additions ki tarah process karo.",
+    ],
+
+    impl: [
+      ["Python", "no stdlib class; a list for parent, or a dict for arbitrary keys", "find ko loop ki tarah likho. Recursion limit badhana fix nahi; bas crash ki jagah badalta hai."],
+      ["Java", "no java.util class either; two int[] arrays", "Aadat se HashMap<Integer,Integer> mat lo: boxing ise kai guna slow karta hai."],
+      ["C++", "vector<int> with iota to fill 0..n-1", "union keyword hai, to method ka naam unite ya join rakho. Allowed ho to Boost mein disjoint_sets hai."],
+      ["JavaScript", "Array or Int32Array for parent", "Non-integer ids ke liye Map lo, object nahi: object keys strings ban jaati hain aur prototype keys inherit karti hain."],
+    ],
+
+    codecap: "Ek array, ek find, ek union, aur ek boolean jo batata hai ki kuch sach mein juda ya nahi. Components, cycles aur Kruskal sab usi boolean par bane hain.",
+
+    q: [
+      ["Har connectivity query par DFS kyun nahi?", "Har DFS O(V + E) hai aur jo seekha use phenk deta hai, to k queries k walks hain, aur har nayi edge purane answers bigaadti hai. Union-find queries ke beech grouping rakhta hai: query do finds hai, aur edge ek union."],
+      ["find kya lautata hai, aur connectivity ke liye itna kaafi kyun hai?", "Set ka leader: parent pointers ki chain ka root. Set ka har node usi root tak pahunchta hai, to u aur v tabhi jude hain jab find(u) == find(v). Edges kabhi dekhe nahi jaate."],
+      ["Laaparwah version kaise tootta hai, aur do fixes kya hain?", "1-2, 2-3, 3-4 aise union karne se n lambi chain ban sakti hai, jisse find O(n). Union by size chhote tree ko bade ke neeche latkata hai. Path compression find raaste ke har node ko seedha root par point karta hai. Akele bhi har ek madad karta hai."],
+      ["Union by size depth ko log n tak kyun baandhta hai?", "Node tabhi gehra hota hai jab uska tree kam se kam utne bade ke neeche latke, aur tab uska tree kam se kam dugna hota hai. Saare n nodes rakhne se pehle tree zyada se zyada log n baar dugna ho sakta hai, to koi node log n baar se zyada nahi doobta."],
+      ["Dono fixes ke saath asli complexity kya hai, aur α(n) kya hai?", "Har operation O(α(n)) amortised, jahan α inverse Ackermann function hai. Store ho sakne wale kisi bhi n ke liye 5 se neeche, to practice mein lagbhag constant. Par O(1) nahi, aur amortised wala hissa maayne rakhta hai."],
+      ["Teen cheezein batao jo union-find nahi kar sakta.", "Union undo nahi kar sakta, kyunki kuch record nahi karta kis merge ne kaunsa root banaya. Alag map ke bina set ke members list nahi kar sakta, kyunki pointers sirf upar jaate hain. Aur raaste ya doori ka kuch nahi jaanta, sirf membership."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "toposort",
   n: "Topological sort and cycles",
   group: "Graphs",
+  need: {
+    ask: `<p>A university lists <b>10⁴ courses</b> and <b>5 × 10⁴ rules</b> of the form “X must be taken before Y”. Produce a study plan that breaks no rule, or report that the rules are impossible.</p>
+<p>The small version: five courses, A to E. A comes before B and C. B and C both come before D. D comes before E. One valid plan is A, B, C, D, E.</p>`,
+    tries: [
+      ["Sort by how many prerequisites each course has", "Counts: A 0, B 1, C 1, D 2, E 1. Sorting puts E (1) before D (2), but E needs D. A count says nothing about <i>which</i> courses come first."],
+      ["Repeatedly scan for any course whose prerequisites are all done", "Correct, but each pass checks every rule to place one course: 10⁴ passes × 5 × 10⁴ rules = 5 × 10⁸ checks."],
+      ["DFS with a visited set, calling any revisit a loop", "B and C both lead to D. The second arrival at D finds it visited and reports a loop. There is none: this is a diamond, and the plan A, B, C, D, E is fine."],
+    ],
+    so: `<p>Count, for each course, how many rules still <b>block</b> it: its <b>in-degree</b>. Anything at 0 can be taken now. Take it, and subtract 1 from everything it was blocking; queue whatever reaches 0. Each course and each rule is handled once: O(<var>V</var> + <var>E</var>).</p>
+<p>That is <b>Kahn's algorithm</b> for a <b>topological sort</b>. If it places fewer than all the courses, the leftovers are stuck in a loop, so it detects impossible rules for free. The page uses the five courses throughout.</p>`,
+  },
+
   one: "An order that respects every <b>must come before</b> exists only when no cycle does, so a topological sort <i>is</i> a cycle detector: whatever it fails to emit is the cycle.",
 
-  plain: `<p>Some problems do not ask for a path or a distance. You are handed a pile of things and a list of rules, each one of the form "this has to happen before that". Find an order that breaks none of them.</p>
-<p>It comes up constantly. Compiling modules, installing packages, picking courses with prerequisites, recalculating a spreadsheet after one cell changes. All the same question.</p>
-<p>Make each thing a node. Make each rule an arrow from the earlier thing to the later one. Now the question is: can I lay the nodes out in a line so that every arrow points forwards? That line is called a <b>topological order</b>.</p>
-<p>Sometimes no such line exists. If A waits on B, B waits on C, and C waits on A, nothing can save you. That is a <b>cycle</b>, and it is the only thing that can go wrong. So an algorithm that produces the order also tells you, for free, whether the graph has a cycle in it. One computation answers both questions. That is why plenty of interview problems that never say the words "topological sort" are exactly that.</p>
-<p><b>Analogy.</b> Getting dressed. Socks before shoes, shirt before jacket. Plenty of valid orders exist and nobody cares which one you pick. But if the rules say jacket before shirt and shirt before jacket, you do not need to try harder. You need a different list of rules.</p>`,
+  plain: `<p>Some problems ask for neither a path nor a distance. You get a pile of things and a list of rules, each “this before that”. Find an order that breaks none of them.</p>
+<p>It comes up constantly: compiling modules, installing packages, choosing courses with prerequisites, recalculating a spreadsheet. All the same question.</p>
+<p>Make each thing a node, and each rule an arrow from the earlier to the later. For the five courses: A→B, A→C, B→D, C→D, D→E. Can the nodes go in a line with every arrow pointing forwards? That line is a <b>topological order</b>: here A, B, C, D, E, or A, C, B, D, E.</p>
+<p>Sometimes no line exists. If A waits on B, B on C, and C on A, nothing can go first. That is a <b>cycle</b>, and it is the only thing that can go wrong. So the algorithm that builds the order also detects cycles, for free.</p>
+<p><b>Analogy.</b> Getting dressed. Socks before shoes, shirt before jacket. Many orders work and nobody cares which. But if the rules say jacket before shirt and shirt before jacket, trying harder will not help: you need different rules.</p>`,
 
   why: [
-    { t: "Start from the rule, not from the algorithm", d: "You are given constraints of the shape \"u before v\". Draw each one as an arrow from u to v. Nothing else is given, and nothing else is needed: the whole problem is now \"arrange the nodes in a line with every arrow pointing right\"." },
-    { t: "A cycle is the only obstruction, and it is total", d: "If a set of nodes forms a cycle, each of them needs another one to come first, so none can go first, so no valid line exists. And if there is no cycle, one always exists. So the order is possible <b>exactly when</b> the graph is a DAG, which makes sorting and cycle detection the same job wearing two names." },
-    { t: "Which gives Kahn's algorithm almost without thinking", d: "Something has to go first, and only a node with no incoming edges can. Count incoming edges (the <b>in-degree</b>), queue everything at zero, and emit them. Removing a node satisfies the constraints it imposed, so decrement its neighbours' in-degrees and queue any that hit zero. Repeat." },
-    { t: "And Kahn reports the cycle by counting", d: "If the graph is acyclic, every node eventually reaches in-degree zero and gets emitted. If you emit fewer than V nodes, the ones left over never reached zero, which means each is still waiting on another survivor. <b>The leftovers are precisely the nodes on or downstream of a cycle.</b> No extra pass, no extra bookkeeping, just a length check." },
-    { t: "The DFS version is the same idea run backwards", d: "Walk depth-first, and push a node onto a list only <b>after</b> every node it points to is finished. So a node is recorded later than all of its dependents, and reversing the list puts it earlier than all of them. Equivalent output, different bookkeeping: this is the finish-time ordering." },
-    { t: "DFS cycle detection needs three states, not a visited set", d: "A visited flag answers \"have I ever been here\". For a cycle you need a different question: am I here <i>right now</i>? An edge into a node still on the current call stack is a cycle. An edge into a node that already finished is only a shortcut into ground you have already covered. So mark nodes unvisited, <b>in progress</b>, and done. Collapsing the last two into one flag reports cycles in a diamond that has none, and it is the single most common wrong answer on this topic." },
-    { t: "What it cannot do, and one thing it gets cheaply", d: "It cannot give you <i>the</i> order, because there usually is not one. Any two nodes with no path between them can go in either order. If the problem wants the alphabetically smallest valid order, make Kahn's queue a min-heap and take the smallest available node each time. It also cannot tell you <i>which</i> nodes form the cycle unless you look, only that one exists. What it does hand you free: put the nodes in topological order and sweep forward once, improving each edge as you pass it. That gives shortest paths on a DAG in <b>O(V + E)</b>, negative weights included, which Dijkstra cannot manage. That is the shortest paths page's business, but the order comes from here." },
+    { t: "Start from the rules, not the algorithm",
+      d: "You are given rules of the shape “<var>u</var> before <var>v</var>”. Draw each as an arrow from <var>u</var> to <var>v</var>. Nothing else is given or needed: the problem is now “line the nodes up with every arrow pointing right”." },
+    { t: "A cycle is the only obstacle, and it is total",
+      d: "If some nodes form a cycle, each needs another to come first, so none can go first. If there is no cycle, an order always exists. So an order is possible <b>exactly when</b> the graph has no directed cycle, which makes sorting and cycle detection the same job." },
+    { t: "Which gives Kahn's algorithm almost without thinking",
+      d: "Something must go first, and only a node with no incoming arrows can. Count incoming arrows, the <b>in-degree</b>: A 0, B 1, C 1, D 2, E 1. Queue everything at 0: just A. Taking A satisfies its rules, so subtract 1 from B and C. Both reach 0 and join the queue. Repeat." },
+    { t: "And Kahn reports a cycle by counting",
+      d: "Without a cycle, every node eventually reaches in-degree 0 and is emitted. If fewer than <var>V</var> come out, the leftovers never reached 0: each still waits on another leftover. <b>They are exactly the nodes on, or downstream of, a cycle.</b> No extra pass: one length check." },
+    { t: "The DFS version is the same idea backwards",
+      d: "Walk depth-first, and add a node to a list only <b>after</b> everything it points to is finished. From A the list fills E, D, B, C, A. Reverse it: A, C, B, D, E, a valid order. Same result, different bookkeeping." },
+    { t: "DFS cycle detection needs three states, not a visited set",
+      d: "A visited flag asks “have I ever been here?”. A cycle needs “am I here <i>right now</i>, on the current path?”. So mark nodes unvisited, <b>in progress</b> and done. Reaching D again from C, after B's branch finished it, is not a loop, because D is done. Two states call it one: the most common wrong answer on this topic." },
+    { t: "What it cannot do, and one thing it gets cheaply",
+      d: "There is usually no single order: B and C can go either way round. For the alphabetically smallest, make Kahn's queue a min-heap. Relaxing edges in topological order also gives shortest paths on a graph with no cycles in O(<var>V</var> + <var>E</var>), negative weights included, which Dijkstra cannot." },
   ],
 
-  hing: `<p><b>Sawaal kya hai:</b> kuch kaam hain aur rules hain "yeh usse pehle hona chahiye". Har cheez ko node banao, har rule ko <b>arrow</b> banao jo pehle wale se baad wale ki taraf jaaye. Ab bas ek line mein sabko lagana hai jisme saare arrows aage ki taraf point karein. Wahi <b>topological order</b> hai. Build steps, course prerequisites, spreadsheet recalculation, sab yahi hai.</p>
-<p><b>Sirf ek cheez galat ho sakti hai: cycle.</b> A ko B chahiye, B ko C, C ko A. Ab koi pehla ho hi nahi sakta. Aur agar cycle nahi hai to order hamesha milega. Matlab <b>order exist karta hai sirf aur sirf tab jab graph DAG ho</b>. Isliye topological sort aur cycle detection <b>ek hi computation</b> hai. Interview mein aadhe sawaal cycle detection hi hote hain, bas naam badla hua hota hai. Yeh line yaad rakho.</p>
-<p><b>Kahn ka tarika (BFS jaisa):</b> har node ke <b>in-degree</b> gino, matlab kitne log uska raasta rok rahe hain. Jinka in-degree 0 hai unhe queue mein daalo, kyunki unhe koi rok nahi raha. Ek node nikaalo, output mein daalo, aur uske padosiyon ka in-degree 1 kam kar do (uski shart poori ho gayi). Jiska 0 hua, woh queue mein. Bas.</p>
-<p><b>Kahn cycle bhi muft mein bata deta hai:</b> agar output mein V se <b>kam</b> nodes aaye, to jo bache unka in-degree kabhi 0 tak pahuncha hi nahi. Matlab woh aapas mein ek doosre ka intezaar kar rahe hain. <b>Bache hue nodes hi cycle hain (ya uske peeche latke hue hain).</b> Sirf ek length check, koi extra pass nahi. Isiliye interview mein Kahn se shuru karo, samjhaana aasan hai.</p>
-<p><b>DFS wala tarika ulta chalta hai:</b> node ko list mein tab daalo jab uske saare descendants khatam ho jaayein, phir list ko <b>reverse</b> kar do. Kyunki node baad mein likha gaya, reverse karne par sabse pehle aa jaayega.</p>
-<p><b>Ab sabse zaroori part, jahan log maar khaate hain.</b> DFS mein cycle dhoondhne ke liye plain <code>visited</code> set <b>kaafi nahi hai</b>. Visited ka matlab hai "kabhi gaya tha". Cycle ke liye chahiye "<b>abhi is waqt isi raaste par hoon kya</b>". Isliye teen states rakho: <b>unvisited</b>, <b>in progress</b> (abhi call stack par hai), aur <b>done</b>. In-progress node par edge mila to cycle. Done node par edge mila to kuch nahi, woh sirf pehle explore kiya hua hissa hai. Do states mein daba diya to diamond shape (A se B aur C, dono se D) par jhoothi cycle report hogi, jahan cycle hai hi nahi. <b>Yeh is topic ka sabse common galat jawaab hai.</b></p>
-<p><b>Order unique nahi hota.</b> Jin do nodes ke beech koi raasta hi nahi, unka aage-peeche kuch bhi ho sakta hai. Agar <b>lexicographically smallest</b> maanga hai to bas Kahn ki queue ki jagah <b>min-heap</b> laga do, baaki sab wahi. Cost O(V + E) se O(V log V + E) ho jaati hai.</p>
-<p><b>Ek bonus:</b> DAG par nodes ko topological order mein le lo aur ek hi sweep mein edges relax kar do. Shortest paths <b>O(V + E)</b> mein mil jaayenge, <b>negative weights ke saath bhi</b>, jo Dijkstra nahi kar sakta. Uski detail shortest paths wale page par hai, par order yahin se aata hai.</p>`,
+  hing: `<p><b>Sawaal kya hai:</b> kuch kaam hain aur rules hain "yeh usse pehle hona chahiye". Har cheez ko node banao, har rule ko <b>arrow</b> banao jo pehle wale se baad wale ki taraf jaaye. Ab bas ek line mein sabko lagana hai jisme saare arrows aage ki taraf point karein. Wahi <b>topological order</b> hai.</p>
+<p><b>Sirf ek cheez galat ho sakti hai: cycle.</b> A ko B chahiye, B ko C, C ko A. Ab koi pehla ho hi nahi sakta. Aur agar cycle nahi hai to order hamesha milega. Isliye topological sort aur cycle detection <b>ek hi computation</b> hai.</p>
+<p><b>Kahn ka tarika (BFS jaisa):</b> har node ke <b>in-degree</b> gino, matlab kitne log uska raasta rok rahe hain. Jinka in-degree 0 hai unhe queue mein daalo. Ek node nikaalo, output mein daalo, aur uske padosiyon ka in-degree 1 kam kar do. Jiska 0 hua, woh queue mein. Bas.</p>
+<p><b>Kahn cycle bhi muft mein bata deta hai:</b> agar output mein <var>V</var> se <b>kam</b> nodes aaye, to jo bache unka in-degree kabhi 0 tak pahuncha hi nahi. <b>Bache hue nodes hi cycle hain (ya uske peeche latke hue hain).</b> Sirf ek length check.</p>
+<p><b>DFS wala tarika ulta chalta hai:</b> node ko list mein tab daalo jab uske saare descendants khatam ho jaayein, phir list ko <b>reverse</b> kar do.</p>
+<p><b>Ab sabse zaroori part.</b> DFS mein cycle dhoondhne ke liye plain <code>visited</code> set <b>kaafi nahi hai</b>. Visited ka matlab hai "kabhi gaya tha". Cycle ke liye chahiye "<b>abhi is waqt isi raaste par hoon kya</b>". Isliye teen states rakho: <b>unvisited</b>, <b>in progress</b>, aur <b>done</b>. Do states mein daba diya to diamond shape par jhoothi cycle report hogi.</p>
+<p><b>Order unique nahi hota.</b> Agar <b>lexicographically smallest</b> maanga hai to Kahn ki queue ki jagah <b>min-heap</b> laga do. Cost O(<var>V</var> + <var>E</var>) se O(<var>V</var> log <var>V</var> + <var>E</var>) ho jaati hai.</p>`,
 
   viz: ["toposort"],
 
   math: [
+    { t: "Kahn on the five courses, step by step", d: "The queue holds every course with in-degree 0. Taking one subtracts 1 from each course it blocks.", w:
+`rules: A->B, A->C, B->D, C->D, D->E
+in-degree:  A 0   B 1   C 1   D 2   E 1
+
+take   queue after      in-degrees after
+A      B, C             B 0  C 0  D 2  E 1
+B      C                D 1
+C      D                D 0
+D      E                E 0
+E      (empty)
+
+order: A, B, C, D, E    emitted 5 of 5: no cycle` },
     { t: "Kahn, counted", d: "Two passes and a queue. Every node enters the queue once and every edge is touched once, which is where the linear bound comes from.", w:
 `building the in-degree table:  one pass over all edges, E
-each node enqueued once when its in-degree hits 0:  V
+each node queued once when its in-degree hits 0:  V
 each edge decremented exactly once:  E
 
 total O(V + E)
+10^4 courses, 5 x 10^4 rules  ->  about 1.1 x 10^5 steps
 
 emitted == V  ->  a valid order
-emitted <  V  ->  the missing nodes are exactly those
-                  on or downstream of a cycle` },
-    { t: "Why a cycle is the only thing that can block an order", d: "One direction is obvious. The other is an induction, and that induction is not a proof about the algorithm, it is the algorithm.", w:
-`a cycle a -> b -> a needs a before b and b before a.
-No order exists. So a cycle blocks it.
+emitted <  V  ->  the missing nodes are on or behind a cycle` },
+    { t: "There is rarely one order, and here is how many", d: "An answer that says “the” topological order is wrong. The count depends on which nodes are free to swap.", w:
+`the five courses: B and C are both free after A
+  A, B, C, D, E     and     A, C, B, D, E      2 orders
 
-no cycle  =>  some node has in-degree 0
-  (otherwise follow edges backwards V + 1 times: a vertex
-   repeats, and that repeat is a cycle)
-remove that node, and the rest is still acyclic. Repeat.
-
-so an order always exists, and the induction emits one` },
-    { t: "There is rarely one order, and here is how many", d: "Interview answers that say the topological order are wrong. The count is a permutation count, and only a chain pins it down.", w:
-`3 independent tasks, no edges:   3! = 6 valid orders
+3 courses with no rules at all:   3! = 6 orders
 a chain a -> b -> c:              exactly 1
-n independent tasks:              n!
 
-which order you get depends on the queue order in Kahn,
-or the neighbour order in DFS. Both are valid; neither
-is "the" answer.` },
-    { t: "DFS cycle detection needs three states, not two", d: "Visited-or-not cannot distinguish an ancestor on the current path from a node that was finished long ago, and only the first is a cycle.", w:
+which one you get depends on queue order in Kahn,
+or neighbour order in DFS. Both are valid.` },
+    { t: "DFS cycle detection needs three states, not two", d: "Visited-or-not cannot tell an ancestor on the current path from a node finished long ago. Only the first is a cycle.", w:
 `white  not seen
-grey   on the current recursion stack
-black  finished, subtree fully explored
+grey   on the current recursion path
+black  finished, everything below it explored
 
-meet grey   -> a back edge  -> cycle
-meet black  -> already done -> not a cycle
+DFS from A:  A -> B -> D -> E   (E, D, B turn black)
+             then A -> C -> D   D is black: NOT a cycle
 
-with only visited/unvisited:
-  1 -> 2, 1 -> 3, 2 -> 3
-  3 is "visited" when 1 reaches it, yet there is no cycle` },
+with only visited / not visited:
+  D was "visited", so C -> D looks like a loop. It is not.` },
   ],
 
   costs: [
     ["build the graph and in-degrees", "O(V + E)", "one pass over the edges, counting arrivals"],
     ["Kahn's algorithm", "O(V + E) time, O(V) space", "each node queued once, each edge decremented once"],
-    ["DFS topological sort", "O(V + E) time, O(V) space", "same walk as any DFS, plus an output list"],
-    ["detect a directed cycle", "O(V + E)", "free with either: a length check, or a grey-node hit"],
+    ["DFS topological sort", "O(V + E) time, O(V) space", "the same walk as any DFS, plus an output list"],
+    ["detect a directed cycle", "O(V + E)", "free with either: a length check, or meeting a grey node"],
     ["lexicographically smallest order", "O(V log V + E)", "Kahn with a min-heap; the log is the price of choosing"],
-    ["shortest paths on a DAG", "O(V + E)", "relax in topological order, so no node is ever revisited"],
-    ["number of valid orders", "hard in general", "counting linear extensions is #P-complete, so nobody asks nicely"],
+    ["shortest paths on a DAG", "O(V + E)", "relax in topological order, so no node is revisited"],
+    ["number of valid orders", "hard in general", "counting them is #P-complete, so nobody asks nicely"],
   ],
 
   traps: [
-    "<b>Using a plain visited set for directed cycle detection.</b> You need to know whether a node is on the <i>current</i> path, not whether you have ever seen it. Two states report a cycle in an honest diamond; three states do not.",
+    "<b>Using a plain visited set for directed cycle detection.</b> You need to know whether a node is on the <i>current</i> path, not whether you ever saw it. Two states report a cycle in the honest diamond A, B, C, D; three do not.",
     "<b>Building the edges backwards.</b> Course Schedule gives pairs as <code>[course, prerequisite]</code>, which reads left to right but means the arrow points right to left. Half the wrong submissions on that problem are this line.",
-    "<b>Seeding the queue with one node instead of every zero in-degree node.</b> The graph need not be connected, and the nodes you skipped will look exactly like a cycle at the end.",
-    "<b>Forgetting the final length check in Kahn.</b> Without it you happily return a partial order for a cyclic graph, and it looks plausible right up to the failing test.",
-    "<b>Reusing the three-colour trick on an undirected graph.</b> There every edge goes both ways, so the node you just came from is always in progress. You need the parent check, or union-find, instead.",
-    "<b>Recursive DFS on 10⁵ nodes.</b> A long dependency chain is a deep call stack. Kahn is iterative by nature, which is one more reason to reach for it first.",
+    "<b>Starting the queue with one node instead of every zero in-degree node.</b> The graph need not be connected, and the nodes you skipped look exactly like a cycle at the end.",
+    "<b>Forgetting the final length check in Kahn.</b> Without it you return a partial order for an impossible set of rules, and it looks plausible until the failing test.",
+    "<b>Reusing the three-colour trick on a two-way graph.</b> There every edge goes both ways, so the node you just came from is always in progress. You need the parent check, or union-find.",
+    "<b>Recursive DFS on 10⁵ nodes.</b> A long chain of prerequisites is a deep call stack. Kahn is a loop by nature, one more reason to reach for it first.",
   ],
 
   impl: [
     ["Python", "collections.deque · heapq for the smallest order", "Recursion limit near 1000 makes deep DFS risky; Kahn has no such problem."],
-    ["Java", "int[] indeg · ArrayDeque · PriorityQueue", "getOrDefault on the adjacency map, or build List<Integer>[] when nodes are 0..n-1."],
+    ["Java", "int[] indeg · ArrayDeque · PriorityQueue", "getOrDefault on the adjacency map, or List<Integer>[] when nodes are 0..n-1."],
     ["C++", "vector<int> indeg · queue · priority_queue with greater<>", "The default priority_queue is a MAX-heap, so the smallest order needs greater<> spelled out."],
     ["JavaScript", "array of arrays, plus a head index", "Array.shift() is O(n); move a head pointer instead, or a big graph turns quadratic."],
   ],
@@ -10507,134 +10891,242 @@ function hasCycle(n, adj) {
   codecap: "Kahn counts blockers and reports the cycle by coming up short. DFS records finish times and reports it by walking into a node that is still grey.",
 
   q: [
-    ["When does a topological order exist, and why does that matter?", "Exactly when the graph is a DAG. A cycle means every node in it needs another one to come first, so nothing can go first. That equivalence is why one algorithm answers both questions, and why so many problems are cycle detection in a costume."],
-    ["How does Kahn's algorithm detect a cycle without extra work?", "It emits a node only when its in-degree reaches zero. In an acyclic graph every node gets there, so the output has V nodes. If it has fewer, the missing ones are still waiting on each other: they are the cycle and what feeds off it. One length comparison."],
-    ["Why does DFS cycle detection need three states instead of a visited set?", "Visited says you have been there at some point. A cycle requires that a node is on the path you are standing on right now. So you need unvisited, in progress, and done. An edge into an in-progress node is a cycle; an edge into a done node is just a second route into finished territory."],
-    ["What goes wrong with only two states?", "A diamond, A to B, A to C, B to D, C to D, has no cycle, but the second arrival at D finds it already visited and a two-state check calls that a cycle. You reject a perfectly valid graph."],
-    ["Is the topological order unique, and what if the problem wants a specific one?", "Almost never unique: nodes with no path between them can go in either order. For the lexicographically smallest, replace Kahn's queue with a min-heap, which costs O(V log V + E) instead of O(V + E). Nothing else changes."],
-    ["What can you do on a DAG in topological order that Dijkstra cannot do at all?", "Relax the edges in that order and get shortest paths in O(V + E), negative weights included. Each node is finalised when you reach it because every path into it comes from earlier in the order, so no priority queue and no non-negativity assumption is needed."],
+    ["When does a topological order exist, and why does that matter?", "Exactly when the graph has no directed cycle. A cycle means every node in it needs another to come first, so nothing can go first. That is why one algorithm answers both questions."],
+    ["How does Kahn's algorithm detect a cycle without extra work?", "It emits a node only when its in-degree reaches zero. Without a cycle every node gets there, so the output has V nodes. If it has fewer, the missing ones are waiting on each other: the cycle and whatever depends on it."],
+    ["Why does DFS cycle detection need three states instead of a visited set?", "Visited says you have been there at some point. A cycle needs the node to be on the path you are on right now. So you need unvisited, in progress and done. An edge into an in-progress node is a cycle; an edge into a done node is not."],
+    ["What goes wrong with only two states?", "A diamond, A to B, A to C, B to D, C to D, has no cycle. But the second arrival at D finds it already visited, and a two-state check calls that a cycle. You reject a perfectly valid graph."],
+    ["Is the topological order unique, and what if the problem wants a specific one?", "Almost never unique: nodes with no path between them can go either way. For the lexicographically smallest, replace Kahn's queue with a min-heap, costing O(V log V + E) instead of O(V + E)."],
+    ["What can you do on a DAG in topological order that Dijkstra cannot do at all?", "Relax the edges in that order and get shortest paths in O(V + E), negative weights included. Each node is final when you reach it, because every path into it comes from earlier in the order."],
   ],
 
   p: [
-    [207, "course-schedule", "Course Schedule, cycle detection wearing a disguise", "M"],
-    [210, "course-schedule-ii", "Course Schedule II, the same run, now printing the order", "M"],
-    [802, "find-eventual-safe-states", "Eventual Safe States, three colours doing exactly their job", "M"],
-    [310, "minimum-height-trees", "Minimum Height Trees, Kahn-style peeling on an undirected graph", "M"],
+    [207, "course-schedule", "Course Schedule, cycle detection in disguise", "M"],
+    [210, "course-schedule-ii", "Course Schedule II, the running example: print the order", "M"],
+    [802, "find-eventual-safe-states", "Eventual Safe States, three colours doing their job", "M"],
+    [310, "minimum-height-trees", "Minimum Height Trees, Kahn-style peeling on a two-way graph", "M"],
     [2115, "find-all-possible-recipes-from-given-supplies", "Possible Recipes, dependencies with a base case", "M"],
     [1462, "course-schedule-iv", "Course Schedule IV, reachability on top of the order", "M"],
     [269, "alien-dictionary", "Alien Dictionary, the hard part is building the edges", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek university <b>10⁴ courses</b> aur “X, Y se pehle lena hai” jaise <b>5 × 10⁴ rules</b> deti hai. Aisa study plan banao jo koi rule na tode, ya batao ki rules naamumkin hain.</p>
+<p>Chhota version: paanch courses, A se E. A, B aur C se pehle. B aur C dono D se pehle. D, E se pehle. Ek valid plan hai A, B, C, D, E.</p>`,
+      tries: [
+        ["Har course ke prerequisites ki ginti se sort karo", "Ginti: A 0, B 1, C 1, D 2, E 1. Sort E (1) ko D (2) se pehle rakhta hai, par E ko D chahiye. Ginti yeh nahi batati ki <i>kaunse</i> courses pehle aate hain."],
+        ["Baar baar scan karo aisa course jiske saare prerequisites ho chuke", "Sahi hai, par har pass ek course rakhne ke liye har rule check karta hai: 10⁴ passes × 5 × 10⁴ rules = 5 × 10⁸ checks."],
+        ["Visited set wala DFS, dobara aane ko loop maano", "B aur C dono D tak le jaate hain. D par doosri baar pahunchna use visited paata hai aur loop bata deta hai. Loop hai hi nahi: yeh diamond hai, aur plan A, B, C, D, E theek hai."],
+      ],
+      so: `<p>Har course ke liye gino kitne rules use abhi <b>rok</b> rahe hain: uska <b>in-degree</b>. 0 wala abhi liya ja sakta hai. Use lo, aur jise woh rok raha tha un sab mein se 1 ghatao; jo 0 pahunche use queue karo. Har course aur har rule ek baar: O(<var>V</var> + <var>E</var>).</p>
+<p>Yahi <b>topological sort</b> ke liye <b>Kahn ka algorithm</b> hai. Agar yeh saare courses na rakh paaye, to bache hue ek loop mein phase hain, to naamumkin rules muft mein pakde jaate hain. Page poore mein paanch courses use karta hai.</p>`,
+    },
+
+    one: "Har <b>pehle aana hai</b> ko maanne wala order tabhi exist karta hai jab koi cycle na ho, to topological sort khud <i>cycle detector hai</i>: jo emit nahi kar paata wahi cycle hai.",
+
+    plain: `<p>Kuch problems na raasta maangti hain na doori. Aapko cheezon ka dher aur rules ki list milti hai, har ek “yeh usse pehle”. Aisa order dhoondho jo koi rule na tode.</p>
+<p>Yeh baar baar aata hai: modules compile karna, packages install karna, prerequisites wale courses chunna, spreadsheet dobara calculate karna. Sab wahi sawaal.</p>
+<p>Har cheez ko node banao, aur har rule ko pehle se baad wale ki taraf arrow. Paanch courses ke liye: A→B, A→C, B→D, C→D, D→E. Kya nodes ek line mein aa sakte hain jahan har arrow aage point kare? Woh line <b>topological order</b> hai: yahan A, B, C, D, E, ya A, C, B, D, E.</p>
+<p>Kabhi kabhi koi line nahi hoti. A, B ka intezaar kare, B, C ka, aur C, A ka, to koi pehla nahi ja sakta. Yeh <b>cycle</b> hai, aur yahi ek cheez galat ho sakti hai. To order banane wala algorithm cycles bhi muft pakadta hai.</p>
+<p><b>Analogy.</b> Kapde pehenna. Mojey jooton se pehle, shirt jacket se pehle. Kai order chalte hain aur kisi ko farak nahi. Par agar rules kahein jacket shirt se pehle aur shirt jacket se pehle, to zyada koshish kaam nahi aayegi: alag rules chahiye.</p>`,
+
+    why: [
+      { t: "Rules se shuru karo, algorithm se nahi",
+        d: "Aapko “<var>u</var>, <var>v</var> se pehle” jaise rules milte hain. Har ek ko <var>u</var> se <var>v</var> ki taraf arrow banao. Aur kuch nahi diya, aur kuch nahi chahiye: problem ab hai “nodes ko line mein lagao jahan har arrow right point kare”." },
+      { t: "Cycle hi ek rukawat hai, aur poori hai",
+        d: "Agar kuch nodes cycle banaate hain, to har ek ko pehle koi aur chahiye, to koi pehla nahi ja sakta. Cycle na ho to order hamesha hai. To order tabhi possible hai jab graph mein koi directed cycle na ho, jo sort aur cycle detection ko ek kaam banata hai." },
+      { t: "Jo Kahn ka algorithm lagbhag bina soche deta hai",
+        d: "Kuch pehle jaana hi hai, aur sirf bina aane wale arrows ka node ja sakta hai. Aane wale arrows gino, <b>in-degree</b>: A 0, B 1, C 1, D 2, E 1. 0 wale sab queue karo: bas A. A lena uske rules poore karta hai, to B aur C se 1 ghatao. Dono 0 pahunchte hain aur queue mein aate hain. Dohrao." },
+      { t: "Aur Kahn ginti karke cycle batata hai",
+        d: "Cycle ke bina har node aakhir in-degree 0 par pahunch kar emit hota hai. Agar <var>V</var> se kam nikle, to bache hue kabhi 0 tak nahi pahunche: har ek kisi aur bache hue ka intezaar kar raha hai. <b>Woh theek wahi nodes hain jo cycle par hain, ya uske peeche.</b> Koi extra pass nahi: ek length check." },
+      { t: "DFS version wahi idea ulta hai",
+        d: "Depth-first chalo, aur node ko list mein tabhi daalo <b>jab</b> woh jin sabko point karta hai woh khatam ho jaayein. A se list bharti hai E, D, B, C, A. Ise ulta karo: A, C, B, D, E, ek valid order. Wahi result, alag hisaab kitaab." },
+      { t: "DFS cycle detection ko teen states chahiye, visited set nahi",
+        d: "Visited flag poochhta hai “kya main kabhi yahan tha?”. Cycle ko chahiye “kya main <i>abhi</i>, current raaste par yahan hoon?”. To nodes ko unvisited, <b>in progress</b> aur done mark karo. B ki branch ke D khatam karne ke baad C se phir D pahunchna loop nahi, kyunki D done hai. Do states ise loop kehte hain: is topic ka sabse common galat answer." },
+      { t: "Yeh kya nahi kar sakta, aur ek cheez saste mein deta hai",
+        d: "Aam taur par ek hi order nahi hota: B aur C kisi bhi taraf ja sakte hain. Alphabetically sabse chhota chahiye to Kahn ki queue min-heap banao. Topological order mein edges relax karna bina cycles wale graph par O(<var>V</var> + <var>E</var>) mein shortest paths bhi deta hai. Negative weights samet, jo Dijkstra nahi kar sakta." },
+    ],
+
+    math: [
+      { t: "Paanch courses par Kahn, step by step", d: "Queue in-degree 0 wala har course rakhti hai. Ek lena jise woh rokta hai un sab se 1 ghataata hai." },
+      { t: "Kahn, gin kar", d: "Do passes aur ek queue. Har node queue mein ek baar aata hai aur har edge ek baar chhua jaata hai, linear bound yahin se aata hai." },
+      { t: "Aam taur par ek order nahi hota, aur yeh rahe kitne", d: "Jo answer “the” topological order kahe woh galat hai. Ginti is par depend hai ki kaunse nodes adla-badli ke liye free hain." },
+      { t: "DFS cycle detection ko do nahi, teen states chahiye", d: "Visited ya nahi, current raaste ke ancestor aur bahut pehle khatam hue node mein farak nahi kar sakta. Sirf pehla cycle hai." },
+    ],
+
+    costs: [
+      ["graph aur in-degrees banana", "O(V + E)", "edges par ek pass, aane wale gin kar"],
+      ["Kahn's algorithm", "O(V + E) time, O(V) space", "har node ek baar queue, har edge ek baar ghataaya"],
+      ["DFS topological sort", "O(V + E) time, O(V) space", "kisi bhi DFS jaisi walk, plus ek output list"],
+      ["directed cycle pakadna", "O(V + E)", "dono se muft: length check, ya grey node se milna"],
+      ["lexicographically smallest order", "O(V log V + E)", "min-heap wala Kahn; log chunne ki keemat hai"],
+      ["DAG par shortest paths", "O(V + E)", "topological order mein relax, to koi node dobara nahi"],
+      ["valid orders ki ginti", "hard in general", "ginna #P-complete hai, to koi pyaar se nahi poochta"],
+    ],
+
+    traps: [
+      "<b>Directed cycle detection ke liye plain visited set.</b> Jaanna hai ki node <i>current</i> raaste par hai ya nahi, yeh nahi ki kabhi dekha. Do states imaandaar diamond A, B, C, D mein cycle bataate hain; teen nahi.",
+      "<b>Edges ulte banana.</b> Course Schedule pairs <code>[course, prerequisite]</code> ki tarah deta hai, jo left se right padhta hai par arrow right se left point karta hai. Us problem ke aadhe galat submissions yahi line hain.",
+      "<b>Har zero in-degree node ki jagah ek node se queue shuru karna.</b> Graph ka juda hona zaroori nahi, aur chhode gaye nodes end mein bilkul cycle jaise dikhte hain.",
+      "<b>Kahn mein aakhri length check bhoolna.</b> Iske bina naamumkin rules ke liye adhoora order lautate ho, aur fail hone wale test tak sahi-sa dikhta hai.",
+      "<b>Three-colour trick ko two-way graph par lagana.</b> Wahan har edge dono taraf hai, to jahan se aaye woh node hamesha in progress hai. Parent check chahiye, ya union-find.",
+      "<b>10⁵ nodes par recursive DFS.</b> Prerequisites ki lambi chain gehra call stack hai. Kahn swabhaav se loop hai, pehle usi ki taraf jaane ki ek aur wajah.",
+    ],
+
+    impl: [
+      ["Python", "collections.deque · heapq for the smallest order", "Recursion limit 1000 ke paas gehre DFS ko risky banata hai; Kahn ko yeh dikkat nahi."],
+      ["Java", "int[] indeg · ArrayDeque · PriorityQueue", "Adjacency map par getOrDefault, ya nodes 0..n-1 hon to List<Integer>[]."],
+      ["C++", "vector<int> indeg · queue · priority_queue with greater<>", "Default priority_queue MAX-heap hai, to sabse chhote order ke liye greater<> likhna padta hai."],
+      ["JavaScript", "array of arrays, plus a head index", "Array.shift() O(n) hai; head pointer hilao, warna bada graph quadratic ho jaata hai."],
+    ],
+
+    codecap: "Kahn rokne walon ko ginta hai aur kam pad kar cycle batata hai. DFS finish times likhta hai aur abhi bhi grey node mein pahunch kar batata hai.",
+
+    q: [
+      ["Topological order kab exist karta hai, aur yeh kyun maayne rakhta hai?", "Theek tab jab graph mein koi directed cycle na ho. Cycle matlab usme har node ko pehle koi aur chahiye, to koi pehla nahi ja sakta. Isiliye ek algorithm dono sawaal answer karta hai."],
+      ["Kahn ka algorithm bina extra kaam ke cycle kaise pakadta hai?", "Woh node tabhi emit karta hai jab uska in-degree zero ho. Cycle ke bina har node wahan pahunchta hai, to output mein V nodes. Kam hon, to missing wale ek doosre ka intezaar kar rahe hain: cycle aur jo us par tika hai."],
+      ["DFS cycle detection ko visited set ki jagah teen states kyun chahiye?", "Visited kehta hai ki kabhi wahan the. Cycle ko node abhi ke raaste par chahiye. To unvisited, in progress aur done chahiye. In-progress node mein edge cycle hai; done node mein nahi."],
+      ["Sirf do states se kya galat hota hai?", "Diamond, A se B, A se C, B se D, C se D, mein koi cycle nahi. Par D par doosri pahunch use pehle se visited paati hai, aur do-state check ise cycle kehta hai. Aap bilkul valid graph reject karte ho."],
+      ["Kya topological order unique hai, aur problem koi khaas order maange to?", "Lagbhag kabhi unique nahi: jin nodes ke beech raasta nahi woh kisi bhi taraf ja sakte hain. Lexicographically smallest ke liye Kahn ki queue ko min-heap se badlo, O(V + E) ki jagah O(V log V + E)."],
+      ["DAG par topological order mein aap kya kar sakte ho jo Dijkstra bilkul nahi kar sakta?", "Us order mein edges relax karke O(V + E) mein shortest paths, negative weights samet. Har node pahunchte hi final hai, kyunki usme aane wala har raasta order mein pehle se aata hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "mst",
   n: "Minimum spanning tree",
   group: "Graphs",
-  one: "Connect every node as cheaply as possible: exactly V-1 edges, no cycles. Both algorithms are one greedy rule, <b>the lightest edge crossing any cut is safe</b>.",
+  need: {
+    ask: `<p>A campus must link <b>10⁴ buildings</b> with fibre. There are <b>5 × 10⁵</b> possible links, each with a price. Every building must be able to reach every other, possibly through others, and the <b>total price</b> must be as small as possible.</p>
+<p>The small version: five buildings, A to E. Links: A–B 1, B–C 2, C–D 3, A–C 4, B–D 4, D–E 6. The cheapest network costs <b>12</b>.</p>`,
+    tries: [
+      ["Buy every link", "Everything is connected, for 1 + 2 + 3 + 4 + 4 + 6 = 20. The A–C link adds a loop, A–B–C–A, and on a loop one link can always be dropped."],
+      ["Use the fastest routes from A: a shortest-path tree", "Dijkstra from A keeps A–B, B–C, B–D and D–E, for a total of 13. Fast journeys from A, but not the cheapest network."],
+      ["Try every spanning network and keep the cheapest", "For 20 buildings with every pair linkable there are 20¹⁸ ≈ 2.6 × 10²³ ways to link them all. For 10⁴ it is beyond counting."],
+    ],
+    so: `<p>Take links <b>cheapest first</b>, and skip any link whose two ends are already connected, because it would only close a loop. A–B 1, B–C 2, C–D 3: take. A–C 4 and B–D 4: skip. D–E 6: take. Four links, total 12.</p>
+<p>That is <b>Kruskal's algorithm</b> for a <b>minimum spanning tree</b>, and the “already connected?” test is union-find. The page follows the five buildings throughout.</p>`,
+  },
 
-  plain: `<p>You have a set of towns and a list of possible cables between them, each with a price. Every town must end up reachable from every other. You want the total price to be as small as possible.</p>
-<p>Nothing else counts. Not how long the journey between two towns ends up being. Not which town you start from. Only the total bill.</p>
-<p>That sounds obvious, and it is the thing people get wrong. <b>The network that is cheapest to build is not the network with the best routes in it.</b> Those are two different questions with two different answers, and interviewers ask about the difference on purpose.</p>
-<p>The shape of the answer is fixed before you choose anything. To connect n towns you need at least n-1 cables. Any extra cable makes a loop, and on a loop you can always cut the most expensive cable and still reach everywhere. So the answer has exactly n-1 cables and no loops. The only question left is <b>which</b> n-1.</p>
-<p><b>Analogy.</b> You are paying for cable, not for driving time. The cheapest network to build is not the one with the fastest journeys, and a resident who cares about their commute will not thank you for the difference.</p>`,
+  one: "Connect every node as cheaply as possible: exactly <var>V</var> − 1 edges, no cycles. Both algorithms are one greedy rule, <b>the lightest edge crossing any cut is safe</b>.",
+
+  plain: `<p>You have some places and a list of possible links between them, each with a price. Every place must be reachable from every other, and the total price must be as small as possible.</p>
+<p>Nothing else counts: not how long any journey ends up, not where you start. Only the total bill.</p>
+<p>That sounds obvious, and it is what people get wrong. <b>The cheapest network to build is not the network with the best routes.</b> In the five-building example, the cheapest network sends B to D through C, a route of 5, even though a direct link of 4 exists.</p>
+<p>The answer's shape is fixed before you choose anything. Connecting <var>n</var> places needs at least <var>n</var> − 1 links. Any extra link makes a loop, and on a loop you can drop the most expensive link and still reach everywhere. So the answer has exactly <var>n</var> − 1 links and no loops: a <b>tree</b>. The only question is which ones.</p>
+<p><b>Analogy.</b> You are paying for cable, not driving time. The cheapest network to build is not the one with the fastest journeys, and a resident with a long commute will not thank you for the difference.</p>`,
 
   why: [
-    { t: "The shape of the answer is forced before you choose anything", d: "V nodes cannot be joined with fewer than V-1 edges. Add one more edge and you have made a loop. On a loop you can always delete the heaviest edge: everything is still reachable, going round the other way, and the bill just went down. So the best answer has no loops and exactly V-1 edges. That is what the word <b>tree</b> means here. It is a conclusion, not an assumption you started with." },
-    { t: "It is not a shortest path tree, and this is where the question is lost", d: "Three nodes. A-B costs 2, B-C costs 2, A-C costs 3. The MST keeps the two 2s, total 4, because every other spanning tree costs 5. Now travel from A to C inside that tree. It costs 4. The direct edge cost 3, and the MST threw it away on purpose. <b>Cheapest total and shortest journey are different goals.</b> Neither tree is wrong. They answer different questions." },
-    { t: "The one fact both algorithms stand on", d: "Split the nodes into two groups, any split you like. Look at the edges with one end in each group. <b>The cheapest of those crossing edges is in some minimum spanning tree.</b> Read the word some carefully. Not every. One safe best answer containing it is all the argument needs." },
-    { t: "Prove it by swapping, which needs nothing new", d: "Let e be the cheapest edge crossing the split. Take any best tree T that does not contain e. Add e, and exactly one loop appears. That loop leaves one side of the split and has to come back, so it uses a second crossing edge f. Since e was the cheapest crossing edge, f costs at least as much. Now delete f. What is left still reaches everything, still has no loop, and costs no more than T. So a best tree containing e exists." },
-    { t: "Kruskal falls out: sort, then ask which group", d: "Take the edges cheapest first. When you reach an edge whose two ends are in different groups, split the nodes along those groups. Nothing cheaper crosses that split, because anything cheaper came earlier and would have merged them already. So the edge is safe. If both ends are already in the same group, the edge would close a loop, so drop it. That same-group test is exactly union-find, which has its own page. The total is <b>O(E log E)</b>, and the sort is nearly all of it." },
-    { t: "Prim falls out: fix one side of the split and never move it", d: "Start anywhere. Let the split always be: what I have built so far, against everything else. The cheapest edge crossing it is safe, so take it, swallow the node on the far end, and repeat. A heap of the edges leaving the tree finds that cheapest edge quickly, giving <b>O(E log V)</b>. This is Dijkstra's loop line for line, with one difference worth memorising. Dijkstra keys the heap by <code>dist[u] + w</code>, the distance from the source. Prim keys it by <code>w</code> alone, the price of that one edge. One addition, deleted. That is the whole difference, and it is why one gives shortest paths and the other does not." },
-    { t: "Choosing between them, and what neither gives you", d: "Kruskal for sparse graphs, and whenever the input already arrives as a list of edges, since you were going to sort something anyway. Prim for dense graphs and when the graph is handed to you as an adjacency list. On a truly dense graph, drop the heap and scan instead: <b>O(V²)</b>. Two more facts. When weights tie the MST is not unique, so two correct programs can return different trees. The multiset of weights is the same in every MST though, which is why comparing totals is safe and comparing edge lists is not. And all of this assumes the graph is undirected and connected. Directed edges are a different problem with a different algorithm, and a disconnected graph has no spanning tree at all, only a forest." },
+    { t: "The answer's shape is forced before you choose anything",
+      d: "<var>V</var> nodes cannot be joined with fewer than <var>V</var> − 1 edges. One more edge makes a loop, and on a loop you can delete the heaviest edge: everything is still reachable, round the other way, and the bill drops. So the best answer has no loops and exactly <var>V</var> − 1 edges. Five buildings, four links." },
+    { t: "It is not a shortest-path tree, and this is where the question is lost",
+      d: "The cheapest network keeps B–C 2 and C–D 3, so B to D inside it costs 5. The direct B–D link costs 4, and the network dropped it on purpose. The shortest-path tree from A keeps B–D and costs 13 in total, against 12. <b>Cheapest total and shortest journeys are different goals.</b>" },
+    { t: "The one fact both algorithms stand on",
+      d: "Split the nodes into two groups, any way you like. Look at the edges with one end in each group. <b>The cheapest of those crossing edges is in some minimum spanning tree.</b> Read “some” carefully: not every one. One best answer containing it is all the argument needs." },
+    { t: "Prove it by swapping",
+      d: "Let <var>e</var> be the cheapest crossing edge, and take any best tree <var>T</var> without it. Adding <var>e</var> makes exactly one loop. The loop leaves one side of the split and must come back, using another crossing edge <var>f</var>. Since <var>e</var> was cheapest, <var>f</var> costs at least as much. Delete <var>f</var>: still connected, no loop, no more expensive." },
+    { t: "Kruskal: sort, then ask which group",
+      d: "Take edges cheapest first. If an edge's ends are in different groups, nothing cheaper crosses the split between them, or it would have merged them already. So it is safe: take it. If both ends are in one group, as A and C are after A–B and B–C, it would close a loop: skip it. That test is union-find. Total <b>O(<var>E</var> log <var>E</var>)</b>, nearly all sorting." },
+    { t: "Prim: fix one side of the split and grow it",
+      d: "Start anywhere. The split is always “what I have built” against “everything else”. Take the cheapest edge crossing it, absorb its far node, repeat. A heap finds that edge in <b>O(<var>E</var> log <var>V</var>)</b>. This is Dijkstra's loop, with one difference: Dijkstra keys the heap by <code>dist[u] + w</code>, Prim by <code>w</code> alone. One addition deleted." },
+    { t: "Choosing between them, and what neither gives you",
+      d: "Kruskal for sparse graphs, or when the input is already a list of edges. Prim for dense graphs; on a very dense one, skip the heap and scan in O(<var>V</var>²). When weights tie, the tree is not unique: A–C and B–D both cost 4. But every minimum tree has the same total. And all of this needs a connected graph with two-way edges." },
   ],
 
   variants: [
     { n: "Kruskal", cost: "O(E log E) · the sort is the bill",
-      idea: "Sort every edge by weight and keep each one whose endpoints are in different components. The component test is a union-find, so the algorithm is one sort plus the page next door.",
-      when: "Sparse graphs, and any time the input is already a list of edges. Also the natural fit when edges arrive offline and you want them processed in weight order for other reasons.",
-      watch: "Keeping fewer than V-1 edges means the graph was disconnected, and the number you are about to return is the weight of a forest. Check the count before you return it." },
-
+      idea: "Sort every edge by weight and keep each one whose ends are in different components. The component test is union-find, so the algorithm is one sort plus the page before.",
+      when: "Sparse graphs, and whenever the input is already a list of edges.",
+      watch: "Keeping fewer than <var>V</var> − 1 edges means the graph was disconnected, and the number you are about to return is the weight of a forest. Check the count first." },
     { n: "Prim with a heap", cost: "O(E log V) · one growing tree",
-      idea: "Keep a flag array for what is in the tree and a heap of edges leaving it. Pop the cheapest, absorb its far node, push that node's edges. The cut is always tree against the rest.",
-      when: "The graph is given as an adjacency list, or building an explicit edge list to sort would be wasteful.",
-      watch: "The heap key is the <b>edge weight</b>, not the running total. Push <code>total + w</code> instead of <code>w</code> and you have silently written Dijkstra, which will return a plausible and wrong number." },
-
+      idea: "Keep a flag array for what is in the tree and a heap of edges leaving it. Pop the cheapest, absorb its far node, push that node's edges.",
+      when: "The graph is given as an adjacency list, or building an edge list to sort would be wasteful.",
+      watch: "The heap key is the <b>edge weight</b>, not the running total. Push <code>dist + w</code>, the distance from the start, and you have quietly written Dijkstra, which returns a plausible, wrong number." },
     { n: "Prim, dense version", cost: "O(V²) · no heap at all",
-      idea: "Hold <code>best[v]</code>, the cheapest known edge from the tree to v. Each round, scan all nodes for the smallest, absorb it, and update its neighbours. Two nested loops, no data structures.",
-      when: "Dense or complete graphs. Points in a plane are the classic case: every pair is an edge, so E is V², and materialising V² edges to sort them is the expensive part of Kruskal.",
-      watch: "<code>best[]</code> is only meaningful for nodes outside the tree. It beats the heap version once E approaches V², and it is shorter to type under pressure, which is its own argument." },
-
+      idea: "Hold <code>best[v]</code>, the cheapest known edge from the tree to <var>v</var>. Each round, scan all nodes for the smallest, absorb it, and update its neighbours.",
+      when: "Dense or complete graphs, such as points in a plane where every pair is an edge, so <var>E</var> is about <var>V</var>².",
+      watch: "<code>best[]</code> only means something for nodes outside the tree. It beats the heap version once <var>E</var> nears <var>V</var>², and is shorter to type under pressure." },
     { n: "Maximum spanning tree", cost: "O(E log E) · the same code",
-      idea: "Reverse the comparator, or negate every weight. Nothing else in the algorithm changes.",
-      when: "The score is something you want more of: bandwidth, reliability, similarity between items.",
-      watch: "The cut property becomes the <i>heaviest</i> crossing edge is safe, and the proof is the same paragraph with the inequality flipped. In C++ this variant is what you get by accident, since the default priority_queue is a max-heap." },
-
+      idea: "Reverse the comparator, or negate every weight. Nothing else changes.",
+      when: "The score is something you want more of: bandwidth, reliability, similarity.",
+      watch: "The rule becomes “the <i>heaviest</i> crossing edge is safe”, with the same proof. In C++ this is what you get by accident, since the default priority_queue is a max-heap." },
     { n: "Second-best MST", cost: "O(V · E log E) naively",
-      idea: "The second-best tree differs from the best by exactly one swap, so forbid each of the V-1 tree edges in turn, rebuild, and keep the cheapest result that is not the original.",
-      when: "Asked as a follow-up roughly nine seconds after you finish writing Kruskal.",
-      watch: "Only tree edges are worth forbidding; banning a non-tree edge changes nothing. The fast version replaces the rebuild with the maximum edge weight on the tree path between each non-tree edge's endpoints, which is where binary lifting turns up." },
+      idea: "The second-best tree differs from the best by exactly one swap. So forbid each of the <var>V</var> − 1 tree edges in turn, rebuild, and keep the cheapest result that differs.",
+      when: "Asked as a follow-up about nine seconds after you finish writing Kruskal.",
+      watch: "Only tree edges are worth forbidding. The fast version uses the heaviest edge on the tree path between each non-tree edge's ends, which is where binary lifting turns up." },
   ],
 
   hing: `<p><b>Sawaal kya hai:</b> saare nodes ko jodna hai, aur total edge weight <b>jitna kam ho sake</b> utna kam. Bas. Kaun kitni door hai, ya kis node se shuru kiya, isse koi matlab nahi.</p>
-<p><b>Answer ka shape pehle se tay hai.</b> V nodes ko jodne ke liye kam se kam V-1 edges chahiye. Ek extra edge daalo to cycle ban jaati hai, aur cycle par sabse bhaari edge hamesha hata sakte ho: graph phir bhi connected rahega aur paisa bach jaayega. Isliye jawaab mein <b>cycle nahi hoti aur theek V-1 edges hoti hain</b>, matlab woh ek <b>tree</b> hai. Tree naam nateeja hai, shuruaat nahi.</p>
-<p><b>Ab woh baat jo interview mein pakadti hai: MST shortest path tree NAHI hai.</b> Teen nodes lo: A-B = 2, B-C = 2, A-C = 3. MST dono 2 rakhega, total 4. Lekin us tree ke andar A se C jaane ka raasta 4 ka padta hai. Asli shortest path to 3 wali seedhi edge thi, jise MST ne jaan-boojh kar phenk diya. <b>Total kam karna aur har node ki source se doori kam karna, ye do alag maqsad hain.</b> Dono trees sahi hain, bas sawaal alag hai.</p>
-<p><b>Cut property, jis par dono algorithms tike hain:</b> nodes ko kisi bhi tarah do hisson mein baant do. Jo edges dono taraf ko cross karti hain, unmein se <b>sabse halki edge kisi na kisi MST mein zaroor hai</b>. Dhyaan do: "kisi ek mein", "har ek mein" nahi. Greedy page wali baat yahan bhi wahi hai.</p>
-<p><b>Proof wahi exchange argument hai.</b> Maan lo e sabse halki crossing edge hai aur T koi MST hai jismein e nahi hai. T mein e daalo, theek ek cycle banegi. Woh cycle cut ke ek taraf se nikli hai, to wapas bhi aayegi. Matlab usmein ek aur crossing edge f hai. Aur e sabse sasti crossing edge thi, to <code>weight(f) >= weight(e)</code>. Ab f hata do. Jo bacha woh abhi bhi spanning tree hai aur <b>bhaari nahi hua</b>. Matlab e wala MST exist karta hai. Yahan bhi tumhein greedy ko optimum se behtar sabit nahi karna, sirf <b>barabar</b>.</p>
-<p><b>Kruskal:</b> saari edges weight se sort karo, aur har edge tabhi rakho jab uske dono sire <b>alag components</b> mein hon. Yeh check exactly <b>union-find</b> hai (uska apna page hai, wahin se uthao). Total <b>O(E log E)</b>, jismein poora kharcha sort ka hai.</p>
-<p><b>Prim:</b> ek node se tree ugao, aur baar baar tree se bahar jaane wali <b>sabse sasti edge</b> lo, priority queue se. <b>O(E log V)</b>. Aur ab woh ek line jo yaad rakhni hai. <b>Dijkstra queue ko source se doori par sort karta hai, yaani <code>dist[u] + w</code>. Prim sirf <code>w</code> par sort karta hai, yaani tree mein aane wali us ek edge ke weight par.</b> Bas ek addition ka farq hai. Aur wahi farq decide karta hai ki kaun shortest path deta hai aur kaun nahi.</p>
-<p><b>Kaun sa kab:</b> sparse graph ya edges pehle se list mein → <b>Kruskal</b>. Dense graph ya adjacency list mila hai → <b>Prim</b>, aur bahut dense ho to heap chhod kar seedha <b>O(V²)</b> scan likh do.</p>
-<p><b>Do aur baatein interview ke liye:</b> weights tie karte hon to <b>MST unique nahi hota</b>, do sahi programs alag-alag trees de sakte hain. Par har MST ka <b>weights ka multiset ek hi hota hai</b>, isliye total compare karna safe hai aur edge list compare karna nahi. Aur yeh sab <b>undirected</b> graph ke liye hai; directed edges ka to alag problem aur alag algorithm hai.</p>`,
+<p><b>Answer ka shape pehle se tay hai.</b> <var>V</var> nodes ko jodne ke liye kam se kam <var>V</var>-1 edges chahiye. Ek extra edge daalo to cycle ban jaati hai, aur cycle par sabse bhaari edge hamesha hata sakte ho. Isliye jawaab mein <b>cycle nahi hoti aur theek <var>V</var>-1 edges hoti hain</b>, matlab woh ek <b>tree</b> hai.</p>
+<p><b>Ab woh baat jo interview mein pakadti hai: MST shortest path tree NAHI hai.</b> Paanch buildings wale example mein MST B se D tak C se hokar jaata hai, 5 ka raasta, jabki seedha B–D link 4 ka hai. <b>Total kam karna aur har node ki source se doori kam karna, ye do alag maqsad hain.</b></p>
+<p><b>Cut property, jis par dono algorithms tike hain:</b> nodes ko kisi bhi tarah do hisson mein baant do. Jo edges dono taraf ko cross karti hain, unmein se <b>sabse halki edge kisi na kisi MST mein zaroor hai</b>. Dhyaan do: "kisi ek mein", "har ek mein" nahi.</p>
+<p><b>Proof wahi exchange argument hai.</b> Maan lo <var>e</var> sabse halki crossing edge hai aur <var>T</var> koi MST hai jismein <var>e</var> nahi hai. <var>T</var> mein <var>e</var> daalo, theek ek cycle banegi. Woh cycle cut ke ek taraf se nikli hai, to wapas bhi aayegi, ek aur crossing edge <var>f</var> se. <code>weight(f) >= weight(e)</code>. Ab <var>f</var> hata do. Jo bacha woh abhi bhi spanning tree hai aur <b>bhaari nahi hua</b>.</p>
+<p><b>Kruskal:</b> saari edges weight se sort karo, aur har edge tabhi rakho jab uske dono sire <b>alag components</b> mein hon. Yeh check exactly <b>union-find</b> hai. Total <b>O(<var>E</var> log <var>E</var>)</b>, jismein poora kharcha sort ka hai.</p>
+<p><b>Prim:</b> ek node se tree ugao, aur baar baar tree se bahar jaane wali <b>sabse sasti edge</b> lo, priority queue se. <b>O(<var>E</var> log <var>V</var>)</b>. <b>Dijkstra queue ko <code>dist[u] + w</code> par sort karta hai. Prim sirf <code>w</code> par.</b> Bas ek addition ka farq hai.</p>
+<p><b>Kaun sa kab:</b> sparse graph ya edges pehle se list mein: <b>Kruskal</b>. Dense graph ya adjacency list mila hai: <b>Prim</b>, aur bahut dense ho to heap chhod kar seedha <b>O(<var>V</var>²)</b> scan likh do.</p>`,
 
   viz: ["mst"],
 
   math: [
+    { t: "Kruskal on the five buildings, edge by edge", d: "Sort the links, then take each one whose ends are in different groups. The groups are tracked with union-find.", w:
+`links sorted:  A-B 1, B-C 2, C-D 3, A-C 4, B-D 4, D-E 6
+
+A-B 1   groups {A}{B}     different: take   {A,B}
+B-C 2   {A,B}{C}          different: take   {A,B,C}
+C-D 3   {A,B,C}{D}        different: take   {A,B,C,D}
+A-C 4   both in {A,B,C,D} same: skip, it closes a loop
+B-D 4   both in {A,B,C,D} same: skip
+D-E 6   {A,B,C,D}{E}      different: take   everything
+
+4 links for 5 buildings, total 1 + 2 + 3 + 6 = 12` },
+    { t: "Not a shortest-path tree, on the same map", d: "The shortest-path tree from A optimises every journey from A. The spanning tree optimises the bill. On this map they differ by one link.", w:
+`shortest-path tree from A (Dijkstra):
+  A-B 1, B-C 2, B-D 4, D-E 6        total 13
+  B to D: direct, 4
+
+minimum spanning tree (Kruskal):
+  A-B 1, B-C 2, C-D 3, D-E 6        total 12
+  B to D: B-C-D, 2 + 3 = 5
+
+cheaper to build, slower to travel. Different objectives.` },
     { t: "The answer's shape is fixed before any choice is made", d: "You are not choosing how many edges. That number is forced, and knowing it turns the problem into picking which ones.", w:
 `a spanning tree of V nodes has exactly V - 1 edges
 
 V - 2 edges:  cannot be connected
-V edges:      contains a cycle, and the heaviest edge on
-              that cycle can be deleted, leaving it
-              connected and strictly cheaper
+V edges:      contains a loop, and the heaviest edge on
+              that loop can be deleted, leaving it
+              connected and no more expensive
 
-so every algorithm chooses WHICH V - 1, never how many` },
-    { t: "An MST is not a shortest-path tree, and one triangle shows it", d: "This is the single most common way the question is lost. Three nodes are enough to separate the two objectives.", w:
-`A-B = 1,  B-C = 1,  A-C = 1.9
-
-MST: take A-B and B-C, total weight 2
-  (A-C at 1.9 would make a cycle and is heavier than 1)
-
-shortest path A to C: the direct edge, 1.9
-inside the MST that trip costs 1 + 1 = 2
-
-minimising the total is not minimising any one path` },
-    { t: "The cut property, proved by exchange", d: "Both algorithms rest on this one fact, and the proof is the same swap argument used for greedy correctness everywhere else.", w:
-`take any cut. Let e be a lightest edge crossing it.
+all 6 links: 20.  drop A-C (loop A-B-C):  16
+drop B-D (loop B-C-D):  12, and now 4 links: a tree` },
+    { t: "The cut property, proved by exchange", d: "Both algorithms rest on this one fact, and the proof is the same swap argument used for greedy correctness everywhere.", w:
+`take any split. Let e be a lightest edge crossing it.
 Suppose some MST T does not contain e.
 
-add e to T  ->  exactly one cycle forms
-that cycle must cross the cut a second time, at some f
+add e to T  ->  exactly one loop forms
+that loop must cross the split a second time, at some f
   weight(f) >= weight(e)        (e was lightest crossing)
 
-T - f + e is still spanning, still acyclic, and weighs
+T - f + e is still spanning, loop-free, and weighs
 no more. So an MST containing e exists.` },
-    { t: "Kruskal and Prim, priced against each other", d: "They agree on the answer and differ on what they sort. The density of the graph is what decides which one is doing less work.", w:
+    { t: "Kruskal and Prim, priced against each other", d: "They agree on the answer and differ on what they sort. The density of the graph decides which does less work.", w:
 `Kruskal:  sort E edges           E log E
           E union-find ops       E x alpha
           total                  O(E log V)
 
 Prim, binary heap:               O(E log V)
-Prim, adjacency matrix, no heap: O(V^2)
+Prim, array scan, no heap:       O(V^2)
 
-V = 10^5, E = 5 x 10^5 (sparse):  both ~ 8 x 10^6
-V = 10^3, E = 5 x 10^5 (dense):   matrix Prim 10^6,
-                                  Kruskal 9.5 x 10^6` },
+V = 10^4, E = 5 x 10^5 (sparse):  heap ~ 7 x 10^6, scan 10^8
+V = 10^3, E = 5 x 10^5 (dense):   scan 10^6, Kruskal ~ 10^7` },
   ],
 
   costs: [
     ["Kruskal, total", "O(E log E)", "sorting is the only expensive step, and log E is at most 2 log V"],
-    ["the union-find inside Kruskal", "O(E α(V))", "near constant per edge, so it never shows up in the answer you quote"],
-    ["Prim with a binary heap", "O(E log V)", "each edge is pushed at most once and every pop pays one log"],
+    ["the union-find inside Kruskal", "O(E α(V))", "near constant per edge, so it never shows in the answer you quote"],
+    ["Prim with a binary heap", "O(E log V)", "each edge pushed at most once, and every pop pays one log"],
     ["Prim with an array scan", "O(V²)", "no heap and no edge list; wins once E is close to V²"],
     ["Prim with a Fibonacci heap", "O(E + V log V)", "true, quoted often, and slower than a binary heap on real inputs"],
     ["extra space", "O(V + E)", "an edge list for Kruskal, a heap plus one flag array for Prim"],
@@ -10642,18 +11134,18 @@ V = 10^3, E = 5 x 10^5 (dense):   matrix Prim 10^6,
   ],
 
   traps: [
-    "<b>Using the MST as a shortest path tree.</b> The path between two nodes inside an MST can be longer than their real shortest path, and no part of the algorithm will mention this. Different objective, different tree, different algorithm.",
-    "<b>Prim pushing the running total instead of the edge weight.</b> Push <code>total + w</code> and you have written Dijkstra, which still terminates and still returns a number. Push <code>w</code> alone.",
-    "<b>C++ priority_queue without greater&lt;&gt;.</b> The default is a max-heap, so Prim quietly computes a <i>maximum</i> spanning tree. The output looks like a plausible total, which is the worst kind of wrong.",
-    "<b>Not checking that you kept V-1 edges.</b> On a disconnected graph Kruskal happily returns the weight of a spanning forest. Count the successful unions, or count components, and say so.",
-    "<b>Marking a node as in-tree when you push it rather than when you pop it.</b> A cheaper edge to that node can still arrive while it sits in the heap. Skip stale entries on pop, exactly as in Dijkstra.",
-    "<b>Reaching for Kruskal or Prim on a directed graph.</b> Neither is correct there. The directed version is a minimum arborescence and needs Chu-Liu / Edmonds, which is not a whiteboard algorithm.",
+    "<b>Using the MST as a shortest-path tree.</b> Inside the five-building tree, B to D costs 5; the real shortest route is 4. No part of the algorithm will mention this.",
+    "<b>Prim pushing the running total instead of the edge weight.</b> Push a running distance instead and you have written Dijkstra, which still returns a number. Push <code>w</code> alone.",
+    "<b>C++ priority_queue without greater&lt;&gt;.</b> The default is a max-heap, so Prim quietly computes a <i>maximum</i> spanning tree. The total looks plausible, which is the worst kind of wrong.",
+    "<b>Not checking that you kept <var>V</var> − 1 edges.</b> On a disconnected graph Kruskal happily returns the weight of a forest. Count the successful unions and say so.",
+    "<b>Marking a node as in the tree when you push it rather than when you pop it.</b> A cheaper edge to it can still arrive while it waits in the heap. Skip stale entries on pop, as in Dijkstra.",
+    "<b>Reaching for Kruskal or Prim on a one-way graph.</b> Neither is correct there. The one-way version needs Chu-Liu / Edmonds, which is not a whiteboard algorithm.",
   ],
 
   impl: [
     ["Python", "sorted() for Kruskal, heapq for Prim", "No disjoint set in the stdlib, so paste your own. heapq is a min-heap, which is what you want here."],
     ["Java", "Arrays.sort with a comparator, PriorityQueue<int[]>", "Write Integer.compare(a[2], b[2]), never a[2] - b[2]: large weights overflow and the sort goes quietly wrong."],
-    ["C++", "std::sort, priority_queue with greater<>", "The default max-heap gives you a maximum spanning tree. Storing edges as tuple<int,int,int> with weight first makes the default sort correct."],
+    ["C++", "std::sort, priority_queue with greater<>", "The default max-heap gives a maximum spanning tree. Storing edges as tuple<int,int,int> with weight first makes the default sort correct."],
     ["JavaScript", "Array.sort with a comparator, no heap", "sort() without a comparator compares as text. With no built-in heap, the O(V²) dense Prim is often the honest choice."],
   ],
 
@@ -10895,25 +11387,132 @@ function primDense(n, weight) {           // weight(i, j) computed on demand
   codecap: "Kruskal is a sort plus a union-find; Prim is Dijkstra with one addition deleted from the heap key. Both are the cut property, read from different ends.",
 
   q: [
-    ["Why does the answer always have exactly V-1 edges and no cycles?", "V nodes need at least V-1 edges to be connected. Any further edge closes a cycle, and on a cycle the heaviest edge can be deleted with everything still reachable the other way round, which lowers the total. So an optimal solution has no cycles and V-1 edges, which is a tree."],
-    ["Is the path between two nodes in an MST their shortest path?", "No, and this is the point of the topic. With A-B = 2, B-C = 2, A-C = 3, the MST keeps the two 2s so the tree path from A to C costs 4, while the direct edge of 3 is shorter and was discarded. An MST minimises the total weight; a shortest path tree minimises each distance from one source. Different objectives, different trees."],
-    ["State the cut property and prove it.", "Split the nodes into two non-empty sides. The lightest edge crossing the split lies in some MST. Proof by exchange: take any MST without that edge e, add e, and exactly one cycle forms. The cycle leaves one side so it must return, using another crossing edge f with weight at least that of e. Remove f. The result still spans, is still a tree, and is no heavier, so an MST containing e exists."],
-    ["Why is Kruskal correct, and what data structure does it need?", "Processing edges cheapest first means that when an edge joins two different components, nothing lighter crosses the cut separating them, since everything lighter has already been handled. So the cut property makes it safe. The only operation needed is asking whether two nodes are in the same component and merging them, which is union-find."],
-    ["What is the difference between Prim and Dijkstra?", "The heap key. Dijkstra pushes the distance from the source, dist[u] + w, so it settles nodes by total path cost. Prim pushes w alone, the weight of the single edge that would attach the node to the tree. The loop, the heap and the stale-entry skip are identical; deleting that one addition changes which question the program answers."],
-    ["Is the MST unique, and which parts of it can you rely on?", "Not unique when weights tie: two correct programs can return different edge sets. But every MST of a graph has the same multiset of edge weights, so the total is always the same and is safe to compare, while a specific edge list is not. If all weights are distinct, the MST is unique."],
+    ["Why does the answer always have exactly V-1 edges and no cycles?", "V nodes need at least V-1 edges to be connected. Any further edge closes a loop, and on a loop the heaviest edge can be deleted with everything still reachable the other way. So an optimal answer has no loops and V-1 edges: a tree."],
+    ["Is the path between two nodes in an MST their shortest path?", "No. In the five-building example the MST keeps B-C 2 and C-D 3, so B to D inside it costs 5, while the direct link of 4 was dropped. An MST minimises the total; a shortest-path tree minimises each distance from one source."],
+    ["State the cut property and prove it.", "Split the nodes into two non-empty sides. The lightest edge crossing the split is in some MST. Take any MST without it, e, and add e: one loop forms, crossing the split again at some f with weight at least e's. Remove f. The result still spans and is no heavier."],
+    ["Why is Kruskal correct, and what data structure does it need?", "Going cheapest first, when an edge joins two different components, nothing lighter crosses the split between them, since it would already have merged them. So the cut property makes it safe. The only operations needed are \"same component?\" and \"merge\": union-find."],
+    ["What is the difference between Prim and Dijkstra?", "The heap key. Dijkstra pushes dist[u] + w, the distance from the source. Prim pushes w alone, the weight of the one edge that attaches the node. The loop, the heap and the stale-entry skip are identical."],
+    ["Is the MST unique, and which parts of it can you rely on?", "Not when weights tie: two correct programs can return different edge sets. But every MST has the same multiset of weights, so the total is always the same. If all weights are distinct, the MST is unique."],
   ],
 
   p: [
     [1319, "number-of-operations-to-make-network-connected", "Make Network Connected, counting components before spanning them", "M"],
-    [1584, "min-cost-to-connect-all-points", "Min Cost to Connect All Points, MST in disguise on a complete graph", "M"],
-    [1135, "connecting-cities-with-minimum-cost", "Connecting Cities, textbook MST with a disconnected case to catch", "M"],
+    [1584, "min-cost-to-connect-all-points", "Min Cost to Connect All Points, MST on a complete graph", "M"],
+    [1135, "connecting-cities-with-minimum-cost", "Connecting Cities, textbook MST with a disconnected case", "M"],
     [1631, "path-with-minimum-effort", "Path With Minimum Effort, the minimax path an MST also answers", "M"],
     [1168, "optimize-water-distribution-in-a-village", "Optimize Water Distribution, a virtual node turns wells into edges", "H"],
     [1697, "checking-existence-of-edge-length-limited-paths", "Edge Length Limited Paths, offline queries along Kruskal's order", "H"],
     [1489, "find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree", "Critical and Pseudo-Critical Edges, Kruskal run once per edge", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek campus ko <b>10⁴ buildings</b> fibre se jodni hain. <b>5 × 10⁵</b> possible links hain, har ek ki keemat. Har building doosri tak pahunch sake, shayad doosron se hokar, aur <b>total keemat</b> jitni kam ho sake.</p>
+<p>Chhota version: paanch buildings, A se E. Links: A–B 1, B–C 2, C–D 3, A–C 4, B–D 4, D–E 6. Sabse sasta network <b>12</b> ka hai.</p>`,
+      tries: [
+        ["Har link khareed lo", "Sab juda, 1 + 2 + 3 + 4 + 4 + 6 = 20 mein. A–C link ek loop jodta hai, A–B–C–A, aur loop par ek link hamesha chhoda ja sakta hai."],
+        ["A se sabse tez raaste lo: shortest-path tree", "A se Dijkstra A–B, B–C, B–D aur D–E rakhta hai, kul 13. A se tez safar, par sabse sasta network nahi."],
+        ["Har spanning network try karo aur sabse sasta rakho", "20 buildings, har jodi judne layak, to sabko jodne ke 20¹⁸ ≈ 2.6 × 10²³ tareeke. 10⁴ ke liye ginti se bahar."],
+      ],
+      so: `<p>Links <b>sabse saste pehle</b> lo, aur woh link chhodo jiske dono sire pehle se jude hon, kyunki woh bas loop band karega. A–B 1, B–C 2, C–D 3: lo. A–C 4 aur B–D 4: chhodo. D–E 6: lo. Chaar links, kul 12.</p>
+<p>Yahi <b>minimum spanning tree</b> ke liye <b>Kruskal ka algorithm</b> hai, aur “pehle se jude?” test union-find hai. Page poore mein paanch buildings follow karta hai.</p>`,
+    },
+
+    one: "Har node ko jitna sasta ho sake jodo: theek <var>V</var> − 1 edges, koi cycle nahi. Dono algorithms ek hi greedy niyam hain, <b>kisi bhi cut ko cross karne wali sabse halki edge safe hai</b>.",
+
+    plain: `<p>Aapke paas kuch jagahein aur unke beech possible links ki list hai, har ek ki keemat. Har jagah har doosri tak pahunch sake, aur total keemat jitni kam ho sake.</p>
+<p>Aur kuch nahi ginta: na kisi safar ki lambai, na kahan se shuru kiya. Sirf total bill.</p>
+<p>Obvious lagta hai, aur yahi log galat karte hain. <b>Banane mein sabse sasta network sabse achhe raaston wala network nahi.</b> Paanch buildings wale example mein sabse sasta network B se D, C se hokar bhejta hai, 5 ka raasta, jabki seedha 4 ka link hai.</p>
+<p>Answer ki shape kuch chunne se pehle tay hai. <var>n</var> jagahein jodne ko kam se kam <var>n</var> − 1 links chahiye. Koi extra link loop banata hai, aur loop par sabse mehenga link chhod kar bhi sab tak pahunch sakte ho. To answer mein theek <var>n</var> − 1 links aur koi loop nahi: ek <b>tree</b>. Sawaal bas yeh ki kaunse.</p>
+<p><b>Analogy.</b> Aap cable ke paise de rahe ho, drive time ke nahi. Banane mein sabse sasta network sabse tez safar wala nahi, aur lambe commute wala resident is farak ke liye shukriya nahi kahega.</p>`,
+
+    why: [
+      { t: "Answer ki shape kuch chunne se pehle forced hai",
+        d: "<var>V</var> nodes <var>V</var> − 1 se kam edges se nahi jud sakte. Ek aur edge loop banati hai, aur loop par sabse bhaari edge hata sakte ho: sab dusri taraf ghoom kar ab bhi pahunchte hain, aur bill girta hai. To best answer mein koi loop nahi aur theek <var>V</var> − 1 edges. Paanch buildings, chaar links." },
+      { t: "Yeh shortest-path tree nahi, aur sawaal yahin haara jaata hai",
+        d: "Sabse sasta network B–C 2 aur C–D 3 rakhta hai, to uske andar B se D 5 ka. Seedha B–D link 4 ka hai, aur network ne use jaan-boojh kar chhoda. A se shortest-path tree B–D rakhta hai aur kul 13, 12 ke against. <b>Sabse sasta total aur sabse chhote safar alag goals hain.</b>" },
+      { t: "Woh ek fact jis par dono algorithms khade hain",
+        d: "Nodes ko do groups mein baanto, jaise chaho. Woh edges dekho jinka ek sira har group mein ho. <b>Un crossing edges mein sabse sasti kisi na kisi minimum spanning tree mein hai.</b> “Kisi na kisi” dhyan se padho: har ek mein nahi. Argument ko bas ek best answer chahiye jisme woh ho." },
+      { t: "Adla-badli se saabit karo",
+        d: "<var>e</var> sabse sasti crossing edge ho, aur koi best tree <var>T</var> lo jisme woh nahi. <var>e</var> jodna theek ek loop banata hai. Loop split ki ek taraf se nikalta hai aur wapas aana padta hai, ek aur crossing edge <var>f</var> se. <var>e</var> sabse sasti thi, to <var>f</var> kam se kam utni. <var>f</var> hatao: ab bhi juda, koi loop nahi, mehenga nahi." },
+      { t: "Kruskal: sort karo, phir poocho kaunsa group",
+        d: "Edges sabse saste pehle lo. Edge ke sire alag groups mein hon, to unke beech ke split ko isse sasta kuch cross nahi karta, warna woh pehle hi jod deta. To safe hai: lo. Dono sire ek group mein hon, jaise A–B aur B–C ke baad A aur C, to loop band karegi: chhodo. Woh test union-find hai. Kul <b>O(<var>E</var> log <var>E</var>)</b>, lagbhag sab sorting." },
+      { t: "Prim: split ki ek taraf fix karo aur use ugao",
+        d: "Kahin se shuru karo. Split hamesha “jo banaya” vs “baaki sab”. Use cross karne wali sabse sasti edge lo, uska door wala node andar lo, dohrao. Heap woh edge <b>O(<var>E</var> log <var>V</var>)</b> mein deta hai. Yeh Dijkstra ka loop hai, ek farak ke saath: Dijkstra heap ko <code>dist[u] + w</code> se key karta hai, Prim sirf <code>w</code> se. Ek addition hataya." },
+      { t: "Dono mein chunna, aur jo dono nahi dete",
+        d: "Sparse graphs ke liye, ya input pehle se edges ki list ho to Kruskal. Dense graphs ke liye Prim; bahut dense ho to heap chhod kar O(<var>V</var>²) scan. Weights tie hon to tree unique nahi: A–C aur B–D dono 4 ke. Par har minimum tree ka total same hai. Aur yeh sab juda hua, do-taraf edges wala graph maangta hai." },
+    ],
+
+    variants: [
+      { n: "Kruskal", cost: "O(E log E) · bill sort ka hai",
+        idea: "Har edge weight se sort karo aur har woh rakho jiske sire alag components mein hon. Component test union-find hai, to algorithm ek sort plus pichhla page.",
+        when: "Sparse graphs, aur jab bhi input pehle se edges ki list ho.",
+        watch: "<var>V</var> − 1 se kam edges rakhi matlab graph juda nahi tha, aur jo number lautane wale ho woh forest ka weight hai. Pehle ginti check karo." },
+      { n: "Prim with a heap", cost: "O(E log V) · ek badhta tree",
+        idea: "Tree mein kya hai uske liye flag array aur usse bahar jaati edges ka heap rakho. Sabse sasti pop karo, door wala node andar lo, uski edges push karo.",
+        when: "Graph adjacency list ki tarah mila ho, ya sort ke liye edge list banana bekaar ho.",
+        watch: "Heap key <b>edge weight</b> hai, running total nahi. <code>dist + w</code>, yaani start se doori, push ki to chupchaap Dijkstra likh diya, jo sahi-sa lagne wala galat number deta hai." },
+      { n: "Prim, dense version", cost: "O(V²) · koi heap nahi",
+        idea: "<code>best[v]</code> rakho, tree se <var>v</var> tak ki sabse sasti jaani edge. Har round sabse chhote ke liye saare nodes scan karo, andar lo, aur uske padosi update karo.",
+        when: "Dense ya complete graphs, jaise plane mein points jahan har jodi edge hai, to <var>E</var> lagbhag <var>V</var>².",
+        watch: "<code>best[]</code> ka matlab sirf tree ke bahar ke nodes ke liye. <var>E</var> <var>V</var>² ke paas ho to heap version ko haraata hai, aur pressure mein likhna chhota." },
+      { n: "Maximum spanning tree", cost: "O(E log E) · wahi code",
+        idea: "Comparator ulta karo, ya har weight negate karo. Aur kuch nahi badalta.",
+        when: "Score aisi cheez ho jo zyada chahiye: bandwidth, reliability, similarity.",
+        watch: "Niyam banta hai “<i>sabse bhaari</i> crossing edge safe hai”, wahi proof. C++ mein galti se yahi milta hai, kyunki default priority_queue max-heap hai." },
+      { n: "Second-best MST", cost: "O(V · E log E) naively",
+        idea: "Doosra-best tree best se theek ek swap alag hai. To <var>V</var> − 1 tree edges mein se har ek ko baari baari mana karo, dobara banao, aur sabse sasta alag result rakho.",
+        when: "Kruskal likhne ke lagbhag nau second baad follow-up ki tarah poocha jaata hai.",
+        watch: "Sirf tree edges mana karne layak hain. Tez version har non-tree edge ke siron ke beech tree raaste ki sabse bhaari edge use karta hai, jahan binary lifting aata hai." },
+    ],
+
+    math: [
+      { t: "Paanch buildings par Kruskal, edge by edge", d: "Links sort karo, phir har woh lo jiske sire alag groups mein hon. Groups union-find se track hote hain." },
+      { t: "Shortest-path tree nahi, usi map par", d: "A se shortest-path tree A se har safar optimise karta hai. Spanning tree bill optimise karta hai. Is map par dono ek link se alag hain." },
+      { t: "Answer ki shape kisi chunaav se pehle tay hai", d: "Aap nahi chun rahe kitni edges. Woh number forced hai, aur use jaanna problem ko kaunsi edges chunne mein badal deta hai." },
+      { t: "Cut property, exchange se saabit", d: "Dono algorithms isi ek fact par tike hain, aur proof wahi swap argument hai jo har jagah greedy ki sahi hone ke liye use hota hai." },
+      { t: "Kruskal aur Prim, ek doosre ke against", d: "Dono answer par agree karte hain aur alag cheez sort karte hain. Graph ki density tay karti hai ki kaun kam kaam karta hai." },
+    ],
+
+    costs: [
+      ["Kruskal, total", "O(E log E)", "sorting hi mehenga step hai, aur log E zyada se zyada 2 log V"],
+      ["Kruskal ke andar union-find", "O(E α(V))", "har edge par lagbhag constant, to jo answer bolte ho usme dikhta nahi"],
+      ["binary heap ke saath Prim", "O(E log V)", "har edge zyada se zyada ek baar push, aur har pop ek log"],
+      ["array scan ke saath Prim", "O(V²)", "na heap na edge list; E, V² ke paas ho to jeet-ta hai"],
+      ["Fibonacci heap ke saath Prim", "O(E + V log V)", "sach, aksar bola jaata hai, aur asli inputs par binary heap se slow"],
+      ["extra space", "O(V + E)", "Kruskal ke liye edge list, Prim ke liye heap plus ek flag array"],
+      ["second-best MST, naive", "O(V · E log E)", "V-1 tree edges mein se har ek baari baari mana karke dobara banao"],
+    ],
+
+    traps: [
+      "<b>MST ko shortest-path tree ki tarah use karna.</b> Paanch buildings wale tree ke andar B se D 5 ka; asli sabse chhota raasta 4. Algorithm ka koi hissa yeh nahi batayega.",
+      "<b>Prim mein edge weight ki jagah running total push karna.</b> Uski jagah chalti doori push ki to Dijkstra likh diya, jo phir bhi number lautata hai. Sirf <code>w</code> push karo.",
+      "<b>greater&lt;&gt; ke bina C++ priority_queue.</b> Default max-heap hai, to Prim chupchaap <i>maximum</i> spanning tree nikaalta hai. Total sahi-sa lagta hai, galti ki sabse buri kism.",
+      "<b>Check na karna ki <var>V</var> − 1 edges rakhi.</b> Disconnected graph par Kruskal khushi se forest ka weight lautata hai. Safal unions gino aur batao.",
+      "<b>Node ko push par tree mein mark karna, pop par nahi.</b> Heap mein intezaar karte hue usse sasti edge aa sakti hai. Pop par purani entries chhodo, Dijkstra ki tarah.",
+      "<b>One-way graph par Kruskal ya Prim lagana.</b> Wahan koi sahi nahi. One-way version ko Chu-Liu / Edmonds chahiye, jo whiteboard algorithm nahi.",
+    ],
+
+    impl: [
+      ["Python", "sorted() for Kruskal, heapq for Prim", "Stdlib mein disjoint set nahi, to apna paste karo. heapq min-heap hai, jo yahan chahiye."],
+      ["Java", "Arrays.sort with a comparator, PriorityQueue<int[]>", "Integer.compare(a[2], b[2]) likho, kabhi a[2] - b[2] nahi: bade weights overflow karte hain aur sort chupchaap galat."],
+      ["C++", "std::sort, priority_queue with greater<>", "Default max-heap maximum spanning tree deta hai. Edges ko weight pehle wale tuple<int,int,int> ki tarah rakhne se default sort sahi hota hai."],
+      ["JavaScript", "Array.sort with a comparator, no heap", "Comparator ke bina sort() text ki tarah compare karta hai. Built-in heap nahi, to O(V²) dense Prim aksar imaandaar chunaav hai."],
+    ],
+
+    codecap: "Kruskal ek sort plus ek union-find hai; Prim woh Dijkstra hai jiski heap key se ek addition hataya. Dono cut property hain, alag siron se padhi hui.",
+
+    q: [
+      ["Answer mein hamesha theek V-1 edges aur koi cycle kyun?", "V nodes ko judne ke liye kam se kam V-1 edges chahiye. Koi aur edge loop band karti hai, aur loop par sabse bhaari edge hata kar bhi sab doosri taraf se pahunchte hain. To optimal answer mein koi loop nahi aur V-1 edges: ek tree."],
+      ["Kya MST mein do nodes ke beech ka raasta unka shortest path hai?", "Nahi. Paanch buildings wale example mein MST B-C 2 aur C-D 3 rakhta hai, to uske andar B se D 5, jabki seedha 4 ka link chhoda gaya. MST total kam karta hai; shortest-path tree ek source se har doori."],
+      ["Cut property batao aur saabit karo.", "Nodes ko do non-empty taraf mein baanto. Split cross karne wali sabse halki edge kisi MST mein hai. Uske bina koi MST lo, e jodo: ek loop banta hai, jo kisi f par split phir cross karta hai, jiska weight kam se kam e jitna. f hatao. Result ab bhi span karta hai aur bhaari nahi."],
+      ["Kruskal sahi kyun hai, aur use kaunsa data structure chahiye?", "Sabse sasta pehle chalte hue, jab edge do alag components jodti hai, to unke beech ke split ko isse halka kuch cross nahi karta. Warna woh pehle hi jod deta. To cut property ise safe banati hai. Sirf \"same component?\" aur \"jodo\" chahiye: union-find."],
+      ["Prim aur Dijkstra mein kya farak hai?", "Heap key. Dijkstra dist[u] + w push karta hai, source se doori. Prim sirf w push karta hai, node ko jodne wali ek edge ka weight. Loop, heap aur purani entry chhodna same hain."],
+      ["Kya MST unique hai, aur kis hisse par bharosa kar sakte ho?", "Weights tie hon to nahi: do sahi programs alag edge sets de sakte hain. Par har MST ke weights ka multiset same hai, to total hamesha same. Saare weights alag hon to MST unique hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "sorting",
