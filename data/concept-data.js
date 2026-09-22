@@ -14287,53 +14287,89 @@ text.indexOf(p);`,
   id: "prefix-sums",
   n: "Prefix sums",
   group: "Patterns",
-  one: "Pay O(n) once to store every running total, then <b>any</b> range sum is a single subtraction: sum(l..r) = pre[r+1] - pre[l], O(1) per query.",
+  need: {
+    ask: `<p>A fitness app stores steps for each of <b>10⁶ days</b>, and users keep asking “how many steps from day <var>l</var> to day <var>r</var>?”: 10⁶ questions, each with different endpoints.</p>
+<p>The small version: five days, <code>3, 1, 4, 1, 5</code> (thousands of steps). Days 1 to 3 total 1 + 4 + 1 = 6.</p>`,
+    tries: [
+      ["Add up the range each time it is asked", "Each query walks its range: up to 10⁶ additions. 10⁶ queries make 10¹², and the ranges overlap, so the same numbers get added again and again."],
+      ["Precompute the answer for every possible (l, r)", "Every query becomes a lookup, but there are <var>n</var>(<var>n</var> + 1) / 2 ranges: 5 × 10¹¹ stored answers for 10⁶ days. Far past any memory."],
+    ],
+    so: `<p>So store only the <b>running totals</b>: pre = <code>0, 3, 4, 8, 9, 14</code>, where pre[<var>i</var>] is the sum of the first <var>i</var> days. Days 1 to 3 are “everything up to day 3, minus everything before day 1”: pre[4] − pre[1] = 9 − 3 = 6.</p>
+<p>One pass to build, then every query is one subtraction: 2 × 10⁶ steps in all, instead of 10¹². Rearranged, the same identity also counts how many ranges add up to a target, in one pass. The page uses these five days throughout.</p>`,
+  },
 
-  plain: `<p>The problem: you are asked for the sum of a stretch of the array, and then asked again, and again, with different endpoints. Adding up the stretch each time costs O(n) per question, so q questions cost O(n·q). On an array of 100,000 items with 100,000 queries that is 10 billion additions, which is a timeout with extra steps.</p>
-<p>Instead do the work once. Walk the array left to right and write down the running total at every point. Now the sum of positions l to r is just the total up to r minus the total up to just before l. One subtraction. Every query after the build is free.</p>
-<p>The same trick, run backwards, answers a different question. Suppose you have many <b>updates</b> to ranges, and only need to read the array at the end. Record each update as a pair of marks, then take the running total once, at the finish.</p>
+  one: "Pay O(<var>n</var>) once to store every running total, then <b>any</b> range sum is one subtraction: sum(<var>l</var>..<var>r</var>) = pre[<var>r</var> + 1] − pre[<var>l</var>], O(1) per query.",
+
+  plain: `<p>The problem: you are asked for the sum of a stretch of the array, then asked again, and again, with different endpoints. Adding up the stretch each time costs O(<var>n</var>) per question, so <var>q</var> questions cost O(<var>n</var>·<var>q</var>). With 10⁶ days and 10⁶ questions, that is 10¹² additions.</p>
+<p>Do the adding once instead. Walk the array left to right, writing down the running total at every point. For <code>3, 1, 4, 1, 5</code> that is <code>0, 3, 4, 8, 9, 14</code>. The sum of days 1 to 3 is the total up to day 3, minus the total before day 1: 9 − 3 = 6. One subtraction, whatever the width.</p>
+<p>The same trick run backwards answers a different question. Suppose you have many <b>updates</b> to ranges, and only need the array at the end. Mark each update at its two edges, then take the running total once, at the finish.</p>
 <p><b>Analogy.</b> Milestones on a highway. Nobody measures the road between two towns. You read the marker at each town and subtract.</p>`,
 
   why: [
     { t: "Re-adding the same stretch is the waste",
-      d: "Answering one range sum by looping over it is O(n). Answering q of them that way is O(n·q), and the ranges overlap heavily, so you are adding the same numbers over and over. That repetition is the only thing wrong with the naive solution." },
+      d: "Answering one range sum by looping over it is O(<var>n</var>). Answering <var>q</var> of them that way is O(<var>n</var>·<var>q</var>), and the ranges overlap heavily, so the same numbers are added over and over. That repetition is the only thing wrong with the plain solution." },
     { t: "Do the adding once and store every running total",
-      d: "One left to right pass gives you the sum of the first i elements for every i. That costs O(n) time and O(n) space, paid a single time. It is the classic trade: precompute, then answer instantly." },
-    { t: "Make the array n+1 long and start it at zero",
-      d: "Define <code>pre[0] = 0</code> and <code>pre[i+1] = pre[i] + a[i]</code>. The leading zero means <b>the empty prefix exists</b>, so a range starting at index 0 is not a special case. Every off by one bug in this pattern comes from someone deciding the extra slot was optional." },
+      d: "One left-to-right pass gives the sum of the first <var>i</var> elements for every <var>i</var>. It costs O(<var>n</var>) time and O(<var>n</var>) space, paid once. For 3, 1, 4, 1, 5 the totals are 3, 4, 8, 9, 14. It is the classic trade: work out in advance, then answer instantly." },
+    { t: "Make the array n + 1 long and start it at zero",
+      d: "Define <code>pre[0] = 0</code> and <code>pre[i+1] = pre[i] + a[i]</code>. The leading zero means <b>the empty prefix exists</b>, so a range starting at index 0 is not a special case. Nearly every off-by-one bug in this pattern comes from deciding the extra slot was optional." },
     { t: "Now every range is one subtraction",
-      d: "<code>sum(l..r) = pre[r+1] - pre[l]</code>. Read it as: everything up to r, minus everything before l. O(1) per query, and it holds for l = 0 for free because <code>pre[0]</code> is 0. Say the identity out loud before you code; the endpoints are where people lose the marks." },
+      d: "<code>sum(l..r) = pre[r+1] - pre[l]</code>. Read it as: everything up to <var>r</var>, minus everything before <var>l</var>. Days 1 to 3: pre[4] − pre[1] = 9 − 3 = 6. It holds for <var>l</var> = 0 for free, because pre[0] is 0. Say the identity aloud before coding; the endpoints are where marks are lost." },
     { t: "The big one: rearrange the identity and count with a hash map",
-      d: "Counting subarrays whose sum is exactly k means counting pairs with <code>pre[r+1] - pre[l] = k</code>, which is <code>pre[l] = pre[r+1] - k</code>. So sweep once, and at each position ask a map how many earlier prefixes had that value. O(n) time. It <b>works with negative numbers</b>, where a sliding window does not, because it never assumes that growing a window grows its sum. Seed the map with <code>{0: 1}</code>, that one entry is the empty prefix and it is what lets a subarray start at index 0." },
+      d: "Counting subarrays that sum to <var>k</var> means counting pairs of totals exactly <var>k</var> apart: pre[<var>l</var>] = pre[<var>r</var> + 1] − <var>k</var>. Sweep once, and at each prefix ask a map how many earlier prefixes had the value needed. For <var>k</var> = 5 the pairs are 3 and 8, 4 and 9, 9 and 14: three subarrays. It <b>works with negative numbers</b>, where a sliding window does not." },
+    { t: "Seed the map with the empty prefix",
+      d: "The map starts as <code>{0: 1}</code>: one prefix, the empty one, with sum 0. That entry is what lets a subarray start at index 0. On 5, 1 with <var>k</var> = 5, the answer [5] pairs prefix 5 with prefix 0. Leave the seed out, and it is silently missed." },
     { t: "Two dimensions, same idea, one more term",
-      d: "For a grid, <code>P[i+1][j+1]</code> holds the sum of the whole rectangle above and left. Building it, and querying it, both need inclusion exclusion: add the two overlapping rectangles, then subtract the corner you counted twice. Any rectangle sum is then 4 lookups, O(1)." },
+      d: "For a grid, <code>P[i+1][j+1]</code> holds the sum of the whole rectangle above and to the left. Building and querying both use inclusion-exclusion: add two overlapping rectangles, then subtract the corner counted twice. Any rectangle sum is then 4 lookups, O(1)." },
     { t: "Run it backwards for updates, and know when it stops working",
-      d: "A <b>difference array</b> is the mirror image. To add v over l..r, write <code>d[l] += v</code> and <code>d[r+1] -= v</code>. That is O(1) per update. Then take prefix sums once at the end to recover the array. Many updates, one read. What neither version survives is the array <b>changing between queries</b>: one write invalidates the whole tail of the prefix array. That case is what a Fenwick tree or segment tree is for, O(log n) per update and per query." },
+      d: "A <b>difference array</b> is the mirror image. To add <var>v</var> over <var>l</var>..<var>r</var>, write <code>d[l] += v</code> and <code>d[r+1] -= v</code>: O(1) per update. Take prefix sums once at the end to recover the array. What neither version survives is the array <b>changing between queries</b>. That needs a Fenwick tree or segment tree, O(log <var>n</var>) each." },
   ],
 
-  hing: `<p><b>Problem ki shakal:</b> baar baar poocha jaa raha hai "l se r tak ka sum kya hai". Har baar loop chalao to O(n) per query, q queries par O(n·q), aur TLE.</p>
-<p><b>Asli idea:</b> ek hi baar left se right chalo aur har point ka <b>running total</b> likh lo. Ab kisi bhi range ka sum ek <b>ghatav</b> hai. Build O(n), phir har query <b>O(1)</b>.</p>
-<p><b>pre array n+1 lambi kyun, aur pehla element 0 kyun?</b> Kyunki <code>pre[0] = 0</code> ka matlab hai "khaali prefix", yaani shuru se pehle kuch nahi. Isse <code>l = 0</code> wala case <b>special case rehta hi nahi</b>. Identity yaad rakho: <code>sum(l..r) = pre[r+1] - pre[l]</code>. Jitne bhi off by one bugs is pattern mein hote hain, sab yahin se aate hain. Pehle identity bolo, phir code likho.</p>
-<p><b>Sabse important part, hash map wala counting trick:</b> "kitne subarrays ka sum k hai" poocha gaya. Seedha likho: <code>pre[r+1] - pre[l] = k</code>, ise ghumao to <code>pre[l] = pre[r+1] - k</code>. Matlab har position par sirf yeh poochna hai: <b>itni value wale kitne purane prefix dekhe hain?</b> Ek map rakho jisme har prefix sum ki count ho. Ek hi pass mein kaam khatam. <b>O(n)</b>.</p>
-<p><b>Map ko <code>{0: 1}</code> se seed karna mat bhoolna.</b> Woh ek entry khaali prefix hai. Uske bina woh saare subarrays chhoot jaate hain jo index 0 se shuru hote hain, aur test case 3 par silently galat answer aata hai.</p>
-<p><b>Sliding window ya prefix sums, kaunsa?</b> Sliding window tab chalta hai jab sab numbers <b>positive</b> hon, kyunki tabhi window badhne se sum badhta hai (monotonic). Negative numbers aate hi woh assumption toot jaata hai. Prefix sums + hash map ko monotonicity chahiye hi nahi, isliye negatives ke saath wahi sahi tool hai. Doosri taraf, agar longest ya shortest window chahiye aur saare numbers positive hain, to sliding window jeet jaata hai. Woh O(1) space mein ho jaata hai, jabki prefix sums O(n) memory maangta hai. Constraints padho, phir choose karo.</p>
-<p><b>2-D version (integral image):</b> grid mein har rectangle ka sum 4 lookups mein. Formula mein do rectangles jodo aur jo corner do baar gin liya use ghatao, yeh inclusion exclusion hai. Sign galat likhna sabse aam galti hai, ek chhoti 2x2 grid par haath se verify kar lo.</p>
-<p><b>Difference array, ulta khel:</b> yahan bahut saare <b>range updates</b> hain aur padhna sirf end mein hai. <code>d[l] += v</code>, <code>d[r+1] -= v</code>, har update O(1), aur last mein ek prefix sum pass se poora array wapas. Array n+1 size ka rakho warna <code>r = n-1</code> par index out of bounds.</p>
-<p><b>Aur agar array beech mein badalta rahe?</b> Tab prefix sums mar jaata hai, ek update poore tail ko invalid kar deta hai. Wahan <b>Fenwick tree ya segment tree</b> chahiye, O(log n) per update aur per query. Interview mein itna bol dena kaafi hai.</p>`,
+  variants: [
+    { n: "1-D prefix array", cost: "O(n) build, O(1) per query",
+      idea: "pre has <var>n</var> + 1 entries starting at 0; any range is pre[<var>r</var> + 1] − pre[<var>l</var>].",
+      when: "Many range-sum questions on an array that does not change.",
+      watch: "Pick one convention, inclusive or half-open, before the first line, and never mix them." },
+    { n: "Prefix sums plus a hash map", cost: "O(n) time, O(n) space",
+      idea: "Sweep once; at each running total, count earlier totals equal to it minus <var>k</var>.",
+      when: "Count subarrays with sum <var>k</var>, or divisible by <var>k</var> (store remainders), or with equal 0s and 1s (store the running difference).",
+      watch: "Seed with {0: 1}. For “longest” rather than “how many”, store the first index of each total instead of a count." },
+    { n: "2-D prefix sums", cost: "O(R × C) build, O(1) per rectangle",
+      idea: "Each cell holds the sum of the rectangle above and left of it. A query adds and subtracts 4 corners.",
+      when: "Many rectangle-sum questions on a fixed grid.",
+      watch: "The corner is removed twice and must be added back once. Check the signs by hand on a 2 × 2 grid." },
+    { n: "Difference array", cost: "O(1) per update, O(n) to read",
+      idea: "Mark +<var>v</var> at <var>l</var> and −<var>v</var> after <var>r</var>, then take prefix sums once.",
+      when: "Many range updates, and the array is read once at the end: bookings, car pooling.",
+      watch: "It needs <var>n</var> + 1 slots, since an update ending at the last index writes one past it." },
+    { n: "Prefix XOR, product, or count", cost: "same as sums",
+      idea: "Any operation that can be undone works: XOR undoes itself, counts subtract.",
+      when: "XOR of a range, number of vowels in a range, and similar.",
+      watch: "Max and min cannot be undone by subtraction. Range max needs a sparse table or a segment tree." },
+  ],
+
+  hing: `<p><b>Problem samjho:</b> array ke kisi hisse ka sum poocha gaya, phir doosre hisse ka, phir teesre ka. Har baar loop chala kar jodoge to ek query O(<var>n</var>), aur <var>q</var> queries O(<var>n</var>·<var>q</var>). 10⁶ din aur 10⁶ queries par yeh 10¹² additions.</p>
+<p><b>Ilaaj: jodna ek hi baar karo.</b> Left se right chalte hue har point tak ka running total likh lo. Isse prefix array banta hai: <code>pre[0] = 0</code>, <code>pre[i+1] = pre[i] + a[i]</code>. <code>3, 1, 4, 1, 5</code> ke liye <code>0, 3, 4, 8, 9, 14</code>.</p>
+<p><b>Ab koi bhi range ek subtraction:</b> <code>sum(l..r) = pre[r+1] - pre[l]</code>. Matlab "<var>r</var> tak sab kuch" minus "<var>l</var> se pehle ka sab kuch". Din 1 se 3: 9 − 3 = 6. <b>O(1) per query</b>.</p>
+<p><b>Shuru mein 0 kyun?</b> Woh khaali prefix hai. Iske bina index 0 se shuru hone wali range special case ban jaati hai. Is pattern ke lagbhag saare off-by-one bugs yahin se aate hain.</p>
+<p><b>Asli interview wala version:</b> kitne subarrays ka sum theek <var>k</var> hai? Identity ko ulta likho: <code>pre[l] = pre[r+1] - k</code>. Ek pass mein chalo, aur hash map se poochho ki pehle kitne prefixes ki value <code>run - k</code> thi. <var>k</var> = 5 par teen pairs milte hain. <b>O(<var>n</var>)</b>, aur <b>negative numbers ke saath bhi chalta hai</b>, jahan sliding window fail ho jaata hai.</p>
+<p><b>Sabse common galti:</b> map ko <code>{0: 1}</code> se shuru karna bhool jaana. Woh khaali prefix hai. Iske bina index 0 se shuru hone wale saare subarrays chhoot jaate hain, aur answer galat par believable aata hai.</p>
+<p><b>Ulta istemaal: difference array.</b> Bahut saare range updates hain aur array sirf aakhir mein padhna hai? <code>d[l] += v</code>, <code>d[r+1] -= v</code>, har update O(1). Aakhir mein ek baar prefix sum le lo.</p>
+<p><b>Kab kaam nahi karta:</b> agar queries ke beech array badalta rehta hai, to ek update ke baad poora prefix array bekaar. Wahan Fenwick tree ya segment tree chahiye, O(log <var>n</var>) har operation.</p>`,
 
   viz: ["prefix-sums"],
 
   math: [
-    { t: "The identity, with every term cancelling", d: "One subtraction answers a range because the shared beginning appears in both prefixes with opposite signs.", w:
+    { t: "The identity, with every term cancelling", d: "One subtraction answers a range because the shared beginning appears in both prefixes, with opposite signs.", w:
 `pre[0] = 0,  pre[i+1] = pre[i] + a[i]
 
 pre[r+1] - pre[l]
   = (a[0] + ... + a[r]) - (a[0] + ... + a[l-1])
   = a[l] + ... + a[r]
 
-everything before index l cancels.
-pre[0] = 0 is what makes l = 0 work without a branch.` },
-    { t: "What the pre-pass buys, over q queries", d: "The build is one pass. Every query afterwards is a subtraction, so the whole cost is additive rather than multiplicative.", w:
+a = 3 1 4 1 5,  pre = 0 3 4 8 9 14
+sum a[1..3] = pre[4] - pre[1] = 9 - 3 = 6 = 1 + 4 + 1
+pre[0] = 0 is what makes l = 0 work without a branch` },
+    { t: "What the build buys, over q queries", d: "The build is one pass. Every query after it is a subtraction, so the costs add instead of multiplying.", w:
 `q range-sum queries over n items
 
 scan per query:   q x n
@@ -14341,63 +14377,60 @@ prefix array:     n to build + 1 per query = n + q
 
 n = 10^6, q = 10^6:
   10^12   vs   2 x 10^6` },
-    { t: "Rearrange the identity and it counts subarrays", d: "This is the version interviews actually ask. The same equation solved for the other unknown becomes a hash-map lookup.", w:
-`want sum(l..r) = k
+    { t: "Rearrange the identity and it counts subarrays", d: "This is the version interviews ask. The same equation, solved for the other unknown, becomes a hash-map lookup.", w:
+`want sum(l..r) = k,  so  pre[l] = pre[r+1] - k
 
-  pre[r+1] - pre[l] = k
-  pre[l] = pre[r+1] - k
+a = 3 1 4 1 5,  k = 5,  seen starts {0: 1}
+run  3   look  -2   found 0   total 0   seen += 3
+run  4   look  -1   found 0   total 0   seen += 4
+run  8   look   3   found 1   total 1   [1, 4]
+run  9   look   4   found 1   total 2   [4, 1]
+run 14   look   9   found 1   total 3   [5]
 
-so walk r, and ask how many earlier prefixes equalled
-pre[r+1] - k.  One pass, O(n), and it handles negatives,
-which a sliding window cannot.
-
-seed the map with {0: 1}, or every subarray starting at
-index 0 is missed.` },
-    { t: "Two dimensions, one extra term", d: "The rectangle sum subtracts two strips and adds the corner back, because the corner was removed twice. Inclusion-exclusion, four lookups, any size.", w:
+one pass, O(n), and negatives are fine` },
+    { t: "Two dimensions, one extra term", d: "The rectangle sum subtracts two strips and adds the corner back, because the corner was removed twice. Four lookups, any size.", w:
 `sum of rows r1..r2, columns c1..c2:
-
     P[r2+1][c2+1]
   - P[r1][c2+1]        the strip above
   - P[r2+1][c1]        the strip to the left
   + P[r1][c1]          the overlap, removed twice
 
 build O(R x C), query O(1) with exactly 4 lookups` },
-    { t: "Run it backwards for range updates", d: "A difference array is the same identity with the roles swapped: mark the two edges, and one prefix pass at the end applies every update at once.", w:
-`add v to every index in [l, r):
-  d[l] += v,  d[r] -= v            two writes, O(1)
+    { t: "Run it backwards for range updates", d: "A difference array is the same identity with the roles swapped: mark the two edges, and one prefix pass at the end applies every update.", w:
+`add v to every index in l..r:
+  d[l] += v,  d[r+1] -= v          two writes, O(1)
 
 after all m updates, prefix-sum d once  ->  the array
 
-m updates then one read:   m + n
-applying each update directly:   m x n
-
+m updates then one read:        m + n
+applying each update directly:  m x n
 n = 10^6, m = 10^6:  2 x 10^6   vs   10^12` },
   ],
 
   costs: [
     ["build the prefix array", "O(n) time · O(n) space", "paid once, before any query is answered"],
-    ["one range sum query", "O(1)", "two array reads and a subtraction, nothing depends on the range width"],
-    ["q queries, naive vs prefix", "O(n·q) vs O(n + q)", "the whole reason the pattern exists"],
-    ["count subarrays with sum k", "O(n) time · O(n) space", "one pass, the map holds at most n distinct prefix values"],
-    ["2-D build, then rectangle query", "O(R·C) then O(1)", "4 corner lookups, independent of rectangle size"],
+    ["one range sum query", "O(1)", "two array reads and a subtraction, whatever the width"],
+    ["q queries, plain vs prefix", "O(n·q) vs O(n + q)", "the whole reason the pattern exists"],
+    ["count subarrays with sum k", "O(n) time · O(n) space", "one pass; the map holds at most n + 1 distinct totals"],
+    ["2-D build, then rectangle query", "O(R·C) then O(1)", "4 corner lookups, whatever the rectangle size"],
     ["m range updates, one final read", "O(m + n)", "difference array: O(1) per update, one prefix pass at the end"],
     ["array changes between queries", "O(log n) with a Fenwick tree", "a plain prefix array would need an O(n) rebuild per write"],
   ],
 
   traps: [
-    "<b>Writing <code>pre[r] - pre[l]</code>.</b> The correct identity is <code>pre[r+1] - pre[l]</code> when <code>pre</code> is the n+1 form. Decide which convention you are using before the first line, and never mix the two in one function.",
-    "<b>Forgetting <code>seen[0] = 1</code></b> in the counting version. Without it, every subarray that starts at index 0 is missed. It passes the first sample and fails the rest, which is the worst possible failure mode.",
-    "<b>Integer overflow.</b> Prefix sums grow to n times the largest element. 100,000 values of a billion each land near 10 to the 14, far past a 32-bit int. Use 64-bit in Java and C++.",
-    "<b>Reaching for a sliding window when negatives are allowed.</b> The shrink rule assumes the sum grows with the window. Prefix sums plus a hash map do not need that assumption.",
-    "<b>Sign errors in the 2-D formula.</b> The corner rectangle is subtracted twice and must be added back. Check it once by hand on a 2x2 grid instead of guessing signs at 2am.",
-    "<b>Sizing the difference array at n.</b> An update ending at the last index writes to <code>d[r+1]</code>, so it needs n+1 slots or a guard.",
+    "<b>Writing <code>pre[r] - pre[l]</code>.</b> With the <var>n</var> + 1 form, the identity is <code>pre[r+1] - pre[l]</code>. Decide the convention before the first line, and never mix two in one function.",
+    "<b>Forgetting <code>seen[0] = 1</code></b> in the counting version. Every subarray starting at index 0 is then missed. It can pass the first sample and fail the rest.",
+    "<b>Integer overflow.</b> Prefix sums grow to <var>n</var> times the largest element: 10⁵ values of 10⁹ each reach 10¹⁴, far past a 32-bit int. Use 64-bit in Java and C++.",
+    "<b>Using a sliding window when negatives are allowed.</b> Its shrink rule assumes the sum grows with the window. Prefix sums with a hash map make no such assumption.",
+    "<b>Sign errors in the 2-D formula.</b> The corner is subtracted twice and must be added back once. Check it by hand on a 2 × 2 grid instead of guessing signs.",
+    "<b>Sizing the difference array at <var>n</var>.</b> An update ending at the last index writes to <code>d[r+1]</code>, so it needs <var>n</var> + 1 slots or a guard.",
   ],
 
   impl: [
-    ["Python", "itertools.accumulate(a, initial=0) / collections.defaultdict(int)", "initial=0 gives the n+1 form directly; ints are arbitrary precision so overflow is not a concern."],
-    ["Java", "long[] pre / HashMap<Long,Integer>", "Use long, not int, or the sum silently wraps. Boxing Long keys is slow, autoboxing caches only small values."],
-    ["C++", "std::partial_sum, std::exclusive_scan, unordered_map<long long,int>", "Use long long. exclusive_scan gives the leading zero; partial_sum does not."],
-    ["JavaScript", "Array.prototype.reduce / Map", "Numbers lose exactness past 2^53, use BigInt for very large sums. Use a Map, object keys become strings."],
+    ["Python", "itertools.accumulate(a, initial=0) / collections.defaultdict(int)", "initial=0 gives the n+1 form directly; ints never overflow."],
+    ["Java", "long[] pre / HashMap<Long,Integer>", "Use long, not int, or the sum silently wraps. Boxing Long keys is slow on tight limits."],
+    ["C++", "std::partial_sum, std::exclusive_scan, unordered_map<long long,int>", "Use long long. partial_sum into pre.begin() + 1 keeps the leading zero; exclusive_scan over n inputs drops the final total."],
+    ["JavaScript", "Array.prototype.reduce / Map", "Numbers lose exactness past 2^53; use BigInt for very large sums. Use a Map, since object keys become strings."],
   ],
 
   code: {
@@ -14521,7 +14554,7 @@ static long[] applyUpdates(int n, int[][] updates) {
 vector<long long> build(const vector<int>& a) {
     vector<long long> pre(a.size() + 1, 0);
     for (size_t i = 0; i < a.size(); ++i) pre[i + 1] = pre[i] + a[i];
-    return pre;                         // or std::exclusive_scan
+    return pre;           // partial_sum into pre.begin() + 1 also works
 }
 
 long long rangeSum(const vector<long long>& pre, int l, int r) {
@@ -14614,10 +14647,10 @@ function applyUpdates(n, updates) {
   q: [
     ["Why does the prefix array have n+1 entries and start at 0?", "The leading zero is the sum of the empty prefix. With it, sum(l..r) = pre[r+1] - pre[l] holds for l = 0 too, so there is no special case to forget."],
     ["State the range sum identity and read it in words.", "sum(l..r) = pre[r+1] - pre[l]: everything up to and including r, minus everything strictly before l."],
-    ["How do you count subarrays with sum k in O(n)?", "Rearrange pre[r+1] - pre[l] = k into pre[l] = pre[r+1] - k. Sweep once keeping a hash map of how many times each prefix sum has been seen, and at each position add the count of run - k."],
-    ["Why must the map be seeded with {0: 1}?", "That entry is the empty prefix. Without it every subarray starting at index 0 goes uncounted, and the code still returns a plausible looking number."],
-    ["Sliding window or prefix sums plus a hash map?", "A window needs the sum to grow monotonically as the window grows, so it needs all-positive values, and it pays O(1) space. Prefix sums plus a map assume no monotonicity, so they handle negatives, at O(n) memory. Negatives present, or you are counting rather than finding a best window, means prefix sums."],
-    ["What breaks the pattern, and what do you use instead?", "Updates to the array between queries: one write invalidates every prefix after it, forcing an O(n) rebuild. A Fenwick tree or segment tree gives O(log n) per update and per query instead."],
+    ["How do you count subarrays with sum k in O(n)?", "Rearrange pre[r+1] - pre[l] = k into pre[l] = pre[r+1] - k. Sweep once with a hash map of how often each running total has appeared, and at each position add the count of run - k."],
+    ["Why must the map be seeded with {0: 1}?", "That entry is the empty prefix. Without it, every subarray starting at index 0 goes uncounted, and the code still returns a plausible number."],
+    ["Sliding window or prefix sums plus a hash map?", "A window needs the sum to grow as the window grows, so all values must be positive; it uses O(1) space. Prefix sums with a map assume nothing, so they handle negatives, at O(n) memory. Negatives, or counting rather than finding one best window, means prefix sums."],
+    ["What breaks the pattern, and what do you use instead?", "Updates between queries: one write invalidates every prefix after it, forcing an O(n) rebuild. A Fenwick tree or segment tree gives O(log n) per update and per query."],
   ],
 
   p: [
@@ -14629,97 +14662,222 @@ function applyUpdates(n, updates) {
     [304, "range-sum-query-2d-immutable", "Range Sum Query 2D, inclusion exclusion", "M"],
     [1109, "corporate-flight-bookings", "Corporate Flight Bookings, difference array", "M"],
   ],
+
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek fitness app <b>10⁶ dinon</b> mein se har din ke steps rakhta hai, aur users poochhte rehte hain “din <var>l</var> se din <var>r</var> tak kitne steps?”: 10⁶ sawaal, har ek alag endpoints ke saath.</p>
+<p>Chhota version: paanch din, <code>3, 1, 4, 1, 5</code> (hazaar steps). Din 1 se 3 ka total 1 + 4 + 1 = 6.</p>`,
+      tries: [
+        ["Har baar poochhe jaane par range jodo", "Har query apni range chalti hai: 10⁶ additions tak. 10⁶ queries 10¹² banati hain, aur ranges overlap karti hain, to wahi numbers baar baar jude jaate hain."],
+        ["Har possible (l, r) ka answer pehle se nikaalo", "Har query lookup ban jaati hai, par <var>n</var>(<var>n</var> + 1) / 2 ranges hain: 10⁶ dinon ke liye 5 × 10¹¹ stored answers. Kisi bhi memory se bahut aage."],
+      ],
+      so: `<p>To sirf <b>running totals</b> rakho: pre = <code>0, 3, 4, 8, 9, 14</code>, jahan pre[<var>i</var>] pehle <var>i</var> dinon ka sum hai. Din 1 se 3 matlab “din 3 tak sab, minus din 1 se pehle ka sab”: pre[4] − pre[1] = 9 − 3 = 6.</p>
+<p>Banane ko ek pass, phir har query ek subtraction: kul 2 × 10⁶ steps, 10¹² ki jagah. Ulta likhne par yahi identity ek pass mein yeh bhi ginti hai ki kitni ranges ek target tak judti hain. Page poore mein yahi paanch din use karta hai.</p>`,
+    },
+
+    one: "Har running total rakhne ke liye ek baar O(<var>n</var>) do, phir <b>koi bhi</b> range sum ek subtraction: sum(<var>l</var>..<var>r</var>) = pre[<var>r</var> + 1] − pre[<var>l</var>], har query O(1).",
+
+    plain: `<p>Problem: array ke ek hisse ka sum poocha jaata hai, phir dobara, phir dobara, alag endpoints ke saath. Har baar hissa jodna har sawaal par O(<var>n</var>), to <var>q</var> sawaal O(<var>n</var>·<var>q</var>). 10⁶ din aur 10⁶ sawaalon par 10¹² additions.</p>
+<p>Iski jagah jodna ek baar karo. Array par left se right chalo, har point par running total likhte hue. <code>3, 1, 4, 1, 5</code> ke liye yeh <code>0, 3, 4, 8, 9, 14</code> hai. Din 1 se 3 ka sum din 3 tak ka total minus din 1 se pehle ka total: 9 − 3 = 6. Ek subtraction, chaudai chahe jo ho.</p>
+<p>Yahi trick ulti chalao to alag sawaal ka answer. Maan lo ranges par bahut saare <b>updates</b> hain, aur array sirf aakhir mein chahiye. Har update ko uske do kinaaron par mark karo, phir aakhir mein ek baar running total lo.</p>
+<p><b>Analogy.</b> Highway par milestones. Do shehron ke beech sadak koi nahi naapta. Har shehar ka marker padho aur ghatao.</p>`,
+
+    why: [
+      { t: "Wahi hissa dobara jodna hi barbaadi hai",
+        d: "Ek range sum loop se nikaalna O(<var>n</var>) hai. Aise <var>q</var> nikaalna O(<var>n</var>·<var>q</var>), aur ranges bahut overlap karti hain, to wahi numbers baar baar jude jaate hain. Seedhe solution mein bas yahi dohraav galat hai." },
+      { t: "Jodna ek baar karo aur har running total rakho",
+        d: "Ek left-to-right pass har <var>i</var> ke liye pehle <var>i</var> elements ka sum deta hai. Yeh O(<var>n</var>) time aur O(<var>n</var>) space, ek baar. 3, 1, 4, 1, 5 ke totals 3, 4, 8, 9, 14 hain. Classic sauda: pehle se nikaalo, phir turant answer do." },
+      { t: "Array n + 1 lamba rakho aur 0 se shuru karo",
+        d: "<code>pre[0] = 0</code> aur <code>pre[i+1] = pre[i] + a[i]</code> rakho. Shuru ka zero matlab <b>khaali prefix exist karta hai</b>, to index 0 se shuru hone wali range special case nahi. Is pattern ke lagbhag saare off-by-one bugs extra slot ko optional maanne se aate hain." },
+      { t: "Ab har range ek subtraction hai",
+        d: "<code>sum(l..r) = pre[r+1] - pre[l]</code>. Aise padho: <var>r</var> tak sab, minus <var>l</var> se pehle ka sab. Din 1 se 3: pre[4] − pre[1] = 9 − 3 = 6. <var>l</var> = 0 par muft mein chalta hai, kyunki pre[0] 0 hai. Code se pehle identity zor se bolo; marks endpoints par jaate hain." },
+      { t: "Bada wala: identity ulto aur hash map se gino",
+        d: "Sum <var>k</var> wale subarrays ginna matlab theek <var>k</var> farak wale totals ke pairs ginna: pre[<var>l</var>] = pre[<var>r</var> + 1] − <var>k</var>. Ek baar chalo, aur har prefix par map se poochho ki kitne pichhle prefixes ki value chahiye wali thi. <var>k</var> = 5 par pairs 3 aur 8, 4 aur 9, 9 aur 14: teen subarrays. Yeh <b>negative numbers ke saath chalta hai</b>, jahan sliding window nahi." },
+      { t: "Map ko khaali prefix se shuru karo",
+        d: "Map <code>{0: 1}</code> se shuru hota hai: ek prefix, khaali wala, sum 0. Wahi entry subarray ko index 0 se shuru hone deti hai. <var>k</var> = 5 ke saath 5, 1 par answer [5] prefix 5 ko prefix 0 se jodta hai. Seed chhodo, aur yeh chupchaap chhoot jaata hai." },
+      { t: "Do dimensions, wahi idea, ek term aur",
+        d: "Grid ke liye <code>P[i+1][j+1]</code> upar aur left ke poore rectangle ka sum rakhta hai. Banana aur query dono inclusion-exclusion use karte hain: do overlapping rectangles jodo, phir do baar gina corner ghatao. Koi bhi rectangle sum phir 4 lookups, O(1)." },
+      { t: "Updates ke liye ulta chalao, aur jaano kab kaam band",
+        d: "<b>Difference array</b> ulti tasveer hai. <var>l</var>..<var>r</var> par <var>v</var> jodne ke liye <code>d[l] += v</code> aur <code>d[r+1] -= v</code> likho: har update O(1). Array wapas paane ko aakhir mein ek baar prefix sums lo. Jo dono nahi jhel paate woh hai <b>queries ke beech array badalna</b>. Uske liye Fenwick tree ya segment tree, har ek O(log <var>n</var>)." },
+    ],
+
+    variants: [
+      { n: "1-D prefix array", cost: "O(n) build, O(1) per query",
+        idea: "pre mein <var>n</var> + 1 entries, 0 se shuru; koi bhi range pre[<var>r</var> + 1] − pre[<var>l</var>].",
+        when: "Na badalne wale array par bahut saare range-sum sawaal.",
+        watch: "Pehli line se pehle ek convention chuno, inclusive ya half-open, aur kabhi mat milao." },
+      { n: "Prefix sums plus a hash map", cost: "O(n) time, O(n) space",
+        idea: "Ek baar chalo; har running total par, usme se <var>k</var> ghata kar barabar wale pichhle totals gino.",
+        when: "Sum <var>k</var> wale subarrays gino, ya <var>k</var> se divisible (remainders rakho), ya barabar 0s aur 1s wale (running farak rakho).",
+        watch: "{0: 1} se seed karo. “Kitne” ki jagah “sabse lamba” ho, to ginti ki jagah har total ka pehla index rakho." },
+      { n: "2-D prefix sums", cost: "O(R × C) build, O(1) per rectangle",
+        idea: "Har cell apne upar aur left ke rectangle ka sum rakhta hai. Query 4 corners jodti ghatati hai.",
+        when: "Fixed grid par bahut saare rectangle-sum sawaal.",
+        watch: "Corner do baar hatta hai aur ek baar wapas jodna hai. 2 × 2 grid par haath se signs check karo." },
+      { n: "Difference array", cost: "O(1) per update, O(n) to read",
+        idea: "<var>l</var> par +<var>v</var> aur <var>r</var> ke baad −<var>v</var> mark karo, phir ek baar prefix sums.",
+        when: "Bahut saare range updates, aur array aakhir mein ek baar padha jaaye: bookings, car pooling.",
+        watch: "<var>n</var> + 1 slots chahiye, kyunki aakhri index par khatam update ek aage likhta hai." },
+      { n: "Prefix XOR, product, or count", cost: "same as sums",
+        idea: "Koi bhi operation jo undo ho sake chalta hai: XOR khud ko undo karta hai, counts ghatate hain.",
+        when: "Range ka XOR, range mein vowels ki ginti, aur aise.",
+        watch: "Max aur min subtraction se undo nahi hote. Range max ko sparse table ya segment tree chahiye." },
+    ],
+
+    math: [
+      { t: "Identity, har term katte hue", d: "Ek subtraction range ka answer deta hai kyunki saanjha shuruaati hissa dono prefixes mein ulte signs ke saath aata hai." },
+      { t: "q queries par build kya deta hai", d: "Build ek pass hai. Uske baad har query ek subtraction, to costs guna nahi, judti hain." },
+      { t: "Identity ulto aur yeh subarrays ginti hai", d: "Interview yahi version poochhte hain. Wahi equation, doosre unknown ke liye hal ki hui, hash-map lookup ban jaati hai." },
+      { t: "Do dimensions, ek term aur", d: "Rectangle sum do strips ghatata hai aur corner wapas jodta hai, kyunki corner do baar hata tha. Chaar lookups, koi bhi size." },
+      { t: "Range updates ke liye ulta chalao", d: "Difference array wahi identity hai, roles badle hue: do kinaare mark karo, aur aakhir ka ek prefix pass har update laga deta hai." },
+    ],
+
+    costs: [
+      ["build the prefix array", "O(n) time · O(n) space", "ek baar, kisi bhi query ke answer se pehle"],
+      ["one range sum query", "O(1)", "do array reads aur ek subtraction, chaudai chahe jo ho"],
+      ["q queries, plain vs prefix", "O(n·q) vs O(n + q)", "pattern ke hone ki poori wajah"],
+      ["count subarrays with sum k", "O(n) time · O(n) space", "ek pass; map mein zyada se zyada n + 1 alag totals"],
+      ["2-D build, then rectangle query", "O(R·C) then O(1)", "4 corner lookups, rectangle size chahe jo ho"],
+      ["m range updates, one final read", "O(m + n)", "difference array: har update O(1), aakhir mein ek prefix pass"],
+      ["array changes between queries", "O(log n) with a Fenwick tree", "seedhe prefix array ko har write par O(n) rebuild chahiye"],
+    ],
+
+    traps: [
+      "<b><code>pre[r] - pre[l]</code> likhna.</b> <var>n</var> + 1 form ke saath identity <code>pre[r+1] - pre[l]</code> hai. Pehli line se pehle convention tay karo, aur ek function mein do kabhi mat milao.",
+      "<b>Counting version mein <code>seen[0] = 1</code> bhoolna.</b> Tab index 0 se shuru har subarray chhoot jaata hai. Pehla sample pass aur baaki fail ho sakte hain.",
+      "<b>Integer overflow.</b> Prefix sums sabse bade element ke <var>n</var> guna tak badhte hain: 10⁹ ki 10⁵ values 10¹⁴ tak, 32-bit int se bahut aage. Java aur C++ mein 64-bit use karo.",
+      "<b>Negatives allowed hon tab sliding window.</b> Uska shrink rule maanta hai ki window ke saath sum badhta hai. Hash map wale prefix sums aisa kuch nahi maante.",
+      "<b>2-D formula mein sign ki galti.</b> Corner do baar ghatta hai aur ek baar wapas jodna hai. Signs guess karne ki jagah 2 × 2 grid par haath se check karo.",
+      "<b>Difference array ko <var>n</var> size dena.</b> Aakhri index par khatam update <code>d[r+1]</code> mein likhta hai, to <var>n</var> + 1 slots ya guard chahiye.",
+    ],
+
+    impl: [
+      ["Python", "itertools.accumulate(a, initial=0) / collections.defaultdict(int)", "initial=0 seedha n+1 form deta hai; ints kabhi overflow nahi hote."],
+      ["Java", "long[] pre / HashMap<Long,Integer>", "int nahi long use karo, warna sum chupchaap wrap hota hai. Long keys ki boxing tight limits par slow hai."],
+      ["C++", "std::partial_sum, std::exclusive_scan, unordered_map<long long,int>", "long long use karo. partial_sum ko pre.begin() + 1 mein likhna shuru ka zero rakhta hai; n inputs par exclusive_scan aakhri total chhod deta hai."],
+      ["JavaScript", "Array.prototype.reduce / Map", "2^53 ke baad numbers exact nahi rehte; bahut bade sums ke liye BigInt. Map use karo, kyunki object keys strings ban jaati hain."],
+    ],
+
+    codecap: "Ek build, ek subtraction, aur ek hash map. Difference array wahi code doosre sire se padha hua hai.",
+
+    q: [
+      ["Prefix array mein n+1 entries kyun, aur 0 se shuru kyun?", "Shuru ka zero khaali prefix ka sum hai. Iske saath sum(l..r) = pre[r+1] - pre[l] l = 0 par bhi chalta hai, to bhoolne ko koi special case nahi."],
+      ["Range sum identity batao aur shabdon mein padho.", "sum(l..r) = pre[r+1] - pre[l]: r tak aur r samet sab, minus l se sakhti se pehle ka sab."],
+      ["O(n) mein sum k wale subarrays kaise gino?", "pre[r+1] - pre[l] = k ko pre[l] = pre[r+1] - k mein badlo. Ek baar chalo, hash map ke saath ki har running total kitni baar aaya, aur har position par run - k ki ginti jodo."],
+      ["Map ko {0: 1} se seed kyun karna zaroori hai?", "Woh entry khaali prefix hai. Iske bina index 0 se shuru har subarray bina gine reh jaata hai, aur code phir bhi believable number lautata hai."],
+      ["Sliding window ya prefix sums plus hash map?", "Window chahti hai ki window badhne par sum badhe, to saari values positive honi chahiye; yeh O(1) space leti hai. Map wale prefix sums kuch nahi maante, to negatives sambhalte hain, O(n) memory par. Negatives, ya ek best window dhoondhne ki jagah ginna, matlab prefix sums."],
+      ["Pattern kya todta hai, aur uski jagah kya use karo?", "Queries ke beech updates: ek write uske baad ka har prefix bekaar kar deta hai, O(n) rebuild zaroori. Fenwick tree ya segment tree har update aur query par O(log n) deta hai."],
+    ],
+  },
 },
 /* ==================================================================== */
 {
   id: "kadane",
   n: "Kadane and maximum subarray",
   group: "Patterns",
+  need: {
+    ask: `<p>A shop has a profit or a loss for each of <b>10⁵ days</b>. Which unbroken stretch of days made the most money in total? A stretch may include bad days, as long as the whole stretch comes out ahead.</p>
+<p>The small version: six days, <code>-2, 3, -1, 4, -3, 2</code>. The best stretch is <code>3, -1, 4</code>, worth 6, and it contains a loss.</p>`,
+    tries: [
+      ["Try every start and end, carrying a running total", "Correct, and <var>n</var>(<var>n</var> + 1) / 2 stretches: 21 for six days, 5 × 10⁹ for 10⁵ days."],
+      ["Take the good days, stop at the first bad one", "From the 3, stopping at −1 gives 3. But 3, −1, 4 makes 6: the −1 was worth carrying to reach the 4. And the good days alone, 3 + 4 + 2, are not one unbroken stretch."],
+    ],
+    so: `<p>So ask a smaller question: what is the best stretch that <b>ends exactly on day <var>i</var></b>? It either extends the best stretch ending the day before, or starts fresh on day <var>i</var>. Two candidates; keep the larger.</p>
+<p>Carrying the past is worth it exactly when its total is positive. One pass, two numbers, O(<var>n</var>): 10⁵ steps instead of 5 × 10⁹. That is <b>Kadane's algorithm</b>. The page follows these six days throughout.</p>`,
+  },
+
   one: "At each index there are only two candidates: extend the block that ended one step back, or start a new one here. <b>Keep the better; track the best separately.</b>",
 
-  plain: `<p>You are given an array with positive and negative numbers and asked for the contiguous stretch with the largest total. Contiguous is the hard word: you cannot pick the good numbers and skip the bad ones, so "take all the positives" is not the answer.</p>
-<p>Checking every stretch means choosing a start and an end, which is about n squared of them. The trick is to stop asking the question that way. Instead of "what is the best block anywhere", ask "what is the best block that <b>ends exactly at index i</b>". There is only one answer per index, so there are only n answers to find. And each one turns out to depend on nothing but the answer before it.</p>
-<p>Because whatever block ends at i, it either includes i-1 or it does not. If it does, it is the best block ending at i-1 with a[i] stuck on the end. If it does not, it is just a[i] on its own. Two candidates, take the larger, move on. That is the entire algorithm, and it fits on two lines.</p>
-<p><b>Analogy.</b> Walking a hilly path, keeping a running altitude. Whenever your accumulated total drops below zero, the ground behind you is a net cost to carry, so you drop it and start measuring from where you stand. You still remember the highest point you ever reached.</p>`,
+  plain: `<p>You have an array of positive and negative numbers, and want the unbroken stretch with the largest total. “Unbroken” is the hard word. You cannot pick the good numbers and skip the bad, so “take all the positives” is not the answer.</p>
+<p>Checking every stretch means choosing a start and an end: about <var>n</var>² of them. The trick is to ask differently. Not “what is the best block anywhere”, but “what is the best block that <b>ends exactly at index <var>i</var></b>”. There is one answer per index, so only <var>n</var> answers to find, and each depends only on the one before it.</p>
+<p>A block ending at <var>i</var> either includes <var>i</var> − 1 or it does not. If it does, it is the best block ending at <var>i</var> − 1 with a[<var>i</var>] added. If not, it is a[<var>i</var>] alone. At the 3 in <code>-2, 3, -1, 4, -3, 2</code>: carrying gives −2 + 3 = 1, starting fresh gives 3. Start fresh. At the −1: carrying gives 2, fresh gives −1. Carry.</p>
+<p><b>Analogy.</b> Walking a hilly path and keeping a running altitude. Whenever the total behind you drops below zero, it is a cost to carry, so you drop it and start measuring from where you stand. You still remember the highest point you ever reached.</p>`,
 
   why: [
-    { t: "Start from what brute force wastes", d: "Trying every (start, end) pair is <b>O(n²)</b> once you carry a running sum, and O(n³) if you re-add each block from scratch. But the block from 3 to 7 and the block from 3 to 8 share almost everything. Any time two candidates overlap that heavily, there is a cheaper formulation." },
-    { t: "Ask a smaller question with a unique answer", d: "\"The best block anywhere\" has n² candidates. \"The best block <b>ending at index i</b>\" has exactly one answer per index, so the whole problem becomes n small questions. The real answer is then just the largest of those n, which is one more pass, or the same pass." },
-    { t: "Each index has exactly two candidates", d: "A block ending at i either contains i-1 or it does not. If it does, it is the best block ending at i-1, extended by a[i]. If it does not, it is a[i] alone. <b>Nothing else can end at i</b>, so comparing those two is not a heuristic, it is exhaustive." },
-    { t: "So the recurrence writes itself", d: "cur[i] = max(a[i], cur[i-1] + a[i]). Read it in words: <b>start fresh, or carry the past forward</b>. And carrying is worth it exactly when cur[i-1] is positive, which is the same rule stated a second way." },
-    { t: "The table is one variable", d: "cur[i] reads only cur[i-1], and nothing ever looks further back, so the array of subproblems collapses to a single number. This is dynamic programming with the table thrown away, which is why the code has no table in it and does not look like DP." },
-    { t: "cur and best are different things", d: "cur is the block ending here and it can decay. best is the record and it never goes down. Keeping one variable for both is the most common bug on this page: you return a running total that has already shrunk past its peak." },
-    { t: "Seeding with zero is wrong, and quietly", d: "If every number is negative the best block is the single least-bad element, not the empty block. Initialise cur and best to <b>a[0]</b>, not to 0. Seeding with 0 passes every test that happens to contain a positive number, which is every test you will write by hand." },
+    { t: "Start from what brute force wastes",
+      d: "Trying every (start, end) pair is <b>O(<var>n</var>²)</b> with a running sum, and O(<var>n</var>³) if each block is re-added from scratch. But the block from 3 to 7 and the block from 3 to 8 share almost everything. Whenever candidates overlap that heavily, there is a cheaper way to ask." },
+    { t: "Ask a smaller question with a unique answer",
+      d: "“The best block anywhere” has about <var>n</var>² candidates. “The best block <b>ending at index <var>i</var></b>” has exactly one answer per index, so the problem becomes <var>n</var> small questions. The real answer is the largest of those <var>n</var>, tracked in the same pass." },
+    { t: "Each index has exactly two candidates",
+      d: "A block ending at <var>i</var> either contains <var>i</var> − 1 or it does not. If it does, it is the best block ending at <var>i</var> − 1, extended by a[<var>i</var>]. If not, it is a[<var>i</var>] alone. <b>Nothing else can end at <var>i</var></b>, so comparing the two is exhaustive, not a guess." },
+    { t: "So the recurrence writes itself",
+      d: "cur[<var>i</var>] = max(a[<var>i</var>], cur[<var>i</var> − 1] + a[<var>i</var>]). In words: <b>start fresh, or carry the past forward</b>. Carrying pays exactly when cur[<var>i</var> − 1] is positive. On the six days, cur runs −2, 3, 2, 6, 3, 5." },
+    { t: "The table is one variable",
+      d: "cur[<var>i</var>] reads only cur[<var>i</var> − 1], and nothing looks further back, so the whole table shrinks to one number. This is dynamic programming with the table thrown away, which is why the code has no table and does not look like DP." },
+    { t: "cur and best are different things",
+      d: "cur is the block ending here, and it can fall: 6 at index 3, then 3 at index 4. best is the record, and it never goes down: it stays 6. Using one variable for both is the most common bug on this page. It returns a running total that has already dropped past its peak." },
+    { t: "Seeding with zero is wrong, and quietly",
+      d: "If every number is negative, the best block is the single least-bad element, not an empty block. For −3, −1, −7 the answer is −1. Start cur and best at <b>a[0]</b>, not 0. A zero start passes every test that has a positive number, which is every test written by hand." },
   ],
 
   variants: [
     { n: "Maximum sum", cost: "O(n) time, O(1) space",
-      idea: "The plain version. cur = max(a[i], cur + a[i]), best = max(best, cur).",
-      when: "Any \"largest contiguous total\" question, and the buy-and-sell-stock family, which is this run on the daily differences.",
-      watch: "Seed both variables with a[0]. Seeding with 0 breaks all-negative input and nothing else." },
-
+      idea: "The plain version: cur = max(a[<var>i</var>], cur + a[<var>i</var>]), best = max(best, cur).",
+      when: "Any “largest unbroken total” question, and the buy-and-sell-stock family, which is this run on the daily differences.",
+      watch: "Seed both variables with a[0]. Seeding with 0 breaks all-negative input, and nothing else." },
     { n: "With the indices", cost: "O(n) time, O(1) space",
-      idea: "Same loop, plus a start marker. The moment you choose to restart, that index becomes the new left edge; record left and right whenever best improves.",
+      idea: "Same loop plus a start marker. When you restart, that index becomes the new left edge; record left and right whenever best improves.",
       when: "The problem wants the block itself, not just its total.",
-      watch: "Update the left edge at the restart, not when best improves. By then the restart has already happened and you record the wrong edge." },
-
+      watch: "Move the left edge at the restart, not when best improves. On the six days, the edge moves to index 1 at the 3." },
     { n: "Maximum product", cost: "O(n) time, O(1) space",
-      idea: "Track the running maximum AND the running minimum. A large negative times a new negative becomes the new maximum, so the smallest value has to be carried too.",
-      when: "The operation is multiplication, or anything else where a bad value can turn good.",
-      watch: "Compute both new values from the OLD pair. Overwriting hi before computing lo uses a value from the wrong step, and it will still pass small tests." },
-
+      idea: "Track the running maximum AND the running minimum. A large negative times a new negative becomes the new maximum, so the smallest must be carried too.",
+      when: "The operation is multiplication, or anything where a bad value can turn good.",
+      watch: "Compute both new values from the OLD pair. Overwriting the maximum first uses a value from the wrong step, and still passes small tests." },
     { n: "Circular array", cost: "O(n) time, O(1) space",
-      idea: "The answer either wraps or it does not. The non-wrapping case is plain Kadane; the wrapping case is the total minus the <b>minimum</b> subarray, found by the same loop with the comparisons flipped.",
+      idea: "The answer either wraps round the end or it does not. Not wrapping is plain Kadane. Wrapping is the total minus the <b>minimum</b> block, found by the same loop with the comparisons flipped.",
       when: "The array is stated to be circular.",
-      watch: "If every number is negative, total minus the minimum block is the empty block, which is not allowed. Detect all-negative and return the plain answer." },
-
+      watch: "If every number is negative, total minus the minimum block is the empty block, which is not allowed. Detect it and return the plain answer." },
     { n: "Two dimensions", cost: "O(rows² · cols)",
-      idea: "Fix a top row and a bottom row, collapse the rows between them into one array of column sums, and run Kadane on it. Every pair of row boundaries is tried.",
+      idea: "Fix a top and a bottom row, collapse the rows between them into one array of column sums, and run Kadane on it. Try every pair of rows.",
       when: "Maximum sum rectangle in a matrix.",
-      watch: "Build the collapsed array incrementally as the bottom row moves down. Recomputing it from scratch adds a factor of rows for nothing." },
+      watch: "Build the collapsed array step by step as the bottom row moves down. Rebuilding it from scratch adds a factor of rows for nothing." },
   ],
+
+  hing: `<p><b>Problem:</b> positive aur negative numbers ka array hai, aur sabse bada total wala <b>lagaataar hissa</b> chahiye. "Lagaataar" hi mushkil shabd hai. Achhe numbers chun kar bure chhod nahi sakte.</p>
+<p><b>Brute force:</b> har start aur har end try karo, <var>n</var>² hisse. 10⁵ par 5 × 10⁹. Chalega nahi.</p>
+<p><b>Trick: sawaal badal do.</b> "Poore array mein best block kaunsa?" ki jagah poochho "<b>index <var>i</var> par khatam hone wala</b> best block kaunsa?". Har index ka ek hi jawaab, to sirf <var>n</var> jawaab dhoondhne hain.</p>
+<p><b>Aur har index par sirf do options:</b> ya to pichhle block ko aage badhao (<code>cur + a[i]</code>), ya yahin se naya shuru karo (<code>a[i]</code>). Teesra koi raasta hai hi nahi. Jo bada ho woh rakho. Pichhla total positive ho to saath le chalo, negative ho to chhod do.</p>
+<p><b>Do variables, alag-alag:</b> <code>cur</code> abhi wala block hai, yeh gir sakta hai. <code>best</code> ab tak ka record hai, yeh kabhi nahi girta. <code>-2, 3, -1, 4, -3, 2</code> par cur 6 se 3 par girta hai, par best 6 hi rehta hai. Dono ko ek variable bana doge to galat answer aayega.</p>
+<p><b>Sabse chupa hua bug:</b> <code>cur</code> aur <code>best</code> ko 0 se shuru karna. Agar saare numbers negative hain, jaise <code>-3, -1, -7</code>, to answer <b>-1</b> hona chahiye, 0 nahi. Isliye dono ko <code>a[0]</code> se shuru karo.</p>
+<p><b>Yeh DP hi hai:</b> <code>dp[i] = max(a[i], dp[i-1] + a[i])</code>. Bas <code>dp[i]</code> sirf <code>dp[i-1]</code> padhta hai, to poori table ek variable ban jaati hai. O(<var>n</var>) time, O(1) space.</p>`,
 
   viz: ["kadane"],
 
-  hing: `<p><b>Contiguous</b> lafz hi asli dikkat hai. Achhe numbers chun kar bure chhod nahi sakte, isliye "saare positive le lo" answer nahi hai. Har (start, end) try karo to <b>O(n²)</b>, aur ek block aur uske agle block mein 90 percent cheezein same hoti hain. Itna overlap ho to hamesha koi sasta tareeka hota hai.</p>
-<p><b>Sawaal badal do.</b> "Sabse achha block kahin bhi" mat poocho. Poocho <b>"sabse achha block jo theek index i par khatam hota hai"</b>. Har index ka sirf ek jawaab hai, to poore problem ke n jawaab hain. Aur jo block i par khatam hota hai, usme ya to i-1 hai ya nahi. Hai to = pichhla best + a[i]. Nahi hai to = sirf a[i]. <b>Do hi candidate</b>, bada wala le lo. Bas, algorithm khatam.</p>
-<p><b>Do variables alag rakho, yeh sabse badi galti hai.</b> <code>cur</code> woh block hai jo yahan khatam hota hai, aur woh <b>ghat sakta hai</b>. <code>best</code> record hai, woh kabhi neeche nahi jaata. Ek hi variable mein dono karoge to aakhir mein ghata hua total return kar doge.</p>
-<p><b>Aur zero se shuru mat karna.</b> Agar saare numbers negative hain, jawaab sabse kam bura ek element hai, khaali block nahi. <code>cur = best = a[0]</code> se shuru karo. Zero waala version har us test mein pass ho jaata hai jisme ek bhi positive number ho, matlab har test jo tum khud banaoge. Interview mein yeh edge case khud bol do, poochne se pehle.</p>`,
-
   math: [
-    { t: "The recurrence, from the only two candidates there are", d: "Asking for the best subarray ending at i is what makes the choice binary, and a binary choice is a recurrence you can write in one line.", w:
-`best[i] = the best subarray sum ENDING at index i
+    { t: "The recurrence, from the only two candidates there are", d: "Asking for the best block ending at <var>i</var> is what makes the choice binary, and a binary choice is a one-line recurrence.", w:
+`cur[i] = the best subarray sum ENDING at index i
 
 it either extends the block ending at i-1, or starts here:
 
-  best[i] = max( a[i],  best[i-1] + a[i] )
-          = a[i] + max(0, best[i-1])
+  cur[i] = max( a[i],  cur[i-1] + a[i] )
+         = a[i] + max(0, cur[i-1])
 
-answer = max over all i of best[i]
+answer = max over all i of cur[i]
 
 "the best in a[0..i]" has no such recurrence, which is
 why the ending-at-i phrasing is the whole trick` },
-    { t: "Worked on a real array", d: "Six values, one pass. The two decisions that matter are the step that starts fresh and the step that extends.", w:
-`a       = [ -2,  3, -1,  4, -3,  2 ]
-best[i] =   -2,  3,  2,  6,  3,  5
-answer  =   -2,  3,  3,  6,  6,  6
+    { t: "Worked on the six days", d: "Six values, one pass. The two decisions that matter are the step that starts fresh and the steps that carry a loss.", w:
+`a     = [ -2,  3, -1,  4, -3,  2 ]
+cur   =   -2,  3,  2,  6,  3,  5
+best  =   -2,  3,  3,  6,  6,  6
 
-i = 1:  max(3, -2 + 3 = 1)  = 3     start fresh
-i = 2:  max(-1, 3 - 1 = 2)  = 2     extend
-i = 3:  max(4, 2 + 4 = 6)   = 6     extend
-i = 4:  max(-3, 6 - 3 = 3)  = 3     extend, and drop
-                                    below the best so far
+i = 1:  max(3, -2 + 3 = 1)   = 3     start fresh
+i = 2:  max(-1, 3 - 1 = 2)   = 2     carry the loss
+i = 3:  max(4, 2 + 4 = 6)    = 6     carry, new best
+i = 4:  max(-3, 6 - 3 = 3)   = 3     carry, below best
+i = 5:  max(2, 3 + 2 = 5)    = 5     carry, below best
 
 answer 6, from the subarray [3, -1, 4]` },
-    { t: "Against the two brute forces", d: "There are two obvious approaches before this one, and both are quadratic or worse. The step from the second to Kadane is the one being tested.", w:
+    { t: "Against the two brute forces", d: "There are two obvious approaches before this one, both quadratic or worse. The step from the second to Kadane is the one being tested.", w:
 `all subarrays, summing each:   n(n+1)/2 subarrays,
-                               n^3 / 6 additions
-prefix sums, then all pairs:   n^2 / 2
+                               about n^3 / 6 additions
+prefix sums, then all pairs:   about n^2 / 2
 Kadane:                        n
 
 n = 10^5:
   1.7 x 10^14   |   5 x 10^9   |   10^5` },
-    { t: "Seeding with zero, and the input that exposes it", d: "The zero start silently allows the empty subarray. It is correct only if the problem says empty is allowed, and it almost never does.", w:
+    { t: "Seeding with zero, and the input that exposes it", d: "A zero start quietly allows the empty subarray. That is right only if the problem says empty is allowed, and it almost never does.", w:
 `a = [-3, -1, -7]
 
 cur = 0, best = 0   ->  answer 0, an EMPTY subarray
@@ -14727,34 +14885,34 @@ cur = a[0], best = a[0], loop from i = 1  ->  answer -1
 
 -1 is right: the best non-empty subarray is [-1]
 
-this only shows up when every element is negative,
-which is the case a hand-written test leaves out` },
+this only shows when every element is negative,
+the case a hand-written test leaves out` },
   ],
 
   costs: [
     ["Kadane, one pass", "O(n) time, O(1) space", "each index answers its own question from the previous one, so nothing is stored"],
-    ["brute force over every block", "O(n²)", "choose a start and an end, carrying a running sum so the inner loop stays O(1) per step"],
-    ["brute force, re-adding each block", "O(n³)", "the version people write first, and the one the constraints are set to reject"],
-    ["prefix sums plus a running minimum", "O(n) time, O(n) space", "the same answer as max over r of pre[r+1] minus the smallest earlier prefix, and it handles the empty block cleanly"],
-    ["recovering the indices", "O(n), no extra space", "one more variable for the left edge, updated at the restart rather than at the improvement"],
+    ["brute force over every block", "O(n²)", "a start and an end, carrying a running sum so each step is O(1)"],
+    ["brute force, re-adding each block", "O(n³)", "the version people write first, and the one the limits are set to reject"],
+    ["prefix sums plus a running minimum", "O(n) time, O(n) space", "max over r of pre[r+1] minus the smallest earlier prefix: the same answer"],
+    ["recovering the indices", "O(n), no extra space", "one more variable for the left edge, moved at the restart"],
     ["maximum product variant", "O(n) time, O(1) space", "two running values instead of one, because a negative can become the maximum"],
-    ["maximum rectangle in a matrix", "O(rows² · cols)", "every pair of row boundaries collapses to one array, and each collapsed array is one Kadane"],
+    ["maximum rectangle in a matrix", "O(rows² · cols)", "every pair of rows collapses to one array, and each is one Kadane"],
   ],
 
   traps: [
-    "<b>Seeding cur and best with 0.</b> An all-negative array then answers 0, an empty block, which the problem did not allow. Seed with <code>a[0]</code> and start the loop at index 1.",
-    "<b>Using one variable for cur and best.</b> The running block decays after its peak, so returning it returns a number that was correct several indices ago.",
-    "<b>Updating best before cur.</b> The order in the loop is: recompute cur for this index, then compare it against best. Reversed, best is always one step stale.",
-    "<b>Recording the left edge when best improves.</b> The edge was set at the last restart, which may have been far earlier. Capture it there, and only copy it into the answer when best improves.",
-    "<b>Reaching for Kadane on a non-contiguous problem.</b> If elements may be skipped, this is not the algorithm; that is house robber, a different recurrence with the same shape.",
-    "<b>Overflow in fixed-width languages.</b> 10^5 elements near 10^9 each sum past 2^31. In Java and C++ the running total wants a 64-bit type, and the wrap is silent.",
+    "<b>Seeding cur and best with 0.</b> An all-negative array then answers 0, an empty block the problem did not allow. Seed with <code>a[0]</code> and start the loop at index 1.",
+    "<b>Using one variable for cur and best.</b> The running block falls after its peak, so returning it returns a number that was right several indices ago.",
+    "<b>Updating best before cur.</b> In the loop, first work out cur for this index, then compare it with best. The other way round, best is always one step behind.",
+    "<b>Recording the left edge when best improves.</b> The edge was set at the last restart, possibly much earlier. Capture it there, and copy it into the answer only when best improves.",
+    "<b>Using Kadane when elements may be skipped.</b> Then the block is not unbroken, and this is the wrong algorithm; that is house robber, a different recurrence of the same shape.",
+    "<b>Overflow in fixed-width languages.</b> 10⁵ elements near 10⁹ each sum past 2³¹. In Java and C++ the running total needs a 64-bit type, and the wrap is silent.",
   ],
 
   impl: [
-    ["Python", "max(x, cur + x)", "Integers are unbounded, so overflow never arises. cur = max(...) reads exactly like the recurrence, which is worth keeping."],
-    ["Java", "Math.max", "Math.max(int, int) returns int, so a long accumulator needs Math.max((long) a[i], cur + a[i]) or it truncates silently."],
-    ["C++", "std::max", "std::max needs both arguments of the same type. Mixing an int element with a long long accumulator is a compile error, which is the kind one to have."],
-    ["JavaScript", "Math.max", "Numbers are doubles, exact only to 2^53. Beyond that use BigInt, though no interview array will get you there."],
+    ["Python", "max(x, cur + x)", "Integers are unbounded, so overflow never arises. cur = max(...) reads exactly like the recurrence."],
+    ["Java", "Math.max", "Math.max(int, int) returns int, so a long total needs Math.max((long) a[i], cur + a[i]), or it truncates silently."],
+    ["C++", "std::max", "std::max needs both arguments of one type. Mixing an int with a long long is a compile error, the kind one to have."],
+    ["JavaScript", "Math.max", "Numbers are doubles, exact only to 2^53. Beyond that use BigInt, though no interview array gets there."],
   ],
 
   code: {
@@ -14909,79 +15067,230 @@ const kadane = (a) => a.slice(1).reduce(([cur, best], x) => {
   return [c, Math.max(best, c)];
 }, [a[0], a[0]])[1];`,
   },
-  codecap: "Two lines carry the whole algorithm; everything else on this page is the same two lines with something extra remembered. If you can only keep one thing, keep this: cur may decay, best may not, and they are never the same variable.",
+  codecap: "Two lines carry the whole algorithm; the rest of the page is those two lines with something extra remembered. Keep one thing: cur may fall, best may not, and they are never the same variable.",
 
   q: [
-    ["Why does asking for \"the best block ending at index i\" make the problem easier?", "Because there is exactly one answer per index rather than n² across the array, and that answer depends only on the answer at i-1. It turns a search over pairs into a single scan."],
-    ["Why are two candidates enough at each index?", "A block that ends at i either contains i-1 or it does not. If it does, the best such block is the best block ending at i-1 plus a[i]. If it does not, it is a[i] alone. There is no third shape, so comparing two is exhaustive, not a heuristic."],
-    ["When is it worth carrying the previous block forward?", "Exactly when the previous running total is positive. A positive carry can only help; a negative carry is a cost that any fresh start avoids. That is why max(a[i], cur + a[i]) and \"reset when cur goes negative\" are the same rule."],
-    ["Why must cur and best be separate variables?", "cur is the best block ending at the current index and it shrinks whenever the numbers turn bad. best is a record of the highest cur ever reached. Merging them returns a total that has already decayed past its peak."],
-    ["What breaks if you initialise both to 0?", "An all-negative array returns 0, an empty block, which the problem does not permit. Seeding with a[0] fixes it. The bug survives every hand-written test, because those tests always happen to contain a positive number."],
-    ["Where is the dynamic programming, given there is no table?", "The recurrence dp[i] = max(a[i], dp[i-1] + a[i]) is the DP. Because dp[i] reads only dp[i-1] and nothing looks further back, the table collapses to one variable. It is the standard space reduction, applied so aggressively the table disappears."],
-    ["Why does maximum product need two running values instead of one?", "Multiplying by a negative swaps the order: the smallest running value becomes the largest. So the minimum has to be carried alongside the maximum, and both new values must be computed from the previous pair, not from each other."],
+    ["Why does asking for \"the best block ending at index i\" make the problem easier?", "There is exactly one answer per index instead of n² across the array, and it depends only on the answer at i-1. A search over pairs becomes a single scan."],
+    ["Why are two candidates enough at each index?", "A block ending at i either contains i-1 or it does not. If it does, the best one is the best block ending at i-1 plus a[i]. If not, it is a[i] alone. There is no third shape, so comparing two is exhaustive."],
+    ["When is it worth carrying the previous block forward?", "Exactly when the previous running total is positive. A positive carry can only help; a negative one is a cost a fresh start avoids. So max(a[i], cur + a[i]) and \"reset when cur goes negative\" are the same rule."],
+    ["Why must cur and best be separate variables?", "cur is the best block ending here, and it shrinks when the numbers turn bad. best is the highest cur ever reached. Merging them returns a total that has already fallen past its peak."],
+    ["What breaks if you start both at 0?", "An all-negative array returns 0, an empty block the problem does not permit. Starting at a[0] fixes it. The bug survives every hand-written test, because those always contain a positive number."],
+    ["Where is the dynamic programming, given there is no table?", "The recurrence dp[i] = max(a[i], dp[i-1] + a[i]) is the DP. dp[i] reads only dp[i-1], so the table shrinks to one variable: the standard space reduction, taken all the way."],
+    ["Why does maximum product need two running values instead of one?", "Multiplying by a negative swaps the order: the smallest running value becomes the largest. So the minimum is carried with the maximum, and both new values come from the previous pair, not from each other."],
   ],
 
   p: [
     [121, "best-time-to-buy-and-sell-stock", "Buy and Sell Stock, Kadane on the differences", "E"],
-    [53, "maximum-subarray", "Maximum Subarray, the archetype", "M"],
+    [53, "maximum-subarray", "Maximum Subarray, the standard example", "M"],
     [1749, "maximum-absolute-sum-of-any-subarray", "Maximum Absolute Sum, run it twice", "M"],
     [918, "maximum-sum-circular-subarray", "Circular, and the all-negative trap", "M"],
     [152, "maximum-product-subarray", "Maximum Product, carry the minimum too", "M"],
     [1567, "maximum-length-of-subarray-with-positive-product", "Positive Product, the same scan on sign", "M"],
     [689, "maximum-sum-of-3-non-overlapping-subarrays", "Three blocks at once, prefix best from both ends", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek dukaan ke paas <b>10⁵ dinon</b> mein har din ka profit ya loss hai. Kaunse lagaataar dinon ne kul milakar sabse zyada kamaaya? Hisse mein bure din ho sakte hain, jab tak poora hissa faayde mein ho.</p>
+<p>Chhota version: chhe din, <code>-2, 3, -1, 4, -3, 2</code>. Sabse achha hissa <code>3, -1, 4</code> hai, 6 ka, aur usme ek loss hai.</p>`,
+      tries: [
+        ["Har start aur end try karo, running total ke saath", "Sahi, aur <var>n</var>(<var>n</var> + 1) / 2 hisse: chhe din par 21, 10⁵ din par 5 × 10⁹."],
+        ["Achhe din lo, pehle bure din par ruko", "3 se shuru karke −1 par rukna 3 deta hai. Par 3, −1, 4 se 6: 4 tak pahunchne ke liye −1 uthaana faayde ka tha. Aur sirf achhe din, 3 + 4 + 2, ek lagaataar hissa nahi."],
+      ],
+      so: `<p>To chhota sawaal poochho: <b>theek din <var>i</var> par khatam</b> hone wala sabse achha hissa kaunsa? Yeh ya to pichhle din khatam hue best hisse ko aage badhata hai, ya din <var>i</var> se naya shuru hota hai. Do candidates; bada rakho.</p>
+<p>Pichhla saath le chalna tabhi faayde ka hai jab uska total positive ho. Ek pass, do numbers, O(<var>n</var>): 5 × 10⁹ ki jagah 10⁵ steps. Yahi <b>Kadane's algorithm</b> hai. Page poore mein yahi chhe din follow karta hai.</p>`,
+    },
+
+    one: "Har index par sirf do candidates: ek kadam pehle khatam hua block badhao, ya yahan naya shuru karo. <b>Behtar rakho; best alag track karo.</b>",
+
+    plain: `<p>Positive aur negative numbers ka array hai, aur sabse bade total wala lagaataar hissa chahiye. “Lagaataar” hi mushkil shabd hai. Achhe numbers chun kar bure nahi chhod sakte, to “saare positive lo” answer nahi.</p>
+<p>Har hissa check karna matlab start aur end chunna: lagbhag <var>n</var>² hisse. Trick alag tarah poochhna hai. “Kahin bhi best block” nahi, balki “<b>theek index <var>i</var> par khatam</b> hone wala best block”. Har index ka ek answer, to sirf <var>n</var> answers, aur har ek sirf pichhle par nirbhar.</p>
+<p><var>i</var> par khatam block ya to <var>i</var> − 1 shaamil karta hai ya nahi. Karta hai, to woh <var>i</var> − 1 par khatam best block hai jisme a[<var>i</var>] juda. Nahi, to akela a[<var>i</var>]. <code>-2, 3, -1, 4, -3, 2</code> ke 3 par: saath le chalna −2 + 3 = 1, naya shuru 3. Naya shuru. −1 par: saath le chalna 2, naya −1. Saath le chalo.</p>
+<p><b>Analogy.</b> Pahaadi raaste par chalte hue running oonchai rakhna. Jab bhi peeche ka total zero se neeche jaaye, woh bojh hai, to use chhod kar jahan khade ho wahan se naapna shuru karo. Sabse oonchi jagah jahan kabhi pahunche, woh phir bhi yaad rakho.</p>`,
+
+    why: [
+      { t: "Dekho brute force kya barbaad karta hai",
+        d: "Har (start, end) pair try karna running sum ke saath <b>O(<var>n</var>²)</b> hai, aur har block shuru se jodne par O(<var>n</var>³). Par 3 se 7 wala aur 3 se 8 wala block lagbhag sab baant-te hain. Jab candidates itna overlap karein, poochhne ka sasta tareeka hota hai." },
+      { t: "Chhota sawaal poochho jiska ek hi answer ho",
+        d: "“Kahin bhi best block” ke lagbhag <var>n</var>² candidates. “<b>Index <var>i</var> par khatam</b> best block” ka har index par theek ek answer, to problem <var>n</var> chhote sawaal ban jaati hai. Asli answer un <var>n</var> mein sabse bada, usi pass mein track." },
+      { t: "Har index ke theek do candidates",
+        d: "<var>i</var> par khatam block ya to <var>i</var> − 1 rakhta hai ya nahi. Rakhta hai, to <var>i</var> − 1 par khatam best block, a[<var>i</var>] se badha. Nahi, to akela a[<var>i</var>]. <b><var>i</var> par aur kuch khatam nahi ho sakta</b>, to dono ki tulna poori hai, guess nahi." },
+      { t: "To recurrence khud likh jaati hai",
+        d: "cur[<var>i</var>] = max(a[<var>i</var>], cur[<var>i</var> − 1] + a[<var>i</var>]). Shabdon mein: <b>naya shuru karo, ya purana aage le chalo</b>. Le chalna theek tab faayde ka jab cur[<var>i</var> − 1] positive ho. Chhe dinon par cur −2, 3, 2, 6, 3, 5 chalta hai." },
+      { t: "Table ek variable hai",
+        d: "cur[<var>i</var>] sirf cur[<var>i</var> − 1] padhta hai, aur usse peeche koi nahi dekhta, to poori table ek number ban jaati hai. Yeh table phenka hua dynamic programming hai, isiliye code mein table nahi aur DP jaisa nahi dikhta." },
+      { t: "cur aur best alag cheezein hain",
+        d: "cur yahan khatam block hai, aur gir sakta hai: index 3 par 6, phir index 4 par 3. best record hai, aur kabhi nahi girta: 6 hi rehta hai. Dono ke liye ek variable is page ka sabse aam bug hai. Yeh aisa running total lautata hai jo peak ke baad gir chuka." },
+      { t: "Zero se shuru karna galat hai, aur chupchaap",
+        d: "Saare numbers negative hon, to best block sabse kam bura akela element hai, khaali block nahi. −3, −1, −7 ka answer −1 hai. cur aur best ko <b>a[0]</b> se shuru karo, 0 se nahi. Zero start har us test ko pass karta hai jisme ek positive number ho, yaani haath se likhe har test ko." },
+    ],
+
+    variants: [
+      { n: "Maximum sum", cost: "O(n) time, O(1) space",
+        idea: "Seedha version: cur = max(a[<var>i</var>], cur + a[<var>i</var>]), best = max(best, cur).",
+        when: "Koi bhi “sabse bada lagaataar total” sawaal, aur buy-and-sell-stock family, jo roz ke farak par yahi chalana hai.",
+        watch: "Dono variables a[0] se seed karo. 0 se seed all-negative input todta hai, aur kuch nahi." },
+      { n: "With the indices", cost: "O(n) time, O(1) space",
+        idea: "Wahi loop aur ek start marker. Restart par woh index naya left edge; jab best behtar ho tab left aur right record karo.",
+        when: "Problem ko block khud chahiye, sirf total nahi.",
+        watch: "Left edge restart par hilao, best behtar hone par nahi. Chhe dinon par 3 par edge index 1 par jaata hai." },
+      { n: "Maximum product", cost: "O(n) time, O(1) space",
+        idea: "Running maximum AUR running minimum dono track karo. Bada negative naye negative se guna ho kar naya maximum banta hai, to sabse chhota bhi saath chalna chahiye.",
+        when: "Operation guna ho, ya kuch bhi jahan bura value achha ban sake.",
+        watch: "Dono nayi values PURANE pair se nikaalo. Pehle maximum overwrite karna galat step ki value use karta hai, aur phir bhi chhote tests pass karta hai." },
+      { n: "Circular array", cost: "O(n) time, O(1) space",
+        idea: "Answer ya to end ke paar ghoomta hai ya nahi. Na ghoomna seedha Kadane. Ghoomna total minus <b>minimum</b> block, usi loop se comparisons ulat kar.",
+        when: "Array ko circular bataya gaya ho.",
+        watch: "Saare numbers negative hon, to total minus minimum block khaali block hai, jo allowed nahi. Pakdo aur seedha answer lautao." },
+      { n: "Two dimensions", cost: "O(rows² · cols)",
+        idea: "Ek upar aur ek neeche ki row fix karo, beech ki rows ko column sums ke ek array mein samet do, aur us par Kadane chalao. Rows ka har pair try karo.",
+        when: "Matrix mein maximum sum rectangle.",
+        watch: "Neeche ki row khisakte hue samete array ko kadam kadam banao. Har baar shuru se banana bina wajah rows ka factor jodta hai." },
+    ],
+
+    math: [
+      { t: "Recurrence, sirf do maujood candidates se", d: "<var>i</var> par khatam best block poochhna hi choice ko do-tarfa banata hai, aur do-tarfa choice ek line ki recurrence hai." },
+      { t: "Chhe dinon par karke dekha", d: "Chhe values, ek pass. Maayne rakhne wale do faisle: naya shuru karne wala step aur loss uthaane wale steps." },
+      { t: "Do brute forces ke saamne", d: "Isse pehle do obvious tareeke hain, dono quadratic ya badtar. Doosre se Kadane tak ka kadam hi test hota hai." },
+      { t: "Zero se seed, aur woh input jo ise pakadta hai", d: "Zero start chupchaap khaali subarray allow karta hai. Yeh tabhi sahi jab problem khaali ki ijaazat de, aur lagbhag kabhi nahi deti." },
+    ],
+
+    costs: [
+      ["Kadane, one pass", "O(n) time, O(1) space", "har index apna sawaal pichhle se hal karta hai, to kuch store nahi"],
+      ["brute force over every block", "O(n²)", "ek start aur ek end, running sum ke saath taaki har step O(1)"],
+      ["brute force, re-adding each block", "O(n³)", "log pehle yahi likhte hain, aur limits ise reject karne ke liye rakhi hain"],
+      ["prefix sums plus a running minimum", "O(n) time, O(n) space", "har r par pre[r+1] minus sabse chhota pichhla prefix ka max: wahi answer"],
+      ["recovering the indices", "O(n), no extra space", "left edge ke liye ek aur variable, restart par hilaaya"],
+      ["maximum product variant", "O(n) time, O(1) space", "ek ki jagah do running values, kyunki negative maximum ban sakta hai"],
+      ["maximum rectangle in a matrix", "O(rows² · cols)", "rows ka har pair ek array mein simat-ta hai, aur har ek ek Kadane"],
+    ],
+
+    traps: [
+      "<b>cur aur best ko 0 se seed karna.</b> All-negative array tab 0 deta hai, khaali block jiski problem ne ijaazat nahi di. <code>a[0]</code> se seed karo aur loop index 1 se shuru.",
+      "<b>cur aur best ke liye ek variable.</b> Running block peak ke baad girta hai, to use lautana aisa number lautata hai jo kai index pehle sahi tha.",
+      "<b>cur se pehle best update karna.</b> Loop mein pehle is index ka cur nikaalo, phir best se compare. Ulta karo to best hamesha ek step peeche.",
+      "<b>best behtar hone par left edge record karna.</b> Edge aakhri restart par set hua tha, shaayad bahut pehle. Use wahin pakdo, aur answer mein tabhi copy karo jab best behtar ho.",
+      "<b>Jab elements chhode ja sakein tab Kadane.</b> Tab block lagaataar nahi, aur yeh galat algorithm hai; woh house robber hai, isi shakal ki alag recurrence.",
+      "<b>Fixed-width languages mein overflow.</b> 10⁹ ke paas ke 10⁵ elements 2³¹ se aage jud jaate hain. Java aur C++ mein running total ko 64-bit type chahiye, aur wrap chupchaap hota hai.",
+    ],
+
+    impl: [
+      ["Python", "max(x, cur + x)", "Integers unbounded hain, to overflow kabhi nahi. cur = max(...) bilkul recurrence jaisa padhta hai."],
+      ["Java", "Math.max", "Math.max(int, int) int lautata hai, to long total ko Math.max((long) a[i], cur + a[i]) chahiye, warna chupchaap kat-ta hai."],
+      ["C++", "std::max", "std::max ko dono arguments ek type ke chahiye. int aur long long milaana compile error hai, achhi wali galti."],
+      ["JavaScript", "Math.max", "Numbers doubles hain, sirf 2^53 tak exact. Uske aage BigInt, par koi interview array wahan nahi pahunchta."],
+    ],
+
+    codecap: "Do lines poora algorithm uthaati hain; baaki page wahi do lines kuch extra yaad rakh kar hai. Ek baat rakho: cur gir sakta hai, best nahi, aur dono kabhi ek variable nahi.",
+
+    q: [
+      ["\"Index i par khatam best block\" poochhna problem aasaan kyun banata hai?", "Poore array mein n² ki jagah har index ka theek ek answer, aur woh sirf i-1 ke answer par nirbhar. Pairs par search ek scan ban jaata hai."],
+      ["Har index par do candidates kaafi kyun hain?", "i par khatam block ya to i-1 rakhta hai ya nahi. Rakhta hai, to best wala i-1 par khatam best block plus a[i]. Nahi, to akela a[i]. Teesri shakal nahi, to do ki tulna poori hai."],
+      ["Pichhla block aage le chalna kab faayde ka hai?", "Theek tab jab pichhla running total positive ho. Positive saath sirf madad karta hai; negative ek bojh hai jisse naya start bachta hai. To max(a[i], cur + a[i]) aur \"cur negative ho to reset\" ek hi rule hain."],
+      ["cur aur best alag variables kyun hone chahiye?", "cur yahan khatam best block hai, aur numbers bure hone par sikudta hai. best ab tak ka sabse ooncha cur hai. Dono milaane se aisa total lautta hai jo peak ke baad gir chuka."],
+      ["Dono ko 0 se shuru karne par kya toot-ta hai?", "All-negative array 0 lautata hai, khaali block jiski problem ijaazat nahi deti. a[0] se shuru karna ise theek karta hai. Bug haath se likhe har test se bach jaata hai, kyunki unme hamesha ek positive number hota hai."],
+      ["Table nahi hai, to dynamic programming kahan hai?", "Recurrence dp[i] = max(a[i], dp[i-1] + a[i]) hi DP hai. dp[i] sirf dp[i-1] padhta hai, to table ek variable tak simat-ti hai: standard space reduction, aakhir tak le jaaya gaya."],
+      ["Maximum product ko ek ki jagah do running values kyun chahiye?", "Negative se guna order ulat deta hai: sabse chhoti running value sabse badi ban jaati hai. To minimum maximum ke saath chalta hai, aur dono nayi values pichhle pair se aati hain, ek doosre se nahi."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "sliding-window",
   n: "Sliding Window",
   group: "Patterns",
-  one: "Consecutive windows <b>overlap</b>, so never recompute one from scratch: subtract what leaves, add what joins. O(n·k) becomes O(n).",
+  need: {
+    ask: `<p>A server logs its load for each of <b>10⁶ minutes</b>. Two questions: which 1,000-minute stretch was busiest, and what is the longest stretch whose total load stays within a budget?</p>
+<p>The small version: six minutes, <code>2, 1, 5, 1, 3, 2</code>. The busiest 3 in a row are 5, 1, 3, totalling 9. With a budget of 7, the longest stretch is 3 minutes long, such as 1, 5, 1.</p>`,
+    tries: [
+      ["Score every window from scratch", "For the busiest stretch, (<var>n</var> − <var>k</var> + 1) × <var>k</var> ≈ 10⁹ additions. For the budget, every start and end: 5 × 10¹¹ stretches."],
+      ["Grow a stretch while it fits, then start again after it", "On 2, 1, 5, 1, 3, 2: 2, 1 fits, the 5 breaks it; restart at 5: 5, 1 fits, the 3 breaks it; then 3, 2. Best 2. But 1, 5, 1 fits in 7 and is 3 long: it began inside a stretch that was thrown away."],
+    ],
+    so: `<p>Neighbouring windows share almost everything. 2, 1, 5 and 1, 5, 1 share the 1 and the 5. So keep a running total and fix it at the edges: <b>subtract what leaves, add what joins</b>. Two operations per step, whatever the width.</p>
+<p>For the budget, the width is not fixed. Push the right edge out, and while the total is over budget, pull the left edge in. The left edge never moves back, so both edges together move at most 2<var>n</var> times: O(<var>n</var>), about 2 × 10⁶ steps. That is the <b>sliding window</b>, and the page works on these six minutes throughout.</p>`,
+  },
 
-  plain: `<p>The problem: find the best <b>contiguous</b> stretch, meaning a run of items sitting next to each other with no gaps. The largest sum of 3 in a row. The longest substring with no repeats. The shortest subarray reaching a target.</p>
-<p>The obvious solution examines every stretch and scores it from scratch, O(n·k), or O(n²). But look at what it repeats: the window covering positions 1–3 and the window covering 2–4 <b>share positions 2 and 3</b>. Re-adding them is pure waste.</p>
-<p>So keep a running answer and update it at the edges only. When the window slides right, <b>subtract the element that left and add the one that joined</b>. Two operations per step instead of k, no matter how wide the window is.</p>
-<p><b>Analogy.</b> Counting people in a moving train carriage. You do not recount all 60 passengers each time the carriage moves. You count who got off and who got on, and adjust.</p>`,
+  one: "Consecutive windows <b>overlap</b>, so never recompute one from scratch: subtract what leaves, add what joins. O(<var>n</var>·<var>k</var>) becomes O(<var>n</var>).",
+
+  plain: `<p>The problem: find the best <b>contiguous</b> stretch, meaning a run of items next to each other with no gaps. The largest sum of 3 in a row. The longest substring with no repeats. The longest stretch within a budget.</p>
+<p>The obvious solution scores every stretch from scratch: O(<var>n</var>·<var>k</var>), or O(<var>n</var>²). Look at what it repeats. In <code>2, 1, 5, 1, 3, 2</code>, the window 2, 1, 5 and the window 1, 5, 1 <b>share the 1 and the 5</b>. Adding them again is pure waste.</p>
+<p>So keep a running answer and update it at the edges only. When the window slides right, <b>subtract the item that left and add the one that joined</b>: 8 − 2 + 1 = 7. Two operations per step instead of <var>k</var>, however wide the window.</p>
+<p><b>Analogy.</b> Counting people in a train carriage. You do not recount all 60 passengers at each stop. You count who got off and who got on, and adjust.</p>`,
 
   why: [
     { t: "Neighbouring windows share almost everything",
-      d: "Positions 1–3 and positions 2–4 have 2 and 3 in common. Recomputing each window from scratch re-reads those shared items every single time. That repeated reading is the entire waste." },
+      d: "Windows 2, 1, 5 and 1, 5, 1 have the 1 and the 5 in common. Recomputing each window from scratch reads those shared items again every time. That repeated reading is the entire waste." },
     { t: "So only update at the edges",
-      d: "When the window slides, one item leaves on the left and one joins on the right. Subtract the leaver, add the joiner. Two operations per step, no matter how wide the window is, and O(n·k) becomes <b>O(n)</b>." },
+      d: "When the window slides, one item leaves on the left and one joins on the right. Subtract the leaver, add the joiner: 8 − 2 + 1 = 7, then 7 − 1 + 3 = 9. Two operations per step, however wide the window, and O(<var>n</var>·<var>k</var>) becomes <b>O(<var>n</var>)</b>." },
     { t: "This only works if the value can be added and removed cheaply",
-      d: "Sums, counts and frequency maps can. A <b>maximum</b> cannot, if the item leaving <i>is</i> the maximum, you have to look at everything again. Ask this before you write any code; it is why \"sliding window maximum\" needs an extra structure." },
+      d: "Sums, counts and frequency maps can. A <b>maximum</b> cannot: if the item leaving <i>is</i> the maximum, you must look at everything again. Ask this before writing any code; it is why “sliding window maximum” needs an extra structure." },
     { t: "If the size is not given, grow and shrink instead",
-      d: "Sometimes the rule is a condition rather than a size: \"no repeated letters\", or \"sum at least target\". Then push the right edge out greedily. Whenever the window breaks the rule, pull the left edge in until it holds again." },
+      d: "Sometimes the rule is a condition, not a size: “no repeated letters”, or “total at most 7”. Then push the right edge out greedily. Whenever the window breaks the rule, pull the left edge in until it holds again. Adding the 3 to 1, 5, 1 makes 10, and both the 1 and the 5 must leave." },
     { t: "Two loops, and still O(n)",
-      d: "The inner loop looks like it makes this O(n²), but the left edge <b>never moves backwards</b>. Across the whole run it can only advance n times, and so can the right edge, at most 2n moves total. Saying this out loud is what the interviewer is waiting for." },
+      d: "The inner loop looks like it makes this O(<var>n</var>²), but the left edge <b>never moves backwards</b>. Over the whole run it can advance only <var>n</var> times, and so can the right edge: at most 2<var>n</var> moves in total. Saying this out loud is what the interviewer is waiting for." },
+    { t: "The shrink rule needs a total that only grows",
+      d: "“Shrink while over budget” assumes that adding an item never lowers the total, which holds when every value is positive. With negatives, a window over budget might come back under by growing, and the rule gives wrong answers. That case needs prefix sums." },
     { t: "Only for contiguous stretches",
-      d: "If the items you want do not have to be next to each other, this pattern does not apply at all. That is a hash-map or DP problem." },
+      d: "If the items you want need not be next to each other, the pattern does not apply at all. That is a hash-map or DP problem." },
   ],
 
-  hing: `<p><b>Problem ki shakal:</b> koi <b>laga-taar (contiguous)</b> hissa dhoondhna hai, sabse bada sum, sabse lambi substring bina repeat ke, sabse chhota subarray jiska sum target tak pahunche.</p>
-<p><b>Brute force kya galti karta hai?</b> Har window ko <b>shuru se</b> phir se jodta hai. Par dekho: window 1–3 aur window 2–4 mein <b>2 aur 3 dono common hain</b>. Unhe dobara jodna bilkul bekaar mehnat hai.</p>
-<p><b>Asli idea:</b> running answer rakho aur sirf <b>kinare</b> update karo, jo element bahar gaya use <b>ghatao</b>, jo naya aaya use <b>jodo</b>. Har step par 2 operations, chahe window kitni bhi chaudi ho. O(n·k) → <b>O(n)</b>.</p>
-<p><b>Ek shart hai (yeh miss mat karna):</b> tumhara window ka statistic add/remove se O(1) mein update hona chahiye. Sum, count, frequency map, theek hain. <b>Maximum theek nahi hai</b>, agar current maximum hi bahar chala gaya to dobara poori window scan karni padegi. Isiliye "sliding window maximum" ke liye monotonic deque chahiye hoti hai.</p>
-<p><b>Do type hote hain:</b><br>1. <b>Fixed size</b>, k diya hua hai. Dono kinare saath mein ek kadam chalte hain.<br>2. <b>Variable size</b>, size nahi, <b>condition</b> di hai. Right ko badhate raho jab tak condition tootey nahi; tootne par left ko aage badhao jab tak wapas theek na ho jaaye.</p>
-<p><b>Sabse zaroori sawaal. Do loops hain, phir O(n) kaise?</b> Kyunki <b>L kabhi peeche nahi jaata</b>. Poore program mein L zyada se zyada n baar aage badhega, aur R bhi n baar. Total ≤ 2n moves → <b>O(n)</b>. Interview mein yahi amortised reasoning bolna hai, warna log O(n²) bol dete hain.</p>
-<p><b>Kaise pehchane?</b> Do signal ek saath: (1) answer <b>contiguous</b> hai, subsequence nahi, aur (2) max/min/count nikaalna hai kisi condition ke saath. Agar elements ko adjacent hone ki zaroorat nahi, to yeh sliding window nahi hai, woh hash map ya DP hai.</p>
-<p><b>Negative numbers ka trap:</b> "sum ≥ target wala sabse chhota subarray" mein hum maante hain ki window badhne se sum badhta hai. Negative numbers ke saath yeh maan-na galat ho jaata hai, tab prefix sum + monotonic deque chahiye. Constraints padhna zaroori hai.</p>`,
+  variants: [
+    { n: "Fixed size", cost: "O(n) time, O(1) space",
+      idea: "Build the first window, then slide: add the joiner, drop the leaver.",
+      when: "The window width is given: best average of <var>k</var> in a row, anagram of a fixed word.",
+      watch: "Start recording after the first full window, not before." },
+    { n: "Longest valid window", cost: "O(n) time",
+      idea: "Grow right; while invalid, shrink left; then record R − L + 1.",
+      when: "Longest substring without repeats, longest stretch within a budget, at most <var>k</var> distinct letters.",
+      watch: "Record after the shrink, when the window is valid again." },
+    { n: "Shortest valid window", cost: "O(n) time",
+      idea: "Grow right until valid; then, while still valid, record and shrink left.",
+      when: "Shortest subarray with sum at least a target, minimum window substring.",
+      watch: "The recording moves inside the shrink loop. Swapping it with the longest template is a classic slip." },
+    { n: "Counting windows", cost: "O(n) time",
+      idea: "For “at most <var>k</var>”, every valid window ending at R adds R − L + 1. “Exactly <var>k</var>” is at most <var>k</var> minus at most <var>k</var> − 1.",
+      when: "Count subarrays with at most, or exactly, <var>k</var> distinct values.",
+      watch: "“Exactly” is not directly a window condition. The subtraction trick is the standard way round." },
+    { n: "Window maximum", cost: "O(n) with a monotonic deque",
+      idea: "Keep candidate indices in a deque with decreasing values; the front is the window's maximum.",
+      when: "Max or min of every window of size <var>k</var>.",
+      watch: "A maximum cannot be removed in O(1), so the plain window fails here. The monotonic stack page covers the deque." },
+  ],
+
+  hing: `<p><b>Pattern pehchaano:</b> jab bhi sawaal ho ki <b>lagaataar</b> hisse (subarray ya substring) mein sabse bada, sabse chhota ya kitne, to pehle sliding window socho.</p>
+<p><b>Brute force ki barbaadi:</b> har window ko shuru se ginna O(<var>n</var>·<var>k</var>). Par <code>2, 1, 5, 1, 3, 2</code> mein window 2, 1, 5 aur 1, 5, 1 dono mein 1 aur 5 common hain. Unhe dobara jodna bekaar hai.</p>
+<p><b>Fixed size window:</b> jab window aage khiskti hai, ek element left se nikalta hai, ek right se aata hai. Bas <b>jaane wale ko ghatao, aane wale ko jodo</b>: 8 − 2 + 1 = 7. Har step par sirf 2 kaam, O(<var>n</var>).</p>
+<p><b>Variable size window:</b> jab size fix nahi, sirf ek condition hai (jaise "total 7 se zyada nahi"). Right ko aage badhate jao. Jaise hi window invalid ho, <b>left ko andar kheecho jab tak valid na ho jaaye</b>. Yahan <code>if</code> nahi, <code>while</code> chahiye, kyunki kabhi ek se zyada element hataane padte hain: 1, 5, 1 mein 3 aaye to total 10, aur 1 aur 5 dono nikalte hain.</p>
+<p><b>Do loops, phir bhi O(<var>n</var>) kyun?</b> Interview mein yeh line zaroor bolo: left pointer <b>kabhi peeche nahi jaata</b>. Poore run mein left zyada se zyada <var>n</var> baar aage badhega, aur right bhi <var>n</var> baar. Total 2<var>n</var> moves.</p>
+<p><b>Kab kaam nahi karega?</b> Agar value hataana sasta nahi (jaise window ka maximum), to extra structure chahiye: monotonic deque. Aur agar negative numbers hain, to window badhane se sum ghat bhi sakta hai, shrink ka rule toot jaata hai. Wahan prefix sums lagao.</p>`,
 
   viz: ["sliding-window", "sliding-window-var"],
 
   math: [
-    { t: "The overlap, counted", d: "Two neighbouring windows differ by two elements out of k. Recomputing means re-adding the k-2 that did not change.", w:
-`window of size k over n items
+    { t: "Both windows on 2, 1, 5, 1, 3, 2", d: "The fixed window moves both edges together. The budget window moves the right edge every step and the left edge only when forced.", w:
+`fixed, k = 3:
+  2 1 5      2 + 1 + 5 = 8
+  1 5 1      8 - 2 + 1 = 7
+  5 1 3      7 - 1 + 3 = 9      best
+  1 3 2      9 - 5 + 2 = 6      answer 9
 
+longest with total <= 7:
+  R=0  [2]          2    len 1
+  R=1  [2 1]        3    len 2
+  R=2  [1 5]        6    len 2    +5 made 8: drop 2
+  R=3  [1 5 1]      7    len 3    best
+  R=4  [1 3]        4    len 2    +3 made 10: drop 1, 5
+  R=5  [1 3 2]      6    len 3    answer 3` },
+    { t: "The overlap, counted", d: "Two neighbouring windows differ by two items out of <var>k</var>. Recomputing means adding again the <var>k</var> − 1 that stayed.", w:
+`window of size k over n items
 recompute each window:  (n - k + 1) x k
 slide instead:          n adds + n removes = 2n
 
 n = 10^6, k = 1000:
   10^9    vs    2 x 10^6
-
-the two windows share k - 1 of their k elements` },
-    { t: "The condition: both edges must be cheap", d: "Sliding works when the value can be repaired at the edges. When removal is expensive, the pattern needs a different structure behind it.", w:
+the two windows share k - 1 of their k items` },
+    { t: "The condition: both edges must be cheap", d: "Sliding works when the value can be repaired at the edges. When removal is expensive, the pattern needs another structure behind it.", w:
 `sum        add O(1)   remove O(1)   works
 count      add O(1)   remove O(1)   works
 distinct   add O(1)   remove O(1)   with a count map
@@ -14989,50 +15298,48 @@ max        add O(1)   remove O(k)   does NOT
                                     -> monotonic deque,
                                        amortised O(1)
 
-if the remove is O(k) the window is not the answer` },
+if the remove is O(k), the window is not the answer` },
     { t: "Two loops, and still linear: the sentence they listen for", d: "A while loop inside a for loop looks quadratic. It is not, because the inner pointer never goes backwards.", w:
 `for r in 0 .. n-1:
     add a[r]
     while the window is invalid:
         remove a[l];  l += 1
 
-l starts at 0, only increases, and stops at n
-so the inner loop body runs at most n times IN TOTAL,
+l starts at 0, only increases, and stops by n
+so the inner body runs at most n times IN TOTAL,
 not n times per r
-
 total pointer moves <= 2n  ->  O(n)` },
-    { t: "The shape it cannot handle", d: "Windows are contiguous and the shrink rule assumes the validity is monotone. Break either assumption and the pattern silently returns the wrong answer.", w:
+    { t: "The shape it cannot handle", d: "Windows are contiguous, and the shrink rule assumes the total only grows. Break either and the pattern silently returns the wrong answer.", w:
 `subarrays of n:      n(n+1)/2       contiguous
 subsequences of n:   2^n            not contiguous
-
-with negative numbers, adding an element can make a sum
-smaller, so "shrink while invalid" is no longer monotone
-
 n = 20:  210 subarrays  vs  1,048,576 subsequences
-for the negative case use prefix sums and a hash map` },
+
+with negative numbers, adding an item can lower a sum,
+so "shrink while over budget" no longer holds
+for that case use prefix sums` },
   ],
 
   costs: [
-    ["fixed-size window", "O(n) time · O(1) space", "each element enters once, leaves once"],
+    ["fixed-size window", "O(n) time · O(1) space", "each item enters once and leaves once"],
     ["variable window + frequency map", "O(n) time · O(k) space", "k = distinct values held in the window"],
     ["brute force over all windows", "O(n·k) / O(n²)", "what you are replacing"],
-    ["window maximum", "O(n) with a monotonic deque", "max is not removable in O(1), needs extra structure"],
-    ["substring with a 26-letter alphabet", "O(n) · O(1) space", "a fixed-size count array, not a growing map"],
+    ["window maximum", "O(n) with a monotonic deque", "a max cannot be removed in O(1), so it needs extra structure"],
+    ["substring over a 26-letter alphabet", "O(n) · O(1) space", "a fixed-size count array, not a growing map"],
   ],
 
   traps: [
-    "<b>Shrinking with <code>if</code> instead of <code>while</code>.</b> One removal may not restore the condition. You often must shrink several times.",
-    "<b>Recording the answer at the wrong moment.</b> For a maximum, record while the window is <i>valid</i>; for a minimum, record after each successful shrink. Decide before you code.",
-    "<b>Forgetting to clean the frequency map.</b> Delete keys whose count hits 0, or 'number of distinct values' silently becomes wrong.",
-    "<b>Applying it to subsequences.</b> Sliding window is only for <b>contiguous</b> ranges.",
-    "<b>Assuming growth is monotonic with negative numbers.</b> The whole shrink rule collapses, check the constraints.",
+    "<b>Shrinking with <code>if</code> instead of <code>while</code>.</b> One removal may not restore the condition. Adding the 3 to 1, 5, 1 needs two removals.",
+    "<b>Recording the answer at the wrong moment.</b> For a longest window, record once it is valid again; for a shortest, record inside the shrink loop. Decide before you code.",
+    "<b>Forgetting to clean the frequency map.</b> Delete keys whose count reaches 0, or “number of distinct values” quietly becomes wrong.",
+    "<b>Applying it to subsequences.</b> A sliding window is only for <b>contiguous</b> ranges.",
+    "<b>Assuming the total only grows when negatives are allowed.</b> The whole shrink rule collapses. Check the limits on the values.",
   ],
 
   impl: [
-    ["Python", "dict / collections.Counter / deque", "del freq[c] when the count hits 0; Counter keeps zero entries and breaks len()."],
+    ["Python", "dict / collections.Counter / deque", "del freq[c] when the count hits 0; Counter keeps zero entries, which breaks len()."],
     ["Java", "HashMap<Character,Integer> / int[128]", "map.remove(c) at zero; an int[] alphabet array is much faster than boxing."],
     ["C++", "unordered_map / array<int,128>", "erase() at zero; prefer a fixed array when the alphabet is small."],
-    ["JavaScript", "Map / plain object / Set", "Use a Map (delete at zero), object keys stringify and Set has no counts."],
+    ["JavaScript", "Map / plain object / Set", "Use a Map and delete at zero; object keys become strings, and a Set has no counts."],
   ],
 
   code: {
@@ -15186,12 +15493,12 @@ function minLen(target, a) {
   codecap: "Two templates cover the whole pattern: the fixed slide, and grow-then-shrink-while-invalid.",
 
   q: [
-    ["What waste does a sliding window remove?", "Consecutive windows overlap in all but two elements, so recomputing each from scratch re-reads shared elements. The window updates only at the edges."],
-    ["What must be true of the window statistic for this pattern to work?", "It must be updatable in O(1) on add and on remove, sums, counts and frequency maps qualify; maximum does not, which is why window-maximum needs a monotonic deque."],
-    ["Two nested loops. Why is it still O(n)?", "The left pointer never moves backwards, so across the entire run it advances at most n times. Right advances at most n times too, giving ≤ 2n moves total."],
-    ["When do you grow versus shrink in a variable window?", "Grow the right edge greedily; while the window violates the condition, shrink from the left. Use while, not if, because one removal may not be enough."],
-    ["What two signals in a problem statement point to sliding window?", "The answer is a contiguous subarray/substring (not a subsequence), and you want a max/min/count subject to a condition."],
-    ["Why do negative numbers break the 'shortest subarray with sum ≥ target' window?", "The logic assumes growing the window increases the sum. With negatives the condition is no longer monotonic, so prefix sums with a monotonic deque are required instead."],
+    ["What waste does a sliding window remove?", "Consecutive windows overlap in all but two items, so recomputing each from scratch reads shared items again. The window updates only at the edges."],
+    ["What must be true of the window's value for this pattern to work?", "It must update in O(1) on add and on remove. Sums, counts and frequency maps qualify; a maximum does not, which is why window maximum needs a monotonic deque."],
+    ["Two nested loops. Why is it still O(n)?", "The left pointer never moves backwards, so over the whole run it advances at most n times. The right advances at most n times too: at most 2n moves in total."],
+    ["When do you grow versus shrink in a variable window?", "Grow the right edge greedily; while the window breaks the condition, shrink from the left. Use while, not if, because one removal may not be enough."],
+    ["What two signals in a problem statement point to a sliding window?", "The answer is a contiguous subarray or substring, not a subsequence, and you want a max, min or count under a condition."],
+    ["Why do negative numbers break the 'shortest subarray with sum ≥ target' window?", "The logic assumes growing the window raises the sum. With negatives that fails, so prefix sums with a monotonic deque are needed instead."],
   ],
 
   p: [
@@ -15203,111 +15510,255 @@ function minLen(target, a) {
     [76, "minimum-window-substring", "Minimum Window Substring", "H"],
     [239, "sliding-window-maximum", "Sliding Window Maximum, monotonic deque", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek server <b>10⁶ minutes</b> mein har minute ka load log karta hai. Do sawaal: kaunsa 1,000-minute ka hissa sabse busy tha, aur sabse lamba hissa kaunsa jiska kul load budget ke andar rahe?</p>
+<p>Chhota version: chhe minute, <code>2, 1, 5, 1, 3, 2</code>. Sabse busy lagaataar 3 hain 5, 1, 3, kul 9. 7 ke budget ke saath sabse lamba hissa 3 minute ka, jaise 1, 5, 1.</p>`,
+      tries: [
+        ["Har window shuru se gino", "Sabse busy hisse ke liye (<var>n</var> − <var>k</var> + 1) × <var>k</var> ≈ 10⁹ additions. Budget ke liye har start aur end: 5 × 10¹¹ hisse."],
+        ["Jab tak fit ho hissa badhao, phir uske baad se naya shuru", "2, 1, 5, 1, 3, 2 par: 2, 1 fit, 5 tod deta hai; 5 se naya: 5, 1 fit, 3 tod deta hai; phir 3, 2. Best 2. Par 1, 5, 1 7 mein fit hai aur 3 lamba: yeh ek phenke gaye hisse ke andar shuru hua tha."],
+      ],
+      so: `<p>Padosi windows lagbhag sab kuch baant-ti hain. 2, 1, 5 aur 1, 5, 1 mein 1 aur 5 common. To running total rakho aur kinaaron par theek karo: <b>jaane wala ghatao, aane wala jodo</b>. Har step do kaam, chaudai chahe jo ho.</p>
+<p>Budget ke liye chaudai fix nahi. Right kinaara aage badhao, aur jab tak total budget se upar ho, left kinaara andar kheecho. Left kabhi peeche nahi jaata, to dono kinaare milkar zyada se zyada 2<var>n</var> baar hilte hain: O(<var>n</var>), lagbhag 2 × 10⁶ steps. Yahi <b>sliding window</b> hai, aur page poore mein yahi chhe minute use karta hai.</p>`,
+    },
+
+    one: "Lagaataar windows <b>overlap</b> karti hain, to kabhi shuru se mat gino: jo nikla use ghatao, jo aaya use jodo. O(<var>n</var>·<var>k</var>) O(<var>n</var>) ban jaata hai.",
+
+    plain: `<p>Problem: sabse achha <b>lagaataar</b> hissa dhoondho, yaani ek doosre ke bagal ke items bina gap ke. Lagaataar 3 ka sabse bada sum. Bina dohraav ka sabse lamba substring. Budget ke andar sabse lamba hissa.</p>
+<p>Seedha solution har hissa shuru se ginta hai: O(<var>n</var>·<var>k</var>), ya O(<var>n</var>²). Dekho kya dohraata hai. <code>2, 1, 5, 1, 3, 2</code> mein window 2, 1, 5 aur window 1, 5, 1 <b>1 aur 5 baant-ti hain</b>. Unhe dobara jodna saaf barbaadi hai.</p>
+<p>To running answer rakho aur sirf kinaaron par update karo. Window right khiske, to <b>nikle item ko ghatao aur aaye ko jodo</b>: 8 − 2 + 1 = 7. Har step <var>k</var> ki jagah do kaam, window kitni bhi chaudi.</p>
+<p><b>Analogy.</b> Train ke dibbe mein log ginna. Har station par saare 60 musafir dobara nahi ginte. Kaun utra aur kaun chadha gino, aur adjust karo.</p>`,
+
+    why: [
+      { t: "Padosi windows lagbhag sab baant-ti hain",
+        d: "Windows 2, 1, 5 aur 1, 5, 1 mein 1 aur 5 common hain. Har window shuru se ginna har baar un baante items ko dobara padhta hai. Wahi dohraaya padhna poori barbaadi hai." },
+      { t: "To sirf kinaaron par update karo",
+        d: "Window khiske to ek item left se nikalta hai aur ek right se aata hai. Nikalne wala ghatao, aane wala jodo: 8 − 2 + 1 = 7, phir 7 − 1 + 3 = 9. Har step do kaam, window kitni bhi chaudi, aur O(<var>n</var>·<var>k</var>) <b>O(<var>n</var>)</b> ban jaata hai." },
+      { t: "Yeh tabhi chalta hai jab value sasti jude aur hate",
+        d: "Sums, counts aur frequency maps ho jaate hain. <b>Maximum</b> nahi: nikalne wala item <i>hi</i> maximum ho, to sab dobara dekhna padta hai. Code se pehle yeh poochho; isiliye “sliding window maximum” ko extra structure chahiye." },
+      { t: "Size na diya ho to badhao aur ghatao",
+        d: "Kabhi rule size nahi, ek condition hota hai: “koi letter dohraaya nahi”, ya “total zyada se zyada 7”. Tab right kinaara laalach se aage badhao. Jab bhi window rule tode, left kinaara andar kheecho jab tak rule phir sahi na ho. 1, 5, 1 mein 3 jodne se 10, aur 1 aur 5 dono ko nikalna padta hai." },
+      { t: "Do loops, aur phir bhi O(n)",
+        d: "Andar ka loop ise O(<var>n</var>²) jaisa dikhata hai, par left kinaara <b>kabhi peeche nahi jaata</b>. Poore run mein woh sirf <var>n</var> baar aage badh sakta hai, aur right bhi: kul zyada se zyada 2<var>n</var> moves. Yeh zor se bolna hi woh hai jiska interviewer intezaar kar raha hai." },
+      { t: "Shrink rule ko aisa total chahiye jo sirf badhe",
+        d: "“Budget se upar ho tab tak ghatao” maanta hai ki item jodne se total kabhi kam nahi hota, jo saari values positive hon tab sach hai. Negatives ke saath budget se upar window badh kar wapas neeche aa sakti hai, aur rule galat answers deta hai. Us case ko prefix sums chahiye." },
+      { t: "Sirf lagaataar hisson ke liye",
+        d: "Agar chahiye wale items ka ek doosre ke bagal hona zaroori nahi, to pattern lagta hi nahi. Woh hash-map ya DP problem hai." },
+    ],
+
+    variants: [
+      { n: "Fixed size", cost: "O(n) time, O(1) space",
+        idea: "Pehli window banao, phir khiskao: aane wala jodo, jaane wala hatao.",
+        when: "Window ki chaudai di ho: lagaataar <var>k</var> ka best average, fixed word ka anagram.",
+        watch: "Pehli poori window ke baad record shuru karo, pehle nahi." },
+      { n: "Longest valid window", cost: "O(n) time",
+        idea: "Right badhao; jab tak invalid, left ghatao; phir R − L + 1 record karo.",
+        when: "Bina dohraav ka sabse lamba substring, budget ke andar sabse lamba hissa, zyada se zyada <var>k</var> alag letters.",
+        watch: "Shrink ke baad record karo, jab window phir valid ho." },
+      { n: "Shortest valid window", cost: "O(n) time",
+        idea: "Valid hone tak right badhao; phir jab tak valid, record karo aur left ghatao.",
+        when: "Target se kam se kam sum wala sabse chhota subarray, minimum window substring.",
+        watch: "Recording shrink loop ke andar chali jaati hai. Ise longest template se badal dena classic galti hai." },
+      { n: "Counting windows", cost: "O(n) time",
+        idea: "“Zyada se zyada <var>k</var>” ke liye R par khatam har valid window R − L + 1 jodti hai. “Theek <var>k</var>” = zyada se zyada <var>k</var> minus zyada se zyada <var>k</var> − 1.",
+        when: "Zyada se zyada, ya theek, <var>k</var> alag values wale subarrays gino.",
+        watch: "“Theek” seedhe window condition nahi. Ghataane wali trick standard raasta hai." },
+      { n: "Window maximum", cost: "O(n) with a monotonic deque",
+        idea: "Candidate indices ek deque mein ghat-ti values ke saath rakho; aage wala window ka maximum hai.",
+        when: "Size <var>k</var> ki har window ka max ya min.",
+        watch: "Maximum O(1) mein nahi hat-ta, to seedhi window yahan fail hoti hai. Monotonic stack page deque samjhata hai." },
+    ],
+
+    math: [
+      { t: "2, 1, 5, 1, 3, 2 par dono windows", d: "Fixed window dono kinaare saath hilaati hai. Budget window right kinaara har step aur left sirf majboori mein hilaati hai." },
+      { t: "Overlap, gina hua", d: "Do padosi windows <var>k</var> mein se do items se alag hain. Shuru se ginna matlab bache <var>k</var> − 1 ko dobara jodna." },
+      { t: "Shart: dono kinaare saste hon", d: "Khiskana tab chalta hai jab value kinaaron par theek ho sake. Jab hataana mehenga ho, pattern ko peeche ek aur structure chahiye." },
+      { t: "Do loops, phir bhi linear: woh sentence jo woh sunna chahte hain", d: "for loop ke andar while loop quadratic dikhta hai. Nahi hai, kyunki andar ka pointer kabhi peeche nahi jaata." },
+      { t: "Woh shakal jo yeh nahi sambhal sakta", d: "Windows lagaataar hain, aur shrink rule maanta hai ki total sirf badhta hai. Koi bhi todo aur pattern chupchaap galat answer deta hai." },
+    ],
+
+    costs: [
+      ["fixed-size window", "O(n) time · O(1) space", "har item ek baar aata aur ek baar jaata hai"],
+      ["variable window + frequency map", "O(n) time · O(k) space", "k = window mein rakhi alag values"],
+      ["brute force over all windows", "O(n·k) / O(n²)", "jise aap badal rahe ho"],
+      ["window maximum", "O(n) with a monotonic deque", "max O(1) mein nahi hat-ta, to extra structure chahiye"],
+      ["substring over a 26-letter alphabet", "O(n) · O(1) space", "fixed-size count array, badhta map nahi"],
+    ],
+
+    traps: [
+      "<b><code>while</code> ki jagah <code>if</code> se ghataana.</b> Ek hataane se condition wapas nahi aati shaayad. 1, 5, 1 mein 3 jodne par do hataane padte hain.",
+      "<b>Galat waqt answer record karna.</b> Longest window ke liye tab record karo jab woh phir valid ho; shortest ke liye shrink loop ke andar. Code se pehle tay karo.",
+      "<b>Frequency map saaf karna bhoolna.</b> Jin keys ki ginti 0 ho unhe delete karo, warna “alag values ki ginti” chupchaap galat ho jaati hai.",
+      "<b>Subsequences par lagaana.</b> Sliding window sirf <b>lagaataar</b> ranges ke liye hai.",
+      "<b>Negatives allowed hon tab maanna ki total sirf badhta hai.</b> Poora shrink rule gir jaata hai. Values ki limits check karo.",
+    ],
+
+    impl: [
+      ["Python", "dict / collections.Counter / deque", "Ginti 0 ho to del freq[c]; Counter zero entries rakhta hai, jo len() tod deta hai."],
+      ["Java", "HashMap<Character,Integer> / int[128]", "Zero par map.remove(c); int[] alphabet array boxing se kaafi tez."],
+      ["C++", "unordered_map / array<int,128>", "Zero par erase(); alphabet chhota ho to fixed array lo."],
+      ["JavaScript", "Map / plain object / Set", "Map lo aur zero par delete karo; object keys strings ban jaati hain, aur Set mein counts nahi."],
+    ],
+
+    codecap: "Do templates poora pattern dhakte hain: fixed slide, aur badhao-phir-invalid-hone-tak-ghatao.",
+
+    q: [
+      ["Sliding window kaunsi barbaadi hataata hai?", "Lagaataar windows do items chhod kar sab mein overlap karti hain, to har ek shuru se ginna baante items dobara padhta hai. Window sirf kinaaron par update hoti hai."],
+      ["Pattern chale, iske liye window ki value ke baare mein kya sach hona chahiye?", "Jodne aur hataane dono par O(1) mein update ho. Sums, counts aur frequency maps chalte hain; maximum nahi, isiliye window maximum ko monotonic deque chahiye."],
+      ["Do nested loops. Phir bhi O(n) kyun?", "Left pointer kabhi peeche nahi jaata, to poore run mein zyada se zyada n baar aage badhta hai. Right bhi zyada se zyada n baar: kul zyada se zyada 2n moves."],
+      ["Variable window mein kab badhao aur kab ghatao?", "Right kinaara laalach se badhao; jab tak window condition tode, left se ghatao. if nahi while use karo, kyunki ek hataana kaafi na ho shaayad."],
+      ["Problem statement ke kaunse do signal sliding window ki taraf ishaara karte hain?", "Answer lagaataar subarray ya substring hai, subsequence nahi, aur kisi condition ke andar max, min ya ginti chahiye."],
+      ["'shortest subarray with sum ≥ target' window ko negative numbers kyun todte hain?", "Logic maanta hai ki window badhane se sum badhta hai. Negatives ke saath yeh fail hota hai, to iski jagah monotonic deque ke saath prefix sums chahiye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "monotonic-stack",
   n: "Monotonic stack and deque",
   group: "Patterns",
-  one: "A bigger value arriving makes every smaller value behind it <b>dead forever</b>, so pop it. Each index is pushed once and popped once: O(n²) becomes <b>O(n)</b>.",
+  need: {
+    ask: `<p>A street has <b>10⁵ buildings</b> in a row. For each one, find the next building to its right that is taller: the one that blocks its view. The same question, reworded, asks for the next warmer day or the next higher price.</p>
+<p>The small version: heights <code>2, 1, 5, 6, 2, 3</code>. The next taller buildings are 5, 5, 6, none, 3, none.</p>`,
+    tries: [
+      ["Walk right from every building until a taller one appears", "Fine when answers are close. On a street whose heights only fall, every walk runs to the end: <var>n</var>² / 2 = 5 × 10⁹ steps for 10⁵ buildings."],
+      ["Walk from the right, remembering the tallest building so far", "The tallest to the right is not the <i>next</i> taller. For the first building, height 2, the tallest to its right is 6, but the next taller is the 5, two places along."],
+    ],
+    so: `<p>So notice who can be forgotten. When the 5 arrives, the 2 and the 1 before it are answered: the 5 is the first taller building to the right of each. With their answers found, they have nothing left to wait for. Throw them away for good.</p>
+<p>Keep the buildings still waiting on a stack. Each newcomer pops every shorter one, answering it on the way out, then waits itself. Each building is pushed once and popped at most once: at most 2<var>n</var> steps, O(<var>n</var>). That is a <b>monotonic stack</b>, and the page uses this street throughout.</p>`,
+  },
 
-  plain: `<p>The problem always has the same shape. <b>For each element, find the next element to its right that is bigger.</b> Or smaller. Or the nearest one to its left. Days until a warmer day. The next larger stock price. How far a bar in a histogram can stretch before a shorter bar stops it.</p>
-<p>The obvious solution walks right from every position until it finds the answer, O(n²), and it re-reads the same tail over and over. The waste is not the scanning, it is that the scan keeps considering elements that <b>cannot possibly be the answer for anybody</b>.</p>
-<p>Here is why. Suppose <code>b</code> sits after <code>a</code> and <code>b</code> is bigger. Then <code>a</code> is finished: for every position further right, <code>b</code> stands in the way and <code>b</code> is the better answer anyway. So <code>a</code> can be thrown away the moment <code>b</code> arrives, permanently. Keep only the elements nothing has blocked yet, and that leftover pile is automatically in decreasing order. Nobody sorted it. The discarding did.</p>
-<p><b>Analogy.</b> A queue of people waiting, seen from the back. Once someone taller joins behind you, nobody further back will ever see you again. The people still visible from the back of the line are always in decreasing height, and no one had to arrange them.</p>`,
+  one: "A bigger value arriving makes every smaller value behind it <b>dead forever</b>, so pop it. Each index is pushed once and popped once: O(<var>n</var>²) becomes <b>O(<var>n</var>)</b>.",
+
+  plain: `<p>The problem always has the same shape. <b>For each element, find the next element to its right that is bigger.</b> Or smaller, or the nearest one to its left. Days until a warmer day. The next higher price. How far a bar in a histogram can stretch before a shorter bar stops it.</p>
+<p>The obvious solution walks right from every position until it finds the answer: O(<var>n</var>²), re-reading the same tail again and again. The waste is not the walking. It is that the walk keeps looking at elements that <b>cannot be the answer for anybody</b>.</p>
+<p>Here is why. On the street <code>2, 1, 5, 6, 2, 3</code>, the 5 comes after the 2 and is taller. The 5 is the first taller building to the right of the 2, so it <b>is</b> the 2's answer. Once answered, the 2 has nothing left to wait for, and can be thrown away the moment the 5 arrives. Keep only buildings still waiting, and that pile is automatically in decreasing order. Nobody sorted it; the throwing away did.</p>
+<p><b>Analogy.</b> A line of people seen from the back. Once someone taller stands behind you, nobody further back will ever see you again. The people still visible from the back are always in decreasing height, and no one arranged them.</p>`,
 
   why: [
     { t: "Start from the question, not the structure",
-      d: "\"For each element, the next one bigger than it.\" The obvious answer scans right from every index, which is O(n²) in the worst case. And the worst case is an array sorted downwards, which is not exotic." },
+      d: "“For each element, the next one bigger than it.” The obvious answer walks right from every index: O(<var>n</var>²) in the worst case. And the worst case is heights that only fall, which is not exotic." },
     { t: "One element can kill another, forever",
-      d: "Say <code>b</code> comes after <code>a</code> and <code>b</code> is bigger. Then <code>a</code> is never anyone's next-greater again. For anything further right, <code>b</code> stands in the way, and <code>b</code> is the better candidate anyway. So <code>a</code> is not deferred, it is <b>discarded</b>." },
+      d: "Say <code>b</code> comes after <code>a</code> and is bigger, like the 5 after the 2. Then <code>b</code> is the first bigger element to the right of <code>a</code>: it <b>is</b> <code>a</code>'s answer. And <code>a</code> can answer nobody still waiting, since everything below it on the stack is bigger. So <code>a</code> is not put off; it is <b>thrown away</b>." },
     { t: "What survives is already sorted",
-      d: "Keep only the elements nothing has blocked yet. Every survivor is bigger than everything after it that is still alive, so the pile is in decreasing order by construction. That is where the word <i>monotonic</i> comes from, and it is a consequence, not a rule you enforce." },
+      d: "Keep only the elements nothing has blocked yet. Each survivor is bigger than everything after it that is still alive, so the pile decreases by construction. After the 6 and the 2 arrive, the stack holds 6, 2. That is where the word <i>monotonic</i> comes from: a result, not a rule you enforce." },
     { t: "The newcomer is the answer for everything it kills",
-      d: "When <code>x</code> arrives and you pop the survivors smaller than it, you are not just tidying up. <code>x</code> is precisely the <b>next greater element</b> of every single one of them, so record the answer as you pop. One pass, and the pops write the whole answer array." },
+      d: "When <code>x</code> arrives and pops the smaller survivors, it is not just tidying. <code>x</code> is exactly the <b>next bigger element</b> of every one of them, so record the answer as you pop. The 5 answers both the 1 and the 2. One pass, and the pops fill the whole answer array." },
     { t: "Two loops, still O(n), and this is the bit they listen for",
-      d: "Each index is pushed exactly once and popped at most once. So the inner while loop runs <b>at most n times in total across the entire outer loop</b>, not n times per iteration. Around 2n operations, therefore <b>O(n)</b>. Say it in those words; \"amortised\" on its own is not an argument." },
+      d: "Each index is pushed exactly once and popped at most once. So the inner while loop runs <b>at most <var>n</var> times over the whole outer loop</b>, not <var>n</var> times per step. On the street: 6 pushes, 4 pops. About 2<var>n</var> operations: <b>O(<var>n</var>)</b>. Say it in those words; “amortised” alone is not an argument." },
     { t: "Four directions, two knobs",
-      d: "<b>Next</b> means scan left to right, <b>previous</b> means scan right to left. <b>Greater</b> means pop while the top is smaller, <b>smaller</b> means pop while the top is bigger. That is the whole family. Store <b>indices</b>, not values: the question is usually how far away the answer is, and an index gives you both." },
+      d: "<b>Next</b> means scan left to right; <b>previous</b> means right to left. <b>Greater</b> means pop while the top is smaller; <b>smaller</b> means pop while the top is bigger. That is the whole family. Store <b>indices</b>, not values: the question is usually how far away the answer is, and an index gives both." },
     { t: "It cannot handle things leaving from the front",
-      d: "A stack only discards from the end you push to. In sliding window maximum, the current maximum expires off the <b>front</b> of the window while it is still the largest thing you hold. A stack has no way to reach it. You need to discard at both ends, which is a <b>deque</b>. Same discarding logic, one extra exit." },
+      d: "A stack only removes from the end you push to. In sliding window maximum, the current maximum leaves off the <b>front</b> of the window while still the largest thing you hold. A stack cannot reach it. You need to remove at both ends: a <b>deque</b>. Same logic, one extra exit." },
   ],
 
-  hing: `<p><b>Sawaal ki shakal hamesha ek hi hoti hai:</b> har element ke liye uske right mein <b>agla bada</b> (ya chhota, ya left wala nazdeeki) element dhoondho. Daily Temperatures, Stock Span, Largest Rectangle, teeno wahi ek sawaal hain alag kapdon mein.</p>
-<p><b>Asli insight (yahi poora topic hai):</b> agar <code>b</code>, <code>a</code> ke baad aaya aur <code>b</code> bada hai, to <code>a</code> ab <b>kisi ka bhi</b> next greater nahi ban sakta. Kyun? Kyunki aage waale har element ke liye <code>b</code> raaste mein khada hai, aur <code>b</code> behtar candidate bhi hai. Matlab <code>a</code> ko baad ke liye rakhna nahi hai, <b>hamesha ke liye phenk dena hai</b>. Stack mein sirf woh log bachte hain jinhe abhi tak kisi ne block nahi kiya, aur isiliye stack apne aap <b>decreasing order</b> mein rehta hai. Kisi ne sort nahi kiya, phenkne se apne aap ho gaya.</p>
-<p><b>Answer kahaan se aata hai?</b> Jab naya <code>x</code> aata hai aur tum chhote elements pop kar rahe ho, to <code>x</code> hi un sab ka answer hai. Pop karte waqt likh do, bas. Ek hi pass mein poora answer array bhar jaata hai.</p>
-<p><b>Interview ka sabse zaroori line:</b> "do loops hain to O(n²) hoga na?" Nahi. <b>Har index ek baar push hota hai aur zyada se zyada ek baar pop</b>. Isliye inner while poore program mein milakar n baar se zyada nahi chalta, har iteration mein n baar nahi. Total ~2n operations, <b>O(n)</b>. Yeh line bolna zaroori hai, sirf "amortised" keh dene se baat nahi banti.</p>
-<p><b>Chaar directions, sirf do knobs:</b><br>next = left se right scan, previous = right se left scan.<br>greater = jab tak top chhota hai pop karo, smaller = jab tak top bada hai pop karo.</p>
-<p><b>Aur ek aadat: indices store karo, values nahi.</b> Zyadatar sawaal distance poochhte hain, jaise kitne din baad. Index rakha to value bhi mil hi jaayegi.</p>
-<p><b>Ties ka trap:</b> equal elements par pop karoge ya chhod doge, yeh decide karta hai ki answer "strictly greater" hai ya "greater ya equal". Daily Temperatures mein <b>strictly warmer</b> chahiye, to equal ko pop mat karo.</p>
-<p><b>Ab deque kab chahiye?</b> Window maximum mein current max <b>window ke aage se</b> bahar nikal jaata hai, jabki woh abhi bhi sabse bada hai. Stack us end tak pahunch hi nahi sakta, kyunki stack sirf ek hi taraf se nikaalta hai. Isliye <b>deque</b>. Peeche se chhote elements pop karo, woh chhote bhi hain aur purane bhi. Aage se woh index nikaal do jo window se bahar ho chuka hai. Front hamesha window ka maximum hota hai.</p>
-<p><b>Largest Rectangle ka sentinel trick:</b> loop khatam hone ke baad stack mein kuch elements bache reh jaate hain jinka rectangle abhi nikala hi nahi gaya. Isliye aakhir mein ek <b>0 height</b> ka fake bar lagao. Woh sabse chhota hai, to sab kuch pop ho jaayega, aur alag se drain karne wala loop likhne ki zaroorat nahi padegi.</p>`,
+  variants: [
+    { n: "Next greater", cost: "O(n)",
+      idea: "Scan left to right; pop while the top is smaller than the newcomer, answering each popped index with the newcomer.",
+      when: "Next warmer day, next taller building, next higher price.",
+      watch: "Leftovers on the stack have no answer. Pre-fill the result with −1 or 0 on purpose." },
+    { n: "Next smaller", cost: "O(n)",
+      idea: "The same loop with the comparison flipped: pop while the top is bigger.",
+      when: "Where a histogram bar's rectangle must stop on the right, sum of subarray minimums.",
+      watch: "Decide whether equal values pop each other. Strict or not changes which duplicates are counted." },
+    { n: "Previous greater or smaller", cost: "O(n)",
+      idea: "Scan right to left, or scan left to right and read the answer from the top of the stack before pushing.",
+      when: "Stock span: how many days back the price was lower or equal.",
+      watch: "After popping, the new top is the previous greater. Read it before you push." },
+    { n: "Circular array", cost: "O(n)",
+      idea: "Walk 2<var>n</var> indices, using <var>i</var> mod <var>n</var>, so every element sees the whole ring once.",
+      when: "Next Greater Element II, and anything on a ring.",
+      watch: "Push only during the first pass, or the second pass pushes duplicates." },
+    { n: "Monotonic deque", cost: "O(n) time, O(k) space",
+      idea: "Pop smaller candidates off the back, and expired indices off the front. The front is always the window's maximum.",
+      when: "Maximum or minimum of every sliding window.",
+      watch: "Check the front for expiry every step, or it stays the maximum after it has left the window." },
+  ],
+
+  hing: `<p><b>Pattern:</b> har element ke liye uske right mein <b>agla bada</b> (ya chhota) element dhoondhna. Jaise "garam din kitne din baad aayega", ya "agli oonchi building kaunsi hai". Brute force: har index se right mein scan karo, O(<var>n</var>²).</p>
+<p><b>Asli insight:</b> maan lo <code>a</code> ke baad <code>b</code> aaya aur <code>b</code> bada hai, jaise 2 ke baad 5. To <code>b</code> hi <code>a</code> ka answer hai, kyunki woh right mein pehla bada hai. Answer mil gaya, to <code>a</code> ko hamesha ke liye phenk do.</p>
+<p><b>Isiliye stack apne aap sorted rehta hai.</b> Jo bache hain, woh wahi hain jinhe abhi tak kisi ne block nahi kiya. Isse stack mein values ghat-te order mein rehti hain. Kisi ne sort nahi kiya, yeh bas phenkne ka nateeja hai.</p>
+<p><b>Aur answer bhi pop karte waqt hi milta hai.</b> Naya element <code>x</code> aaya aur usne chhote elements pop kiye, to <code>x</code> hi un sab ka <b>next greater</b> hai. Wahi likh do.</p>
+<p><b>Loop ke andar loop, phir bhi O(<var>n</var>) kyun?</b> Har index <b>ek baar push</b> hota hai aur <b>zyada se zyada ek baar pop</b>. To andar ka <code>while</code> poore run mein kul <var>n</var> baar chalega, har iteration mein nahi. <code>2, 1, 5, 6, 2, 3</code> par 6 push aur 4 pop. Total lagbhag 2<var>n</var>.</p>
+<p><b>Chaar variants, bas do cheezein badlo:</b> next ke liye left se right scan, previous ke liye right se left. Greater ke liye tab tak pop karo jab tak top chhota hai, smaller ke liye ulta. Stack mein <b>index</b> rakho, value nahi, kyunki aksar distance poochha jaata hai.</p>
+<p><b>Galtiyan jo log karte hain:</b> equal values ka dhyaan na rakhna (strict greater chahiye ya greater-or-equal?), aur loop ke baad stack mein bache elements ko bhool jaana. Unka answer kabhi mila hi nahi, unhe -1 do.</p>`,
 
   viz: ["monotonic-stack"],
 
   math: [
-    { t: "Each index is pushed once and popped once", d: "The inner while loop can run a long time on one step. What matters is its total across the whole scan, and that is bounded by the number of pushes.", w:
-`n elements, one stack
+    { t: "The street 2, 1, 5, 6, 2, 3, push by push", d: "The stack holds indices of buildings still waiting, shown here by height. Every pop writes one answer.", w:
+`height   push?   pops (and their answer)        stack
+2        push                                   [2]
+1        push                                   [2, 1]
+5        push    1 -> 5,  2 -> 5                [5]
+6        push    5 -> 6                         [6]
+2        push                                   [6, 2]
+3        push    2 -> 3                         [6, 3]
+end              6 and 3 never answered: -1
 
+next taller = [5, 5, 6, -1, 3, -1]
+6 pushes, 4 pops: at most 2n` },
+    { t: "Each index is pushed once and popped once", d: "The inner while loop can run long on one step. What matters is its total over the whole scan, and that is bounded by the number of pushes.", w:
+`n elements, one stack
 pushes:  exactly n, one per element
 pops:    at most n, since nothing is pushed twice
 
 the inner while may pop n-1 items on a single step,
 but only because n-1 pushes already happened
-
 total stack operations <= 2n   ->   O(n)` },
-    { t: "Against the nested scan", d: "Next-greater-element is the canonical use, and the naive version is the triangular sum that appears everywhere in this file.", w:
+    { t: "Against the nested scan", d: "Next greater element is the standard use, and the naive version is the triangular sum that appears all over this site.", w:
 `next greater element for every index
-
-scan right from each i:  (n-1) + (n-2) + ... = n^2 / 2
+walk right from each i:  (n-1) + (n-2) + ... = n^2 / 2
 monotonic stack:         2n
 
 n = 10^5:   5 x 10^9   vs   2 x 10^5` },
-    { t: "Why popping is safe, stated as a fact about the future", d: "The pop is not a tidy-up. It is a proof that the popped index can never be the answer for anything still to come.", w:
-`the stack holds indices with decreasing values
-a new value v = a[i] arrives and pops index j, a[j] <= v
+    { t: "Why popping is safe", d: "The pop is not a tidy-up. The popped index has just received its final answer, and it can no longer be anyone else's.", w:
+`the stack holds waiting indices, values decreasing
+a new value v = a[i] arrives and pops index j, a[j] < v
 
-for any future index k > i:
-  a[j] <= v = a[i],  and  i is closer to k than j is
+every index between j and i was smaller than a[j],
+or it would have popped j already, so i is the FIRST
+index right of j with a bigger value: answer[j] = i
 
-so j loses to i on both value and distance: j can never
-be the answer for k. Deleting it loses nothing.` },
-    { t: "Largest rectangle, which is the version they ask", d: "Each bar's rectangle is bounded by the nearest strictly smaller bar on each side. Two monotonic passes give both, so the whole thing stays linear.", w:
+and j can answer nobody still waiting: everything
+below it on the stack is bigger. Deleting it loses nothing.` },
+    { t: "Largest rectangle, the version they ask", d: "Each bar's rectangle is bounded by the nearest smaller bar on each side. Two monotonic passes find both, so the whole thing stays linear.", w:
 `for each bar i:  area = height[i] x (right - left - 1)
   left  = index of the nearest smaller bar to the left
   right = index of the nearest smaller bar to the right
 
-both arrays: one monotonic pass each, n pushes, n pops
-total O(n) time, O(n) space
+bars 2, 1, 5, 6, 2, 3:  the 5 spans 5 and 6, width 2
+  area 5 x 2 = 10, the largest
 
-expanding outward from every bar instead: n^2 / 2
-n = 10^5:  5 x 10^9  vs  4 x 10^5` },
+both arrays: one monotonic pass each, O(n)
+expanding outward from every bar: n^2 / 2` },
   ],
 
   costs: [
-    ["next greater over n elements", "O(n)", "each index pushed once, popped at most once, about 2n ops"],
-    ["the inner while loop", "O(1) amortised", "it can only remove what some earlier push paid for"],
-    ["naive scan from every index", "O(n²)", "the same tail is re-read once per element to its left"],
-    ["stack space", "O(n)", "a strictly increasing input never pops, so everything is held"],
+    ["next greater over n elements", "O(n)", "each index pushed once, popped at most once, about 2n operations"],
+    ["the inner while loop", "O(1) amortised", "it can only remove what an earlier push paid for"],
+    ["naive walk from every index", "O(n²)", "the same tail is read again once per element to its left"],
+    ["stack space", "O(n)", "an input that only falls never pops, so everything is held"],
     ["sliding window maximum", "O(n) time, O(k) space", "the deque holds only candidates still inside the window"],
-    ["largest rectangle in histogram", "O(n)", "same 2n budget, the sentinel just pays for the final pops"],
+    ["largest rectangle in histogram", "O(n)", "the same 2n budget; a sentinel pays for the final pops"],
   ],
 
   traps: [
-    "<b>Storing values instead of indices.</b> Then the question turns out to be \"how many days until\", and you have thrown away the only thing that answers it. Push indices, read the value through the array.",
-    "<b>Getting ties wrong.</b> Popping on equal gives you the next <i>strictly</i> greater; keeping on equal gives greater-or-equal. Daily Temperatures wants strictly warmer, so equal values must not pop each other. Nothing crashes, the answers are just quietly wrong.",
-    "<b>Ignoring what is left on the stack.</b> Whatever survives the loop never found an answer. Pre-fill the result with -1 (or 0), or append a sentinel, but decide deliberately rather than discovering it on the last test case.",
-    "<b>Using a stack for sliding window maximum.</b> The maximum leaves through the front of the window, which a stack cannot reach. This one does not degrade gracefully, it returns maxima from outside the window.",
-    "<b>Forgetting the front-expiry check in the deque.</b> The back-popping keeps the deque decreasing, so the front is the biggest thing you hold, and without the expiry check it stays the biggest long after it has fallen out of the window.",
-    "<b>Using <code>if</code> instead of <code>while</code> when popping the back.</b> One arrival can invalidate a long run of survivors. Stop after one and the monotonic invariant is gone, along with every answer that depended on it.",
+    "<b>Storing values instead of indices.</b> Then the question turns out to be “how many days until”, and the only thing that answers it is gone. Push indices; read values through the array.",
+    "<b>Getting ties wrong.</b> Popping on equal gives the next <i>strictly</i> greater; keeping on equal gives greater-or-equal. Daily Temperatures wants strictly warmer, so equal values must not pop each other. Nothing crashes; the answers are quietly wrong.",
+    "<b>Ignoring what is left on the stack.</b> Whatever survives the loop never found an answer: the 6 and the 3 on the street. Pre-fill the result with −1 or 0, or add a sentinel, and decide on purpose.",
+    "<b>Using a stack for sliding window maximum.</b> The maximum leaves through the front of the window, which a stack cannot reach. It returns maxima from outside the window.",
+    "<b>Forgetting the front-expiry check in the deque.</b> The front is the biggest thing you hold, and without the check it stays the biggest long after it has left the window.",
+    "<b>Using <code>if</code> instead of <code>while</code> when popping.</b> One arrival can end a long run of survivors: the 5 pops two. Stop after one and the order breaks, along with every answer after it.",
   ],
 
   impl: [
     ["Python", "list as the stack, collections.deque for both ends", "deque gives pop() and popleft(), both O(1); a list has no cheap front removal."],
-    ["Java", "ArrayDeque for both roles", "push() is addFirst(), so do not mix push() with peekFirst() as if it were a tail. Pick one vocabulary: push/peek/pop, or addLast/peekLast/pollLast."],
-    ["C++", "std::stack, std::deque", "stack::pop() returns void, read top() before popping. deque has front(), back() and pops at both ends."],
-    ["JavaScript", "Array, plus a head index", "There is no deque. shift() is O(n), so keep a head pointer for the front and let the consumed prefix sit there."],
+    ["Java", "ArrayDeque for both roles", "push() is addFirst(), so do not mix push() with peekLast(). Pick one set of names: push/peek/pop, or addLast/peekLast/pollLast."],
+    ["C++", "std::stack, std::deque", "stack::pop() returns void, so read top() first. deque has front(), back() and pops at both ends."],
+    ["JavaScript", "Array, plus a head index", "There is no deque. shift() is O(n), so keep a head pointer for the front and leave the used prefix alone."],
   ],
 
   code: {
@@ -15519,15 +15970,15 @@ function largestRectangle(h) {
   return best;
 }`,
   },
-  codecap: "One loop shape underneath all of it: pop everything the newcomer kills, answer them on the way out, then push the newcomer.",
+  codecap: "One loop shape under all of it: pop everything the newcomer kills, answer them on the way out, then push the newcomer.",
 
   q: [
-    ["Why can an element be thrown away permanently instead of kept for later?", "If a bigger element arrives after it, that bigger element blocks it from everything further right and is a better answer there anyway. It can never be anyone's next-greater again, so there is nothing left to keep it for."],
-    ["Why is the stack sorted when nobody sorts it?", "It only ever holds elements that nothing has blocked yet. Anything smaller than a newcomer is discarded on arrival, so every survivor is larger than the ones after it. Monotonicity is a side effect of the discarding rule."],
-    ["There is a while loop inside a for loop. Why is it not O(n²)?", "Each index is pushed exactly once and popped at most once, so the inner while executes at most n times summed over the entire outer loop, not per iteration. About 2n operations in total, so O(n)."],
-    ["What changes between next greater, next smaller, previous greater and previous smaller?", "Two things only. Next versus previous flips the scan direction, left-to-right or right-to-left. Greater versus smaller flips the comparison used to pop. Whether the comparison is strict decides how equal values are treated."],
-    ["Why store indices rather than values?", "The question is usually a distance, how many days until it gets warmer, or how wide a rectangle can be. An index gives you the distance and the value; a value gives you neither."],
-    ["Why does sliding window maximum need a deque instead of a stack?", "The current maximum expires off the front of the window while it is still the largest element held. A stack can only remove from the end it pushes to, so you need to discard at both ends: smaller candidates off the back, expired indices off the front."],
+    ["Why can an element be thrown away for good instead of kept for later?", "If a bigger element arrives after it, that element blocks it from everything further right and is a better answer there anyway. It can never be anyone's next greater again, so there is nothing to keep it for."],
+    ["Why is the stack sorted when nobody sorts it?", "It only holds elements nothing has blocked yet. Anything smaller than a newcomer is thrown away on arrival, so every survivor is larger than the ones after it. The order is a side effect of the rule."],
+    ["There is a while loop inside a for loop. Why is it not O(n²)?", "Each index is pushed exactly once and popped at most once, so the inner while runs at most n times over the whole outer loop, not per step. About 2n operations in total, so O(n)."],
+    ["What changes between next greater, next smaller, previous greater and previous smaller?", "Two things. Next versus previous flips the scan direction. Greater versus smaller flips the comparison used to pop. Whether the comparison is strict decides how equal values are treated."],
+    ["Why store indices rather than values?", "The question is usually a distance: how many days until it gets warmer, or how wide a rectangle can be. An index gives the distance and the value; a value gives neither."],
+    ["Why does sliding window maximum need a deque instead of a stack?", "The current maximum leaves off the front of the window while still the largest element held. A stack only removes from the end it pushes to, so you need both ends: smaller candidates off the back, expired indices off the front."],
   ],
 
   p: [
@@ -15539,119 +15990,235 @@ function largestRectangle(h) {
     [239, "sliding-window-maximum", "Sliding Window Maximum, the deque variant", "H"],
     [84, "largest-rectangle-in-histogram", "Largest Rectangle, the sentinel drain", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek gali mein <b>10⁵ buildings</b> ek line mein hain. Har ek ke liye uske right mein agli oonchi building dhoondho: jo uska nazaara rokti hai. Yahi sawaal, alag shabdon mein, agla garam din ya agla ooncha daam poochhta hai.</p>
+<p>Chhota version: heights <code>2, 1, 5, 6, 2, 3</code>. Agli oonchi buildings 5, 5, 6, koi nahi, 3, koi nahi.</p>`,
+      tries: [
+        ["Har building se right chalo jab tak oonchi na mile", "Jab answers paas hon to theek. Jis gali ki heights sirf girti hon, wahan har walk end tak jaati hai: 10⁵ buildings ke liye <var>n</var>² / 2 = 5 × 10⁹ steps."],
+        ["Right se chalo, ab tak ki sabse oonchi building yaad rakhte hue", "Right ki sabse oonchi <i>agli</i> oonchi nahi hai. Pehli building, height 2, ke right mein sabse oonchi 6 hai, par agli oonchi 5 hai, do jagah aage."],
+      ],
+      so: `<p>To dekho kise bhoola ja sakta hai. Jab 5 aata hai, uske pehle ke 2 aur 1 ka answer mil jaata hai: 5 dono ke right mein pehli oonchi building hai. Answer mil gaya, to intezaar ko kuch nahi bacha. Unhe hamesha ke liye phenk do.</p>
+<p>Intezaar kar rahi buildings ek stack par rakho. Har nayi building har chhoti ko pop karti hai, nikalte waqt uska answer likhte hue, phir khud intezaar karti hai. Har building ek baar push aur zyada se zyada ek baar pop: zyada se zyada 2<var>n</var> steps, O(<var>n</var>). Yahi <b>monotonic stack</b> hai, aur page poore mein yahi gali use karta hai.</p>`,
+    },
+
+    one: "Bada value aate hi uske peeche ka har chhota value <b>hamesha ke liye mar jaata hai</b>, to use pop karo. Har index ek baar push aur ek baar pop: O(<var>n</var>²) <b>O(<var>n</var>)</b> ban jaata hai.",
+
+    plain: `<p>Problem ki shakal hamesha ek hi. <b>Har element ke liye uske right mein agla bada element dhoondho.</b> Ya chhota, ya left mein sabse paas wala. Garam din tak kitne din. Agla ooncha daam. Histogram ka bar chhote bar se rukne se pehle kitna phail sakta hai.</p>
+<p>Seedha solution har position se right chalta hai jab tak answer na mile: O(<var>n</var>²), wahi poonch baar baar padhte hue. Barbaadi chalne mein nahi. Yeh hai ki walk aise elements dekhti rehti hai jo <b>kisi ke answer nahi ho sakte</b>.</p>
+<p>Kyun, yeh dekho. Gali <code>2, 1, 5, 6, 2, 3</code> par 5, 2 ke baad aata hai aur ooncha hai. 5, 2 ke right mein pehli oonchi building hai, to wahi 2 ka answer <b>hai</b>. Answer milne ke baad 2 ke paas intezaar ko kuch nahi, aur 5 aate hi use phenka ja sakta hai. Sirf intezaar karti buildings rakho, aur woh dher apne aap ghat-te order mein hota hai. Kisi ne sort nahi kiya; phenkne ne kiya.</p>
+<p><b>Analogy.</b> Peeche se dekhi logon ki line. Aapke peeche koi lamba khada ho jaaye, to aur peeche wala aapko kabhi nahi dekhega. Peeche se dikhne wale log hamesha ghat-ti lambai mein hote hain, aur kisi ne unhe lagaaya nahi.</p>`,
+
+    why: [
+      { t: "Sawaal se shuru karo, structure se nahi",
+        d: "“Har element ke liye usse agla bada.” Seedha answer har index se right chalta hai: worst case mein O(<var>n</var>²). Aur worst case sirf girti heights hai, jo koi ajeeb cheez nahi." },
+      { t: "Ek element doosre ko hamesha ke liye maar sakta hai",
+        d: "Maan lo <code>b</code>, <code>a</code> ke baad aata hai aur bada hai, jaise 2 ke baad 5. Tab <code>b</code>, <code>a</code> ke right mein pehla bada element hai: wahi <code>a</code> ka answer <b>hai</b>. Aur <code>a</code> kisi intezaar karte ka answer nahi ban sakta, kyunki stack par uske neeche sab bade hain. To <code>a</code> taala nahi jaata; <b>phenka jaata hai</b>." },
+      { t: "Jo bachta hai woh pehle se sorted hai",
+        d: "Sirf woh elements rakho jinhe kisi ne block nahi kiya. Har bacha hua apne baad ke har zinda se bada hai, to dher banaawat se ghat-ta hai. 6 aur 2 aane ke baad stack mein 6, 2. <i>Monotonic</i> shabd yahin se aata hai: nateeja, lagaaya gaya rule nahi." },
+      { t: "Naya aane wala har maare hue ka answer hai",
+        d: "Jab <code>x</code> aata hai aur chhote bache hue pop karta hai, yeh sirf safaai nahi. <code>x</code> un sab ka theek <b>agla bada element</b> hai, to pop karte waqt answer likho. 5, 1 aur 2 dono ka answer hai. Ek pass, aur pops poora answer array bhar dete hain." },
+      { t: "Do loops, phir bhi O(n), aur yahi hissa woh sunte hain",
+        d: "Har index theek ek baar push aur zyada se zyada ek baar pop hota hai. To andar ka while <b>poore bahari loop mein zyada se zyada <var>n</var> baar</b> chalta hai, har step par <var>n</var> nahi. Gali par: 6 push, 4 pop. Lagbhag 2<var>n</var> operations: <b>O(<var>n</var>)</b>. Inhi shabdon mein bolo; akela “amortised” argument nahi." },
+      { t: "Chaar dishaayein, do knobs",
+        d: "<b>Next</b> matlab left se right scan; <b>previous</b> matlab right se left. <b>Greater</b> matlab top chhota ho tab tak pop; <b>smaller</b> matlab top bada ho tab tak. Poori family bas itni. <b>Indices</b> rakho, values nahi: sawaal aksar hota hai answer kitna door hai, aur index dono deta hai." },
+      { t: "Yeh aage se nikalne wali cheezein nahi sambhal sakta",
+        d: "Stack sirf usi sire se hataata hai jahan push karta hai. Sliding window maximum mein current maximum window ke <b>aage</b> se nikalta hai, jab woh abhi bhi sabse badi cheez hai. Stack wahan nahi pahunch sakta. Dono siron se hataana chahiye: <b>deque</b>. Wahi logic, ek extra darwaaza." },
+    ],
+
+    variants: [
+      { n: "Next greater", cost: "O(n)",
+        idea: "Left se right scan; jab tak top naye se chhota ho pop karo, har pop hue index ka answer naya element.",
+        when: "Agla garam din, agli oonchi building, agla ooncha daam.",
+        watch: "Stack par bache hue ka koi answer nahi. Result ko jaan boojh kar −1 ya 0 se bharo." },
+      { n: "Next smaller", cost: "O(n)",
+        idea: "Wahi loop comparison ulat kar: jab tak top bada ho pop karo.",
+        when: "Histogram bar ka rectangle right mein kahan ruke, subarray minimums ka sum.",
+        watch: "Tay karo ki barabar values ek doosre ko pop karein ya nahi. Strict ya nahi, isse badalta hai kaunse duplicates gine jaate hain." },
+      { n: "Previous greater or smaller", cost: "O(n)",
+        idea: "Right se left scan karo, ya left se right karke push se pehle stack ke top se answer padho.",
+        when: "Stock span: daam kitne din peeche kam ya barabar tha.",
+        watch: "Pop ke baad naya top hi previous greater hai. Push se pehle padho." },
+      { n: "Circular array", cost: "O(n)",
+        idea: "2<var>n</var> indices chalo, <var>i</var> mod <var>n</var> use karke, taaki har element poora ring ek baar dekhe.",
+        when: "Next Greater Element II, aur ring par kuch bhi.",
+        watch: "Sirf pehle pass mein push karo, warna doosra pass duplicates push karta hai." },
+      { n: "Monotonic deque", cost: "O(n) time, O(k) space",
+        idea: "Chhote candidates peeche se pop karo, aur expire hue indices aage se. Aage wala hamesha window ka maximum hai.",
+        when: "Har sliding window ka maximum ya minimum.",
+        watch: "Har step aage wale ka expiry check karo, warna window chhodne ke baad bhi woh maximum rehta hai." },
+    ],
+
+    math: [
+      { t: "Gali 2, 1, 5, 6, 2, 3, push dar push", d: "Stack intezaar kar rahi buildings ke indices rakhta hai, yahan height se dikhaaye. Har pop ek answer likhta hai." },
+      { t: "Har index ek baar push aur ek baar pop hota hai", d: "Andar ka while ek step par lamba chal sakta hai. Maayne uska poore scan ka total rakhta hai, aur woh pushes ki ginti se bandha hai." },
+      { t: "Nested scan ke saamne", d: "Next greater element standard use hai, aur naive version wahi triangular sum hai jo is site par har jagah aata hai." },
+      { t: "Pop karna safe kyun hai, bhavishya ke baare mein ek fact ki tarah", d: "Pop safaai nahi. Yeh proof hai ki pop hua index aage aane waali kisi cheez ka answer kabhi nahi ban sakta." },
+      { t: "Largest rectangle, jo version woh poochhte hain", d: "Har bar ka rectangle dono taraf sabse paas ke chhote bar se bandha hai. Do monotonic passes dono dhoondhte hain, to poora linear rehta hai." },
+    ],
+
+    costs: [
+      ["next greater over n elements", "O(n)", "har index ek baar push, zyada se zyada ek baar pop, lagbhag 2n operations"],
+      ["the inner while loop", "O(1) amortised", "yeh sirf wahi hata sakta hai jiski keemat pehle ke push ne di"],
+      ["naive walk from every index", "O(n²)", "wahi poonch left ke har element ke liye dobara padhi jaati hai"],
+      ["stack space", "O(n)", "sirf girta input kabhi pop nahi karta, to sab rakha jaata hai"],
+      ["sliding window maximum", "O(n) time, O(k) space", "deque sirf window ke andar ke candidates rakhta hai"],
+      ["largest rectangle in histogram", "O(n)", "wahi 2n budget; sentinel aakhri pops chukaata hai"],
+    ],
+
+    traps: [
+      "<b>Indices ki jagah values rakhna.</b> Phir sawaal nikalta hai “kitne din tak”, aur jo ise answer karta woh ja chuka. Indices push karo; values array se padho.",
+      "<b>Ties galat karna.</b> Barabar par pop karna agla <i>strictly</i> bada deta hai; barabar par rakhna bada-ya-barabar. Daily Temperatures ko strictly garam chahiye, to barabar values ek doosre ko pop na karein. Kuch crash nahi; answers chupchaap galat.",
+      "<b>Stack par bache hue ko nazarandaaz karna.</b> Loop ke baad jo bacha use kabhi answer nahi mila: gali par 6 aur 3. Result ko −1 ya 0 se bharo, ya sentinel jodo, aur jaan boojh kar tay karo.",
+      "<b>Sliding window maximum ke liye stack.</b> Maximum window ke aage se nikalta hai, jahan stack nahi pahunchta. Yeh window ke bahar ke maxima lautata hai.",
+      "<b>Deque mein aage ka expiry check bhoolna.</b> Aage wala aapki sabse badi cheez hai, aur check ke bina window chhodne ke kaafi baad tak sabse bada rehta hai.",
+      "<b>Pop karte waqt <code>while</code> ki jagah <code>if</code>.</b> Ek aagman bachon ki lambi line khatam kar sakta hai: 5 do pop karta hai. Ek ke baad ruko aur order toot-ta hai, uske baad ke har answer ke saath.",
+    ],
+
+    impl: [
+      ["Python", "list as the stack, collections.deque for both ends", "deque pop() aur popleft() deta hai, dono O(1); list mein aage se sasta hataana nahi."],
+      ["Java", "ArrayDeque for both roles", "push() addFirst() hai, to push() ko peekLast() se mat milao. Naamon ka ek set chuno: push/peek/pop, ya addLast/peekLast/pollLast."],
+      ["C++", "std::stack, std::deque", "stack::pop() void lautata hai, to pehle top() padho. deque mein front(), back() aur dono siron par pop."],
+      ["JavaScript", "Array, plus a head index", "Deque nahi hai. shift() O(n) hai, to aage ke liye head pointer rakho aur use hua prefix wahin chhodo."],
+    ],
+
+    codecap: "Sab ke neeche ek hi loop shakal: naya jise maarta hai woh sab pop karo, nikalte waqt unka answer do, phir naya push karo.",
+
+    q: [
+      ["Element ko baad ke liye rakhne ki jagah hamesha ke liye kyun phenka ja sakta hai?", "Uske baad bada element aaye, to woh use aage ki har cheez se rokta hai aur wahan behtar answer bhi hai. Woh kabhi kisi ka next greater nahi ban sakta, to rakhne ki koi wajah nahi."],
+      ["Koi sort nahi karta, phir stack sorted kyun hai?", "Yeh sirf woh elements rakhta hai jinhe kisi ne block nahi kiya. Naye se chhota har cheez aate hi phenki jaati hai, to har bacha hua apne baad walon se bada hai. Order rule ka side effect hai."],
+      ["for loop ke andar while loop hai. O(n²) kyun nahi?", "Har index theek ek baar push aur zyada se zyada ek baar pop hota hai. To andar ka while poore bahari loop mein kul n baar tak chalta hai, har step par nahi. Kul lagbhag 2n operations, to O(n)."],
+      ["Next greater, next smaller, previous greater aur previous smaller mein kya badalta hai?", "Do cheezein. Next vs previous scan ki disha ulat-ta hai. Greater vs smaller pop wala comparison ulat-ta hai. Comparison strict hai ya nahi, yeh barabar values ka bartaav tay karta hai."],
+      ["Values ki jagah indices kyun rakhein?", "Sawaal aksar ek doori hota hai: garam hone tak kitne din, ya rectangle kitna chauda. Index doori aur value dono deta hai; value dono mein se koi nahi."],
+      ["Sliding window maximum ko stack ki jagah deque kyun chahiye?", "Current maximum window ke aage se nikalta hai jab woh abhi bhi sabse bada rakha element hai. Stack sirf push wale sire se hataata hai, to dono sire chahiye: chhote candidates peeche se, expire hue indices aage se."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "intervals",
   n: "Intervals and sweep line",
   group: "Patterns",
-  one: "Sorting is the algorithm, and the <b>sort key</b> is the decision: by start to merge, by end to pack the most. Then turn intervals into <b>+1/-1 events</b> and sweep.",
+  need: {
+    ask: `<p>A company calendar holds <b>10⁵ meetings</b>, each a start and an end time. Two questions: when is anyone busy at all, as a list of solid blocks, and how many rooms are needed at the busiest moment?</p>
+<p>The small version: four meetings, A 0–3, B 1–4, C 5–7, D 6–8, where a meeting ending at 3 frees its room at 3. The busy blocks are 0–4 and 5–8, and 2 rooms are enough.</p>`,
+    tries: [
+      ["Compare every meeting with every other", "Four meetings make 6 pairs. 10⁵ make <var>n</var>(<var>n</var> − 1) / 2 = 5 × 10⁹, and even then the pairs do not directly give blocks or a room count."],
+      ["Rooms = the most meetings any single meeting overlaps, plus one", "A long meeting 0–10 overlaps 1–2, 3–4 and 5–6, so the rule says 4 rooms. But those three never overlap each other: 2 rooms suffice."],
+    ],
+    so: `<p>So <b>sort first</b>. Sorted by start, a meeting can only overlap the block just before it, and one pass glues the blocks: A and B become 0–4, C and D become 5–8. About 1.7 × 10⁶ steps, all in the sort.</p>
+<p>For rooms, stop thinking about meetings. Each is <b>+1 at its start and −1 at its end</b>. Sort those 2<var>n</var> events and keep a running count; its highest value, 2 here, is the rooms needed. That is a <b>sweep line</b>. The page uses these four meetings throughout.</p>`,
+  },
 
-  plain: `<p>An interval is a pair: a start and an end. A meeting, a booking, a range of house numbers. The questions asked about them are always the same three. Which ones overlap? How many can I keep if none of them may overlap? How many are happening at once at the busiest moment?</p>
-<p>Handed an unsorted pile, you have to compare every interval against every other one. That is about n² comparisons, and you will still get the overlap test slightly wrong.</p>
-<p>Sorted, the picture changes completely. Once the intervals are in order, <b>only the neighbour matters</b>, and one left-to-right pass answers the question. The sort costs n log n and buys you the whole algorithm.</p>
-<p>So the only real decision on these problems is <b>what to sort by</b>. Sort by start when you are gluing overlapping things together. Sort by end when you are packing as many as possible into a day. Same four lines of loop, different key, different answer.</p>
-<p><b>Analogy.</b> A doorman with a clicker. He does not track who is inside or how long they stay. He clicks up when someone walks in and down when someone walks out. The highest number he ever sees is the size of room the fire officer will insist on.</p>`,
+  one: "Sorting is the algorithm, and the <b>sort key</b> is the decision: by start to merge, by end to pack the most. Then turn intervals into <b>+1/−1 events</b> and sweep.",
+
+  plain: `<p>An interval is a pair: a start and an end. A meeting, a booking, a range of house numbers. The questions about them are nearly always three. Which overlap? How many can I keep if none may overlap? How many are happening at once at the busiest moment?</p>
+<p>Handed an unsorted pile, you must compare every interval with every other: about <var>n</var>² comparisons, and the overlap test is easy to get slightly wrong.</p>
+<p>Sorted, the picture changes. With A 0–3, B 1–4, C 5–7, D 6–8 in start order, <b>only the neighbour matters</b>. B starts before A ends, so they glue into 0–4. C starts after 4, so a new block begins. One left-to-right pass answers the question; the sort costs <var>n</var> log <var>n</var> and buys the whole algorithm.</p>
+<p>So the one real decision is <b>what to sort by</b>. Sort by start to glue overlapping things together. Sort by end to pack as many as possible into a day. Same short loop, different key, different answer.</p>
+<p><b>Analogy.</b> A doorman with a clicker. He does not track who is inside. He clicks up when someone walks in and down when someone walks out. The highest number he sees is the size of room the fire officer will insist on.</p>`,
 
   why: [
     { t: "Unsorted, every pair is a candidate",
-      d: "With no order at all, the interval that overlaps the first one could be anywhere in the list, so you compare all n squared over two pairs. Nothing about the data stops you, which is exactly the problem: there is no local structure to exploit yet." },
+      d: "With no order, the interval overlapping the first one could be anywhere in the list, so you compare all <var>n</var>(<var>n</var> − 1) / 2 pairs. There is no local structure to use yet: 5 × 10⁹ comparisons for 10⁵ meetings." },
     { t: "Get the overlap test right by negating the misses",
-      d: "Do not enumerate the ways two intervals can overlap, there are four and you will forget one. Enumerate the two ways they can <b>miss</b>: <code>b &lt; c</code> (the first ends before the second starts) or <code>d &lt; a</code> (the other way round). Negate both and you are done: <code>[a,b]</code> and <code>[c,d]</code> overlap when <b><code>a &lt;= d and c &lt;= b</code></b>. Two comparisons, no cases." },
+      d: "Do not list the ways two intervals can overlap; there are four, and you will forget one. List the two ways they <b>miss</b>: <code>b &lt; c</code> (the first ends before the second starts) or <code>d &lt; a</code>. Negate both: <code>[a,b]</code> and <code>[c,d]</code> overlap when <b><code>a &lt;= d and c &lt;= b</code></b>. Two comparisons, no cases." },
     { t: "Sorting by start makes the neighbour the only thing that matters",
-      d: "Once starts are in order, every interval that could overlap the current one has already been seen. So walk the list, holding the block you are currently building. If the next start is at or before the block's end, <b>extend the end</b>. Otherwise there is a real gap, so close this block and open a new one. One pass, and the total is O(n log n) because the sort dominates." },
+      d: "Once starts are in order, everything that could overlap the current block has already been seen. So walk the list holding one block. If the next start is at or before the block's end, <b>extend the end</b>: B pushes A's block from 3 to 4. Otherwise there is a gap: close the block, open a new one. One pass; the sort dominates at O(<var>n</var> log <var>n</var>)." },
     { t: "A different question wants a different key",
-      d: "Now ask for the largest set of intervals that do not overlap. Sorting by start is useless here, a first meeting that runs all day blocks everything. Sort by <b>end</b> instead. The one that finishes earliest leaves the most room for whatever comes next. So take every interval that starts after the last one you kept, and that plain rule is provably optimal. Same shape of loop, different key, and the key is the entire argument." },
+      d: "Now ask for the largest set of intervals with no overlap. Sorting by start is useless: one meeting that runs all day blocks everything. Sort by <b>end</b>. The one that finishes first leaves the most room for what comes next, so take every interval that starts after the last one kept. The greedy page proves this rule optimal." },
     { t: "Now stop thinking about intervals and think about events",
-      d: "For counting questions the pairing is a distraction. Split each interval into two things that happen on a number line: <b>+1 at the start</b>, <b>-1 at the end</b>. Sort all 2n of them by position and sweep left to right with a running counter. That counter is how many intervals are live at your current position, and its maximum is the peak concurrency: meeting rooms, overlapping bookings, the height in a skyline." },
+      d: "For counting questions, the pairing is a distraction. Split each interval into two events on a number line: <b>+1 at the start</b>, <b>−1 at the end</b>. Sort all 2<var>n</var> by position and sweep with a running counter. The counter is how many intervals are live, and its maximum is the peak: 2 for A to D." },
     { t: "At equal positions, the tie rule decides what overlap means",
-      d: "One meeting ends at 10:00 and another starts at 10:00. Process the <b>-1 before the +1</b> and they do not clash, so one room is enough. Process the +1 first and you have invented a second room. Neither is wrong in general, it depends on whether touching counts as overlapping, but it must be a decision and not an accident of your comparator." },
+      d: "One meeting ends at 10:00 and another starts at 10:00. Process the <b>−1 before the +1</b> and they do not clash: one room. Process the +1 first and you invent a second room. Either can be right, depending on whether touching counts as overlapping, but it must be a decision, not an accident of the comparator." },
     { t: "What the sweep will not give you",
-      d: "It reports numbers, not names. You learn that four things overlap at position 12, not <i>which</i> four. To know which, carry a set of the currently active intervals alongside the counter, and pay for it. It is also <b>offline</b>, you need every interval before you can sort. Intervals arriving one at a time, with queries in between, is a different problem and wants an interval tree or an ordered map." },
+      d: "It reports numbers, not names: four things overlap at 12, but not <i>which</i> four. To know which, carry a set of active intervals alongside the counter, and pay for it. It is also <b>offline</b>: you need every interval before sorting. Intervals arriving live, with queries in between, want an interval tree or an ordered map." },
   ],
 
   variants: [
     { n: "Merge intervals", cost: "O(n log n), sort by start",
-      idea: "Walk the sorted list holding one block. Extend its end when the next start is at or before that end, otherwise push it and start a new block.",
-      when: "Anything that asks for the union: merged bookings, coalesced ranges, free-versus-busy calendars.",
-      watch: "Extend with <code>max(end, next.end)</code>, not <code>next.end</code>. A short interval fully swallowed by the current block would otherwise shrink it, and the bug survives every test where the intervals happen to be the same width." },
-
+      idea: "Walk the sorted list holding one block. Extend its end when the next start is at or before it; otherwise push the block and start a new one.",
+      when: "Anything asking for the union: merged bookings, joined ranges, free-versus-busy calendars.",
+      watch: "Extend with <code>max(end, next.end)</code>, not <code>next.end</code>. A short interval inside the current block would otherwise shrink it." },
     { n: "Insert interval", cost: "O(n) on an already sorted list",
       idea: "Three phases: copy everything ending before the new start, absorb everything that overlaps into one widened interval, copy the rest.",
-      when: "The list is already sorted and disjoint and one new interval arrives. Re-sorting would be O(n log n) for nothing.",
-      watch: "The three loops each have their own boundary condition and people fuse them into one loop with flags. Keep them separate, they are easier to argue about than to debug." },
-
+      when: "The list is already sorted and disjoint, and one new interval arrives. Sorting again would be O(<var>n</var> log <var>n</var>) for nothing.",
+      watch: "Each of the three loops has its own boundary. Keep them separate rather than fusing them into one loop with flags." },
     { n: "Non-overlapping subset, greedy by end", cost: "O(n log n), sort by end",
-      idea: "Keep a running <code>lastEnd</code>. Take every interval whose start is at or after it. The number removed is n minus the number kept.",
-      when: "Maximise how many fit, or minimise how many to delete: non-overlapping intervals, arrows bursting balloons, classroom scheduling.",
-      watch: "Sorting by start or by duration both feel reasonable and both are wrong, with three-interval counterexamples. The exchange argument only works for finish time: swapping in the earliest finisher frees the room no later, so nothing that fitted before stops fitting." },
-
+      idea: "Keep a running <code>lastEnd</code>. Take every interval starting at or after it. The number removed is <var>n</var> minus the number kept.",
+      when: "Fit the most, or delete the fewest: non-overlapping intervals, arrows bursting balloons.",
+      watch: "Sorting by start or by length both feel reasonable and both are wrong, with three-interval counterexamples." },
     { n: "Meeting rooms via sweep line", cost: "O(n log n), sort 2n events",
-      idea: "Emit +1 at each start and -1 at each end, sort by position with ends first on ties, and track the running counter's maximum.",
-      when: "You want the peak count, or the count at every position: minimum rooms, car pooling capacity, skyline outlines, maximum overlapping bookings.",
-      watch: "The tie rule is the whole correctness of it. Also note the shortcut: sorting the starts array and the ends array separately gives the same sweep without ever building event pairs." },
-
-    { n: "Meeting rooms via min-heap", cost: "O(n log n), sort by start plus heap ops",
-      idea: "Sort by start. Keep a min-heap of the end times of rooms in use. For each meeting, pop the earliest-ending room if it is already free, then push this meeting's end. The heap size is the answer.",
-      when: "You need the rooms themselves and not just how many: assigning each meeting to a specific room, or reporting what each room holds.",
-      watch: "Reaching for a heap when a counter would do costs you a log factor and a page of code. Use the sweep when the question is 'how many', the heap when the question is 'which room'." },
-
-    { n: "Interval intersection of two sorted lists", cost: "O(n + m), no sort at all",
-      idea: "Two pointers. The overlap of the current pair is <code>[max(starts), min(ends)]</code>, kept if it is non-empty, then advance whichever interval ends first.",
-      when: "Both lists arrive already sorted and disjoint, as in comparing two people's calendars.",
-      watch: "Advance the one with the <b>smaller end</b>, never the smaller start. The one that ends first cannot possibly meet anything further along in the other list, so it is finished." },
+      idea: "Emit +1 at each start and −1 at each end, sort by position with ends first on ties, and track the running maximum.",
+      when: "The peak count, or the count at every point: minimum rooms, car pooling, skyline outlines.",
+      watch: "The tie rule is the whole correctness. Shortcut: sorting the starts and the ends as two separate arrays gives the same sweep." },
+    { n: "Meeting rooms via min-heap", cost: "O(n log n)",
+      idea: "Sort by start. Keep a min-heap of end times of rooms in use. For each meeting, pop the earliest-ending room if it is free by now, then push this meeting's end. The heap size is the answer.",
+      when: "You need the rooms themselves, not just how many: which meeting goes in which room.",
+      watch: "A heap where a counter would do costs a log factor and a page of code. Counter for “how many”, heap for “which room”." },
+    { n: "Intersection of two sorted lists", cost: "O(n + m), no sort at all",
+      idea: "Two pointers. The overlap of the current pair is <code>[max(starts), min(ends)]</code>, kept if not empty; then advance whichever interval ends first.",
+      when: "Both lists arrive sorted and disjoint, as when comparing two people's calendars.",
+      watch: "Advance the one with the <b>smaller end</b>, never the smaller start. It cannot meet anything further along the other list." },
   ],
 
-  hing: `<p><b>Ek line mein:</b> interval problems mein asli algorithm <b>sort</b> hai. Loop to char line ka hai. Poora dimaag sirf ek sawaal par lagao: <b>kis cheez se sort karun, start se ya end se?</b></p>
-<p><b>Pehle overlap test, kyunki yahin sabse zyada log phisalte hain.</b> Overlap ke saare cases mat ginno, char hote hain aur ek zaroor bhool jaaoge. Ulta socho: do interval <b>miss</b> kaise karte hain? Sirf do tareeke, <code>b &lt; c</code> ya <code>d &lt; a</code>. Ab dono ko negate kar do: <code>[a,b]</code> aur <code>[c,d]</code> overlap karte hain jab <b><code>a &lt;= d and c &lt;= b</code></b>. Bas do comparison, koi case analysis nahi. Yeh line yaad rakh lo, interview mein seedha likh dena.</p>
-<p><b>Start se sort kyun merge ke liye?</b> Jab starts sorted hain, to jo bhi interval current wale se overlap kar sakta tha, woh <b>pehle hi dekha ja chuka hai</b>. Aage kuch chhoot nahi sakta. Isliye sirf apne aakhri block ko pakde raho. Agla start block ke end tak ya usse pehle hai, to end ko <code>max</code> se badha do. Warna asli gap hai, naya block shuru karo. Ek pass. <code>max</code> lagana mat bhoolna, warna ek chhota interval jo poora andar hi samaya hua tha, tumhara block chhota kar dega.</p>
-<p><b>End se sort kab?</b> Jab sawaal ho "zyada se zyada kitne non-overlapping rakh sakte ho". Yahan start se sort karna bekaar hai, ek subah shuru hone wali din bhar chalne wali meeting sab kuch block kar degi. <b>Jo sabse pehle khatam hota hai</b> woh baaki sabke liye sabse zyada jagah chhodta hai. Yahi exchange argument hai, aur yahi jawaab interviewer sun-na chahta hai.</p>
-<p><b>Ab asli cheez, sweep line.</b> Interval ke baare mein sochna band karo, <b>events</b> ke baare mein socho. Har interval ko do events mein tod do: start par <b>+1</b>, end par <b>-1</b>. Saare 2n events ko position se sort karo aur left se right chalte hue ek counter chalao. Woh counter batata hai ki is waqt kitni cheezein <b>live</b> hain. Uska maximum hi tumhara jawaab hai: kitne meeting rooms chahiye, kitni cars ek saath, skyline ki height. Ek loop, teen alag alag problems.</p>
-<p><b>Tie ka rule, ise halke mein mat lo.</b> Ek meeting 10:00 par khatam, doosri 10:00 par shuru. Agar <b>-1 pehle</b> process kiya to dono ek hi room mein aa jaayengi. Agar +1 pehle kiya to tumne bina zaroorat ke ek extra room bana diya. Dono sahi ho sakte hain, depend karta hai ki chhoote hue kinare overlap maane jaayenge ya nahi. Par yeh <b>decision</b> hona chahiye, comparator ki galti nahi.</p>
-<p><b>Heap wala tareeka bhi jaan lo.</b> Start se sort karo, aur ek min-heap rakho jisme rooms ke end times hain, sabse pehle khali hone wala upar. Nayi meeting aayi: agar top wala room free ho chuka hai to pop karo, phir apna end push kar do. Heap ka size hi answer hai. <b>Kab kaunsa?</b> Agar sirf "kitne rooms" poocha hai, sweep line saaf aur tez hai. Agar "kaunsi meeting kis room mein" chahiye, tab heap, kyunki wahan rooms sach mein exist karte hain.</p>
-<p><b>Interview line:</b> "Sorting dominates, so it is O(n log n) time and O(n) for the events." Aur agar intervals pehle se sorted mile hain, to bol do ki insert wala case O(n) mein ho jaayega. Dobara sort karne ki zaroorat nahi.</p>`,
+  hing: `<p><b>Interval matlab ek pair:</b> start aur end. Meeting, booking, koi range. Sawaal teen hi tarah ke hote hain: kaun overlap karte hain, bina overlap ke kitne rakh sakte hain, aur ek waqt mein sabse zyada kitne chal rahe hain.</p>
+<p><b>Bina sort kiye</b> har pair compare karna padega, O(<var>n</var>²). <b>Sort karte hi</b> sirf padosi maayne rakhta hai, aur ek hi pass kaafi hai. Asli faisla bas yeh hai ki <b>kis cheez se sort karein</b>.</p>
+<p><b>Overlap test:</b> overlap hone ke chaar tareeke yaad karne ki koshish mat karo. Miss hone ke sirf do tareeke hain: pehla doosre ke shuru hone se pehle khatam ho gaya, ya ulta. Dono ko ulta karo: <code>[a,b]</code> aur <code>[c,d]</code> overlap karte hain jab <code>a &lt;= d and c &lt;= b</code>.</p>
+<p><b>Merge ke liye start se sort karo.</b> A 0–3, B 1–4, C 5–7, D 6–8. Agla interval current block ke khatam hone se pehle shuru hota hai to end aage badha do, warna naya block. End badhaate waqt <code>max(end, next.end)</code> lo, sirf <code>next.end</code> nahi.</p>
+<p><b>Sabse zyada non-overlapping rakhne hain? To end se sort karo.</b> Jo sabse pehle khatam hota hai, woh aage ke liye sabse zyada jagah chhodta hai.</p>
+<p><b>Sweep line:</b> intervals ko bhool jao, events socho. Har start par <b>+1</b>, har end par <b>-1</b>. Saare 2<var>n</var> events sort karo aur left se right ek counter chalao. Counter ka maximum hi batata hai ki kitne rooms chahiye: A se D ke liye 2.</p>
+<p><b>Tie ka dhyaan rakho:</b> ek meeting 10 baje khatam aur doosri 10 baje shuru. Agar <b>-1 pehle</b> process kiya to ek hi room kaafi hai. Agar +1 pehle kiya to galti se doosra room ban jaayega. Yeh faisla comparator mein jaan boojh kar likho.</p>`,
 
   viz: ["intervals"],
 
   math: [
-    { t: "What sorting removes", d: "Unsorted, any pair might overlap. Sorted by start, only the immediate neighbour can, and that is the entire saving.", w:
-`n intervals
+    { t: "A, B, C, D, merged and swept", d: "The same four meetings answer both questions. Merging walks them in start order; the sweep walks their eight events.", w:
+`A 0-3   B 1-4   C 5-7   D 6-8      (end frees the room)
 
+merge, sorted by start:
+  A 0-3            block 0-3
+  B 1-4, 1 <= 3    extend to max(3, 4) = 4    block 0-4
+  C 5-7, 5 >  4    close 0-4                  block 5-7
+  D 6-8, 6 <= 7    extend to max(7, 8) = 8    block 5-8
+busy: 0-4 and 5-8
+
+sweep: +1 at 0 1 5 6,   -1 at 3 4 7 8
+  count  0:1  1:2  3:1  4:0  5:1  6:2  7:1  8:0
+peak 2, so 2 rooms` },
+    { t: "What sorting removes", d: "Unsorted, any pair might overlap. Sorted by start, only the block just before can, and that is the whole saving.", w:
+`n intervals
 every pair:      n(n-1)/2
 n = 10^5    ->   5 x 10^9
-
 sort by start:   n log2 n = 1.7 x 10^6, then one pass of n
 
-after sorting, starts are non-decreasing, so anything
-that overlaps the current interval must start before it
-ends, which only the next interval can do` },
-    { t: "The overlap test, derived by negating the two misses", d: "Do not enumerate the arrangements. There are exactly two ways to miss, so overlap is the negation of their union, and it is one line.", w:
+after sorting, starts never decrease, so anything that
+overlaps the current block must start before it ends,
+and the next interval is the only one to check` },
+    { t: "The overlap test, derived by negating the two misses", d: "Do not list the arrangements. There are exactly two ways to miss, so overlap is the negation of both, in one line.", w:
 `[a1, b1] and [a2, b2] do NOT overlap when
    b1 < a2      the first finishes before the second starts
    b2 < a1      or the other way round
-
 so they DO overlap when
    a1 <= b2   and   a2 <= b1
-
 two comparisons, no case analysis
 half-open [a, b):  a1 < b2 and a2 < b1` },
-    { t: "The sort key is the algorithm, and the wrong key is a wrong answer", d: "Both questions are solved by sorting and one pass. They are different sorts, and using the merge key for the packing problem loses quietly.", w:
-`merge overlapping intervals     sort by START
-most non-overlapping intervals  sort by END
-minimum rooms needed            sort the endpoints, sweep
+    { t: "The sort key is the algorithm, and the wrong key is a wrong answer", d: "Both questions are solved by a sort and one pass. They are different sorts, and using the merge key for the packing problem loses quietly.", w:
+`merge overlapping intervals      sort by START
+most non-overlapping intervals   sort by END
+minimum rooms needed             sort the endpoints, sweep
 
 sorting by start for the packing problem:
   [1, 10], [2, 3], [4, 5]
   by start: take [1,10], reject both others  ->  1
   by end:   take [2,3], then [4,5]           ->  2` },
-    { t: "Turn intervals into events and the sweep counts for you", d: "Once each interval is two signed events, the question stops being about intervals at all and becomes a running total over a sorted list.", w:
+    { t: "Turn intervals into events and the sweep counts for you", d: "Once each interval is two signed events, the question stops being about intervals and becomes a running total over a sorted list.", w:
 `[2, 5]  becomes  (2, +1)  and  (5, -1)
-
 sort 2n events by position, walk them, keep a counter
   counter = intervals covering this point
   max counter = minimum rooms needed
-
 O(n log n) to sort, O(n) to sweep
 
 ties at the same position:
@@ -15660,29 +16227,29 @@ ties at the same position:
   ],
 
   costs: [
-    ["merge overlapping intervals", "O(n log n) time, O(n) output", "the sort is the whole cost, the merging pass is O(n) and free next to it"],
-    ["brute force pairwise overlap check", "O(n^2)", "what sorting removes: unordered, the partner could be any of the others"],
-    ["insert into an already sorted list", "O(n)", "the order is already paid for, so re-sorting would be spending it twice"],
-    ["max non-overlapping subset", "O(n log n)", "sorted by end, one greedy sweep, and no state beyond the last kept end"],
-    ["sweep line over events", "O(n log n) time, O(n) space", "2n events, sorted once, then a single counter walks them"],
-    ["min-heap room assignment", "O(n log n)", "same bound, larger constant: a heap push and pop per meeting, not one add"],
+    ["merge overlapping intervals", "O(n log n) time, O(n) output", "the sort is the whole cost; the merging pass is O(n)"],
+    ["brute force pairwise overlap check", "O(n²)", "what sorting removes: unordered, the partner could be any of the others"],
+    ["insert into an already sorted list", "O(n)", "the order is already paid for, so sorting again spends it twice"],
+    ["max non-overlapping subset", "O(n log n)", "sorted by end, one greedy sweep, nothing kept but the last end"],
+    ["sweep line over events", "O(n log n) time, O(n) space", "2n events, sorted once, then one counter walks them"],
+    ["min-heap room assignment", "O(n log n)", "same bound, bigger constant: a heap push and pop per meeting"],
     ["overlap test itself", "O(1), two comparisons", "a <= d and c <= b, which is why deriving it beats memorising four cases"],
   ],
 
   traps: [
-    "<b>Extending with <code>next.end</code> instead of <code>max(end, next.end)</code>.</b> An interval sitting entirely inside the current block will silently shorten it, and every test where intervals are roughly equal width will pass.",
-    "<b>Sorting by start for a packing question.</b> For the largest non-overlapping subset the key is the <b>end</b> time. Start time and duration both look defensible and both have three-interval counterexamples.",
-    "<b>Leaving the tie rule to chance.</b> If ends and starts at the same position sort arbitrarily, meeting rooms will be off by one on exactly the inputs a reviewer tries first. Decide whether touching counts, then encode it in the comparator.",
-    "<b>Using <code>&lt;</code> where the problem means <code>&lt;=</code>.</b> Whether <code>[1,2]</code> and <code>[2,3]</code> overlap is a property of the problem statement, not of intervals. Read it, then keep that choice consistent across the merge test, the greedy test and the sweep.",
-    "<b>Sorting on the raw pair in a language where that compares more than the start.</b> Sorting pairs sorts by start then end, which is usually harmless, but if you meant to sort by end you must say so explicitly.",
-    "<b>Reaching for a heap when a counter would do.</b> If the answer is a number, the sweep is shorter, faster and easier to explain. The heap earns its keep only when you need the rooms themselves.",
+    "<b>Extending with <code>next.end</code> instead of <code>max(end, next.end)</code>.</b> An interval inside the current block silently shortens it, and every test with roughly equal-width intervals passes.",
+    "<b>Sorting by start for a packing question.</b> For the largest non-overlapping subset, the key is the <b>end</b>. Start and length both look defensible, and both have three-interval counterexamples.",
+    "<b>Leaving the tie rule to chance.</b> If ends and starts at one position sort arbitrarily, the room count is off by one on exactly the inputs a reviewer tries first. Decide whether touching counts, then put it in the comparator.",
+    "<b>Using <code>&lt;</code> where the problem means <code>&lt;=</code>.</b> Whether <code>[1,2]</code> and <code>[2,3]</code> overlap depends on the problem statement. Read it, then use that choice everywhere: merge, greedy and sweep.",
+    "<b>Sorting raw pairs when you meant to sort by end.</b> Pairs sort by start, then end. That is usually harmless, but if you meant the end you must say so.",
+    "<b>Reaching for a heap when a counter would do.</b> If the answer is a number, the sweep is shorter, faster and easier to explain. The heap earns its place only when you need the rooms themselves.",
   ],
 
   impl: [
-    ["Python", "list.sort(key=lambda x: x[0]) / heapq", "Tuples sort lexicographically, so (pos, -1) lands before (pos, +1) for free."],
-    ["Java", "Arrays.sort(a, Comparator.comparingInt(x -> x[0]))", "int[][] needs a comparator; never write (a,b) -> a[0]-b[0], it overflows."],
-    ["C++", "std::sort on a vector of pairs, plus std::priority_queue", "Sorting pairs orders by first then second; write a lambda when you mean end."],
-    ["JavaScript", "arr.sort((a,b) => a[0]-b[0])", "Without a comparator sort() compares as text, so 10 lands before 9."],
+    ["Python", "list.sort(key=lambda x: x[0]) / heapq", "Tuples sort element by element, so (pos, -1) lands before (pos, +1) for free."],
+    ["Java", "Arrays.sort(a, Comparator.comparingInt(x -> x[0]))", "int[][] needs a comparator; never write (a,b) -> a[0]-b[0], which can overflow."],
+    ["C++", "std::sort on a vector of pairs, plus std::priority_queue", "Pairs sort by first, then second; write a lambda when you mean the end."],
+    ["JavaScript", "arr.sort((a,b) => a[0]-b[0])", "Without a comparator, sort() compares as text, so 10 lands before 9."],
   ],
 
   code: {
@@ -15904,15 +16471,15 @@ function insert(intervals, nw) {
   return out;
 }`,
   },
-  codecap: "Two sort keys and one counter cover the whole family: start to merge, end to pack, and +1/-1 events to count.",
+  codecap: "Two sort keys and one counter cover the whole family: start to merge, end to pack, and +1/−1 events to count.",
 
   q: [
-    ["State the overlap test, and say how you would rederive it under pressure.", "Two intervals [a,b] and [c,d] overlap when a <= d and c <= b. Rederive it by listing the only two ways they can miss, b < c or d < a, and negating both. Enumerating overlap cases directly gives four shapes and you will drop one."],
-    ["Why does merging sort by start while max non-overlapping sorts by end?", "For merging, sorted starts guarantee that anything overlapping the current block has already been seen, so only the last block needs checking. For packing, the interval that finishes earliest leaves the most room for whatever follows, so end time is the key with an exchange argument behind it. Sorting by start there fails on one long meeting that starts first."],
-    ["What is the sweep line reformulation, in one sentence?", "Replace each interval by two events, +1 at its start and -1 at its end, sort all 2n events by position, then walk left to right with a running counter whose value is how many intervals are live at that point and whose maximum is the peak concurrency."],
-    ["Two meetings, one ending at 10:00 and one starting at 10:00. How many rooms?", "One, if you process the -1 before the +1 at equal positions. Process the +1 first and the counter briefly reads 2 and you allocate a second room. Which is correct depends on whether the problem treats touching intervals as overlapping, so it has to be a deliberate tie-break in the comparator."],
-    ["When would you use the min-heap formulation instead of the sweep?", "When you need the rooms themselves rather than their number. The heap holds the end time of each busy room with the earliest on top, so you pop a room that has freed up and push the new end, and each meeting is tied to a concrete room. If the question only asks how many, the sweep is shorter and has a smaller constant."],
-    ["What can the sweep not answer, and what does that cost you?", "It gives counts, not memberships: you learn four intervals overlap at position 12 but not which four, unless you maintain an active set alongside the counter. It is also offline, since everything must be sorted before the first answer, so intervals arriving live with queries in between need an interval tree or an ordered map instead."],
+    ["State the overlap test, and say how you would rederive it under pressure.", "[a,b] and [c,d] overlap when a <= d and c <= b. Rederive it by listing the only two ways they can miss, b < c or d < a, and negating both. Listing the overlap shapes directly gives four, and one gets dropped."],
+    ["Why does merging sort by start while max non-overlapping sorts by end?", "For merging, sorted starts mean everything overlapping the current block has been seen, so only the last block needs checking. For packing, the interval finishing first leaves the most room, so end time has the exchange argument behind it. Start order fails on one long meeting that starts first."],
+    ["What is the sweep line reformulation, in one sentence?", "Replace each interval by +1 at its start and −1 at its end, sort all 2n events, and walk them with a running counter: its value is how many intervals are live, and its maximum is the peak."],
+    ["Two meetings, one ending at 10:00 and one starting at 10:00. How many rooms?", "One, if the −1 is processed before the +1 at equal positions. The other order briefly reads 2 and allocates a second room. Which is right depends on whether touching counts as overlapping, so it must be a deliberate tie-break."],
+    ["When would you use the min-heap formulation instead of the sweep?", "When you need the rooms themselves, not their number. The heap holds each busy room's end time with the earliest on top, so a freed room is reused and each meeting gets a concrete room. For a count, the sweep is shorter and faster."],
+    ["What can the sweep not answer, and what does that cost you?", "It gives counts, not members: four intervals overlap at 12, but not which four, unless you keep an active set too. It is also offline, since everything must be sorted first, so live intervals with queries in between need an interval tree or ordered map."],
   ],
 
   p: [
@@ -15924,101 +16491,234 @@ function insert(intervals, nw) {
     [253, "meeting-rooms-ii", "Meeting Rooms II, sweep and heap, both worth writing", "M"],
     [218, "the-skyline-problem", "The Skyline Problem, sweep line with a multiset of heights", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek company calendar mein <b>10⁵ meetings</b> hain, har ek ka start aur end time. Do sawaal: koi bhi kab busy hai, thos blocks ki list ki tarah, aur sabse busy pal par kitne rooms chahiye?</p>
+<p>Chhota version: chaar meetings, A 0–3, B 1–4, C 5–7, D 6–8, jahan 3 par khatam meeting 3 par room khaali karti hai. Busy blocks 0–4 aur 5–8 hain, aur 2 rooms kaafi hain.</p>`,
+      tries: [
+        ["Har meeting ko har doosri se compare karo", "Chaar meetings 6 pairs banati hain. 10⁵ banati hain <var>n</var>(<var>n</var> − 1) / 2 = 5 × 10⁹, aur tab bhi pairs seedhe blocks ya rooms ki ginti nahi dete."],
+        ["Rooms = kisi ek meeting se overlap karne wali sabse zyada meetings, plus one", "Ek lambi meeting 0–10, 1–2, 3–4 aur 5–6 se overlap karti hai, to rule 4 rooms kehta hai. Par woh teen aapas mein kabhi overlap nahi karti: 2 rooms kaafi."],
+      ],
+      so: `<p>To <b>pehle sort karo</b>. Start se sorted, meeting sirf apne theek pehle wale block se overlap kar sakti hai, aur ek pass blocks jod deta hai: A aur B 0–4 bante hain, C aur D 5–8. Lagbhag 1.7 × 10⁶ steps, saare sort mein.</p>
+<p>Rooms ke liye meetings ke baare mein sochna band karo. Har ek <b>start par +1 aur end par −1</b> hai. Un 2<var>n</var> events ko sort karo aur running count rakho; uski sabse oonchi value, yahan 2, chahiye rooms hain. Yahi <b>sweep line</b> hai. Page poore mein yahi chaar meetings use karta hai.</p>`,
+    },
+
+    one: "Sorting hi algorithm hai, aur <b>sort key</b> hi faisla: merge ke liye start se, sabse zyada pack karne ke liye end se. Phir intervals ko <b>+1/−1 events</b> banao aur sweep karo.",
+
+    plain: `<p>Interval ek pair hai: start aur end. Meeting, booking, gharon ke numbers ki range. Inke baare mein sawaal lagbhag hamesha teen: kaun overlap karte hain? Koi overlap na kare to kitne rakh sakte hain? Sabse busy pal par ek saath kitne chal rahe hain?</p>
+<p>Unsorted dher mile to har interval ko har doosre se compare karna padta hai: lagbhag <var>n</var>² comparisons, aur overlap test thoda galat hona aasaan hai.</p>
+<p>Sorted, tasveer badal jaati hai. A 0–3, B 1–4, C 5–7, D 6–8 start order mein hon, to <b>sirf padosi maayne rakhta hai</b>. B, A ke khatam hone se pehle shuru hoti hai, to dono 0–4 mein judti hain. C, 4 ke baad shuru hoti hai, to naya block. Ek left-to-right pass sawaal ka answer deta hai; sort ki keemat <var>n</var> log <var>n</var> hai aur woh poora algorithm khareedta hai.</p>
+<p>To ek hi asli faisla hai <b>kis se sort karein</b>. Overlap karne wali cheezein jodne ko start se. Din mein jitni ho sake utni pack karne ko end se. Wahi chhota loop, alag key, alag answer.</p>
+<p><b>Analogy.</b> Clicker wala darbaan. Woh track nahi karta ki andar kaun hai. Koi andar aaye to click upar, bahar jaaye to neeche. Jo sabse ooncha number woh dekhta hai, fire officer utne ka hi room maangega.</p>`,
+
+    why: [
+      { t: "Unsorted, har pair ek candidate hai",
+        d: "Koi order nahi, to pehle se overlap karne wala interval kahin bhi ho sakta hai. To saare <var>n</var>(<var>n</var> − 1) / 2 pairs compare karte ho. Abhi use karne ko koi local structure nahi: 10⁵ meetings par 5 × 10⁹ comparisons." },
+      { t: "Miss ko ulta karke overlap test sahi karo",
+        d: "Do intervals ke overlap ke tareeke mat gino; chaar hain, aur ek bhoologe. Woh do tareeke gino jinse woh <b>miss</b> karte hain: <code>b &lt; c</code> (pehla doosre ke shuru hone se pehle khatam) ya <code>d &lt; a</code>. Dono ulto: <code>[a,b]</code> aur <code>[c,d]</code> overlap karte hain jab <b><code>a &lt;= d and c &lt;= b</code></b>. Do comparisons, koi cases nahi." },
+      { t: "Start se sort karna padosi ko hi akela maayne wala banata hai",
+        d: "Starts order mein hon, to current block se overlap kar sakne wala sab pehle dekha ja chuka. To ek block pakde list par chalo. Agla start block ke end par ya usse pehle ho, to <b>end badhao</b>: B, A ke block ko 3 se 4 tak dhakelti hai. Warna gap hai: block band, naya kholo. Ek pass; sort O(<var>n</var> log <var>n</var>) par haavi." },
+      { t: "Alag sawaal ko alag key chahiye",
+        d: "Ab bina overlap ke intervals ka sabse bada set poochho. Start se sort bekaar: din bhar chalne wali ek meeting sab rok deti hai. <b>End</b> se sort karo. Jo pehle khatam ho woh aage ke liye sabse zyada jagah chhodta hai, to aakhri rakhe ke baad shuru hone wala har interval lo. Greedy page is rule ko optimal saabit karta hai." },
+      { t: "Ab intervals nahi, events socho",
+        d: "Ginti wale sawaalon mein pairing dhyaan bhatkaati hai. Har interval ko number line par do events mein todo: <b>start par +1</b>, <b>end par −1</b>. Saare 2<var>n</var> position se sort karo aur running counter ke saath sweep karo. Counter batata hai kitne intervals zinda hain, aur uska maximum peak hai: A se D ke liye 2." },
+      { t: "Barabar positions par tie rule overlap ka matlab tay karta hai",
+        d: "Ek meeting 10:00 par khatam aur doosri 10:00 par shuru. <b>−1 ko +1 se pehle</b> process karo, to takraav nahi: ek room. +1 pehle karo, to doosra room bana dete ho. Dono sahi ho sakte hain, is par nirbhar ki chhoona overlap gina jaaye ya nahi, par yeh faisla hona chahiye, comparator ka hadsa nahi." },
+      { t: "Sweep kya nahi dega",
+        d: "Yeh numbers batata hai, naam nahi: 12 par chaar cheezein overlap karti hain, par <i>kaunsi</i> chaar nahi. Kaunsi, yeh jaanne ko counter ke saath zinda intervals ka set rakho, aur keemat do. Yeh <b>offline</b> bhi hai: sort se pehle har interval chahiye. Beech mein queries ke saath live aate intervals ko interval tree ya ordered map chahiye." },
+    ],
+
+    variants: [
+      { n: "Merge intervals", cost: "O(n log n), sort by start",
+        idea: "Sorted list par ek block pakde chalo. Agla start uske end par ya pehle ho to end badhao; warna block push karo aur naya shuru.",
+        when: "Jo bhi union maange: judi bookings, judi ranges, free-vs-busy calendars.",
+        watch: "<code>next.end</code> nahi, <code>max(end, next.end)</code> se badhao. Current block ke andar ka chhota interval warna use chhota kar dega." },
+      { n: "Insert interval", cost: "O(n) on an already sorted list",
+        idea: "Teen phases: naye start se pehle khatam hone wala sab copy, overlap karne wala sab ek chaude interval mein samet lo, baaki copy.",
+        when: "List pehle se sorted aur alag-alag hai, aur ek naya interval aata hai. Dobara sort bekaar O(<var>n</var> log <var>n</var>) hoga.",
+        watch: "Teeno loops ki apni boundary hai. Unhe flags wale ek loop mein jodne ki jagah alag rakho." },
+      { n: "Non-overlapping subset, greedy by end", cost: "O(n log n), sort by end",
+        idea: "Ek running <code>lastEnd</code> rakho. Uske barabar ya baad shuru hone wala har interval lo. Hataaye gaye = <var>n</var> minus rakhe gaye.",
+        when: "Sabse zyada fit karo, ya sabse kam delete karo: non-overlapping intervals, arrows se balloons.",
+        watch: "Start ya length se sort dono samajhdaar lagte hain aur dono galat, teen-interval counterexamples ke saath." },
+      { n: "Meeting rooms via sweep line", cost: "O(n log n), sort 2n events",
+        idea: "Har start par +1 aur har end par −1 do, position se sort karo, tie par ends pehle, aur running maximum track karo.",
+        when: "Peak ginti, ya har point par ginti: minimum rooms, car pooling, skyline outlines.",
+        watch: "Tie rule hi poori sahi-hona hai. Shortcut: starts aur ends ko do alag arrays mein sort karna wahi sweep deta hai." },
+      { n: "Meeting rooms via min-heap", cost: "O(n log n)",
+        idea: "Start se sort karo. Use ho rahe rooms ke end times ka min-heap rakho. Har meeting ke liye sabse pehle khatam hone wala room pop karo agar ab tak khaali ho, phir is meeting ka end push karo. Heap ka size answer hai.",
+        when: "Rooms khud chahiye, sirf ginti nahi: kaunsi meeting kis room mein.",
+        watch: "Counter ki jagah heap ek log factor aur ek page code ki keemat hai. “Kitne” ke liye counter, “kaunsa room” ke liye heap." },
+      { n: "Intersection of two sorted lists", cost: "O(n + m), no sort at all",
+        idea: "Do pointers. Current pair ka overlap <code>[max(starts), min(ends)]</code> hai, khaali na ho to rakho; phir jo interval pehle khatam ho use aage badhao.",
+        when: "Dono lists sorted aur alag-alag aati hain, jaise do logon ke calendars milaana.",
+        watch: "<b>Chhote end</b> wale ko aage badhao, chhote start wale ko kabhi nahi. Woh doosri list mein aage kisi se nahi mil sakta." },
+    ],
+
+    math: [
+      { t: "A, B, C, D, jode aur sweep kiye", d: "Wahi chaar meetings dono sawaalon ke answer deti hain. Merge unhe start order mein chalta hai; sweep unke aath events par chalta hai." },
+      { t: "Sorting kya hataata hai", d: "Unsorted, koi bhi pair overlap kar sakta hai. Start se sorted, sirf theek pehle wala block kar sakta hai, aur yahi poori bachat hai." },
+      { t: "Overlap test, do miss ko ulta karke nikaala", d: "Arrangements mat gino. Miss ke theek do tareeke hain, to overlap dono ka ulta hai, ek line mein." },
+      { t: "Sort key hi algorithm hai, aur galat key galat answer", d: "Dono sawaal ek sort aur ek pass se hal hote hain. Sorts alag hain, aur packing problem ke liye merge key chupchaap haarti hai." },
+      { t: "Intervals ko events banao aur sweep aapke liye ginta hai", d: "Har interval do signed events ban jaaye, to sawaal intervals ka nahi rehta, ek sorted list par running total ban jaata hai." },
+    ],
+
+    costs: [
+      ["merge overlapping intervals", "O(n log n) time, O(n) output", "sort hi poori keemat hai; jodne ka pass O(n)"],
+      ["brute force pairwise overlap check", "O(n²)", "jo sorting hataata hai: unordered mein saathi baaki mein koi bhi ho sakta hai"],
+      ["insert into an already sorted list", "O(n)", "order ki keemat pehle di ja chuki, to dobara sort use do baar kharchna hai"],
+      ["max non-overlapping subset", "O(n log n)", "end se sorted, ek greedy sweep, aakhri end ke siwa kuch nahi rakha"],
+      ["sweep line over events", "O(n log n) time, O(n) space", "2n events, ek baar sorted, phir ek counter unpar chalta hai"],
+      ["min-heap room assignment", "O(n log n)", "wahi bound, bada constant: har meeting par heap push aur pop"],
+      ["overlap test itself", "O(1), two comparisons", "a <= d and c <= b, isiliye nikaalna chaar cases ratne se behtar"],
+    ],
+
+    traps: [
+      "<b><code>max(end, next.end)</code> ki jagah <code>next.end</code> se badhaana.</b> Current block ke andar ka interval use chupchaap chhota karta hai, aur lagbhag barabar chaudai wale har test pass hote hain.",
+      "<b>Packing sawaal ke liye start se sort.</b> Bina overlap ke sabse bade subset ke liye key <b>end</b> hai. Start aur length dono theek lagte hain, aur dono ke teen-interval counterexamples hain.",
+      "<b>Tie rule kismat par chhodna.</b> Ek position par ends aur starts kaise bhi sort hon, to room ginti theek unhi inputs par ek se galat jo reviewer pehle try karta hai. Tay karo chhoona gina jaaye ya nahi, phir comparator mein daalo.",
+      "<b>Jahan problem <code>&lt;=</code> kehti hai wahan <code>&lt;</code>.</b> <code>[1,2]</code> aur <code>[2,3]</code> overlap karte hain ya nahi, yeh problem statement par nirbhar hai. Padho, phir wahi choice har jagah: merge, greedy aur sweep.",
+      "<b>End se sort karna tha aur raw pairs sort kiye.</b> Pairs start se, phir end se sort hote hain. Aam taur par nuksaan nahi, par end chahiye tha to kehna padega.",
+      "<b>Counter kaafi ho tab heap.</b> Answer ek number ho to sweep chhota, tez aur samjhaane mein aasaan. Heap tabhi jagah kamaata hai jab rooms khud chahiye.",
+    ],
+
+    impl: [
+      ["Python", "list.sort(key=lambda x: x[0]) / heapq", "Tuples element dar element sort hote hain, to (pos, -1) muft mein (pos, +1) se pehle."],
+      ["Java", "Arrays.sort(a, Comparator.comparingInt(x -> x[0]))", "int[][] ko comparator chahiye; (a,b) -> a[0]-b[0] kabhi mat likho, overflow ho sakta hai."],
+      ["C++", "std::sort on a vector of pairs, plus std::priority_queue", "Pairs pehle first, phir second se sort; end chahiye to lambda likho."],
+      ["JavaScript", "arr.sort((a,b) => a[0]-b[0])", "Comparator ke bina sort() text ki tarah compare karta hai, to 10, 9 se pehle."],
+    ],
+
+    codecap: "Do sort keys aur ek counter poori family dhakte hain: jodne ko start, pack karne ko end, aur ginne ko +1/−1 events.",
+
+    q: [
+      ["Overlap test batao, aur dabaav mein dobara kaise nikaaloge.", "[a,b] aur [c,d] overlap karte hain jab a <= d and c <= b. Miss ke sirf do tareeke likho, b < c ya d < a, aur dono ulto. Overlap ki shakalein seedhe gino to chaar aati hain, aur ek chhoot jaati hai."],
+      ["Merge start se sort kyun karta hai jabki max non-overlapping end se?", "Merge mein sorted starts ka matlab current block se overlap karne wala sab dekha ja chuka, to sirf aakhri block check karna hai. Packing mein pehle khatam hone wala sabse zyada jagah chhodta hai, to end time ke peeche exchange argument hai. Start order pehle shuru hone wali ek lambi meeting par fail hota hai."],
+      ["Sweep line reformulation ek sentence mein kya hai?", "Har interval ko start par +1 aur end par −1 se badlo, saare 2n events sort karo, aur running counter ke saath chalo: uski value zinda intervals ki ginti hai, aur maximum peak."],
+      ["Do meetings, ek 10:00 par khatam aur ek 10:00 par shuru. Kitne rooms?", "Ek, agar barabar positions par −1 ko +1 se pehle process karo. Ulta order thodi der 2 padhta hai aur doosra room deta hai. Sahi kaunsa, yeh is par nirbhar ki chhoona overlap gina jaaye ya nahi, to yeh jaan boojh kar tie-break hona chahiye."],
+      ["Sweep ki jagah min-heap formulation kab use karoge?", "Jab rooms khud chahiye, unki ginti nahi. Heap har busy room ka end time rakhta hai, sabse pehla upar, to khaali room dobara use hota hai aur har meeting ko pakka room milta hai. Ginti ke liye sweep chhota aur tez hai."],
+      ["Sweep kya answer nahi kar sakta, aur iski keemat kya hai?", "Yeh ginti deta hai, members nahi: 12 par chaar intervals overlap karte hain, par kaunse chaar nahi, jab tak saath mein active set na rakho. Yeh offline bhi hai, kyunki pehle sab sort hona chahiye, to beech mein queries ke saath live intervals ko interval tree ya ordered map chahiye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "cyclic-sort",
   n: "Cyclic sort",
   group: "Patterns",
-  one: "When the values are exactly 1 to n, every value already knows its index. Put each one home in one pass, and then <b>any slot holding the wrong value names the answer</b>.",
+  need: {
+    ask: `<p>An event sold tickets numbered 1 to <var>n</var>, with <b><var>n</var> = 10⁶</b>. The gate's log has exactly <var>n</var> scans, but one ticket was scanned twice and one never. Find both, on a gate controller with almost no spare memory.</p>
+<p>The small version: tickets 1 to 5, scanned as <code>4, 1, 5, 4, 2</code>. Ticket 3 is missing, and ticket 4 was scanned twice.</p>`,
+    tries: [
+      ["Remember every ticket seen in a hash set", "O(<var>n</var>) time, but 10⁶ entries cost tens of MB, which the controller does not have."],
+      ["Compare the sum with 1 + 2 + … + n", "1 to 5 add to 15, and the log adds to 16. That says the duplicate is 1 more than the missing ticket: one equation, two unknowns. It cannot name either."],
+      ["Sort the log, then scan it", "It works, but the sort compares tickets to learn where they go: <var>n</var> log <var>n</var> ≈ 2 × 10⁷ steps. The ticket number already says where it goes."],
+    ],
+    so: `<p>Ticket <var>v</var> belongs at index <var>v</var> − 1. So walk the array, and whenever a ticket is not home, <b>swap it home</b>. Stay on the same index, because the swap brought in a new ticket. Move on only when the slot is settled, or when its ticket's home already holds a copy.</p>
+<p>Afterwards the array is <code>1, 2, 4, 4, 5</code>. Index 2 should hold 3 and holds 4: <b>3 is missing, 4 is the duplicate</b>. At most <var>n</var> swaps, O(<var>n</var>) time, O(1) extra space. That is <b>cyclic sort</b>, and the page follows these five tickets throughout.</p>`,
+  },
 
-  plain: `<p>Most patterns are about finding structure in arbitrary data. This one is the opposite: it exploits a constraint the problem hands you, and it only works because of that constraint.</p>
-<p>The constraint is that the array contains the numbers 1 to n, or 0 to n-1, possibly with one missing or one duplicated. That is a peculiar thing to be told, and it is a tell. It means every value has a <b>correct index it belongs at</b>, computable with no lookup: value <code>v</code> belongs at index <code>v-1</code>.</p>
-<p>So walk the array, and whenever the value in front of you is not home, swap it to where it belongs. Do not advance yet, because the swap brought a new stranger into your current slot. Only move on once the slot is correct.</p>
-<p>Once everything that can be home is home, the array is sorted. More usefully, any index still holding the wrong value is telling you exactly what is missing or duplicated. That second sentence is why the pattern exists at all, because sorting was never the goal.</p>
-<p><b>Analogy.</b> Numbered coats on numbered pegs. You do not sort the coats. You pick one up, hang it on its own peg, pick up whatever was already there, and repeat. At the end, an empty peg names the missing coat.</p>`,
+  one: "When the values are exactly 1 to <var>n</var>, every value already knows its index. Put each one home in one pass, and then <b>any slot holding the wrong value names the answer</b>.",
+
+  plain: `<p>Most patterns find structure in arbitrary data. This one does the opposite: it uses a promise the problem makes, and only works because of it.</p>
+<p>The promise is that the array holds the numbers 1 to <var>n</var>, or 0 to <var>n</var> − 1, perhaps with one missing or one repeated. That is an odd thing to be told, and it is a hint. It means every value has a <b>correct index it belongs at</b>, known with no lookup: value <var>v</var> belongs at index <var>v</var> − 1.</p>
+<p>So walk the array, and whenever the value in front of you is not home, swap it to where it belongs. Do not move on yet, because the swap brought a new value into your slot. With tickets <code>4, 1, 5, 4, 2</code>, the 1 goes home and a 4 lands in its place.</p>
+<p>Once everything that can be home is home, any index still holding the wrong value tells you what is missing or repeated. Here, index 2 holds 4 instead of 3. That last step is why the pattern exists: sorting was never the goal.</p>
+<p><b>Analogy.</b> Numbered coats on numbered pegs. You do not sort the coats. You pick one up, hang it on its own peg, pick up whatever was there, and repeat. At the end, an empty peg names the missing coat.</p>`,
 
   why: [
-    { t: "The constraint is the algorithm", d: "Being told the values are 1 to n is not decoration. It means the value <b>is</b> the index, so no comparison, no hash lookup and no sorting is needed to know where something belongs. Whenever a problem statement bothers to promise you the range of the values, it is pointing at this." },
-    { t: "Swap it home, and do not advance", d: "The loop looks unusual because the index only moves forward when the current slot is already correct. Swapping brings a new value into the slot you are standing on, and that value has its own home to go to. Advancing after a swap is the mistake that quietly leaves things misplaced." },
-    { t: "The nested loop is still linear", d: "It looks like it could be O(n²), and it is not. <b>Every swap puts at least one value into its final position permanently</b>, and a value never leaves its home once it arrives. So there are at most n swaps across the entire run, which with the n steps of the outer loop gives <b>O(n)</b>. This is the same amortised argument as the monotonic stack, and it is what interviewers want said out loud." },
-    { t: "Then the mismatch is the answer", d: "After the pass, scan once more. If index <code>i</code> does not hold <code>i+1</code>, then <code>i+1</code> is missing and whatever is sitting there is the duplicate. One loop answers \"which number is missing\", \"which is repeated\", and \"which pair is wrong\" simultaneously, because they were always the same question." },
-    { t: "The point is the space, not the speed", d: "A hash set also solves these in O(n) time, and everybody reaches for it first. Cyclic sort matches that time in <b>O(1) extra space</b>, by using the array itself as the record of what it has seen. When a problem says \"without extra space\" and promises a bounded value range, it has told you the answer twice." },
-    { t: "Know when the promise does not hold", d: "Values outside 1 to n, or a range far larger than the array, break it: there is no home index to swap to. Guard the swap with a range check and skip anything out of bounds. First Missing Positive is exactly this case, and the guard is what makes it work on arbitrary input." },
+    { t: "The promise is the algorithm",
+      d: "Being told the values are 1 to <var>n</var> is not decoration. It means the value <b>is</b> the index, so no comparison, hash lookup or sorting is needed to know where something belongs. Whenever a problem bothers to promise the range of the values, it is pointing here." },
+    { t: "Swap it home, and do not advance",
+      d: "The index only moves forward when the current slot is settled. A swap brings a new value into the slot you are on, and that value has its own home. At index 1, sending the 1 home brings in a 4. Advancing after a swap is the mistake that quietly leaves values misplaced." },
+    { t: "The nested loop is still linear",
+      d: "It looks like O(<var>n</var>²) and is not. <b>Every swap puts at least one value in its final place for good</b>, and a value never leaves home once there. So there are at most <var>n</var> swaps in the whole run, 3 for the five tickets, and with the <var>n</var> outer steps that is <b>O(<var>n</var>)</b>. Say this out loud." },
+    { t: "Two equal values must not swap each other",
+      d: "At index 0 sits a 4, whose home, index 3, already holds a 4. Swapping them changes nothing, and the loop would do it forever. So compare the value with its <b>target slot</b>, and if they are equal, move on. That leftover copy is the duplicate." },
+    { t: "Then the mismatch is the answer",
+      d: "After the pass, scan once more. If index <var>i</var> does not hold <var>i</var> + 1, then <var>i</var> + 1 is missing and whatever sits there is the duplicate. <code>1, 2, 4, 4, 5</code> answers “which is missing” and “which is repeated” at once, because they were always the same question." },
+    { t: "The point is the space, not the speed",
+      d: "A hash set also solves this in O(<var>n</var>) time, and everyone reaches for it first. Cyclic sort matches that in <b>O(1) extra space</b>, using the array itself as the record of what was seen. When a problem says “no extra space” and promises a value range, it has told you the answer twice." },
+    { t: "Know when the promise does not hold",
+      d: "Values outside 1 to <var>n</var> have no home index to swap to. Guard the swap with a range check, and skip anything out of bounds. First Missing Positive is exactly this case, and the guard is what makes it work on arbitrary input." },
   ],
 
   variants: [
     { n: "Missing number", cost: "O(n) time, O(1) space",
-      idea: "Values 0 to n with one absent. After the pass, the first index not holding its own value names the missing one.",
+      idea: "Values 0 to <var>n</var> with one absent. After the pass, the first index not holding its own value names the missing one.",
       when: "The classic warm-up for the pattern.",
-      watch: "XOR and the sum formula also solve it in one line. Sum risks overflow; XOR does not. Know all three." },
-
+      watch: "XOR and the sum formula also solve it in one line when only one number is wrong. The sum can overflow; XOR cannot. Know all three." },
     { n: "Find the duplicate", cost: "O(n) time, O(1) space",
-      idea: "n+1 values in the range 1 to n, so one repeats. The value that will not fit into its own slot is the duplicate.",
-      when: "You are told the array must not be modified? Then use fast and slow pointers instead.",
-      watch: "The classic version forbids modifying the array, which rules cyclic sort out and points at Floyd's cycle detection on the index graph." },
-
+      idea: "<var>n</var> + 1 values in 1 to <var>n</var>, so one repeats. The value that cannot go home, because home already holds a copy, is the duplicate.",
+      when: "The array may be changed.",
+      watch: "The LeetCode version forbids changing the array, which rules this out and points to Floyd's cycle detection on the index graph." },
     { n: "Find all duplicates and all missing", cost: "O(n) time, O(1) space",
-      idea: "After one pass, sweep once and collect every index whose value is wrong. Both answers come out of the same sweep.",
-      when: "The problem asks for several numbers rather than one.",
-      watch: "The output array does not count against O(1) space, and saying so is worth a sentence." },
-
+      idea: "After one pass, sweep once and collect every index whose value is wrong. Both lists come out of the same sweep.",
+      when: "The problem asks for several numbers, not one.",
+      watch: "The output list does not count against O(1) space, and saying so is worth a sentence." },
     { n: "First missing positive", cost: "O(n) time, O(1) space",
-      idea: "Same pass, but ignore anything outside 1 to n, since those can never be the answer.",
+      idea: "The same pass, ignoring anything outside 1 to <var>n</var>, since those can never be the answer.",
       when: "Arbitrary integers, negatives included, and you need the smallest absent positive.",
-      watch: "The range guard is the whole difficulty here. Without it the swap loop runs off the end or spins." },
-
+      watch: "The range guard is the whole difficulty. Without it, the swap loop runs off the end or spins." },
     { n: "Sign marking, the sibling trick", cost: "O(n) time, O(1) space",
-      idea: "Instead of swapping, negate the value at index v-1 to record that v was seen. A negative entry means its index was visited.",
-      when: "Values are guaranteed positive and you may modify the array.",
-      watch: "Use the absolute value when reading, or the second visit reads your own marker as data." },
+      idea: "Instead of swapping, negate the value at index <var>v</var> − 1 to record that <var>v</var> was seen. A negative entry means its index was visited.",
+      when: "Values are positive and you may change the array.",
+      watch: "Read with the absolute value, or a second visit reads your own marker as data." },
   ],
 
-  hing: `<p><b>Yeh pattern baaki sabse ulta hai.</b> Zyadatar patterns bikhre hue data mein structure dhoondhte hain. Yeh ek <b>shart (constraint)</b> ka faayda uthata hai jo problem khud tumhe deti hai.</p>
-<p><b>Shart kya hai:</b> array mein numbers <b>1 se n tak</b> hain (ya 0 se n-1), shayad ek missing ya ek duplicate ke saath. Yeh line bekaar mein nahi likhi hoti. Iska matlab hai ki har value ko pata hai ki uski <b>jagah kahan hai</b>: value <code>v</code> ka ghar index <code>v-1</code> hai. Na comparison, na hash, na sorting.</p>
-<p><b>Loop ajeeb kyun dikhta hai?</b> Kyunki index tabhi aage badhta hai jab current slot <b>sahi</b> ho. Swap karne par tumhare slot mein ek naya ajnabi aa jaata hai, aur uska apna ghar hai. Swap ke baad turant aage badh gaye, to cheezein galat jagah reh jaayengi. <b>Yeh sabse common galti hai.</b></p>
-<p><b>Nested loop hai, phir bhi O(n) kaise?</b> Kyunki <b>har swap kam se kam ek value ko hamesha ke liye uski sahi jagah par bitha deta hai</b>. Wahan se woh kabhi hilti nahi. Isliye poore run mein n se zyada swaps ho hi nahi sakte. Isliye poore program mein zyada se zyada n swaps. Yeh wahi amortised argument hai jo monotonic stack mein tha, aur interview mein ise <b>bol kar</b> batana hota hai.</p>
-<p><b>Ab asli faayda:</b> pass ke baad ek aur sweep maaro. Agar index <code>i</code> par <code>i+1</code> nahi hai, to <code>i+1</code> <b>missing</b> hai aur jo wahan baitha hai woh <b>duplicate</b> hai. Missing number, repeated number, dono ek hi loop se. Sorting to kabhi maqsad thi hi nahi.</p>
-<p><b>Aur sabse important:</b> hash set bhi yeh sab O(n) time mein kar deta hai, aur sabse pehle wahi dimaag mein aata hai. Cyclic sort ka faayda <b>time nahi, SPACE hai</b>: <b>O(1) extra space</b>, kyunki array khud hi record ban jaata hai. Jab problem bole "extra space mat use karo" aur saath mein values ki range bata de, to usne answer do baar bata diya hai.</p>
-<p><b>Kab nahi chalega:</b> agar values 1 se n ke bahar hain, to unka koi ghar hi nahi hai. Swap se pehle range check lagao aur bahar wali values chhod do. "First Missing Positive" bilkul yahi case hai, aur wahi guard use solve karta hai.</p>`,
+  hing: `<p><b>Pehchaan:</b> jab problem khud bataye ki values <b>1 se n</b> (ya 0 se n-1) ke beech hain, to samajh jao ki yeh cyclic sort hai. Yeh promise hi algorithm hai.</p>
+<p><b>Kyun?</b> Kyunki har value ko pehle se pata hai ki uska ghar kahan hai. Value <var>v</var> ka sahi index hai <var>v</var>-1. Na comparison chahiye, na hash map, na sorting.</p>
+<p><b>Loop kaise chalta hai:</b> index <code>i</code> par jo value hai, agar woh apne ghar par nahi hai, to use uske ghar bhej do (swap). Par <b>i ko aage mat badhao</b>, kyunki swap ke baad ek nayi value aa gayi hai jise bhi ghar bhejna hai. Tickets <code>4, 1, 5, 4, 2</code> mein 1 ghar jaata hai aur uski jagah 4 aa jaata hai.</p>
+<p><b>Nested loop, phir bhi O(<var>n</var>) kyun?</b> Har swap kam se kam ek value ko <b>hamesha ke liye</b> uski sahi jagah bitha deta hai. Jo value ghar pahunch gayi, woh dobara nahi hilti. To poore run mein zyada se zyada <var>n</var> swaps, yahan 3.</p>
+<p><b>Asli kaam iske baad hai:</b> ek baar scan karo. Jis index <code>i</code> par <code>i+1</code> nahi hai, wahi batata hai ki <code>i+1</code> missing hai aur wahan baithi value duplicate hai. <code>1, 2, 4, 4, 5</code> mein index 2 par 4 hai: 3 missing, 4 do baar.</p>
+<p><b>Hash set bhi to O(<var>n</var>) mein kar deta hai?</b> Haan, par O(<var>n</var>) extra space leta hai. Cyclic sort <b>O(1) extra space</b> mein karta hai, array ko hi record bana ke. Problem mein "extra space mat use karo" likha ho aur values ki range di ho, to yahi pattern chahiye.</p>
+<p><b>Common galtiyan:</b> swap ke baad <code>i</code> badha dena. Aur jab target par pehle se same value ho, tab bhi swap karte rehna, jisse loop kabhi khatam nahi hota. Hamesha <code>a[home] != a[i]</code> check karo.</p>`,
 
   viz: ["cyclic-sort"],
   see: [["GFG", "https://www.geeksforgeeks.org/cycle-sort/", "GeeksforGeeks, cycle sort"]],
 
   math: [
+    { t: "Tickets 4, 1, 5, 4, 2, step by step", d: "The index moves only when the slot is settled, or when its value's home already holds a copy. Three swaps, then one sweep.", w:
+`i   array            a[i]  home  a[home]   action
+0  4 1 5 4 2         4     3     4         equal: move on
+1  4 1 5 4 2         1     0     4         swap
+1  1 4 5 4 2         4     3     4         equal: move on
+2  1 4 5 4 2         5     4     2         swap
+2  1 4 2 4 5         2     1     4         swap
+2  1 2 4 4 5         4     3     4         equal: move on
+3, 4                 home already          move on
+
+sweep: index 2 holds 4, not 3
+missing 3, duplicate 4. 3 swaps, n = 5` },
     { t: "The promise, and what it removes", d: "When the values are a permutation of the indices, the destination of every value is known without comparing it to anything.", w:
 `values are exactly 1..n, each appearing once
-
 value v belongs at index v - 1. Known immediately.
 
 so nothing is compared, and the n log n lower bound
 does not apply: it only binds algorithms whose sole
 move is a comparison. This one reads the value.
-
 sorting cost: O(n), and O(1) extra space` },
-    { t: "The nested loop is still linear", d: "A while inside a for looks quadratic and is not, because every swap permanently finishes one element and there are only n of them.", w:
+    { t: "The nested loop is still linear", d: "A while inside a for looks quadratic and is not, because every swap permanently finishes one element, and there are only <var>n</var> of them.", w:
 `for i in 0..n-1:
-    while a[i] != i + 1:
+    while a[i] is not home and its home differs:
         swap a[i] with a[a[i] - 1]
 
 every swap places at least one value in its final home
 a value in its final home is never moved again
 so there are at most n swaps in the entire run
-
-outer steps n + swaps <= n  ->  at most 2n operations` },
-    { t: "Then the answer is wherever the pattern breaks", d: "After the pass the array is its own lookup table, and four different interview questions are the same single scan over it.", w:
+n outer steps + at most n swaps  ->  at most 2n operations` },
+    { t: "Then the answer is wherever the pattern breaks", d: "After the pass, the array is its own lookup table, and four interview questions are the same single scan over it.", w:
 `after the pass, a[i] should be i + 1
 
-first missing number   the first i with a[i] != i + 1
-the duplicate          the value found sitting in a slot
-                       whose owner is elsewhere
-all missing numbers    every i with a[i] != i + 1
-first missing positive the same scan, having ignored
-                       values outside 1..n` },
-    { t: "The point is the space, not the speed", d: "A hash set also answers these in O(n) time. What it cannot do is answer them in no extra memory, which is the constraint the question is really about.", w:
+first missing number    the first i with a[i] != i + 1
+the duplicate           the value sitting in that slot
+all missing numbers     every i with a[i] != i + 1
+first missing positive  the same scan, having ignored
+                        values outside 1..n` },
+    { t: "The point is the space, not the speed", d: "A hash set also answers these in O(<var>n</var>) time. What it cannot do is answer them in no extra memory, which is the real constraint.", w:
 `n = 10^6 values in 1..n
-
 hash set of seen values   ~10^6 entries, tens of MB
 boolean array             10^6 bytes = 1 MB
 cyclic sort               0 extra bytes
@@ -16032,24 +16732,24 @@ original order is destroyed.` },
     ["the placement pass", "O(n) time", "at most n swaps, because each one is permanent"],
     ["extra space", "O(1)", "the array itself records what has been seen"],
     ["the answer sweep", "O(n)", "one more scan to find the mismatched index"],
-    ["hash set alternative", "O(n) time, O(n) space", "same speed, and the space is the whole difference"],
-    ["sorting alternative", "O(n log n)", "strictly worse, and throws away the constraint you were given"],
-    ["writes to the array", "up to n", "this pattern mutates the input, which is sometimes forbidden"],
+    ["hash set alternative", "O(n) time, O(n) space", "same speed; the space is the whole difference"],
+    ["sorting alternative", "O(n log n)", "strictly worse, and it ignores the promise you were given"],
+    ["writes to the array", "up to n", "this pattern changes the input, which is sometimes forbidden"],
   ],
 
   traps: [
-    "<b>Advancing after a swap.</b> The slot you are on now holds a different value that also needs placing. Only move forward when the current slot is correct.",
-    "<b>Forgetting the range guard.</b> Values outside 1 to n have no home index, so swapping on them reads out of bounds or loops forever.",
-    "<b>Swapping when the target already holds the right value.</b> Two equal values will swap each other back and forth until the heat death of the universe. Compare the target, not the current slot.",
-    "<b>Mixing up 0-indexed and 1-indexed.</b> Values 1 to n go to index v-1; values 0 to n-1 go to index v. Write down which one the problem gave you before the loop.",
-    "<b>Using it when the array must not be modified.</b> Find the Duplicate forbids it, which is why that one wants Floyd's cycle detection instead.",
+    "<b>Advancing after a swap.</b> The slot you are on now holds a different value that also needs placing. Move forward only when the current slot is settled.",
+    "<b>Forgetting the range guard.</b> Values outside 1 to <var>n</var> have no home index, so swapping on them reads out of bounds or loops forever.",
+    "<b>Swapping when the target already holds the same value.</b> The two 4s would swap back and forth forever. Compare with the target slot, not with the current index.",
+    "<b>Mixing up 0-indexed and 1-indexed.</b> Values 1 to <var>n</var> go to index <var>v</var> − 1; values 0 to <var>n</var> − 1 go to index <var>v</var>. Write down which the problem gave you before the loop.",
+    "<b>Using it when the array must not be changed.</b> Find the Duplicate forbids it, which is why that one wants Floyd's cycle detection instead.",
   ],
 
   impl: [
-    ["Python", "a[i], a[j] = a[j], a[i]", "Tuple swap evaluates the right side first, so the usual self-swap bug does not bite here."],
+    ["Python", "a[home], a[i] = a[i], a[home]", "Compute home first. In a[i], a[a[i]-1] = ..., the second index is read after a[i] has already changed."],
     ["Java", "manual swap with a temp", "Watch int versus Integer: unboxing in a loop is avoidable overhead on large inputs."],
-    ["C++", "std::swap(a[i], a[j])", "size() is unsigned, so cast before comparing against a signed index."],
-    ["JavaScript", "[a[i], a[j]] = [a[j], a[i]]", "Destructuring swap allocates a small array each time; a temp variable is faster in hot loops."],
+    ["C++", "std::swap(a[i], a[j])", "size() is unsigned, so cast before comparing it with a signed index."],
+    ["JavaScript", "[a[i], a[j]] = [a[j], a[i]]", "Destructuring allocates a small array each time; a temp variable is faster in hot loops."],
   ],
 
   code: {
@@ -16207,15 +16907,15 @@ function findDisappeared(a) {
   return out;
 }`,
   },
-  codecap: "Stay on the index until it is settled, guard the range, and remember the sweep afterwards is the part you were actually asked for.",
+  codecap: "Stay on the index until it is settled, guard the range, and remember that the sweep afterwards is the part you were asked for.",
 
   q: [
-    ["What in the problem statement tells you to use this pattern?", "A promise about the range of the values, typically that they are 1 to n or 0 to n-1. That makes the value equal to its own index, so nothing needs to be searched or compared to know where it belongs."],
-    ["Why does the index not advance after a swap?", "The swap brings a different value into the current slot, and that value has its own home to reach. Advancing leaves it misplaced. You move on only when the slot already holds the right value."],
-    ["The loop is nested. Why is it O(n)?", "Every swap places at least one value in its final position permanently, and placed values never move again. So at most n swaps happen across the whole run, giving 2n operations in total."],
-    ["Once the pass is done, how do you get the answer?", "Scan once. If index i does not hold i+1, then i+1 is the missing value and whatever sits there is the duplicate. Missing, repeated and mismatched are all the same question."],
-    ["A hash set solves these in O(n) too. Why bother?", "Space. The hash set costs O(n) extra memory; cyclic sort uses the array itself as the record and costs O(1). When a problem demands constant space and also promises a value range, it has named the technique twice."],
-    ["When does the pattern fail, and what do you do instead?", "When values fall outside the range, so there is no home index: guard the swap and skip them, which is how First Missing Positive works. And when the array may not be modified, which points at Floyd's cycle detection instead."],
+    ["What in the problem statement tells you to use this pattern?", "A promise about the range of the values, usually that they are 1 to n or 0 to n-1. Then each value names its own index, so nothing needs to be searched or compared to know where it belongs."],
+    ["Why does the index not advance after a swap?", "The swap brings a different value into the current slot, and that value has its own home to reach. Advancing leaves it misplaced. You move on only when the slot is settled."],
+    ["The loop is nested. Why is it O(n)?", "Every swap puts at least one value in its final place for good, and placed values never move again. So at most n swaps happen in the whole run: 2n operations in total."],
+    ["Once the pass is done, how do you get the answer?", "Scan once. If index i does not hold i+1, then i+1 is missing and whatever sits there is the duplicate. Missing, repeated and mismatched are all the same question."],
+    ["A hash set solves these in O(n) too. Why bother?", "Space. The hash set costs O(n) extra memory; cyclic sort uses the array itself as the record and costs O(1). When a problem demands constant space and promises a value range, it has named the technique twice."],
+    ["When does the pattern fail, and what do you do instead?", "When values fall outside the range, so there is no home index: guard the swap and skip them, which is how First Missing Positive works. And when the array may not be changed, which points to Floyd's cycle detection."],
   ],
 
   p: [
@@ -16226,118 +16926,250 @@ function findDisappeared(a) {
     [287, "find-the-duplicate-number", "Find the Duplicate, where the array is read-only", "M"],
     [41, "first-missing-positive", "First Missing Positive, the range guard", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek event ne 1 se <var>n</var> tak numbered tickets beche, <b><var>n</var> = 10⁶</b>. Gate ke log mein theek <var>n</var> scans hain, par ek ticket do baar scan hua aur ek kabhi nahi. Dono dhoondho, aise gate controller par jiske paas lagbhag koi extra memory nahi.</p>
+<p>Chhota version: tickets 1 se 5, scan hue <code>4, 1, 5, 4, 2</code>. Ticket 3 missing hai, aur ticket 4 do baar scan hua.</p>`,
+      tries: [
+        ["Har dekha ticket hash set mein yaad rakho", "O(<var>n</var>) time, par 10⁶ entries das-baees MB leti hain, jo controller ke paas nahi."],
+        ["Sum ko 1 + 2 + … + n se compare karo", "1 se 5 ka jod 15, aur log ka jod 16. Yeh kehta hai duplicate missing ticket se 1 zyada hai: ek equation, do unknowns. Kisi ka naam nahi bata sakta."],
+        ["Log sort karo, phir scan", "Chalta hai, par sort tickets compare karke seekhta hai ki woh kahan jaayein: <var>n</var> log <var>n</var> ≈ 2 × 10⁷ steps. Ticket ka number pehle hi batata hai woh kahan jaaye."],
+      ],
+      so: `<p>Ticket <var>v</var> ki jagah index <var>v</var> − 1 hai. To array par chalo, aur jab bhi ticket ghar par na ho, <b>use ghar swap karo</b>. Usi index par raho, kyunki swap naya ticket laaya. Aage tabhi badho jab slot settle ho, ya uske ticket ke ghar mein pehle se ek copy ho.</p>
+<p>Baad mein array <code>1, 2, 4, 4, 5</code> hai. Index 2 par 3 hona chahiye tha aur 4 hai: <b>3 missing, 4 duplicate</b>. Zyada se zyada <var>n</var> swaps, O(<var>n</var>) time, O(1) extra space. Yahi <b>cyclic sort</b> hai, aur page poore mein yahi paanch tickets follow karta hai.</p>`,
+    },
+
+    one: "Jab values theek 1 se <var>n</var> hon, har value ko apna index pehle se pata hai. Ek pass mein har ek ko ghar bhejo, phir <b>galat value rakhne wala koi bhi slot answer ka naam batata hai</b>.",
+
+    plain: `<p>Zyadatar patterns anjaan data mein structure dhoondhte hain. Yeh ulta karta hai: problem ka diya vaada use karta hai, aur usi ki wajah se chalta hai.</p>
+<p>Vaada yeh hai ki array mein 1 se <var>n</var>, ya 0 se <var>n</var> − 1 tak ke numbers hain, shaayad ek missing ya ek dohraaya. Yeh ajeeb baat batayi jaana ek ishaara hai. Matlab har value ka ek <b>sahi index hai jahan uski jagah</b> hai, bina lookup ke pata: value <var>v</var> index <var>v</var> − 1 par jaati hai.</p>
+<p>To array par chalo, aur jab bhi saamne ki value ghar par na ho, use uski jagah swap karo. Abhi aage mat badho, kyunki swap aapke slot mein nayi value laaya. Tickets <code>4, 1, 5, 4, 2</code> ke saath 1 ghar jaata hai aur uski jagah ek 4 aa jaata hai.</p>
+<p>Jab jo ghar ja sakta tha sab ghar par hai, galat value rakhne wala har index batata hai kya missing ya dohraaya hai. Yahan index 2 par 3 ki jagah 4. Wahi aakhri kadam pattern ke hone ki wajah hai: sorting kabhi goal thi hi nahi.</p>
+<p><b>Analogy.</b> Numbered khoontiyon par numbered coats. Coats sort nahi karte. Ek uthao, apni khoonti par taango, jo wahan tha use uthao, aur dohraao. Aakhir mein khaali khoonti missing coat ka naam batati hai.</p>`,
+
+    why: [
+      { t: "Vaada hi algorithm hai",
+        d: "Yeh batana ki values 1 se <var>n</var> hain sajaavat nahi. Iska matlab value <b>hi</b> index hai, to kahan jaana hai yeh jaanne ko na comparison, na hash lookup, na sorting chahiye. Jab bhi problem values ki range ka vaada kare, woh yahin ishaara kar rahi hai." },
+      { t: "Ghar swap karo, aur aage mat badho",
+        d: "Index tabhi aage badhta hai jab current slot settle ho. Swap aapke slot mein nayi value laata hai, aur us value ka apna ghar hai. Index 1 par 1 ko ghar bhejne se ek 4 aata hai. Swap ke baad aage badhna woh galti hai jo chupchaap values galat jagah chhodti hai." },
+      { t: "Nested loop phir bhi linear hai",
+        d: "O(<var>n</var>²) dikhta hai, hai nahi. <b>Har swap kam se kam ek value ko hamesha ke liye uski final jagah rakhta hai</b>, aur ghar pahunchi value kabhi nahi hilti. To poore run mein zyada se zyada <var>n</var> swaps, paanch tickets ke liye 3, aur <var>n</var> bahari steps ke saath <b>O(<var>n</var>)</b>. Zor se bolo." },
+      { t: "Do barabar values ek doosre ko swap na karein",
+        d: "Index 0 par ek 4 hai, jiske ghar, index 3, mein pehle se 4 hai. Unhe swap karna kuch nahi badalta, aur loop hamesha karta rahega. To value ko uske <b>target slot</b> se compare karo, aur barabar ho to aage badho. Wahi bachi copy duplicate hai." },
+      { t: "Phir mismatch hi answer hai",
+        d: "Pass ke baad ek baar aur scan karo. Index <var>i</var> par <var>i</var> + 1 na ho, to <var>i</var> + 1 missing hai aur wahan baitha duplicate. <code>1, 2, 4, 4, 5</code> “kya missing” aur “kya dohraaya” ek saath batata hai, kyunki yeh hamesha ek hi sawaal the." },
+      { t: "Baat space ki hai, speed ki nahi",
+        d: "Hash set bhi ise O(<var>n</var>) time mein hal karta hai, aur sab pehle wahi pakadte hain. Cyclic sort yahi <b>O(1) extra space</b> mein karta hai, array ko hi dekhe gaye ka record bana kar. Problem “extra space nahi” kahe aur value range ka vaada kare, to answer do baar bata diya." },
+      { t: "Jaano kab vaada nahi nibhta",
+        d: "1 se <var>n</var> ke bahar ki values ka koi ghar index nahi jahan swap ho. Swap ko range check se guard karo, aur bahar wali cheez chhodo. First Missing Positive theek yahi case hai, aur guard hi ise kisi bhi input par chalaata hai." },
+    ],
+
+    variants: [
+      { n: "Missing number", cost: "O(n) time, O(1) space",
+        idea: "Values 0 se <var>n</var>, ek gaayab. Pass ke baad pehla index jo apni value na rakhe, missing ka naam batata hai.",
+        when: "Pattern ka classic warm-up.",
+        watch: "Jab sirf ek number galat ho, XOR aur sum formula bhi ek line mein hal karte hain. Sum overflow ho sakta hai; XOR nahi. Teeno jaano." },
+      { n: "Find the duplicate", cost: "O(n) time, O(1) space",
+        idea: "1 se <var>n</var> mein <var>n</var> + 1 values, to ek dohraati hai. Jo value ghar nahi ja sakti, kyunki ghar mein pehle se copy hai, woh duplicate hai.",
+        when: "Array badla ja sakta ho.",
+        watch: "LeetCode version array badalna mana karta hai, jo ise rule out karke index graph par Floyd's cycle detection ki taraf ishaara karta hai." },
+      { n: "Find all duplicates and all missing", cost: "O(n) time, O(1) space",
+        idea: "Ek pass ke baad ek baar sweep karo aur har galat value wala index jama karo. Dono lists usi sweep se nikalti hain.",
+        when: "Problem ek ki jagah kai numbers maange.",
+        watch: "Output list O(1) space mein nahi gini jaati, aur yeh ek sentence mein kehna faayde ka hai." },
+      { n: "First missing positive", cost: "O(n) time, O(1) space",
+        idea: "Wahi pass, 1 se <var>n</var> ke bahar sab nazarandaaz, kyunki woh kabhi answer nahi ho sakte.",
+        when: "Koi bhi integers, negatives samet, aur sabse chhota gaayab positive chahiye.",
+        watch: "Range guard hi poori mushkil hai. Iske bina swap loop end se bahar bhaagta hai ya ghoomta rehta hai." },
+      { n: "Sign marking, the sibling trick", cost: "O(n) time, O(1) space",
+        idea: "Swap ki jagah index <var>v</var> − 1 ki value negative karo taaki dikhe ki <var>v</var> dekha gaya. Negative entry matlab uska index visit hua.",
+        when: "Values positive hon aur array badal sakte ho.",
+        watch: "Absolute value se padho, warna doosri visit aapka apna marker data samajh kar padhti hai." },
+    ],
+
+    math: [
+      { t: "Tickets 4, 1, 5, 4, 2, step by step", d: "Index tabhi hilta hai jab slot settle ho, ya uski value ke ghar mein pehle se copy ho. Teen swaps, phir ek sweep." },
+      { t: "Vaada, aur yeh kya hataata hai", d: "Jab values indices ka permutation hon, har value ki manzil bina kisi se compare kiye pata hai." },
+      { t: "Nested loop phir bhi linear hai", d: "for ke andar while quadratic dikhta hai par nahi, kyunki har swap ek element ko hamesha ke liye nipta deta hai, aur woh sirf <var>n</var> hain." },
+      { t: "Phir answer wahan hai jahan pattern toot-ta hai", d: "Pass ke baad array apna hi lookup table hai, aur chaar interview sawaal uspar ek hi scan hain." },
+      { t: "Baat space ki hai, speed ki nahi", d: "Hash set bhi inka answer O(<var>n</var>) time mein deta hai. Jo nahi kar sakta woh bina extra memory ke answer dena hai, jo asli shart hai." },
+    ],
+
+    costs: [
+      ["the placement pass", "O(n) time", "zyada se zyada n swaps, kyunki har ek pakka hai"],
+      ["extra space", "O(1)", "array khud record rakhta hai ki kya dekha gaya"],
+      ["the answer sweep", "O(n)", "galat index dhoondhne ko ek aur scan"],
+      ["hash set alternative", "O(n) time, O(n) space", "wahi speed; space hi poora farak"],
+      ["sorting alternative", "O(n log n)", "saaf taur par bura, aur diya vaada nazarandaaz karta hai"],
+      ["writes to the array", "up to n", "yeh pattern input badalta hai, jo kabhi mana hota hai"],
+    ],
+
+    traps: [
+      "<b>Swap ke baad aage badhna.</b> Jis slot par ho usme ab alag value hai jise bhi rakhna hai. Aage tabhi badho jab current slot settle ho.",
+      "<b>Range guard bhoolna.</b> 1 se <var>n</var> ke bahar ki values ka ghar index nahi, to un par swap bounds ke bahar padhta hai ya hamesha loop karta hai.",
+      "<b>Jab target mein wahi value ho tab swap.</b> Do 4 hamesha aage peeche swap karte rahenge. Target slot se compare karo, current index se nahi.",
+      "<b>0-indexed aur 1-indexed milaana.</b> Values 1 se <var>n</var> index <var>v</var> − 1 par jaati hain; values 0 se <var>n</var> − 1 index <var>v</var> par. Loop se pehle likho problem ne kaunsa diya.",
+      "<b>Jab array badalna mana ho tab use karna.</b> Find the Duplicate ise mana karta hai, isiliye wahan Floyd's cycle detection chahiye.",
+    ],
+
+    impl: [
+      ["Python", "a[home], a[i] = a[i], a[home]", "Pehle home nikaalo. a[i], a[a[i]-1] = ... mein doosra index a[i] badalne ke baad padha jaata hai."],
+      ["Java", "manual swap with a temp", "int vs Integer dekho: loop mein unboxing bade inputs par bachne layak kharcha hai."],
+      ["C++", "std::swap(a[i], a[j])", "size() unsigned hai, to signed index se compare karne se pehle cast karo."],
+      ["JavaScript", "[a[i], a[j]] = [a[j], a[i]]", "Destructuring har baar ek chhota array banata hai; hot loops mein temp variable tez hai."],
+    ],
+
+    codecap: "Index par tab tak raho jab tak settle na ho, range guard karo, aur yaad rakho ki baad ka sweep hi woh hissa hai jo poocha gaya tha.",
+
+    q: [
+      ["Problem statement mein kya batata hai ki yeh pattern use karo?", "Values ki range ka vaada, aam taur par ki woh 1 se n ya 0 se n-1 hain. Tab har value apna index batati hai, to kahan jaana hai yeh jaanne ko kuch dhoondhna ya compare nahi karna."],
+      ["Swap ke baad index aage kyun nahi badhta?", "Swap current slot mein alag value laata hai, aur us value ka apna ghar hai. Aage badhna use galat jagah chhodta hai. Slot settle hone par hi aage badho."],
+      ["Loop nested hai. O(n) kyun?", "Har swap kam se kam ek value ko hamesha ke liye final jagah rakhta hai, aur rakhi values kabhi nahi hilti. To poore run mein zyada se zyada n swaps: kul 2n operations."],
+      ["Pass ke baad answer kaise milta hai?", "Ek baar scan karo. Index i par i+1 na ho, to i+1 missing hai aur wahan baitha duplicate. Missing, dohraaya aur mismatch sab ek hi sawaal hain."],
+      ["Hash set bhi inhe O(n) mein hal karta hai. Kyun pareshan ho?", "Space. Hash set O(n) extra memory leta hai; cyclic sort array ko hi record banata hai aur O(1) leta hai. Problem constant space maange aur value range ka vaada kare, to technique ka naam do baar le diya."],
+      ["Pattern kab fail hota hai, aur tab kya karo?", "Jab values range ke bahar hon, to ghar index nahi: swap guard karo aur unhe chhodo, First Missing Positive aise hi chalta hai. Aur jab array badal na sakein, jo Floyd's cycle detection ki taraf ishaara hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "two-pointers",
   n: "Two Pointers",
   group: "Patterns",
-  one: "Two indices moving under a rule turn an O(n²) search over pairs into <b>O(n)</b>, because each move eliminates a whole set of candidates, not just one.",
+  need: {
+    ask: `<p>A shop lists <b>10⁵ prices</b>, sorted from cheapest to dearest. A customer has a gift card for exactly 10 and wants two items that use it up exactly. Which pair?</p>
+<p>The small version: prices <code>1, 3, 4, 6, 8, 11</code> and a card for 10. The answer is 4 + 6.</p>`,
+    tries: [
+      ["Try every pair", "6 prices make 15 pairs. 10⁵ make <var>n</var>(<var>n</var> − 1) / 2 = 5 × 10⁹, and the sorted order is never used."],
+      ["Start with the two cheapest and grow the sum", "1 + 3 = 4 is too small. But moving either pointer raises the sum, so nothing tells you which to move, and nothing is ruled out. You are back to trying pairs."],
+    ],
+    so: `<p>So start at <b>opposite ends</b>. 1 + 11 = 12 is too big, and since 1 is the smallest partner 11 could have, 11 is too big with <i>everyone</i>: drop it. 1 + 8 = 9 is too small, and 8 is the largest partner left, so 1 is too small with everyone: drop it.</p>
+<p>Every comparison removes one number for good. The pointers only move inward, so they meet within <var>n</var> steps: O(<var>n</var>) time and O(1) space, 5 comparisons here instead of 15 pairs. That is <b>two pointers</b>, and the page uses these six prices throughout.</p>`,
+  },
 
-  plain: `<p>Many problems ask about a <b>pair</b>: two numbers summing to a target, the two lines forming the largest container, the two ends of a palindrome. Checking every pair is O(n²).</p>
-<p>Two pointers replaces that with two indices and a rule for which one moves next. The rule must guarantee that moving discards only candidates that <b>cannot possibly be the answer</b>. When it does, the pointers sweep the array once and finish in O(n).</p>
-<p><b>The classic.</b> Sorted array, find a pair summing to 10. Start at both ends. If the sum is too big, the largest element cannot pair with anything. It is already too large even with the smallest partner, so move the right pointer in. Too small? Symmetrically, the smallest element is useless, so move the left pointer in. Each step deletes an entire row or column of the pair table.</p>
-<p><b>Analogy.</b> Two people walking toward each other along a corridor to find where a picture hangs. Each step, whoever is further from the target moves. They meet in the middle having covered the corridor once between them, not once each.</p>`,
+  one: "Two indices moving under a rule turn an O(<var>n</var>²) search over pairs into <b>O(<var>n</var>)</b>. Each move rules out a whole set of candidates, not just one.",
+
+  plain: `<p>Many problems ask about a <b>pair</b>: two numbers adding to a target, the two walls holding the most water, the two ends of a palindrome. Checking every pair is O(<var>n</var>²).</p>
+<p>Two pointers replaces that with two indices and a rule for which one moves next. The rule must guarantee that each move throws away only candidates that <b>cannot be the answer</b>. When it does, the pointers sweep the array once and finish in O(<var>n</var>).</p>
+<p><b>The classic.</b> Sorted prices <code>1, 3, 4, 6, 8, 11</code>, find two adding to 10. Start at both ends: 1 + 11 = 12, too big. The 11 is too big even with the smallest partner, so move the right pointer in. 1 + 8 = 9, too small, and 8 is the biggest partner left, so move the left pointer in. Each step deletes a whole row or column of the pair table.</p>
+<p><b>Analogy.</b> Two people walking towards each other along a corridor to find where a picture hangs. Each step, one of them moves. They meet having covered the corridor once between them, not once each.</p>`,
 
   why: [
     { t: "Checking every pair is the thing to beat",
-      d: "All pairs is about n²/2 comparisons. But when the data has structure, usually sorted order, most of those pairs can be ruled out without ever being looked at." },
+      d: "All pairs is about <var>n</var>² / 2 comparisons: 15 for six prices, 5 × 10⁹ for 10⁵. But when the data has structure, usually sorted order, most of those pairs can be ruled out without ever being looked at." },
     { t: "Each move must throw away only impossible answers",
-      d: "Sorted list, and <code>a[L] + a[R]</code> is too big. Since <code>a[L]</code> is the smallest value left, <code>a[R]</code> paired with <i>anything</i> remaining is still too big, so <code>a[R]</code> can be dropped completely. One comparison eliminates a whole group. <b>If you cannot make an argument like this, two pointers is not valid for your problem.</b>" },
-    { t: "They only move toward each other, so the sweep is O(n)",
-      d: "Each step advances exactly one pointer, and they never turn back. They meet after at most n steps, <b>O(n) time and O(1) extra space</b>. That O(1) is often the real reason to choose this over a map." },
+      d: "Sorted list, and <code>a[L] + a[R]</code> is too big: 1 + 11 = 12. Since <code>a[L]</code> is the smallest value left, <code>a[R]</code> with <i>any</i> remaining partner is still too big, so it can be dropped. One comparison removes a whole group. <b>If you cannot make an argument like this, two pointers is not valid for your problem.</b>" },
+    { t: "They only move towards each other, so the sweep is O(n)",
+      d: "Each step moves exactly one pointer, and they never turn back. They meet within <var>n</var> steps: <b>O(<var>n</var>) time and O(1) extra space</b>. On the six prices, 5 steps. That O(1) space is often the real reason to choose this over a hash map." },
     { t: "Three shapes cover almost everything",
-      d: "<b>From both ends</b>, moving inward: sorted pair sums, container with most water, palindromes. <b>Both from the left</b>, one writing behind the other: removing duplicates in place. <b>Different speeds</b>, one moving twice as fast. This finds the middle of a list, and it detects a loop. Inside a loop the gap shrinks by one each step, so the two must meet." },
+      d: "<b>From both ends</b>, moving inward: sorted pair sums, container with most water, palindromes. <b>Both from the left</b>, one writing behind the other: removing duplicates in place. <b>Different speeds</b>, one moving twice as fast: this finds the middle of a list, and detects a loop, because inside a loop the gap shrinks by one each step." },
     { t: "Choosing between this and a hash map",
-      d: "A map needs no order and keeps the original positions, but costs O(n) memory. Two pointers costs almost no memory but needs sorted input. Pick on whichever the problem constrains." },
+      d: "A hash map needs no order and keeps the original positions, but costs O(<var>n</var>) memory. Two pointers costs almost no memory but needs sorted input, and sorting loses the original positions. Pick by whichever the problem constrains." },
   ],
 
-  hing: `<p><b>Problem ki shakal:</b> aksar sawaal ek <b>jodi (pair)</b> ke baare mein hota hai. Do numbers ka sum target, sabse bada container, palindrome ke do sire. Saari jodiyaan check karo to O(n²).</p>
-<p><b>Two pointers ka asli funda:</b> do index rakho aur ek <b>niyam</b> banao ki agla kaun aage badhega. Niyam aisa hona chahiye ki har move sirf <b>un candidates ko hataaye jo answer ho hi nahi sakte</b>.</p>
-<p><b>Ab woh argument, jise samajh liya to pattern pakka.</b> Array lo <code>[1, 3, 4, 6, 8, 11]</code>, target <b>10</b>. L pehle par (1), R aakhri par (11). Sum <code>1 + 11 = 12</code>, target se bada.</p>
-<p>Ab dhyan do: <b>1 to sabse chhota element hai</b>. Jab 11 ka sabse chhote saathi ke saath bhi sum 12 aa gaya, to baaki kisi ke saath, yaani 3, 4, 6, 8, aur bhi bada aayega. Matlab <b>11 kisi ke bhi saath jodi nahi banayega</b>. Use poora hata do: ek hi comparison mein <b>paanch jodiyan</b> khatam. Ulta case bhi wahi hai, sum chhota hua to <code>a[L]</code> apne sabse bade saathi ke saath bhi kam pad raha hai, to L aage badhao.</p>
-<p>Har move ek poori line kaatta hai, ek jodi nahi. Agar tum apni problem ke liye aisa argument nahi bana pa rahe, to two pointers <b>valid nahi hai</b>.</p>
-<p><b>O(n) kyun?</b> Har step mein ek pointer aage badhta hai aur dono ek doosre ki taraf hi aate hain, to milne se pehle zyada se zyada n steps. Time O(n), <b>space O(1)</b>. Yeh O(1) space hi asli jeet hai.</p>
-<p><b>Teen variants yaad rakho:</b><br>1. <b>Dono sire se</b> (converging), sorted two-sum, container with most water, palindrome, 3Sum.<br>2. <b>Ek hi taraf, fast aur slow</b>, duplicates hatana, zeroes ko peeche bhejna. Slow pointer batata hai "agla rakha jaane wala element kahan jaayega". In-place O(1) space ka kaam yahi se hota hai.<br>3. <b>Alag speed</b> (Floyd), ek 1 kadam, doosra 2 kadam. Cycle hai to milna <b>pakka</b> hai, kyunki loop ke andar dono ka fasla har step 1 se ghatta hai. Linked list ka cycle <b>O(1) space</b> mein pakda jaata hai, aur middle node bhi ek hi pass mein mil jaata hai.</p>
-<p><b>Hash map lein ya two pointers?</b> Hash map: O(n) time, <b>O(n) space</b>, unsorted par bhi chalta hai, original indices milte hain. Two pointers: sort ke baad O(n), <b>O(1) space</b>, par order chahiye. Agar array already sorted hai ya interviewer "O(1) space" bole → two pointers. Agar original index chahiye → hash map.</p>`,
+  variants: [
+    { n: "Converging from both ends", cost: "O(n) time, O(1) space",
+      idea: "L at the start, R at the end; compare, then move the one the elimination argument allows.",
+      when: "Pair sums on sorted input, container with most water, valid palindrome.",
+      watch: "Move exactly one pointer per comparison, unless the answer was found." },
+    { n: "Reader and writer from the left", cost: "O(n) time, O(1) space",
+      idea: "The reader visits every item; the writer marks where the next kept item goes. Everything before the writer is the answer so far.",
+      when: "Remove duplicates in place, move zeroes, filter an array without extra space.",
+      watch: "The writer never passes the reader, so no kept item is overwritten before it is read." },
+    { n: "Fast and slow", cost: "O(n) time, O(1) space",
+      idea: "slow moves 1 step, fast moves 2. With no loop, fast hits the end when slow is at the middle. In a loop, fast catches slow.",
+      when: "Middle of a linked list, cycle detection, where a cycle starts.",
+      watch: "Check <code>fast</code> and <code>fast.next</code> before stepping two, or it crashes at the end." },
+    { n: "Fix one, two-point the rest", cost: "O(n²) time",
+      idea: "For 3Sum, sort, fix each element in turn, and run converging pointers on the part after it.",
+      when: "Triplets or quadruplets with a target sum.",
+      watch: "Skip equal values after recording a triplet, or the output repeats." },
+    { n: "Two sorted lists", cost: "O(n + m)",
+      idea: "One pointer per list, advancing whichever holds the smaller value: the merge step.",
+      when: "Merging, intersecting or comparing two sorted sequences.",
+      watch: "When one list runs out, copy or skip the rest of the other in one go." },
+  ],
+
+  hing: `<p><b>Kab use karein?</b> Jab sawaal kisi <b>pair</b> ke baare mein ho: do numbers jinka sum target ho, do deewarein jinke beech sabse zyada paani aaye, palindrome ke do sire. Har pair check karna O(<var>n</var>²) hai.</p>
+<p><b>Idea:</b> do index rakho aur ek rule ki agla kaun sa khiskega. Shart yeh hai ki har move sirf unhi candidates ko hataaye jo <b>kabhi answer ho hi nahi sakte</b>. Agar yeh argument ban gaya, to ek hi pass mein kaam ho jaata hai: O(<var>n</var>) time, O(1) space.</p>
+<p><b>Classic example:</b> sorted prices <code>1, 3, 4, 6, 8, 11</code> mein do dhoondho jinka sum 10 ho. Ek pointer shuru mein, ek aakhir mein. 1 + 11 = 12, zyada. 11 sabse chhote partner ke saath bhi zyada hai, to use hata do. 1 + 8 = 9, kam, to 1 hata do. Har comparison ek poori row ya column mita deta hai. 5 comparisons mein 4 + 6 mil gaya, 15 pairs ki jagah.</p>
+<p><b>Teen roop yaad rakho:</b> (1) dono sire se andar ki taraf, sorted two-sum ke liye. (2) dono left se, ek likhne wala ek padhne wala, in-place duplicates hataane ke liye. (3) alag speed wale, fast aur slow, linked list ka middle ya cycle dhoondhne ke liye.</p>
+<p><b>Hash map se kab behtar?</b> Hash map ko sorted input nahi chahiye aur original index bache rehte hain, par O(<var>n</var>) memory lagti hai. Two pointers O(1) memory mein karta hai, par sorted input chahiye. Jo constraint problem mein diya hai, usi se faisla karo.</p>`,
 
   viz: ["two-pointers"],
 
   math: [
-    { t: "The pair count being beaten", d: "Every pair is quadratic. Two pointers is one pass, and the whole question is what licenses skipping all those pairs.", w:
+    { t: "Prices 1, 3, 4, 6, 8, 11 and a card for 10", d: "Five comparisons, and each one drops a price for good. The dropped price is always the one the argument proves useless.", w:
+`L  R    sum              verdict     drop
+1  11   1 + 11 = 12      too big     11: too big even with 1
+1  8    1 + 8  =  9      too small   1: too small even with 8
+3  8    3 + 8  = 11      too big     8
+3  6    3 + 6  =  9      too small   3
+4  6    4 + 6  = 10      found
+
+5 comparisons instead of 15 pairs` },
+    { t: "The pair count being beaten", d: "Every pair is quadratic. Two pointers is one pass, and the whole question is what allows skipping all those pairs.", w:
 `all pairs:      n(n-1)/2
 n = 10^5   ->   5 x 10^9
-
-two pointers:   L and R only move toward each other,
+two pointers:   L and R only move towards each other,
                 so at most n moves between them: O(n)
-
 plus n log2 n if the input has to be sorted first` },
-    { t: "The elimination argument, written out in full", d: "Each move must discard only candidates that provably cannot be the answer. For sorted two-sum, that proof is two lines and it is what the interviewer is asking for.", w:
+    { t: "The elimination argument, written out in full", d: "Each move must discard only candidates that provably cannot be the answer. For sorted two-sum, the proof is two lines, and it is what the interviewer is asking for.", w:
 `sorted array, L at the front, R at the back, target t
 
 if a[L] + a[R] > t:
   for every i with L <= i < R,  a[i] >= a[L]
   so  a[i] + a[R] >= a[L] + a[R] > t
   a[R] is too large for EVERY remaining partner. Drop it.
+if a[L] + a[R] < t, likewise a[L] is too small for every
+remaining partner. Drop it.
 
-if a[L] + a[R] < t, symmetrically a[L] is too small for
-every remaining partner. Drop it.
-
-each move deletes a whole row or column of the pair table,
-not a single pair` },
-    { t: "Why the sweep is n steps", d: "A shrinking gap that falls by at least one per step is the same termination measure as a loop invariant, and it bounds the pass immediately.", w:
-`L = 0, R = n - 1, gap = R - L = n - 1
-
-each step moves exactly one pointer inward,
-so the gap falls by at least 1 and never rises
-
-it reaches 0 in at most n - 1 steps  ->  O(n), one pass` },
-    { t: "Fast and slow, and the two facts it gives you", d: "The same two-pointer idea on a list, where the rule is a difference in speed rather than a difference in direction.", w:
+each move deletes a whole row or column of the pair table` },
+    { t: "Fast and slow, and the two facts it gives you", d: "The same idea on a list, where the rule is a difference in speed rather than direction.", w:
 `slow +1, fast +2
 
 inside a cycle of length L:
   fast gains exactly 1 on slow per step, so the gap
-  falls to 0 within L steps. They cannot pass each other.
-
+  falls to 0 within L steps. They cannot jump past.
 no cycle:
   fast reaches the end after n/2 steps, and slow is at
   n/2: the middle, in one pass, O(1) space` },
-    { t: "Two pointers or a hash map, decided on two axes", d: "Both solve two-sum in linear time after the setup. They differ on memory and on whether the original positions survive.", w:
+    { t: "Two pointers or a hash map, decided on two axes", d: "Both solve two-sum in linear time after setup. They differ on memory, and on whether the original positions survive.", w:
 `Two Sum, n = 10^5
-
 hash map      O(n) time, O(n) space
               unsorted input is fine
-              original indices preserved
+              original indices kept
 two pointers  O(1) extra space
               needs sorted input: n log2 n if not
-              sorting destroys the original indices
+              sorting loses the original indices
 
 so: do you need the indices, or do you need the space?` },
   ],
 
   costs: [
-    ["converging pointers on sorted input", "O(n) time · O(1) space", "each step eliminates a whole row/column of pairs"],
-    ["sort first, then two pointers", "O(n log n) · O(1)", "the sort dominates; still beats O(n²)"],
-    ["fast & slow, in-place rewrite", "O(n) · O(1)", "the writer lags the reader"],
-    ["Floyd's cycle detection", "O(n) · O(1)", "vs O(n) space for the hash-set version"],
-    ["3Sum (fix one + two-point)", "O(n²) · O(1)", "down from O(n³)"],
+    ["converging pointers on sorted input", "O(n) time · O(1) space", "each step removes a whole row or column of pairs"],
+    ["sort first, then two pointers", "O(n log n) · O(1)", "the sort dominates, and still beats O(n²)"],
+    ["reader and writer, rewriting in place", "O(n) · O(1)", "the writer lags behind the reader"],
+    ["Floyd's cycle detection", "O(n) · O(1)", "against O(n) space for the hash-set version"],
+    ["3Sum (fix one, two-point the rest)", "O(n²) · O(1)", "down from O(n³)"],
     ["hash-map alternative", "O(n) · O(n)", "no sort needed, but costs memory"],
   ],
 
   traps: [
-    "<b>Using it on unsorted data</b> for a sum problem. The elimination argument depends on order, without it the answer is simply wrong.",
-    "<b>Forgetting to skip duplicates in 3Sum.</b> Advance past equal values after recording a triplet, or you emit repeats.",
-    "<b>Not checking <code>fast</code> and <code>fast.next</code></b> before stepping two in a linked list, the classic null-pointer crash.",
-    "<b>Moving both pointers in one step</b> when only one comparison was made. That can skip the answer.",
-    "<b>Losing original indices after sorting.</b> If the problem wants indices, sort (value, index) pairs or use a hash map instead.",
+    "<b>Using it on unsorted data</b> for a sum problem. The elimination argument depends on order; without it the answer is simply wrong.",
+    "<b>Forgetting to skip duplicates in 3Sum.</b> Move past equal values after recording a triplet, or the output repeats.",
+    "<b>Not checking <code>fast</code> and <code>fast.next</code></b> before stepping two in a linked list: the classic null-pointer crash.",
+    "<b>Moving both pointers after one comparison.</b> The comparison proves only one of them useless. Moving both can skip the answer.",
+    "<b>Losing original indices after sorting.</b> If the problem wants indices, sort (value, index) pairs, or use a hash map instead.",
   ],
 
   impl: [
     ["Python", "i, j = 0, len(a)-1; a[i], a[j] = a[j], a[i]", "Tuple assignment swaps without a temp; while i < j is the standard guard."],
-    ["Java", "int i = 0, j = a.length-1", "Needs an explicit temp to swap. Watch char vs int when working on strings."],
-    ["C++", "int i = 0, j = (int)a.size()-1", "std::swap(a[i], a[j]); size() is unsigned, cast before subtracting 1."],
-    ["JavaScript", "let i = 0, j = a.length-1", "[a[i], a[j]] = [a[j], a[i]] destructures; strings are immutable, so split into an array first."],
+    ["Java", "int i = 0, j = a.length-1", "Needs an explicit temp to swap. Watch char versus int when working on strings."],
+    ["C++", "int i = 0, j = (int)a.size()-1", "std::swap(a[i], a[j]); size() is unsigned, so cast before subtracting 1."],
+    ["JavaScript", "let i = 0, j = a.length-1", "[a[i], a[j]] = [a[j], a[i]] swaps; strings cannot be changed, so split into an array first."],
   ],
 
   code: {
@@ -16512,26 +17344,125 @@ function hasCycle(head) {
   return false;
 }`,
   },
-  codecap: "Converging, same-direction, and fast/slow, three shapes that between them cover most O(1)-space array and linked-list questions.",
+  codecap: "Converging, same-direction, and fast/slow: three shapes that between them cover most O(1)-space array and linked-list questions.",
 
   q: [
-    ["What must every pointer move guarantee?", "That it discards only candidates which cannot be the answer. Without that elimination argument the sweep can skip the solution."],
-    ["Spell out the elimination argument for sorted two-sum.", "If a[L]+a[R] > target then a[R] paired with any remaining element is even bigger, since a[L] is the smallest left. So a[R] can never be part of a solution and is discarded."],
-    ["Why is the total work O(n)?", "Each step advances exactly one pointer and they only move toward each other, so they meet after at most n steps."],
-    ["Name the three variants and one use each.", "Converging (sorted two-sum, container with most water); same-direction fast/slow writer (remove duplicates in place); different speeds (Floyd's cycle detection, find the middle node)."],
-    ["Why must fast and slow eventually meet inside a cycle?", "Once both are in the loop the gap between them shrinks by exactly one each step, so it must reach zero."],
-    ["Two pointers or hash map for Two Sum?", "Hash map: O(n) time, O(n) space, works unsorted and preserves original indices. Two pointers: O(1) space but needs sorted input (O(n log n) if you must sort). Choose by the space constraint and whether indices matter."],
+    ["What must every pointer move guarantee?", "That it discards only candidates which cannot be the answer. Without that argument, the sweep can skip the solution."],
+    ["Spell out the elimination argument for sorted two-sum.", "If a[L]+a[R] > target, then a[R] with any remaining partner is at least as big, since a[L] is the smallest left. So a[R] can never be in a solution and is discarded."],
+    ["Why is the total work O(n)?", "Each step moves exactly one pointer, and they only move towards each other, so they meet within n steps."],
+    ["Name the three variants and one use each.", "Converging: sorted two-sum, container with most water. Same-direction reader and writer: remove duplicates in place. Different speeds: Floyd's cycle detection, finding the middle node."],
+    ["Why must fast and slow meet inside a cycle?", "Once both are in the loop, the gap between them shrinks by exactly one each step, so it must reach zero."],
+    ["Two pointers or hash map for Two Sum?", "Hash map: O(n) time and space, works unsorted and keeps the original indices. Two pointers: O(1) space but needs sorted input, O(n log n) if you must sort. Choose by the space limit and whether indices matter."],
   ],
 
   p: [
     [125, "valid-palindrome", "Valid Palindrome", "E"],
-    [283, "move-zeroes", "Move Zeroes, fast & slow", "E"],
+    [283, "move-zeroes", "Move Zeroes, reader and writer", "E"],
     [167, "two-sum-ii-input-array-is-sorted", "Two Sum II, converging", "M"],
     [11, "container-with-most-water", "Container With Most Water", "M"],
     [15, "3sum", "3Sum, fix one, two-point the rest", "M"],
-    [141, "linked-list-cycle", "Linked List Cycle. Floyd", "E"],
+    [141, "linked-list-cycle", "Linked List Cycle, Floyd", "E"],
     [42, "trapping-rain-water", "Trapping Rain Water", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek dukaan <b>10⁵ prices</b> list karti hai, sabse saste se sabse mehenge tak sorted. Ek customer ke paas theek 10 ka gift card hai aur use do items chahiye jo use theek khatam karein. Kaunsa pair?</p>
+<p>Chhota version: prices <code>1, 3, 4, 6, 8, 11</code> aur 10 ka card. Answer 4 + 6 hai.</p>`,
+      tries: [
+        ["Har pair try karo", "6 prices 15 pairs banati hain. 10⁵ banati hain <var>n</var>(<var>n</var> − 1) / 2 = 5 × 10⁹, aur sorted order kabhi use nahi hota."],
+        ["Do sabse saste se shuru karo aur sum badhao", "1 + 3 = 4 bahut kam. Par koi bhi pointer hilaao, sum badhta hai, to kuch nahi batata kaunsa hilaana hai, aur kuch rule out nahi hota. Wapas pairs try karne par."],
+      ],
+      so: `<p>To <b>ulte siron</b> se shuru karo. 1 + 11 = 12 zyada hai, aur 1, 11 ka sabse chhota possible partner hai, to 11 <i>har kisi</i> ke saath zyada: use hatao. 1 + 8 = 9 kam hai, aur 8 bacha sabse bada partner hai, to 1 har kisi ke saath kam: use hatao.</p>
+<p>Har comparison ek number hamesha ke liye hataata hai. Pointers sirf andar hilte hain, to <var>n</var> steps ke andar milte hain: O(<var>n</var>) time aur O(1) space, yahan 15 pairs ki jagah 5 comparisons. Yahi <b>two pointers</b> hai, aur page poore mein yahi chhe prices use karta hai.</p>`,
+    },
+
+    one: "Ek rule ke saath hilte do indices pairs par O(<var>n</var>²) search ko <b>O(<var>n</var>)</b> bana dete hain. Har move ek nahi, candidates ka poora set rule out karta hai.",
+
+    plain: `<p>Kai problems ek <b>pair</b> ke baare mein poochhti hain: target tak judte do numbers, sabse zyada paani rokti do deewarein, palindrome ke do sire. Har pair check karna O(<var>n</var>²) hai.</p>
+<p>Two pointers ise do indices aur ek rule se badalta hai ki agla kaunsa hilega. Rule ki guarantee honi chahiye ki har move sirf woh candidates phenke jo <b>answer nahi ho sakte</b>. Jab aisa ho, pointers array ek baar paar karte hain aur O(<var>n</var>) mein khatam.</p>
+<p><b>Classic.</b> Sorted prices <code>1, 3, 4, 6, 8, 11</code>, do dhoondho jo 10 banayein. Dono siron se shuru: 1 + 11 = 12, zyada. 11 sabse chhote partner ke saath bhi zyada, to right pointer andar. 1 + 8 = 9, kam, aur 8 bacha sabse bada partner, to left pointer andar. Har step pair table ki poori row ya column mitata hai.</p>
+<p><b>Analogy.</b> Do log corridor mein ek doosre ki taraf chalte hue dhoondh rahe hain ki tasveer kahan tangi hai. Har step, ek hilta hai. Woh milte hain corridor ko dono ne milkar ek baar tay karke, har ek ne ek baar nahi.</p>`,
+
+    why: [
+      { t: "Har pair check karna hi haraana hai",
+        d: "Saare pairs lagbhag <var>n</var>² / 2 comparisons hain: chhe prices par 15, 10⁵ par 5 × 10⁹. Par jab data mein structure ho, aam taur par sorted order, to un pairs mein se zyadatar bina dekhe rule out ho sakte hain." },
+      { t: "Har move sirf naamumkin answers phenke",
+        d: "Sorted list, aur <code>a[L] + a[R]</code> zyada hai: 1 + 11 = 12. <code>a[L]</code> bachi sabse chhoti value hai, to <code>a[R]</code> <i>kisi bhi</i> bache partner ke saath zyada hi hai, to use hata sakte ho. Ek comparison poora group hataata hai. <b>Aisa argument na bana sako, to two pointers aapki problem par valid nahi.</b>" },
+      { t: "Woh sirf ek doosre ki taraf hilte hain, to sweep O(n) hai",
+        d: "Har step theek ek pointer hilta hai, aur woh kabhi peeche nahi mudte. <var>n</var> steps ke andar milte hain: <b>O(<var>n</var>) time aur O(1) extra space</b>. Chhe prices par 5 steps. Wahi O(1) space aksar hash map ki jagah ise chunne ki asli wajah hai." },
+      { t: "Teen shakalein lagbhag sab dhakti hain",
+        d: "<b>Dono siron se</b>, andar ki taraf: sorted pair sums, container with most water, palindromes. <b>Dono left se</b>, ek doosre ke peeche likhta hua: in place duplicates hataana. <b>Alag speeds</b>, ek dugna tez: list ka middle dhoondhta hai, aur loop pakadta hai, kyunki loop ke andar gap har step ek ghatta hai." },
+      { t: "Isme aur hash map mein chunna",
+        d: "Hash map ko order nahi chahiye aur original positions bachi rehti hain, par O(<var>n</var>) memory lagti hai. Two pointers lagbhag koi memory nahi leta par sorted input chahiye, aur sort original positions kho deta hai. Jo problem baandhe, usi se chuno." },
+    ],
+
+    variants: [
+      { n: "Converging from both ends", cost: "O(n) time, O(1) space",
+        idea: "L shuru mein, R end mein; compare karo, phir woh hilaao jise elimination argument ijaazat de.",
+        when: "Sorted input par pair sums, container with most water, valid palindrome.",
+        watch: "Har comparison par theek ek pointer hilaao, jab tak answer na mil jaaye." },
+      { n: "Reader and writer from the left", cost: "O(n) time, O(1) space",
+        idea: "Reader har item dekhta hai; writer batata hai agla rakha item kahan jaayega. Writer se pehle sab ab tak ka answer hai.",
+        when: "In place duplicates hataana, zeroes khiskaana, bina extra space array filter karna.",
+        watch: "Writer kabhi reader se aage nahi jaata, to koi rakha item padhne se pehle overwrite nahi hota." },
+      { n: "Fast and slow", cost: "O(n) time, O(1) space",
+        idea: "slow 1 step, fast 2 steps. Loop na ho to fast end par tab pahunchta hai jab slow middle par ho. Loop mein fast slow ko pakad leta hai.",
+        when: "Linked list ka middle, cycle detection, cycle kahan shuru hoti hai.",
+        watch: "Do step se pehle <code>fast</code> aur <code>fast.next</code> check karo, warna end par crash." },
+      { n: "Fix one, two-point the rest", cost: "O(n²) time",
+        idea: "3Sum ke liye sort karo, baari baari har element fix karo, aur uske baad wale hisse par converging pointers chalao.",
+        when: "Target sum wale triplets ya quadruplets.",
+        watch: "Triplet record karne ke baad barabar values chhodo, warna output dohraata hai." },
+      { n: "Two sorted lists", cost: "O(n + m)",
+        idea: "Har list ka ek pointer, jo chhoti value rakhe use aage badhao: merge step.",
+        when: "Do sorted sequences ko merge, intersect ya compare karna.",
+        watch: "Ek list khatam ho to doosri ka baaki ek saath copy ya skip karo." },
+    ],
+
+    math: [
+      { t: "Prices 1, 3, 4, 6, 8, 11 aur 10 ka card", d: "Paanch comparisons, aur har ek ek price hamesha ke liye hataata hai. Hataayi price hamesha wahi jise argument bekaar saabit kare." },
+      { t: "Jis pair count ko haraana hai", d: "Har pair quadratic hai. Two pointers ek pass hai, aur poora sawaal yeh hai ki un saare pairs ko chhodne ki ijaazat kya deta hai." },
+      { t: "Elimination argument, poora likha hua", d: "Har move sirf woh candidates phenke jo saabit taur par answer nahi ho sakte. Sorted two-sum ke liye proof do line ka hai, aur interviewer yahi poochh raha hai." },
+      { t: "Fast aur slow, aur do facts jo yeh deta hai", d: "Wahi idea list par, jahan rule disha nahi, speed ka farak hai." },
+      { t: "Two pointers ya hash map, do cheezon par tay", d: "Dono setup ke baad two-sum linear time mein hal karte hain. Farak memory mein hai, aur is mein ki original positions bachti hain ya nahi." },
+    ],
+
+    costs: [
+      ["converging pointers on sorted input", "O(n) time · O(1) space", "har step pairs ki poori row ya column hataata hai"],
+      ["sort first, then two pointers", "O(n log n) · O(1)", "sort haavi hai, phir bhi O(n²) ko haraata hai"],
+      ["reader and writer, rewriting in place", "O(n) · O(1)", "writer reader ke peeche rehta hai"],
+      ["Floyd's cycle detection", "O(n) · O(1)", "hash-set version ke O(n) space ke saamne"],
+      ["3Sum (fix one, two-point the rest)", "O(n²) · O(1)", "O(n³) se neeche"],
+      ["hash-map alternative", "O(n) · O(n)", "sort nahi chahiye, par memory lagti hai"],
+    ],
+
+    traps: [
+      "<b>Sum problem ke liye unsorted data par use karna.</b> Elimination argument order par tika hai; uske bina answer seedha galat hai.",
+      "<b>3Sum mein duplicates chhodna bhoolna.</b> Triplet record karne ke baad barabar values paar karo, warna output dohraata hai.",
+      "<b>Linked list mein do step se pehle <code>fast</code> aur <code>fast.next</code> check na karna:</b> classic null-pointer crash.",
+      "<b>Ek comparison ke baad dono pointers hilaana.</b> Comparison sirf ek ko bekaar saabit karta hai. Dono hilaana answer chhod sakta hai.",
+      "<b>Sort ke baad original indices khona.</b> Problem ko indices chahiye, to (value, index) pairs sort karo, ya hash map use karo.",
+    ],
+
+    impl: [
+      ["Python", "i, j = 0, len(a)-1; a[i], a[j] = a[j], a[i]", "Tuple assignment bina temp swap karta hai; while i < j standard guard hai."],
+      ["Java", "int i = 0, j = a.length-1", "Swap ko explicit temp chahiye. Strings par kaam karte waqt char vs int dekho."],
+      ["C++", "int i = 0, j = (int)a.size()-1", "std::swap(a[i], a[j]); size() unsigned hai, to 1 ghataane se pehle cast karo."],
+      ["JavaScript", "let i = 0, j = a.length-1", "[a[i], a[j]] = [a[j], a[i]] swap karta hai; strings badal nahi sakte, to pehle array mein todo."],
+    ],
+
+    codecap: "Converging, same-direction, aur fast/slow: teen shakalein jo milkar zyadatar O(1)-space array aur linked-list sawaal dhakti hain.",
+
+    q: [
+      ["Har pointer move ki guarantee kya honi chahiye?", "Ki woh sirf woh candidates phenke jo answer nahi ho sakte. Us argument ke bina sweep solution chhod sakta hai."],
+      ["Sorted two-sum ka elimination argument batao.", "Agar a[L]+a[R] > target, to a[R] kisi bhi bache partner ke saath utna hi bada ya zyada, kyunki a[L] bacha sabse chhota hai. To a[R] kabhi solution mein nahi ho sakta aur phenka jaata hai."],
+      ["Kul kaam O(n) kyun hai?", "Har step theek ek pointer hilta hai, aur woh sirf ek doosre ki taraf hilte hain, to n steps ke andar milte hain."],
+      ["Teen variants aur har ek ka ek use batao.", "Converging: sorted two-sum, container with most water. Same-direction reader aur writer: in place duplicates hataana. Alag speeds: Floyd's cycle detection, middle node dhoondhna."],
+      ["Cycle ke andar fast aur slow ko milna hi kyun padta hai?", "Jab dono loop mein hon, unke beech ka gap har step theek ek ghatta hai, to use zero tak pahunchna hi hai."],
+      ["Two Sum ke liye two pointers ya hash map?", "Hash map: O(n) time aur space, unsorted par chalta hai aur original indices rakhta hai. Two pointers: O(1) space par sorted input chahiye, sort karna pade to O(n log n). Space limit aur indices ki zaroorat se chuno."],
+    ],
+  },
+},
 ];
