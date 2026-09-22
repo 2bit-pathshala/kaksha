@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <script>
     /* set the theme before first paint so dark mode never flashes light */
     (function () { try { var s = localStorage.getItem("dsa-theme");
@@ -13,20 +13,21 @@
   </script>
   <title>Concepts</title>
   <meta name="description" content="First-principles notes on data structures and algorithms: a stepped visual, plain words, the reasoning, a Hinglish explanation, costs, traps, code in five languages, and questions to check yourself." />
-  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/fonts.css" />
-  <link rel="stylesheet" href="css/brand.css" />
-  <script src="js/scroll-focus.js" defer></script>
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/brand.css" />
+  <script src="assets/js/scroll-focus.js" defer></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
-  <link rel="stylesheet" href="css/learn.css?v=3" />
+  <link rel="stylesheet" href="assets/css/learn.css?v=4" />
 </head>
 <body>
   <header class="bar">
     <div class="bar-in">
       <button class="nav menu-btn" id="menuBtn">Contents</button>
-      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <a class="brandlock" href="index.html"><img src="assets/img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
       <span class="here">Concepts</span>
       <div class="sp"></div>
       <a class="nav" href="revise.html">Revision</a>
@@ -45,9 +46,9 @@
     <main id="main"></main>
   </div>
 
-  <footer><a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a> · <a href="revise.html">Revision</a></footer>
+  <footer><a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a> · <a href="revise.html">Revision</a></footer>
 
-  <script src="js/viz.js"></script>
+  <script src="assets/js/viz.js"></script>
   <script src="data/concept-data.js"></script>
   <script>
   (function () {
@@ -269,18 +270,8 @@
     $("#menuBtn").addEventListener("click", toggleSide);
     scrim.addEventListener("click", toggleSide);
 
-    const t = $("#themeToggle"), root = document.documentElement;
-    const saved = localStorage.getItem("dsa-theme");
-    const setLabel = () => { t.textContent = root.getAttribute("data-theme") === "dark" ? "Light" : "Dark"; };
-    if (saved === "dark" || (!saved && matchMedia("(prefers-color-scheme: dark)").matches)) root.setAttribute("data-theme", "dark");
-    setLabel();
-    t.addEventListener("click", () => {
-      const dark = root.getAttribute("data-theme") === "dark";
-      if (dark) { root.removeAttribute("data-theme"); localStorage.setItem("dsa-theme", "light"); }
-      else      { root.setAttribute("data-theme", "dark"); localStorage.setItem("dsa-theme", "dark"); }
-      setLabel();
-    });
   })();
   </script>
+  <script src="assets/js/theme.js"></script>
 </body>
 </html>

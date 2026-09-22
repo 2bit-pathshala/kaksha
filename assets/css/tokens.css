@@ -1,0 +1,148 @@
+/* tokens.css - the one palette for the whole site.
+
+   The landing page set the direction: warm paper rather than cool blue-grey,
+   hairlines rather than borders, one brand orange carrying the meaning. Every
+   other page used to ship its own <style> block with its own colours, so the
+   site changed temperature as you moved through it. Those blocks are gone and
+   everything now reads from here.
+
+   Names are kept as the pages already spell them (--surface next to --card,
+   --border next to --rule) so no markup had to change; the aliases point at
+   the same value, they are not second opinions. */
+
+:root{
+  color-scheme:light;
+
+  /* paper and ink */
+  --bg:#fcfcfa;
+  --bg-soft:#f4f4f0;
+  --surface:#ffffff;
+  --surface2:#f4f4f0;
+  --surface-2:#f4f4f0;
+  --card:#ffffff;
+  --text:#1c1c1a;
+  --text-2:#38382f;
+  --muted:#62625a;
+  --faint:#8a8a81;
+
+  /* hairlines: --border is the older name for the same rule */
+  --rule:#e4e3dd;
+  --rule-2:#d6d5cd;
+  --border:#e4e3dd;
+
+  /* the brand orange, the only colour that carries meaning by itself.
+     --primary is the fill, --primary-ink the same hue dark enough for small
+     text on paper (5.5:1). --accent* are the landing page's names for it. */
+  --primary:#F0540C;
+  --primary-ink:#b83c0a;
+  --primary-2:#F2C31E;
+  --primary-soft:#FDECE1;
+  --accent:#F0540C;
+  --accent-ink:#b83c0a;
+  --accent-text:#b83c0a;
+  --accent-soft:#FDECE1;
+
+  /* the warm secondary, for the few places that need a second voice without
+     leaving the brand range: diagram arrows, leaf markers, gradient tails */
+  --accent-2:#a4551b;
+  --accent-2-ink:#8a4a17;
+  --accent-2-soft:#fbf2e9;
+  --warm:#a4551b;
+  --warm-soft:#fbf2e9;
+
+  /* near-black, for solid buttons and the skip link */
+  --ink:#1c1c1a;
+  --on-ink:#fcfcfa;
+
+  --grad:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%);
+
+  /* difficulty: easy, medium, hard. Muted on purpose, they label a row, they
+     are not a traffic light you should see from across the room. */
+  --e:#3f7a4a; --e-bg:#eef4ef;
+  --m:#8a6410; --m-bg:#f7f1e2;
+  --h:#9b3a3a; --h-bg:#f7ecec;
+
+  /* the six growth curves, in the order they appear */
+  --vz1:#3f7a4a; --vz2:#2f8f9c; --vz3:#2f5faa; --vz4:#6b4fa8; --vz5:#b4761c; --vz6:#b04242;
+
+  /* code */
+  --code-bg:#1b1c1e;
+  --code-fg:#d6d4cd;
+  --code-bar:#232427;
+
+  /* motion. Three durations and one curve, so everything that moves on the
+     site moves the same way: quick to leave, soft to settle. The reduced-motion
+     block at the foot of this file collapses all three to nothing, which is why
+     every transition and animation on the site is written in terms of them
+     rather than in raw seconds. */
+  --t-fast:.15s;
+  --t-mid:.24s;
+  --t-slow:.32s;
+  --ease:cubic-bezier(.2,.7,.3,1);
+
+  /* shape: the landing page rounds cards at 14 and lifts them with a long,
+     faint shadow rather than a close dark one */
+  --radius:14px;
+  --radius-lg:18px;
+  --shadow:0 20px 44px -26px rgba(28,28,26,.22);
+  --shadow-sm:0 1px 2px rgba(28,28,26,.06);
+}
+
+[data-theme="dark"]{
+  color-scheme:dark;
+
+  --bg:#131315;
+  --bg-soft:#1a1b1d;
+  --surface:#1c1d20;
+  --surface2:#1a1b1d;
+  --surface-2:#1a1b1d;
+  --card:#1c1d20;
+  --text:#e4e3de;
+  --text-2:#cfcec8;
+  --muted:#a3a29a;
+  --faint:#7d7d76;
+
+  --rule:#292a2d;
+  --rule-2:#35363a;
+  --border:#292a2d;
+
+  --primary:#F5A623;
+  --primary-ink:var(--primary);
+  --primary-2:#F2C31E;
+  --primary-soft:#2A180E;
+  --accent:#F5A623;
+  --accent-ink:var(--accent);
+  --accent-text:var(--accent);
+  --accent-soft:#2A180E;
+
+  --accent-2:#e0a878;
+  --accent-2-ink:var(--accent-2);
+  --accent-2-soft:#251c13;
+  --warm:#e0a878;
+  --warm-soft:#251c13;
+
+  --ink:#e4e3de;
+  --on-ink:#131315;
+
+  --e:#7fb98a; --e-bg:#18291c;
+  --m:#c9a03f; --m-bg:#2c2410;
+  --h:#d08585; --h-bg:#2e1b1b;
+
+  --vz1:#7fb98a; --vz2:#5fc4cf; --vz3:#8fb6ea; --vz4:#b09ce8; --vz5:#e0a878; --vz6:#e08a8a;
+
+  --code-bg:#0f1011;
+  --code-fg:#cfcec7;
+  --code-bar:#17181a;
+
+  --shadow:0 20px 44px -26px rgba(0,0,0,.6);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+}
+
+/* Someone who asks the system for less movement gets none. Collapsing the
+   durations here rather than switching off individual rules means a transition
+   added later is covered without anyone remembering to cover it. */
+@media (prefers-reduced-motion:reduce){
+  :root,[data-theme="dark"]{--t-fast:0s;--t-mid:0s;--t-slow:0s}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}

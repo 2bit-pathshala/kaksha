@@ -3,38 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <script>
     /* set the theme before first paint so dark mode never flashes light */
     (function () { try { var s = localStorage.getItem("dsa-theme");
       if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
         document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
   </script>
-  <title>DSA Patterns — LeetCode Roadmap</title>
+  <title>DSA Patterns: LeetCode Roadmap</title>
   <meta name="description" content="A structured DSA patterns roadmap: topics, patterns, and curated Easy/Medium/Hard LeetCode problems." />
-  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/fonts.css" />
-  <link rel="stylesheet" href="css/brand.css" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/brand.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
   <style>
-    :root {
-      --bg:#f4f5fb; --surface:#ffffff; --surface-2:#f0f2f9; --text:#1e2230; --muted:#666d7a;
-      --primary:#F0540C; --primary-ink:#bc4209; --primary-2:#F5A623; --primary-soft:#FDECE1; --border:#e7e9f2;
-      --accent:#0ea5b7; --accent-ink:#0a7683; --accent-soft:#e2f6f8;
-      --e:#15a349; --e-bg:#e4f8ec; --m:#e08600; --m-bg:#fdf1dc; --h:#e23b52; --h-bg:#fdeaed;
-      --shadow:0 10px 30px rgba(30,34,48,.08); --shadow-sm:0 2px 8px rgba(30,34,48,.05);
-      --code-bg:#0d1117; --code-bar:#161b22; --radius:16px;
-    }
-    [data-theme="dark"] {
-      --bg:#0a0b11; --surface:#14161f; --surface-2:#1a1d28; --text:#e7eaf3; --muted:#9aa2b6;
-      --primary:#F5A623; --primary-ink:var(--primary); --primary-2:#F7B84E; --primary-soft:#2A180E; --border:#252938;
-      --accent:#2dd4d4; --accent-ink:var(--accent); --accent-soft:#0e2a2c;
-      --e:#4ade80; --e-bg:#0f3320; --m:#fbbf24; --m-bg:#392b07; --h:#fb7185; --h-bg:#3a1520;
-      --shadow:0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 2px 10px rgba(0,0,0,.4);
-      --code-bg:#0d1117; --code-bar:#161b22;
-    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: "Inter", "Inter Fallback", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15.5px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
 
@@ -77,7 +62,7 @@
     .chev { transition: transform .2s ease; color: var(--muted); font-size: .78rem; }
     details[open] > summary .chev { transform: rotate(90deg); }
     .topic > summary { position: relative; }
-    .topic > summary::after { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 4px; background: linear-gradient(var(--primary), var(--accent)); }
+    .topic > summary::after { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 4px; background: linear-gradient(var(--primary), var(--accent-2)); }
     .topic > summary { padding-left: 22px; }
     .count { font-size: .72rem; color: var(--muted); font-weight: 500; margin-left: auto; }
     .topic-row { position: relative; }
@@ -98,7 +83,7 @@
     /* leaf problem rows */
     .leaf { padding: 10px 12px 14px; }
     .leaf-name { font-size: .92rem; font-weight: 650; margin: 10px 0 9px; display: flex; align-items: center; gap: 9px; }
-    .leaf-name::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    .leaf-name::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); }
     .probs { display: flex; flex-wrap: wrap; gap: 9px; }
     .prob {
       display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
@@ -115,7 +100,7 @@
     .p-num.am { color: #167d3c; font-weight: 700; }
 
     /* hints, notes, code */
-    .hint { font-size: .9rem; color: var(--text); background: var(--accent-soft); border-radius: 10px; padding: 11px 14px; margin: 6px 0 12px; line-height: 1.6; }
+    .hint { font-size: .9rem; color: var(--text); background: var(--accent-2-soft); border-radius: 10px; padding: 11px 14px; margin: 6px 0 12px; line-height: 1.6; }
     .hint b { font-weight: 700; }
     .note { font-size: .9rem; color: var(--muted); margin: 6px 0 10px; line-height: 1.7; }
     .note b { color: var(--text); }
@@ -131,7 +116,7 @@
     footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 32px 20px 54px; }
     footer a { color: var(--primary-ink); }
     @media (max-width: 560px) { body { font-size: 15px; } }
-      header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
+      header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
       /* site badges: each colour nudged until it clears 4.5:1, darker on light, lighter on dark */
     [data-theme="dark"] .p-num.gfg{color:#419756} [data-theme="dark"] .p-num.am{color:#22c55e}
       @media (max-width:440px){ .top-title{flex:1 1 150px;min-width:0} }
@@ -140,7 +125,7 @@
 <body>
   <header class="top">
     <div class="top-row">
-      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <a class="brandlock" href="index.html"><img src="assets/img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
       <span class="bl-divider" aria-hidden="true"></span>
         <div class="top-title">
         <h1 class="brand">DSA <span>Patterns</span></h1>
@@ -165,7 +150,7 @@
   </main>
 
   <footer>
-    Built for focused DSA prep · problems open on <a href="https://leetcode.com" target="_blank" rel="noopener">LeetCode</a> · <a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+    Built for focused DSA prep · problems open on <a href="https://leetcode.com" target="_blank" rel="noopener">LeetCode</a> · <a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
   </footer>
 
   <script src="data/dsa-data.js"></script>
@@ -302,17 +287,7 @@
       });
     });
 
-    /* ---------- theme ---------- */
-    const toggle = $("#themeToggle"), root = document.documentElement;
-    const saved = localStorage.getItem("dsa-theme");
-    if (saved === "dark" || (!saved && matchMedia("(prefers-color-scheme: dark)").matches)) {
-      root.setAttribute("data-theme", "dark"); toggle.textContent = "Light";
-    }
-    toggle.addEventListener("click", () => {
-      const dark = root.getAttribute("data-theme") === "dark";
-      if (dark) { root.removeAttribute("data-theme"); toggle.textContent = "Dark"; localStorage.setItem("dsa-theme", "light"); }
-      else { root.setAttribute("data-theme", "dark"); toggle.textContent = "Light"; localStorage.setItem("dsa-theme", "dark"); }
-    });
   </script>
+  <script src="assets/js/theme.js"></script>
 </body>
 </html>
