@@ -1,0 +1,64 @@
+# Deploys the site to Cloudflare Pages on every push to main, the same way
+# travsr-web deploys travsr.com: direct upload from Actions with an API token,
+# rather than connecting the repo to Cloudflare. Nothing has to be authorised
+# in a dashboard for a deploy to run, and the credentials stay repo secrets.
+#
+# Two secrets are required on this repo:
+#   CLOUDFLARE_API_TOKEN    scope: Account > Cloudflare Pages > Edit
+#   CLOUDFLARE_ACCOUNT_ID   the account holding the Pages project
+#
+# The custom domain (pathshala.2bit.in) is attached to the Pages project once,
+# in the dashboard. Cloudflare writes the DNS record itself as long as the
+# 2bit.in zone sits in the same account, so nothing here touches DNS.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # for redeploying without an empty commit
+
+concurrency:
+  # a newer push makes an in-flight deploy pointless, but never interrupt one
+  # that is already uploading, or Pages is left with a half-written deployment
+  group: deploy-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: pathshala.2bit.in
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # the repo's own guard rails, and the reason they exist: every check in
+      # here fired because something once broke in exactly that way. A deploy
+      # that skips them is a deploy that can publish a spilling label or a
+      # visual pointing at a variable no stylesheet defines.
+      - name: Check
+        run: node tools/check.js
+
+      # Only what the site serves. README, docs and tools are part of the repo,
+      # not part of the site, and there is no reason to publish them twice.
+      # A new top-level directory that the pages load has to be added here.
+      - name: Stage the public files
+        run: |
+          mkdir -p _site
+          cp ./*.html _site/
+          cp -r assets data _site/
+          echo "staged $(find _site -type f | wc -l) files"
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy _site --project-name=kaksha --branch=main
