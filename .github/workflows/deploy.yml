@@ -56,9 +56,58 @@ jobs:
           cp -r assets data _site/
           echo "staged $(find _site -type f | wc -l) files"
 
+      # An invalid or mis-pasted token surfaces from the deploy as
+      # "Authentication failed (status: 400) [code: 9106]", which says nothing
+      # about which of the several possible causes it was. Ask the API directly
+      # first, so the log names the problem instead of describing a symptom.
+      - name: Verify the credentials
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          [ -n "${CF_TOKEN:-}" ]   || fail "CLOUDFLARE_API_TOKEN is not set on this repository."
+          [ -n "${CF_ACCOUNT:-}" ] || fail "CLOUDFLARE_ACCOUNT_ID is not set on this repository."
+          # A value pasted with a trailing newline or a stray space makes the
+          # Authorization header unparseable, which is exactly the 9106 above.
+          case "$CF_TOKEN" in
+            *[[:space:]]*) fail "CLOUDFLARE_API_TOKEN contains whitespace. Re-add it with no trailing newline: printf %s 'TOKEN' | gh secret set CLOUDFLARE_API_TOKEN" ;;
+          esac
+          case "$CF_ACCOUNT" in
+            *[[:space:]]*) fail "CLOUDFLARE_ACCOUNT_ID contains whitespace." ;;
+          esac
+
+          status=$(curl -sS https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("result") or {}).get("status") or "; ".join(e.get("message","") for e in (d.get("errors") or [])) or "unknown")')
+          echo "token verify: $status"
+          [ "$status" = "active" ] || fail "The API token did not verify: $status. It is either wrong, revoked, expired, or a Global API Key rather than an API token."
+
+      - name: Install wrangler
+        # Pinned. Left to itself the action installs whatever it defaults to,
+        # which was 3.90.0 on a runner where 4.x is current, and a version that
+        # moves under you is a deploy that can start failing without a commit.
+        run: npm install -g wrangler@4
+
+      # wrangler will not create a Pages project as a side effect of deploying
+      # to it. On a terminal it offers; in CI it just fails. Nothing had created
+      # this one, so the first green token would only have bought the next error.
+      - name: Ensure the Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if wrangler pages project list | grep -qE '(^|[[:space:]])kaksha([[:space:]]|$)'; then
+            echo "project kaksha already exists"
+          else
+            echo "creating project kaksha"
+            wrangler pages project create kaksha --production-branch=main
+          fi
+
       - name: Deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy _site --project-name=kaksha --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler pages deploy _site --project-name=kaksha --branch=main
