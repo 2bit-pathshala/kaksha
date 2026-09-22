@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <script>
     /* set the theme before first paint so dark mode never flashes light */
     (function () { try { var s = localStorage.getItem("dsa-theme");
@@ -13,11 +13,11 @@
   </script>
   <title>DSA one-day sheet: Deep Revision Notes</title>
   <meta name="description" content="In-depth DSA revision: key properties, sub-topics, Python templates, diagrams, and must-know algorithms." />
-  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/tokens.css?v=1" />
-  <link rel="stylesheet" href="css/fonts.css" />
-  <link rel="stylesheet" href="css/brand.css" />
-  <script src="js/scroll-focus.js" defer></script>
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/brand.css" />
+  <script src="assets/js/scroll-focus.js" defer></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;scroll-padding-top:96px}
@@ -92,7 +92,7 @@
 <body>
   <header class="bar">
     <div class="bar-in">
-      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <a class="brandlock" href="index.html"><img src="assets/img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
       <span class="bl-divider" aria-hidden="true"></span>
       <div>
         <div class="logo">DSA <span>Cheat Sheet</span></div>
@@ -716,18 +716,13 @@ def power(a, b, mod):
     </section>
   </main>
 
-  <footer>Deep revision notes · pair with the <a href="dsa-patterns.html">patterns roadmap</a> for practice links · <a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a></footer>
+  <footer>Deep revision notes · pair with the <a href="dsa-patterns.html">patterns roadmap</a> for practice links · <a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a></footer>
 
   <script>
     const secs=[...document.querySelectorAll("section.card")];
     const toc=document.getElementById("toc");
     secs.forEach(s=>{const a=document.createElement("a");a.href="#"+s.id;a.textContent=s.querySelector("h2").textContent.trim();toc.appendChild(a);});
-    const t=document.getElementById("themeToggle"), root=document.documentElement;
-    const saved=localStorage.getItem("dsa-theme");
-    if(saved==="dark"||(!saved&&matchMedia("(prefers-color-scheme: dark)").matches)){root.setAttribute("data-theme","dark");t.textContent="Light";}
-    t.addEventListener("click",()=>{const d=root.getAttribute("data-theme")==="dark";
-      if(d){root.removeAttribute("data-theme");t.textContent="Dark";localStorage.setItem("dsa-theme","light");}
-      else{root.setAttribute("data-theme","dark");t.textContent="Light";localStorage.setItem("dsa-theme","dark");}});
   </script>
+  <script src="assets/js/theme.js"></script>
 </body>
 </html>

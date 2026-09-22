@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <script>
     /* set the theme before first paint so dark mode never flashes light */
     (function () { try { var s = localStorage.getItem("dsa-theme");
@@ -13,116 +13,20 @@
   </script>
   <title>HR: STAR · CAR · HERO + Behavioral Notes</title>
   <meta name="description" content="HR and manager interview one-pager: STAR, CAR, HERO, résumé stories, why this company, why leaving, salary, and what to ask." />
-  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/tokens.css?v=1" />
-  <link rel="stylesheet" href="css/fonts.css" />
-  <link rel="stylesheet" href="css/brand.css" />
-  <script src="js/scroll-focus.js" defer></script>
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/brand.css" />
+  <link rel="stylesheet" href="assets/css/notes.css?v=1" />
+  <script src="assets/js/scroll-focus.js" defer></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-behavior:smooth;scroll-padding-top:82px}
-    body{font-family:"Inter","Inter Fallback",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
-
-    header.bar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--border)}
-    .bar-in{max-width:1160px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .logo{font-weight:800;font-size:1.1rem;letter-spacing:-.01em}.logo span{color:var(--primary-ink)}
-    .sp{flex:1}
-    .btn{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600;cursor:pointer;text-decoration:none;transition:border-color .15s,color .15s,transform .15s}
-    .btn:hover{border-color:var(--primary);color:var(--primary-ink);transform:translateY(-1px)}
-    .menu-btn{display:none;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1.05rem;cursor:pointer}
-
-    .layout{max-width:1160px;margin:0 auto;display:flex;gap:28px;padding:0 20px;min-height:100vh}
-    .side{width:238px;flex:0 0 238px;position:sticky;top:92px;align-self:flex-start;max-height:calc(100vh - 110px);overflow-y:auto;padding:20px 0 30px}
-    .note-search{width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.86rem;outline:none;margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
-    .note-search:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-    .search-results{display:none;flex-direction:column;gap:2px;margin-bottom:12px;max-height:46vh;overflow-y:auto}
-    .search-results.show{display:flex}
-    .search-results a{display:block;padding:7px 10px;border-radius:8px;text-decoration:none;border:1px solid var(--border);background:var(--surface)}
-    .search-results a:hover{border-color:var(--primary);background:var(--primary-soft)}
-    .search-results .r-name{display:block;font-size:.84rem;font-weight:600;color:var(--text);line-height:1.3}
-    .search-results .r-topic{display:block;font-size:.68rem;color:var(--primary-ink);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-    .search-empty{font-size:.82rem;color:var(--muted);padding:6px 10px}
-    .side-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin:0 0 10px 8px}
-    #topicNav{display:flex;flex-direction:column;gap:2px}
-    #topicNav a{display:block;padding:9px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:600;border:1px solid transparent;transition:background .12s,color .12s,border-color .12s;line-height:1.35}
-    #topicNav a:hover{background:var(--surface2);color:var(--text)}
-    #topicNav a.active{background:var(--primary-soft);color:var(--primary-ink);border-color:color-mix(in srgb,var(--primary) 30%, transparent)}
-    .scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:35}
-    .scrim.open{display:block}
-
-    main{flex:1;min-width:0;padding:24px 0 48px}
-    @media(max-width:860px){
-      .layout{padding:0}
-      .side{position:fixed;top:0;left:0;bottom:0;width:270px;background:var(--surface);border-right:1px solid var(--border);z-index:40;transform:translateX(-100%);transition:transform .25s;max-height:none;padding:20px 14px 30px;box-shadow:var(--shadow)}
-      .side.open{transform:none}
-      .menu-btn{display:inline-block}
-      main{padding:16px 20px 40px}
-    }
-    h1.topic{font-size:clamp(1.9rem,5vw,2.6rem);font-weight:800;letter-spacing:-.03em;margin-bottom:8px}
-    .intro{color:var(--text);background:linear-gradient(120deg,var(--primary-soft),transparent);border:1px solid var(--border);border-left:4px solid var(--primary);padding:14px 16px;border-radius:12px;margin-bottom:26px;font-size:1rem;line-height:1.7}
-
-    .pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:22px 24px;margin-bottom:20px}
-    h2.pat,h3.sub,h4.leaf{scroll-margin-top:96px}
-    @keyframes flashbg{0%{background:var(--primary-soft)}100%{background:transparent}}
-    .flash{animation:flashbg 1.6s ease}
-    h2.pat{font-size:1.4rem;font-weight:750;letter-spacing:-.01em;margin-bottom:6px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-    h2.pat::before{content:"";width:9px;height:22px;border-radius:5px;background:linear-gradient(var(--primary),var(--accent-2))}
-    h3.sub{font-size:1.12rem;font-weight:700;margin:22px 0 6px;color:var(--text)}
-    h4.leaf{font-size:1.02rem;font-weight:650;margin:18px 0 6px;display:flex;align-items:center;gap:9px;color:var(--text)}
-    h4.leaf::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent-2)}
-
-    .hint{font-size:.95rem;color:var(--text);background:var(--accent-2-soft);border-radius:11px;padding:12px 15px;margin:10px 0;line-height:1.65}
-    .hint b{font-weight:700}
-    .note{font-size:.95rem;color:var(--muted);margin:10px 0;line-height:1.7}
-    .note b{color:var(--text);font-weight:650}
-    .note code,.inl{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;background:var(--surface2);padding:2px 6px;border-radius:5px;color:var(--primary-ink);font-size:.85rem}
-
-    .codewrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:12px 0 14px;box-shadow:var(--shadow-sm)}
-    .codebar{display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--code-bar);border-bottom:1px solid #21262d}
-    .codebar .dot{width:11px;height:11px;border-radius:50%}
-    .codebar .lang{margin-left:auto;font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.7rem;color:#8b949e;letter-spacing:.04em}
-    pre.code{margin:0;background:var(--code-bg);color:#c9d1d9;padding:15px 17px;font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.82rem;line-height:1.7;overflow-x:auto;white-space:pre}
-    pre.code code{background:none!important;padding:0;font-size:inherit}
-
-    .qwrap{margin:14px 0 2px;padding-top:12px;border-top:1px dashed var(--border)}
-    .qhead{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:7px}
-    .qhead::before{content:"✍️"}
-    .probs{display:flex;flex-wrap:wrap;gap:9px}
-    .prob{display:inline-flex;align-items:center;gap:9px;text-decoration:none;padding:8px 13px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:.86rem;color:var(--text);transition:transform .14s,border-color .14s,box-shadow .14s}
-    .prob:hover{transform:translateY(-2px);border-color:var(--primary);box-shadow:var(--shadow-sm)}
-    .tag{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:6px}
-    .tag.E{color:var(--e);background:var(--e-bg)}.tag.M{color:var(--m);background:var(--m-bg)}.tag.H{color:var(--h);background:var(--h-bg)}
-    .pn{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.74rem;color:var(--muted)}
-    .pn.gfg{color:#297b3d;font-weight:700}
-    .pn.edu{color:#5a5ddc;font-weight:700}
-    .pn.hi{color:#0a7885;font-weight:700}
-    .pn.gh{color:#7b52da;font-weight:700}
-    .pn.bb{color:#b05110;font-weight:700}
-    .pn.dg{color:#bc397a;font-weight:700}
-    .pn.cwa{color:#0a73a2;font-weight:700}
-    .pn.amzn{color:#9d5e00;font-weight:700}
-    .pn.hbr{color:#b91c1c;font-weight:700}
-    .pn.muse{color:#7c3aed;font-weight:700}
-    .pn.lfy{color:#0b7a70;font-weight:700}
-    .pn.exp{color:#2563eb;font-weight:700}
-
-    .nav{display:flex;justify-content:space-between;gap:12px;margin-top:30px}
-    footer{text-align:center;color:var(--muted);font-size:.82rem;padding:28px 20px 54px}
-    footer a{color:var(--primary-ink)}
-    @media(max-width:560px){ .pcard{padding:18px 16px} body{font-size:15px} }
-    @media print{header.bar,.nav,.btn,select,.prob input{display:none}body{background:#fff}a{color:#000}}
-      header.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
-      /* site badges: each colour nudged until it clears 4.5:1, darker on light, lighter on dark */
-    [data-theme="dark"] .pn.gfg{color:#419756} [data-theme="dark"] .pn.edu{color:#797cf3} [data-theme="dark"] .pn.hi{color:#0ea5b7} [data-theme="dark"] .pn.gh{color:#986ff7} [data-theme="dark"] .pn.bb{color:#f97316} [data-theme="dark"] .pn.dg{color:#ec4899} [data-theme="dark"] .pn.cwa{color:#0ea5e9} [data-theme="dark"] .pn.amzn{color:#ff9900} [data-theme="dark"] .pn.hbr{color:#d06666} [data-theme="dark"] .pn.muse{color:#9e6ef2} [data-theme="dark"] .pn.lfy{color:#14978c} [data-theme="dark"] .pn.exp{color:#5485ef}
-  </style>
 </head>
 <body>
   <header class="bar">
     <div class="bar-in">
       <button class="menu-btn" id="menuBtn" aria-label="Toggle topics">Menu</button>
-      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <a class="brandlock" href="index.html"><img src="assets/img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
       <span class="bl-divider" aria-hidden="true"></span>
       <div class="logo">HR <span>Notes</span></div>
       <div class="sp"></div>
@@ -142,162 +46,17 @@
     <main id="main"></main>
   </div>
 
-  <footer>Study one topic → read the script → tick the links when you've practiced out loud. Progress is saved in this browser · <a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a></footer>
+  <footer>Study one topic → read the script → tick the links when you've practiced out loud. Progress is saved in this browser · <a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a></footer>
 
   <script src="data/hr-data.js"></script>
+  <script src="assets/js/notes.js"></script>
+  <script src="assets/js/theme.js"></script>
   <script>
-    const LC = s => (typeof s === "string" && s.startsWith("http")) ? s : `https://leetcode.com/problems/${s}/`;
-    const $ = s => document.querySelector(s);
-    const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    const params = new URLSearchParams(location.search);
-
-    const topics = HR.map(t => t.n);
-    let current = params.get("topic");
-    if (!topics.includes(current)) current = topics[0];
-
-    const tnav = $("#topicNav");
-    topics.forEach(t => {
-      const a = document.createElement("a");
-      a.href = "?topic=" + encodeURIComponent(t);
-      a.textContent = t;
-      if (t === current) a.className = "active";
-      tnav.appendChild(a);
+    NOTES.mount({
+      data: HR,
+      lang: "say",
+      hl: "plaintext",
     });
-    const menuBtn = $("#menuBtn"), side = $("#side"), scrim = $("#scrim");
-    function toggleSide() { side.classList.toggle("open"); scrim.classList.toggle("open"); }
-    if (menuBtn) menuBtn.addEventListener("click", toggleSide);
-    if (scrim) scrim.addEventListener("click", toggleSide);
-
-    const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const searchIdx = [];
-    HR.forEach(t => {
-      const walk = (node, trail) => {
-        const path = trail ? (trail + " › " + node.n) : node.n;
-        searchIdx.push({ topic: t.n, name: node.n, path, hay: normalize(t.n + " " + path) });
-        (node.c || []).forEach(ch => walk(ch, path));
-      };
-      (t.c || []).forEach(ch => walk(ch, ""));
-    });
-    const searchInput = $("#noteSearch"), resBox = $("#searchResults");
-    searchInput.addEventListener("input", () => {
-      const tokens = searchInput.value.trim().toLowerCase().split(/\s+/).map(normalize).filter(Boolean);
-      const match = hay => tokens.every(tk => hay.includes(tk));
-      [...tnav.children].forEach(a => { a.style.display = (!tokens.length || match(normalize(a.textContent))) ? "" : "none"; });
-      if (!tokens.length) { resBox.innerHTML = ""; resBox.classList.remove("show"); return; }
-      const matches = searchIdx.filter(r => match(r.hay)).slice(0, 40);
-      resBox.innerHTML = "";
-      if (!matches.length) {
-        resBox.innerHTML = '<div class="search-empty">No matches</div>';
-      } else {
-        matches.forEach(r => {
-          const a = document.createElement("a");
-          a.href = "?topic=" + encodeURIComponent(r.topic) + "#n-" + slug(r.name);
-          a.innerHTML = `<span class="r-topic">${r.topic}</span><span class="r-name">${r.path}</span>`;
-          resBox.appendChild(a);
-        });
-      }
-      resBox.classList.add("show");
-    });
-    const srcClass = src => {
-      const s = String(src).toUpperCase();
-      if (s === "GFG") return " gfg";
-      if (s === "EDU") return " edu";
-      if (s === "HI") return " hi";
-      if (s === "GH") return " gh";
-      if (s === "BB") return " bb";
-      if (s === "DG") return " dg";
-      if (s === "CWA") return " cwa";
-      if (s === "AMZN") return " amzn";
-      if (s === "HBR") return " hbr";
-      if (s === "MUSE") return " muse";
-      if (s === "LFY") return " lfy";
-      if (s === "EXP") return " exp";
-      return "";
-    };
-
-    function problemEl(p) {
-      const [num, href, title, diff] = p;
-      const isNum = typeof num === "number";
-      const id = isNum ? ("lc" + num) : (num + ":" + href);
-      const srcLabel = isNum ? ("#" + num) : num;
-      const a = document.createElement("a");
-      a.className = "prob";
-      a.href = LC(href); a.target = "_blank"; a.rel = "noopener";
-      a.innerHTML =
-        `<span class="tag ${diff}">${diff}</span><span class="pn${isNum ? "" : srcClass(num)}">${srcLabel}</span><span class="pt">${title}</span>`;
-      return a;
-    }
-
-    function blocks(node, host) {
-      if (node.h) { const d=document.createElement("div"); d.className="hint"; d.innerHTML="💡 "+node.h; host.appendChild(d); }
-      if (node.note) { const d=document.createElement("div"); d.className="note"; d.innerHTML=node.note; host.appendChild(d); }
-      if (node.code) {
-        const wrap = document.createElement("div"); wrap.className = "codewrap";
-        wrap.innerHTML = '<div class="codebar"><span class="dot" style="background:#ff5f56"></span>' +
-          '<span class="dot" style="background:#ffbd2e"></span><span class="dot" style="background:#27c93f"></span>' +
-          '<span class="lang">say</span></div>';
-        const pre = document.createElement("pre"); pre.className = "code";
-        const code = document.createElement("code"); code.className = "language-plaintext"; code.textContent = node.code;
-        pre.appendChild(code); wrap.appendChild(pre); host.appendChild(wrap);
-        if (window.hljs) { try { hljs.highlightElement(code); } catch (e) {} }
-      }
-      if (node.p) {
-        const w=document.createElement("div"); w.className="qwrap";
-        const hd=document.createElement("div"); hd.className="qhead"; hd.textContent="Read / practice"; w.appendChild(hd);
-        const pr=document.createElement("div"); pr.className="probs";
-        node.p.forEach(q=>pr.appendChild(problemEl(q))); w.appendChild(pr); host.appendChild(w);
-      }
-    }
-
-    function render(node, host, depth) {
-      if (depth === 1) {
-        const card = document.createElement("section"); card.className = "pcard";
-        const h = document.createElement("h2"); h.className = "pat"; h.id = "n-" + slug(node.n); h.textContent = node.n; card.appendChild(h);
-        blocks(node, card);
-        if (node.c) node.c.forEach(ch => render(ch, card, depth + 1));
-        host.appendChild(card);
-        return;
-      }
-      if (node.c) {
-        const tag = depth === 2 ? "h3" : "h4", cls = depth === 2 ? "sub" : "leaf";
-        const h = document.createElement(tag); h.className = cls; h.id = "n-" + slug(node.n); h.textContent = node.n; host.appendChild(h);
-        blocks(node, host);
-        node.c.forEach(ch => render(ch, host, depth + 1));
-      } else {
-        const h = document.createElement("h4"); h.className = "leaf"; h.id = "n-" + slug(node.n); h.textContent = node.n; host.appendChild(h);
-        blocks(node, host);
-      }
-    }
-
-
-    const topicNode = HR.find(t => t.n === current);
-    const main = $("#main");
-    const h1 = document.createElement("h1"); h1.className = "topic"; h1.textContent = current; main.appendChild(h1);
-    if (topicNode.h) { const i=document.createElement("div"); i.className="intro"; i.innerHTML="💡 "+topicNode.h; main.appendChild(i); }
-    (topicNode.c || []).forEach(ch => render(ch, main, 1));
-    if (topicNode.p) blocks(topicNode, main);
-
-    const idx = topics.indexOf(current);
-    const navRow = document.createElement("div"); navRow.className = "nav";
-    const prev = document.createElement("a"); prev.className = "btn";
-    if (idx > 0) { prev.href = "?topic=" + encodeURIComponent(topics[idx-1]); prev.textContent = "← " + topics[idx-1]; } else prev.style.visibility="hidden";
-    const next = document.createElement("a"); next.className = "btn";
-    if (idx < topics.length-1) { next.href = "?topic=" + encodeURIComponent(topics[idx+1]); next.textContent = topics[idx+1] + " →"; } else next.style.visibility="hidden";
-    navRow.append(prev, next); main.appendChild(navRow);
-
-    function scrollToHash() {
-      if (!location.hash) return;
-      const el = document.getElementById(location.hash.slice(1));
-      if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
-    }
-    scrollToHash();
-    window.addEventListener("hashchange", scrollToHash);
-
-    const t=$("#themeToggle"), root=document.documentElement, saved=localStorage.getItem("dsa-theme");
-    if(saved==="dark"||(!saved&&matchMedia("(prefers-color-scheme: dark)").matches)){root.setAttribute("data-theme","dark");t.textContent="Light";}
-    t.addEventListener("click",()=>{const d=root.getAttribute("data-theme")==="dark";
-      if(d){root.removeAttribute("data-theme");t.textContent="Dark";localStorage.setItem("dsa-theme","light");}
-      else{root.setAttribute("data-theme","dark");t.textContent="Light";localStorage.setItem("dsa-theme","dark");}});
   </script>
 </body>
 </html>

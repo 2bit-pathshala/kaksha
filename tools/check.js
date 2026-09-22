@@ -7,7 +7,8 @@
    are skipped with a note if it is not installed (npm i --no-save jsdom). */
 
 const fs = require("fs"), vm = require("vm"), path = require("path");
-const P = __dirname + path.sep;
+// the checks run from tools/, everything they read lives at the repo root
+const P = path.join(__dirname, "..") + path.sep;
 let fails = 0;
 const ok   = (name, detail) => console.log("  ok    " + name.padEnd(16) + detail);
 const bad  = (name, detail) => { fails++; console.log("  FAIL  " + name.padEnd(16) + detail); };
@@ -16,7 +17,7 @@ const test = (name, pass, detail) => (pass ? ok : bad)(name, detail);
 /* ---------- load the data the same way a browser would ---------- */
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(fs.readFileSync(P + "js/viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
+vm.runInContext(fs.readFileSync(P + "assets/js/viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
 vm.runInContext(fs.readFileSync(P + "data/concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", ctx);
 const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 
@@ -71,9 +72,9 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 
 /* ---------- 3. the visuals are painted with variables the stylesheet defines ---------- */
 {
-  const viz = fs.readFileSync(P + "js/viz.js", "utf8");
+  const viz = fs.readFileSync(P + "assets/js/viz.js", "utf8");
   // the palette lives in tokens.css now, learn.css only shapes the pages
-  const css = fs.readFileSync(P + "css/tokens.css", "utf8");
+  const css = fs.readFileSync(P + "assets/css/tokens.css", "utf8");
   const cut = css.indexOf('[data-theme="dark"]');
   const light = css.slice(0, cut), dark = css.slice(cut);
   const wanted = [...new Set([...viz.matchAll(/var\(--([a-z0-9-]+)\)/g)].map(m => m[1]))];
@@ -182,7 +183,7 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
   const DASH = String.fromCharCode(0x2014);   // written this way so this file passes its own test
   // every file we author, found rather than listed: the old hand-kept list left the
   // section notes out, and that is exactly where the em-dashes had collected
-  const OURS = [".", "css", "js", "data", "docs"].flatMap(dir =>
+  const OURS = [".", "assets/css", "assets/js", "data", "docs", "tools"].flatMap(dir =>
     fs.readdirSync(P + dir)
       .filter(f => /\.(html|css|js|md)$/.test(f))
       .map(f => (dir === "." ? f : dir + "/" + f)))
