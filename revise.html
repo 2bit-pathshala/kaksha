@@ -27,13 +27,14 @@
       <div class="sp"></div>
       <a class="nav" href="concept.html">Concepts</a>
       <a class="nav" href="dsa-notes.html">DSA notes</a>
+      <button class="nav" id="langToggle" aria-label="Switch explanations to Hinglish">Hinglish</button>
       <button class="nav" id="themeToggle">Dark</button>
     </div>
   </header>
 
   <div class="reading" role="main">
     <h1>Revision</h1>
-    <p class="lede">Every concept reduced to the one sentence worth remembering. Read a line, then answer its questions <em>out loud</em> before you open them, anything you fumble is a concept to reopen in full, not to re-read here.</p>
+    <p class="lede" id="lede">Every concept reduced to the one sentence worth remembering. Read a line, then answer its questions <em>out loud</em> before you open them, anything you fumble is a concept to reopen in full, not to re-read here.</p>
 
     <div class="tools">
       <input id="find" placeholder="Filter concepts" aria-label="Filter concepts" />
@@ -54,45 +55,76 @@
     const list = $("#list");
     let allOpen = false;
 
-    [...new Set(CONCEPTS.map(c => c.group))].forEach(g => {
-      const h = document.createElement("h2");
-      h.className = "grp"; h.textContent = g; h.dataset.grp = g;
-      list.appendChild(h);
+    /* Reading language, shared with the concept pages under "ms-read". A concept
+       carries its Hinglish in hi.one and hi.q; anything missing falls back to English. */
+    let L = "en";
+    try { if (localStorage.getItem("ms-read") === "hi") L = "hi"; } catch (e) {}
+    const UI = {
+      en: { lede: $("#lede").innerHTML, find: "Filter concepts", qs: n => n + " questions", hide: "Hide questions",
+            openAll: "Open all questions", closeAll: "Close all questions", empty: "Nothing matches that.",
+            toggle: "Hinglish", toggleLabel: "Switch explanations to Hinglish" },
+      hi: { lede: "Har concept woh ek sentence jo yaad rakhne layak hai. Ek line padho, phir uske sawaalon ka answer kholne se pehle <em>zor se</em> do. Jisme atko, woh concept poora dobara kholo, yahan dobara mat padho.",
+            find: "Concepts filter karo", qs: n => n + " sawaal", hide: "Sawaal chhupao",
+            openAll: "Saare sawaal kholo", closeAll: "Saare sawaal band karo", empty: "Kuch match nahi hua.",
+            toggle: "English", toggleLabel: "Switch explanations to English" },
+    };
+    const one = c => (L === "hi" && c.hi && c.hi.one) || c.one;
+    const qs  = c => (L === "hi" && c.hi && c.hi.q && c.hi.q.length === c.q.length) ? c.hi.q : c.q;
 
-      CONCEPTS.filter(c => c.group === g).forEach(c => {
-        const entry = document.createElement("div");
-        entry.className = "entry";
-        entry.dataset.id = c.id;
-        entry.dataset.hay = (c.n + " " + c.group + " " + c.one).toLowerCase();
-        entry.innerHTML =
-          `<h3><a href="concept.html?c=${c.id}">${esc(c.n)}</a></h3>` +
-          `<div class="one">${c.one}</div>` +
-          `<button class="more">${c.q.length} questions</button>` +
-          `<div class="cards hidden"></div>`;
+    const build = () => {
+      const u = UI[L];
+      document.documentElement.lang = L === "hi" ? "hi-Latn" : "en";
+      $("#lede").innerHTML = u.lede;
+      $("#find").placeholder = u.find;
+      $("#find").setAttribute("aria-label", u.find);
+      $("#empty").textContent = u.empty;
+      $("#toggleAll").textContent = allOpen ? u.closeAll : u.openAll;
+      const lt = $("#langToggle");
+      lt.textContent = u.toggle;
+      lt.setAttribute("aria-label", u.toggleLabel);
+      list.innerHTML = "";
 
-        const cards = entry.querySelector(".cards");
-        c.q.forEach(([q, a], i) => {
-          const item = document.createElement("div");
-          item.className = "qa";
-          item.innerHTML =
-            `<div class="qq"><span class="qn">${String(i + 1).padStart(2, "0")}</span><span>${esc(q)}</span></div>` +
-            `<div class="aa">${esc(a)}</div>`;
-          item.querySelector(".qq").addEventListener("click", () => item.classList.toggle("open"));
-          cards.appendChild(item);
+      [...new Set(CONCEPTS.map(c => c.group))].forEach(g => {
+        const h = document.createElement("h2");
+        h.className = "grp"; h.textContent = g; h.dataset.grp = g;
+        list.appendChild(h);
+
+        CONCEPTS.filter(c => c.group === g).forEach(c => {
+          const entry = document.createElement("div");
+          entry.className = "entry";
+          entry.dataset.id = c.id;
+          entry.dataset.hay = (c.n + " " + c.group + " " + one(c).replace(/<[^>]+>/g, "")).toLowerCase();
+          entry.innerHTML =
+            `<h3><a href="concept.html?c=${c.id}">${esc(c.n)}</a></h3>` +
+            `<div class="one">${one(c)}</div>` +
+            `<button class="more">${allOpen ? u.hide : u.qs(c.q.length)}</button>` +
+            `<div class="cards${allOpen ? "" : " hidden"}"></div>`;
+
+          const cards = entry.querySelector(".cards");
+          qs(c).forEach(([q, a], i) => {
+            const item = document.createElement("div");
+            item.className = "qa" + (allOpen ? " open" : "");
+            item.innerHTML =
+              `<div class="qq"><span class="qn">${String(i + 1).padStart(2, "0")}</span><span>${esc(q)}</span></div>` +
+              `<div class="aa">${esc(a)}</div>`;
+            item.querySelector(".qq").addEventListener("click", () => item.classList.toggle("open"));
+            cards.appendChild(item);
+          });
+
+          const more = entry.querySelector(".more");
+          more.addEventListener("click", () => {
+            cards.classList.toggle("hidden");
+            more.textContent = cards.classList.contains("hidden") ? UI[L].qs(c.q.length) : UI[L].hide;
+          });
+
+          list.appendChild(entry);
         });
-
-        const more = entry.querySelector(".more");
-        more.addEventListener("click", () => {
-          cards.classList.toggle("hidden");
-          more.textContent = cards.classList.contains("hidden") ? c.q.length + " questions" : "Hide questions";
-        });
-
-        list.appendChild(entry);
       });
-    });
+      filter();
+    };
 
-    $("#find").addEventListener("input", e => {
-      const v = e.target.value.trim().toLowerCase();
+    const filter = () => {
+      const v = $("#find").value.trim().toLowerCase();
       let shown = 0;
       list.querySelectorAll(".entry").forEach(en => {
         const ok = !v || en.dataset.hay.includes(v);
@@ -106,6 +138,14 @@
         h.style.display = any ? "" : "none";
       });
       $("#empty").style.display = shown ? "none" : "";
+    };
+    $("#find").addEventListener("input", filter);
+    build();
+
+    $("#langToggle").addEventListener("click", () => {
+      L = L === "hi" ? "en" : "hi";
+      try { localStorage.setItem("ms-read", L); } catch (e) {}
+      build();
     });
 
     $("#toggleAll").addEventListener("click", () => {
@@ -114,9 +154,9 @@
       list.querySelectorAll(".qa").forEach(q => q.classList.toggle("open", allOpen));
       list.querySelectorAll(".entry").forEach(en => {
         const n = CONCEPTS.find(c => c.id === en.dataset.id).q.length;
-        en.querySelector(".more").textContent = allOpen ? "Hide questions" : n + " questions";
+        en.querySelector(".more").textContent = allOpen ? UI[L].hide : UI[L].qs(n);
       });
-      $("#toggleAll").textContent = allOpen ? "Close all questions" : "Open all questions";
+      $("#toggleAll").textContent = allOpen ? UI[L].closeAll : UI[L].openAll;
     });
 
     const t = $("#themeToggle"), root = document.documentElement;
