@@ -199,10 +199,16 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
   const CURVES = ctx.CURVES || null;
   const spec = VIZ["big-o"];
   const svg = DRAW.curve(spec, spec.frames[spec.frames.length - 1]);
-  const ys = [...svg.matchAll(/<text x="[0-9.]+" y="([0-9.]+)"[^>]*font-weight:600/g)].map(m => +m[1]);
+  // count the labels as well as their spacing: this test once kept passing while
+  // matching nothing at all, because an attribute was added ahead of the x it
+  // anchored on. A run that finds no labels is a broken test, not a clean chart.
+  const ys = [...svg.matchAll(/<text\b[^>]*\sy="([0-9.]+)"[^>]*font-weight:600/g)].map(m => +m[1]);
   let collisions = 0;
   ys.forEach((a, i) => ys.slice(i + 1).forEach(b => { if (Math.abs(a - b) < 14) collisions++; }));
-  test("curve labels", collisions === 0, ys.length + " labels on the final frame, none overlapping");
+  const want = spec.frames[spec.frames.length - 1].show.length;
+  test("curve labels", collisions === 0 && ys.length === want,
+    ys.length + " labels on the final frame, none overlapping" +
+    (ys.length !== want ? "   <-- expected " + want : ""));
 }
 
 /* ---------- 7. the Design Lab: shape, geometry, and labels that fit ----------

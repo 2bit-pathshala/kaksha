@@ -383,6 +383,52 @@ pre.code code{background:none!important;padding:0;font-size:inherit;color:inheri
 .v-band{fill:var(--accent);opacity:.11}
 .v-curve{fill:none;stroke-width:2.4;stroke-linecap:round}
 
+/* ---------------- how a step moves ----------------
+   The player updates the drawing in place rather than redrawing it, so the same
+   box, pointer or curve survives from one frame to the next and can be carried
+   to where the next frame puts it. That carrying is what these rules do, and it
+   is the difference between watching a pointer walk an array and being handed
+   two stills of it.
+
+   What moves and why:
+     transform   pointers. A pointer is drawn at the origin and placed with a
+                 translate, because a transform is the one thing every browser
+                 will interpolate, so it slides cell to cell.
+     x/y/width   the sliding-window band stretching over its range, and boxes
+                 that shift when the array in front of them grows.
+     fill/stroke a cell going from plain to on, hot or bad. The colour change
+                 is the state change, so it is worth half a beat rather than none.
+     opacity     dimming, and the fade used to add or remove a thing.
+
+   Nothing names a duration: --t-mid and --t-slow come from tokens.css, where
+   prefers-reduced-motion sets them to zero and every rule below goes still. */
+.vizstage svg [data-k]{
+  transition:
+    transform var(--t-slow) var(--ease),
+    x var(--t-slow) var(--ease), y var(--t-slow) var(--ease),
+    width var(--t-slow) var(--ease), height var(--t-slow) var(--ease),
+    x1 var(--t-slow) var(--ease), y1 var(--t-slow) var(--ease),
+    x2 var(--t-slow) var(--ease), y2 var(--t-slow) var(--ease),
+    fill var(--t-mid) var(--ease), stroke var(--t-mid) var(--ease),
+    opacity var(--t-mid) var(--ease);
+}
+/* A curve is revealed by drawing it, left to right, which is how a growth
+   curve reads: you watch O(n squared) leave the top of the chart. The player
+   sets the dash length from the real path length, so this only has to say how
+   long the drawing takes. */
+.vizstage svg .v-curve{transition:stroke-dashoffset var(--t-slow) linear,opacity var(--t-mid) var(--ease)}
+
+/* Arriving and leaving. A new box grows a little out of nothing rather than
+   appearing at full size, which reads as "this was just added" instead of
+   "this was always here and you missed it".
+
+   The scale is withheld from anything already carrying its own transform,
+   which is every pointer: a second transform would replace the one holding it
+   in place and tear it back to the origin. Those just fade. */
+.vizstage svg .v-enter{opacity:0}
+.vizstage svg .v-enter:not([style*="transform"]){transform:scale(.88);transform-box:fill-box;transform-origin:center}
+.vizstage svg .v-exit{opacity:0}
+
 /* ---------------- type roles ----------------
    The serif is for reading prose. Anything you operate or scan, tabs, player
    controls, tables, link lists, the question you are about to answer. Is UI and
