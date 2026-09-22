@@ -10,7 +10,7 @@
               frame: { arr?, band?:[l,r], on?:[i], hot?:[i], bad?:[i], dim?:[i],
                        ptr?:{LABEL:index}, out?:"running value", cap }
      curve, growth curves for complexity          frame: { show:[names], mark?:n, cap }
-     tree, nodes + edges, optional array strip    frame: { on:[ids], dim:[ids], edge:[[a,b]], cap }
+     tree, nodes + edges, optional array strip    frame: { on:[ids], hot:[ids], bad:[ids], dim:[ids], edge:[[a,b]], cap }
      hash, keys -> hash function -> buckets       frame: { k:"key", b:bucketIndex, look?:bool, cap }
               (look: a lookup, so the key is shown but not stored in the bucket)
 
@@ -184,7 +184,10 @@ function drawTree(spec, f) {
   });
   Object.entries(spec.nodes).forEach(([id, n]) => {
     if (n.hidden && !(f.show || []).includes(id)) return;
-    let cls = "v-box" + (on.includes(id) ? " on" : "") + (dim.includes(id) ? " dim" : "");
+    // bad and hot outrank on, the same order the cells renderer uses
+    const bad = f.bad || [], hot = f.hot || [];
+    let cls = "v-box" + (bad.includes(id) ? " bad" : hot.includes(id) ? " hot" : on.includes(id) ? " on" : "") +
+              (dim.includes(id) ? " dim" : "");
     // frame.t lets a frame relabel a node. That is how a swap or a return value is shown.
     const label = (f.t && f.t[id] != null) ? f.t[id] : n.t;
     const w = n.w || 52;                       // wide enough for a real label
@@ -965,35 +968,167 @@ Object.assign(VIZ, {
 /* ---- linked list: walking it, and the reversal that everyone gets wrong ---- */
 Object.assign(VIZ, {
 
+/* The play queue 3 -> 1 -> 4 -> 9, song 1 playing. Reaching a node costs
+   hops; inserting where you stand costs two writes, in the right order. */
 "linked-list": { kind: "chain", arr: ["3", "1", "4", "9"], frames: [
-  { on: [0], ptr: { head: 0 }, cap: "A node holds a value and <b>the address of the next node</b>. Nothing else. The nodes can sit anywhere in memory, the arrows are the only structure." },
-  { on: [0], ptr: { curr: 0 }, out: "step 1", cap: "There is no arithmetic that jumps to index 2. To go anywhere you <b>follow arrows from the head</b>, one at a time." },
-  { on: [1], dim: [0], ptr: { curr: 1 }, out: "step 2", cap: "Reaching position i costs i steps. That is why indexing is <b>O(n)</b> and binary search is impossible here." },
-  { on: [2], dim: [0, 1], ptr: { curr: 2 }, out: "step 3", cap: "Every hop is also a jump to an unrelated place in memory, so the cache cannot help, a linked list is slower than its Big-O suggests." },
-  { arr: ["3", "1", "7", "4", "9"], on: [2], hot: [1, 3], ptr: { curr: 2 }, out: "insert: 2 pointers rewritten", cap: "But <b>insert</b> is where it wins. Point the new node at 4, point 1 at the new node. <b>Two writes, O(1)</b>. Nothing shifts, unlike an array." },
+  { scene: `<span class="kicker">Why this example</span><p>A play queue, with song 1 playing. “Play next” on song 7 must slot it straight after 1:</p><table><tr><td>before</td><td>3 → 1 → 4 → 9</td></tr><tr><td>after</td><td>3 → 1 → 7 → 4 → 9</td></tr><tr><td>in an array</td><td>4 and 9 shift right</td></tr></table><p>With 10⁵ songs and 10⁵ taps, the shifting is 5 × 10⁹ moves. Goal: see why a linked list does each tap in two writes, and what it pays for that.</p>`,
+    cap: "Each box is a node: a song plus an arrow to the next node. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Ek play queue, song 1 chal raha hai. Song 7 par “play next” use 1 ke theek baad rakhe:</p><table><tr><td>pehle</td><td>3 → 1 → 4 → 9</td></tr><tr><td>baad mein</td><td>3 → 1 → 7 → 4 → 9</td></tr><tr><td>array mein</td><td>4 aur 9 right khisakte</td></tr></table><p>10⁵ songs aur 10⁵ taps par khisakna 5 × 10⁹ moves hai. Goal: dekhna ki linked list har tap do writes mein kyun karti hai, aur iske badle kya deti hai.</p>`,
+          cap: "Har box ek node hai: ek song plus agle node ka arrow. Next dabao." } },
+
+  { on: [0], ptr: { head: 0 }, out: "head -> 3",
+    cap: "All you hold is the <b>head</b>, node 3. The nodes can sit anywhere in memory; the arrows are the only order there is.",
+    ask: { q: "Song 4 is at position 2. How do you get to it?", opts: ["compute its address, like a[2]", "follow arrows from the head: 2 hops"], a: 1,
+           why: "Nothing is packed side by side, so there is no address to compute. Only the arrows lead there." },
+    hi: { out: "head -> 3",
+          cap: "Aapke haath mein sirf <b>head</b> hai, node 3. Nodes memory mein kahin bhi ho sakte hain; order sirf arrows mein hai.",
+          ask: { q: "Song 4 position 2 par hai. Wahan kaise pahunchoge?", opts: ["a[2] ki tarah address nikaalo", "head se arrows follow karo: 2 hops"],
+                 why: "Kuch saath saath packed nahi, to calculate karne ko koi address nahi. Sirf arrows wahan le jaate hain." } } },
+
+  { on: [1], dim: [0], ptr: { curr: 1 }, out: "hop 1: at song 1, now playing",
+    cap: "One hop reaches song 1, the one playing. Position <var>i</var> costs <var>i</var> hops: that is the price of the whole design.",
+    ask: { q: "Now “play next” on 7: put it right after 1. How many existing nodes move?", opts: ["none: two arrows change", "4 and 9 shift right"], a: 0,
+           why: "Nodes are not packed, so there is nothing to shift. Only arrows are rewritten." },
+    hi: { out: "hop 1: song 1 par, jo chal raha hai",
+          cap: "Ek hop song 1 tak le jaata hai, jo chal raha hai. Position <var>i</var> ki keemat <var>i</var> hops: poore design ki yahi keemat hai.",
+          ask: { q: "Ab 7 par “play next”: use 1 ke theek baad rakho. Kitne maujooda nodes hilenge?", opts: ["koi nahi: do arrows badlenge", "4 aur 9 right khisakenge"],
+                 why: "Nodes packed nahi, to khisakane ko kuch nahi. Sirf arrows dobara likhe jaate hain." } } },
+
+  { arr: ["3", "1", "7", "4", "9"], links: [1, 0, 1, 1], on: [2], hot: [3], ptr: { curr: 1, new: 2 }, out: "write 1: 7.next = 1.next (song 4)",
+    cap: "First, point the new node 7 at 4, the node after 1. The dotted gap means 1 does not point at 7 yet: it still points past it, at 4.",
+    ask: { q: "Could you have written <code>1.next = 7</code> first?", opts: ["no: 1's arrow is the only way to reach 4", "yes, the order does not matter"], a: 0,
+           why: "Overwrite 1.next first and nothing points at 4 any more. 7.next = 1.next would then make 7 point at itself." },
+    hi: { out: "write 1: 7.next = 1.next (song 4)",
+          cap: "Pehle naye node 7 ko 4 par point karo, jo 1 ke baad hai. Dotted gap ka matlab 1 abhi 7 ko point nahi karta: woh ab bhi uske paar, 4 ko point karta hai.",
+          ask: { q: "Kya pehle <code>1.next = 7</code> likh sakte the?", opts: ["nahi: 4 tak ka ek hi raasta 1 ka arrow hai", "haan, order se farak nahi"],
+                 why: "Pehle 1.next mitaya to 4 ko koi point nahi karta. Phir 7.next = 1.next 7 ko khud par point kara dega." } } },
+
+  { arr: ["3", "1", "7", "4", "9"], on: [1, 2], hot: [2], ptr: { curr: 1 }, out: "write 2: 1.next = 7. Done: 2 writes",
+    cap: "Then point 1 at 7. <b>Two writes, nothing moved</b>, whether the queue holds 4 songs or 10⁵. For 10⁵ taps that is 2 × 10⁵ writes, against 5 × 10⁹ moves in an array.",
+    hi: { out: "write 2: 1.next = 7. Ho gaya: 2 writes",
+          cap: "Phir 1 ko 7 par point karo. <b>Do writes, kuch nahi hila</b>, queue mein 4 songs hon ya 10⁵. 10⁵ taps ke liye 2 × 10⁵ writes, array ke 5 × 10⁹ moves ke against." } },
+
+  { arr: ["3", "1", "7", "4", "9"], on: [4], dim: [0, 1, 2, 3], ptr: { curr: 4 }, out: "reaching song 9: 4 hops",
+    cap: "The price, stated plainly: the O(1) insert only holds while you already stand on the node. Reaching the last song from the head takes 4 hops, and each hop lands somewhere unrelated in memory.",
+    hi: { out: "song 9 tak: 4 hops",
+          cap: "Keemat, seedhe shabdon mein: O(1) insert tabhi hai jab aap pehle se node par khade ho. Head se aakhri song tak 4 hops lagte hain, aur har hop memory mein kahin door girta hai." } },
 ]},
 
-"linked-list-reverse": { kind: "chain", arr: ["3", "1", "4"], frames: [
-  { links: [1, 1], ptr: { prev: -1, curr: 0 }, out: "prev = null", cap: "Reversing means <b>turning every arrow around</b>. Walk the list once, flipping one arrow per step." },
-  { links: [1, 1], on: [0], hot: [1], ptr: { curr: 0, next: 1 }, out: "next = curr.next   <-- save it FIRST", cap: "Here is the trap: the moment you flip curr's arrow, you have destroyed your only way forward. <b>Save <code>next</code> before touching anything.</b>" },
-  { links: [-1, 1], on: [0, 1], ptr: { prev: 0, curr: 1 }, out: "curr.next = prev", cap: "Now flip it. Node 3 points backwards at null, and prev and curr both shuffle one step right." },
-  { links: [-1, -1], on: [1, 2], ptr: { prev: 1, curr: 2 }, out: "repeat", cap: "Same three moves again: save next, flip, advance. This is why the loop needs <b>three</b> pointers, not two." },
-  { links: [-1, -1], on: [2], ptr: { head: 2 }, nullEnd: false, out: "return prev", cap: "curr falls off the end, and <b>prev is the new head</b>. One pass, <b>O(n) time and O(1) space</b>, returning curr is the other classic bug." },
+/* Reversing the same queue, 3 -> 1 -> 4 -> 9. Links are the gaps between
+   neighbours: 1 points right, -1 left, 0 severed. */
+"linked-list-reverse": { kind: "chain", arr: ["3", "1", "4", "9"], frames: [
+  { scene: `<span class="kicker">Why this example</span><p>Reverse the queue, so it plays backwards:</p><table><tr><td>before</td><td>3 → 1 → 4 → 9</td></tr><tr><td>after</td><td>9 → 4 → 1 → 3</td></tr></table><p>Every arrow must turn round, in one pass, with no extra list. Goal: see why that takes <b>three</b> pointers, and which one you return.</p>`,
+    cap: "prev starts as null, before the list. curr starts at the head. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Queue ulti karo, taaki peeche se baje:</p><table><tr><td>pehle</td><td>3 → 1 → 4 → 9</td></tr><tr><td>baad mein</td><td>9 → 4 → 1 → 3</td></tr></table><p>Har arrow ko palatna hai, ek pass mein, bina extra list ke. Goal: dekhna ki isme <b>teen</b> pointers kyun lagte hain, aur kaunsa return hota hai.</p>`,
+          cap: "prev null se shuru hota hai, list se pehle. curr head par. Next dabao." } },
+
+  { ptr: { curr: 0 }, out: "prev = null, curr = 3",
+    cap: "To reverse, node 3 must point back at prev, which is null. But 3's arrow is also the only way to reach 1.",
+    ask: { q: "Before flipping 3's arrow, what must you save?", opts: ["next = 3.next, which is node 1", "nothing"], a: 0,
+           why: "The flip overwrites 3.next. Without a saved copy, 1, 4 and 9 are unreachable." },
+    hi: { out: "prev = null, curr = 3",
+          cap: "Reverse karne ke liye node 3 ko prev, yaani null, par point karna hai. Par 3 ka arrow hi 1 tak ka ek matra raasta hai.",
+          ask: { q: "3 ka arrow palatne se pehle kya save karna hai?", opts: ["next = 3.next, yaani node 1", "kuch nahi"],
+                 why: "Palatna 3.next ko mita deta hai. Saved copy ke bina 1, 4 aur 9 pahunch ke bahar." } } },
+
+  { hot: [1], ptr: { curr: 0, next: 1 }, out: "next = curr.next  (save it first)",
+    cap: "<b>Save <code>next</code> before touching anything.</b> Now the rest of the list is safe, whatever happens to 3's arrow.",
+    hi: { out: "next = curr.next  (pehle save)",
+          cap: "<b>Kuch bhi chhoone se pehle <code>next</code> save karo.</b> Ab 3 ke arrow ka kuch bhi ho, baaki list safe hai." } },
+
+  { links: [0, 1, 1], on: [0], nullEnd: false, ptr: { prev: 0, curr: 1 }, out: "3.next = null; prev = 3, curr = 1",
+    cap: "Flip: 3 now points at null, the new end of the list. Then advance: prev moves to 3, and curr to the saved node 1.",
+    ask: { q: "Same three moves for node 1: save next (4), flip, advance. Where does 1's arrow point after the flip?", opts: ["back at 3", "at null"], a: 0,
+           why: "The flip always points curr at prev, and prev is now 3." },
+    hi: { out: "3.next = null; prev = 3, curr = 1",
+          cap: "Palto: 3 ab null ko point karta hai, list ka naya end. Phir aage badho: prev 3 par, aur curr saved node 1 par.",
+          ask: { q: "Node 1 ke liye wahi teen moves: next (4) save, palto, aage. Palatne ke baad 1 ka arrow kahan point karega?", opts: ["wapas 3 par", "null par"],
+                 why: "Palatna hamesha curr ko prev par point karta hai, aur prev ab 3 hai." } } },
+
+  { links: [-1, 1, 1], on: [0, 1], nullEnd: false, ptr: { prev: 1, curr: 2 }, out: "1.next = 3; prev = 1, curr = 4",
+    cap: "1 points back at 3. Save, flip, advance, the same three moves every time. Two pointers are not enough: without <code>next</code>, the flip strands the rest.",
+    hi: { out: "1.next = 3; prev = 1, curr = 4",
+          cap: "1 wapas 3 ko point karta hai. Save, palto, aage, har baar wahi teen moves. Do pointers kaafi nahi: <code>next</code> ke bina palatna baaki ko akela chhod deta hai." } },
+
+  { links: [-1, -1, -1], on: [0, 1, 2, 3], nullEnd: false, ptr: { prev: 3 }, out: "4.next = 1, 9.next = 4; curr = null",
+    cap: "Two more rounds flip 4 and 9. curr steps past 9 and becomes null, so the loop stops.",
+    ask: { q: "curr is null now. Which pointer is the new head?", opts: ["prev, on 9", "curr, which is null"], a: 0,
+           why: "prev is the last node the loop visited, and 9 now starts the reversed list." },
+    hi: { out: "4.next = 1, 9.next = 4; curr = null",
+          cap: "Do aur round 4 aur 9 ko palat-te hain. curr 9 ke paar jaakar null ho jaata hai, to loop rukta hai.",
+          ask: { q: "Ab curr null hai. Naya head kaunsa pointer hai?", opts: ["prev, 9 par", "curr, jo null hai"],
+                 why: "prev loop ka aakhri dekha node hai, aur 9 ab ulti list shuru karta hai." } } },
+
+  { links: [-1, -1, -1], on: [3], nullEnd: false, ptr: { head: 3 }, out: "return prev: 9 -> 4 -> 1 -> 3",
+    cap: "<b>Return prev.</b> One pass, four flips: <b>O(<var>n</var>) time, O(1) extra space</b>. Returning curr hands back null, the other classic bug.",
+    hi: { out: "prev return karo: 9 -> 4 -> 1 -> 3",
+          cap: "<b>prev return karo.</b> Ek pass, chaar flips: <b>O(<var>n</var>) time, O(1) extra space</b>. curr return kiya to null milta hai, doosra classic bug." } },
 ]},
 
 /* ---- binary tree: the same three lines, in three different orders ---- */
+/* The six-person org chart: 1 over 2 and 3, 4 and 5 under 2, 6 under 3.
+   Labels become "person:headcount" as the post-order walk fills them in. */
 "tree-traversal": {
   kind: "tree", w: 560, h: 290,
   nodes: { a: { x: 280, y: 44, t: "1" }, b: { x: 170, y: 130, t: "2" }, c: { x: 400, y: 130, t: "3" },
-           d: { x: 110, y: 216, t: "4" }, e: { x: 232, y: 216, t: "5" }, f: { x: 400, y: 216, t: "6" } },
+           d: { x: 110, y: 216, t: "4" }, e: { x: 232, y: 216, t: "5" }, f: { x: 460, y: 216, t: "6" } },
   edges: [["a", "b"], ["a", "c"], ["b", "d"], ["b", "e"], ["c", "f"]],
   frames: [
-    { on: ["a"], dim: ["b", "c", "d", "e", "f"], out: "every node is the root of a smaller tree", cap: "A tree <b>is</b> recursion made of data. Node 1 is a root; so is node 2, of its own little tree. That is why nearly every tree solution is three lines." },
-    { on: ["a", "b", "d"], dim: ["c", "e", "f"], edge: [["a", "b"], ["b", "d"]], out: "pre-order: 1, 2, 4 …", cap: "<b>Pre-order</b> visits the node <i>before</i> its children. Use it when the parent's answer must be known first, copying a tree, printing structure." },
-    { on: ["d", "b", "e"], dim: ["a", "c", "f"], out: "in-order: 4, 2, 5 …", cap: "<b>In-order</b> visits left, then the node, then right. On a search tree this prints the values <b>in sorted order</b>, the invariant read out loud." },
-    { on: ["d", "e", "b"], dim: ["a", "c", "f"], out: "post-order: 4, 5, 2 …", cap: "<b>Post-order</b> visits the node <i>after</i> its children. Use it when your answer is built from theirs, height, sums, deleting a tree." },
-    { on: ["a", "b", "c"], dim: ["d", "e", "f"], out: "BFS by level: 1 | 2, 3 | 4, 5, 6", cap: "Those three are all depth-first, driven by the call stack. Swap in a <b>queue</b> and you get level order instead, the shape you need for 'shortest' and 'per level' questions." },
-    { on: ["a", "b", "d"], dim: ["c", "e", "f"], out: "height 3 balanced ≈ log n · skewed = n", cap: "Everything costs <b>O(h)</b>. That is O(log n) only while the tree stays bushy. Degenerate it into a line and every operation is O(n), a linked list wearing a tree costume." },
+    { scene: `<span class="kicker">Why this example</span><p>An org chart where each manager has at most two direct reports. For every person, count everyone under them, themselves included.</p><table><tr><td>1</td><td>runs the company</td></tr><tr><td>2, 3</td><td>report to 1</td></tr><tr><td>4, 5</td><td>report to 2</td></tr><tr><td>6</td><td>reports to 3</td></tr></table><p>Goal: get every count while visiting each person <b>once</b>, and meet the traversal orders on the way.</p>`,
+      cap: "Each box is a person. Lines join a manager to their reports. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Ek org chart jahan har manager ke zyada se zyada do direct reports hain. Har insaan ke liye unke neeche sabko gino, khud ko milakar.</p><table><tr><td>1</td><td>company chalata hai</td></tr><tr><td>2, 3</td><td>1 ko report karte hain</td></tr><tr><td>4, 5</td><td>2 ko report karte hain</td></tr><tr><td>6</td><td>3 ko report karta hai</td></tr></table><p>Goal: har insaan ko <b>ek baar</b> dekh kar har ginti nikaalna, aur raaste mein traversal orders se milna.</p>`,
+            cap: "Har box ek insaan hai. Lines manager ko uske reports se jodti hain. Next dabao." } },
+
+    { on: ["a"], dim: ["b", "c", "d", "e", "f"], out: "count(p) = 1 + count(left) + count(right)",
+      cap: "Person 1's count needs the counts of 2's group and 3's group. Trust that those are solvable, and add 1 for person 1.",
+      ask: { q: "Person 2 together with 4 and 5: is that a tree too?", opts: ["yes, with 2 as its root", "no, only a piece of one"], a: 0,
+             why: "It has a root and branches of the same shape, so the same function works on it." },
+      hi: { out: "count(p) = 1 + count(left) + count(right)",
+            cap: "Insaan 1 ki ginti ko 2 ke group aur 3 ke group ki ginti chahiye. Bharosa karo ki woh solve ho sakte hain, aur insaan 1 ke liye 1 jodo.",
+            ask: { q: "Insaan 2, 4 aur 5 ke saath: kya yeh bhi tree hai?", opts: ["haan, 2 uska root hai", "nahi, bas ek ka tukda"],
+                   why: "Iska root hai aur usi shape ki branches, to wahi function is par chalta hai." } } },
+
+    { t: { d: "4:1", e: "5:1" }, on: ["d", "e"], dim: ["a", "c", "f"], out: "leaves: 1 + 0 + 0 = 1 each",
+      cap: "The walk goes down to the <b>leaves</b>, 4 and 5, which have no reports. Each counts 1: themselves, plus 0 for each empty spot below.",
+      ask: { q: "count(2) = 1 + count(4) + count(5). What is it?", opts: ["3", "2"], a: 0,
+             why: "1 for person 2, plus 1 and 1 for the two leaves." },
+      hi: { out: "leaves: 1 + 0 + 0 = 1 har ek",
+            cap: "Walk <b>leaves</b> tak neeche jaati hai, 4 aur 5, jinke koi report nahi. Har ek 1 gina jaata hai: khud, plus neeche ki har khaali jagah ka 0.",
+            ask: { q: "count(2) = 1 + count(4) + count(5). Kya hai?", opts: ["3", "2"],
+                   why: "Insaan 2 ka 1, plus dono leaves ka 1 aur 1." } } },
+
+    { t: { d: "4:1", e: "5:1", b: "2:3" }, on: ["b", "d", "e"], edge: [["b", "d"], ["b", "e"]], dim: ["a", "c", "f"], out: "count(2) = 1 + 1 + 1 = 3",
+      cap: "Person 2 is finished only <i>after</i> both reports. Handling a node after its children is <b>post-order</b>, the order any “built from the children” answer needs.",
+      ask: { q: "On the right, 6 is a leaf and 3 has only 6 under it. What is count(3)?", opts: ["2", "3"], a: 0,
+             why: "1 for person 3, 0 for the empty left spot, 1 for person 6." },
+      hi: { out: "count(2) = 1 + 1 + 1 = 3",
+            cap: "Insaan 2 dono reports ke <i>baad</i> hi poora hota hai. Node ko children ke baad sambhalna <b>post-order</b> hai, har “children se bana” answer ko yahi order chahiye.",
+            ask: { q: "Right side par 6 leaf hai aur 3 ke neeche sirf 6. count(3) kya hai?", opts: ["2", "3"],
+                   why: "Insaan 3 ka 1, khaali left jagah ka 0, insaan 6 ka 1." } } },
+
+    { t: { d: "4:1", e: "5:1", b: "2:3", f: "6:1", c: "3:2" }, on: ["c", "f"], edge: [["c", "f"]], dim: ["a", "d", "e"], out: "count(3) = 1 + 0 + 1 = 2",
+      cap: "The empty left spot under 3 counts 0. That base case is why every tree function starts by checking for null.",
+      hi: { out: "count(3) = 1 + 0 + 1 = 2",
+            cap: "3 ke neeche khaali left jagah 0 gini jaati hai. Isi base case ki wajah se har tree function null check se shuru hota hai." } },
+
+    { t: { d: "4:1", e: "5:1", b: "2:3", f: "6:1", c: "3:2", a: "1:6" }, on: ["a", "b", "c"], edge: [["a", "b"], ["a", "c"]], out: "count(1) = 1 + 3 + 2 = 6: each person visited once",
+      cap: "<b>count(1) = 6.</b> Six people, six calls, O(<var>n</var>). Walking down from every person separately would repeat work; on a chain of 10⁵ that is 5 × 10⁹ steps.",
+      ask: { q: "To print the chart top-down, every boss before their reports, which order?", opts: ["pre-order: a node before its children", "post-order: a node after its children"], a: 0,
+             why: "A boss must appear before the people under them." },
+      hi: { out: "count(1) = 1 + 3 + 2 = 6: har insaan ek baar",
+            cap: "<b>count(1) = 6.</b> Chhe log, chhe calls, O(<var>n</var>). Har insaan se alag neeche chalna kaam dohraata; 10⁵ ki chain par yeh 5 × 10⁹ steps.",
+            ask: { q: "Chart upar se neeche print karna hai, har boss apne reports se pehle. Kaunsa order?", opts: ["pre-order: node apne children se pehle", "post-order: node apne children ke baad"],
+                   why: "Boss ko apne neeche ke logon se pehle aana chahiye." } } },
+
+    { on: ["a", "b", "d", "e", "c", "f"], out: "pre: 1 2 4 5 3 6 · in: 4 2 5 1 3 6 · post: 4 5 2 6 3 1",
+      cap: "The same walk, recorded at three moments. <b>Pre-order</b> writes a node on arrival, <b>in-order</b> between its children, <b>post-order</b> on leaving. Only the position of one line in the code changes.",
+      hi: { out: "pre: 1 2 4 5 3 6 · in: 4 2 5 1 3 6 · post: 4 5 2 6 3 1",
+            cap: "Wahi walk, teen palon par likhi hui. <b>Pre-order</b> node ko aate hi likhta hai, <b>in-order</b> uske children ke beech, <b>post-order</b> jaate waqt. Code mein sirf ek line ki jagah badalti hai." } },
+
+    { on: ["b", "c"], dim: ["d", "e", "f"], out: "by level, with a queue: 1 | 2, 3 | 4, 5, 6",
+      cap: "Swap the call stack for a <b>queue</b> and the walk goes level by level: 1, then 2 and 3, then 4, 5 and 6. Every cost here is <b>O(<var>h</var>)</b> per path: 2 levels below the root in this chart, but <var>n</var> if every manager had one report.",
+      hi: { out: "level by level, queue ke saath: 1 | 2, 3 | 4, 5, 6",
+            cap: "Call stack ki jagah <b>queue</b> lagao aur walk level by level chalti hai: 1, phir 2 aur 3, phir 4, 5 aur 6. Yahan har path ki cost <b>O(<var>h</var>)</b> hai: is chart mein root ke neeche 2 levels, par <var>n</var> agar har manager ka ek hi report hota." } },
   ]
 },
 
@@ -1429,6 +1564,8 @@ Object.assign(VIZ, {
 /* ---- search trees, graphs, and shortest paths ---- */
 Object.assign(VIZ, {
 
+/* Booking start times 1, 3, 6, 8, 10, 14, with 8 at the root. The last two
+   frames build a second tree from 1, 3, 6, 8 inserted in order: a line. */
 "bst": {
   kind: "tree", w: 600, h: 300,
   nodes: {
@@ -1446,24 +1583,51 @@ Object.assign(VIZ, {
   edges: [["a","b"],["a","c"],["b","d"],["b","e"],["c","f"],
           ["s1","s2"],["s2","s3"],["s3","s4"]],
   frames: [
-    { show: ["a","b","c","d","e","f"], on: ["a"],
-      out: "everything left < 8 < everything right",
-      cap: "A search tree adds one rule to a binary tree: <b>every value in the left subtree is smaller, every value on the right is larger</b>. Not just the children. The entire subtree." },
-    { show: ["a","b","c","d","e","f"], on: ["a"], dim: ["c","f"],
-      out: "looking for 6:  6 < 8, so go left",
-      cap: "That rule is what makes searching cheap. 6 is less than 8, so it cannot be anywhere on the right. <b>Half the tree is gone after one comparison</b>, which should sound familiar." },
-    { show: ["a","b","c","d","e","f"], on: ["b"], dim: ["c","f","d"],
-      out: "6 > 3, so go right",
-      cap: "Same decision again, on a tree half the size. This is binary search, except the halving is built into the shape instead of computed from indices." },
-    { show: ["a","b","c","d","e","f"], hot: ["e"], dim: ["c","f","d"],
-      out: "found in 3 comparisons, not 6",
-      cap: "Found. Insert and delete follow the identical path, which is why all three cost <b>O(h)</b>." },
-    { show: ["a","b","c","d","e","f"], on: ["d","b","e","a","c","f"],
-      out: "in-order walk:  1, 3, 6, 8, 10, 14",
-      cap: "Walk it in-order (left, node, right) and the values come out <b>sorted</b>. That is not a happy accident, it is the invariant being read aloud." },
-    { show: ["s1","s2","s3","s4"], bad: ["s1","s2","s3","s4"],
-      out: "insert 1, 3, 6, 8 in order  ->  h = n",
-      cap: "And here is the catch nobody mentions until it is too late. Insert <b>sorted</b> data and every value goes right, giving you a linked list with extra steps. Every O(log n) claim becomes <b>O(n)</b>. Self-balancing trees exist entirely to prevent this picture." },
+    { scene: `<span class="kicker">Why this example</span><p>Six booking start times, and the system's favourite question: <b>what is the first booking at or after time t?</b></p><table><tr><td>bookings</td><td>1, 3, 6, 8, 10, 14</td></tr><tr><td>find</td><td>6</td></tr><tr><td>first at or after 7</td><td>8</td></tr></table><p>A sorted array answers fast but inserts slowly. Goal: keep the fast answers <i>and</i> cheap inserts, by storing the halving in the shape of a tree.</p>`,
+      cap: "The tree below holds the six times, with 8 at the root. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Chhe booking start times, aur system ka pasandeeda sawaal: <b>time t par ya uske baad pehli booking kaunsi?</b></p><table><tr><td>bookings</td><td>1, 3, 6, 8, 10, 14</td></tr><tr><td>dhoondho</td><td>6</td></tr><tr><td>7 par ya baad pehli</td><td>8</td></tr></table><p>Sorted array jaldi answer deta hai par insert dheere. Goal: tez answers <i>aur</i> saste inserts dono, aadha karne ko tree ki shape mein rakh kar.</p>`,
+            cap: "Neeche ka tree chhe times rakhta hai, root par 8. Next dabao." } },
+
+    { show: ["a","b","c","d","e","f"], on: ["a"], out: "everything left < 8 < everything right",
+      cap: "One rule: <b>every value in the left subtree is smaller, every value in the right subtree is larger</b>. Not just the children: the whole subtree. 1, 3 and 6 are all below 8; 10 and 14 are all above.",
+      ask: { q: "Looking for 6. Compare with 8 first. Where can 6 be?", opts: ["only on the left: 6 < 8", "on either side"], a: 0,
+             why: "Everything on the right is larger than 8, so 6 cannot be there." },
+      hi: { out: "left mein sab < 8 < right mein sab",
+            cap: "Ek niyam: <b>left subtree ki har value chhoti, right subtree ki har value badi</b>. Sirf children nahi: poora subtree. 1, 3 aur 6 sab 8 se neeche; 10 aur 14 sab upar.",
+            ask: { q: "6 dhoondh rahe ho. Pehle 8 se compare. 6 kahan ho sakta hai?", opts: ["sirf left mein: 6 < 8", "kisi bhi taraf"],
+                   why: "Right mein sab 8 se bada hai, to 6 wahan nahi ho sakta." } } },
+
+    { show: ["a","b","c","d","e","f"], on: ["a", "b"], edge: [["a","b"]], dim: ["c","f"], out: "6 < 8: the whole right side is gone",
+      cap: "One comparison removed half the tree. That is binary search again, except the halving is built into the shape instead of worked out from indexes.",
+      ask: { q: "Now compare with 3. Which way?", opts: ["right: 6 > 3", "left: 6 < 3"], a: 0,
+             why: "6 is bigger than 3, and 3's right subtree holds the values between 3 and 8." },
+      hi: { out: "6 < 8: poori right side gayi",
+            cap: "Ek comparison ne aadha tree hata diya. Yeh phir binary search hai, bas aadha karna indexes se nikaalne ki jagah shape mein bana hai.",
+            ask: { q: "Ab 3 se compare. Kidhar?", opts: ["right: 6 > 3", "left: 6 < 3"],
+                   why: "6, 3 se bada hai, aur 3 ka right subtree 3 aur 8 ke beech ki values rakhta hai." } } },
+
+    { show: ["a","b","c","d","e","f"], hot: ["e"], on: ["a","b"], edge: [["a","b"],["b","e"]], dim: ["c","f","d"], out: "found 6 in 3 comparisons",
+      cap: "Found. “First booking at or after 7” walks the same path: 8 is a candidate, go left; 3 and 6 are too small, go right; nothing there, so the answer is 8. Inserting 7 also ends here, as 6's right child. Each is <b>O(<var>h</var>)</b>.",
+      ask: { q: "Walk the whole tree in-order: left, node, right. What order do the values come out in?", opts: ["sorted: 1, 3, 6, 8, 10, 14", "the order they were inserted"], a: 0,
+             why: "At every node, smaller things come out before it and larger things after it." },
+      hi: { out: "3 comparisons mein 6 mila",
+            cap: "Mil gaya. “7 par ya baad pehli booking” yahi raasta chalti hai: 8 candidate hai, left jao; 3 aur 6 chhote hain, right jao; wahan kuch nahi, to answer 8. 7 insert karna bhi yahin khatam hota hai, 6 ke right child ki tarah. Har ek <b>O(<var>h</var>)</b>.",
+            ask: { q: "Poora tree in-order chalo: left, node, right. Values kis order mein aayengi?", opts: ["sorted: 1, 3, 6, 8, 10, 14", "jis order mein insert hui"],
+                   why: "Har node par chhoti cheezein usse pehle aur badi baad mein aati hain." } } },
+
+    { show: ["a","b","c","d","e","f"], on: ["d","b","e","a","c","f"], out: "in-order: 1, 3, 6, 8, 10, 14",
+      cap: "<b>Sorted.</b> Not an accident: it is the rule read aloud. The <var>k</var>-th smallest booking is this walk, stopped after <var>k</var> values.",
+      ask: { q: "Now build a new tree by inserting 1, 3, 6, 8 in that order. What shape do you get?", opts: ["a bushy tree like this one", "a straight line going right"], a: 1,
+             why: "Each new value is larger than everything before it, so it always goes right." },
+      hi: { out: "in-order: 1, 3, 6, 8, 10, 14",
+            cap: "<b>Sorted.</b> Ittefaq nahi: yeh niyam zor se padha gaya hai. <var>k</var>-th sabse chhoti booking yahi walk hai, <var>k</var> values ke baad roki hui.",
+            ask: { q: "Ab 1, 3, 6, 8 isi order mein insert karke naya tree banao. Kya shape milegi?", opts: ["is jaisa ghana tree", "right ki taraf seedhi line"],
+                   why: "Har nayi value pehle wali sab se badi hai, to hamesha right jaati hai." } } },
+
+    { show: ["s1","s2","s3","s4"], bad: ["s1","s2","s3","s4"], edge: [["s1","s2"],["s2","s3"],["s3","s4"]], out: "insert 1, 3, 6, 8 in order: h = n - 1",
+      cap: "A linked list with extra steps. Times usually arrive in order, so this is the common case, not a trick. Every O(log <var>n</var>) becomes <b>O(<var>n</var>)</b>. Self-balancing trees, like Java's TreeMap, exist to prevent exactly this picture.",
+      hi: { out: "1, 3, 6, 8 order mein insert: h = n - 1",
+            cap: "Extra steps wali linked list. Times aksar order mein aate hain, to yeh common case hai, chaal nahi. Har O(log <var>n</var>) <b>O(<var>n</var>)</b> ban jaata hai. Self-balancing trees, jaise Java ka TreeMap, theek isi tasveer ko rokne ke liye hain." } },
   ]
 },
 
@@ -1662,10 +1826,12 @@ Object.assign(VIZ, {
 
 /* ---- a trie: the shared prefix IS the shared path ---- */
 Object.assign(VIZ, {
+/* The dictionary car, cart, care, dog, built one word at a time, then asked
+   the two questions that matter: is "ca" a word, and what starts with "car"? */
 "trie": {
   kind: "tree", w: 570, h: 330,
   nodes: {
-    root: { x: 300, y: 34,  t: "\u25cf", w: 44, hidden: true },
+    root: { x: 300, y: 34,  t: "●", w: 44, hidden: true },
     c:    { x: 205, y: 100, t: "c", hidden: true },
     a:    { x: 205, y: 166, t: "a", hidden: true },
     r:    { x: 205, y: 232, t: "r", sub: "end", hidden: true },
@@ -1678,28 +1844,59 @@ Object.assign(VIZ, {
   edges: [["root","c"],["c","a"],["a","r"],["r","t"],["r","e"],
           ["root","d"],["d","o"],["o","g"]],
   frames: [
-    { show: ["root","c","a","r"], on: ["c","a","r"],
-      out: "insert \"car\": one node per character",
-      cap: "Each <b>edge</b> is a character, so a node is not a letter, it is the whole prefix spelled by the path that reached it. The node marked <i>end</i> says a real word finishes here." },
-    { show: ["root","c","a","r","t"], on: ["c","a","r"], hot: ["t"],
-      out: "insert \"cart\": one new node, not four",
-      cap: "\"cart\" already agrees with \"car\" for three characters, so it reuses that path and adds a single node. <b>Shared prefixes cost nothing twice.</b>" },
-    { show: ["root","c","a","r","t","e"], on: ["c","a","r"], hot: ["e"],
-      out: "insert \"care\": again, one new node",
-      cap: "Three words, one spine. The overlap that a hash table deliberately destroys is exactly what this structure is built out of." },
-    { show: ["root","c","a","r","t","e","d","o","g"], on: ["d","o","g"], dim: ["c","a","r","t","e"],
-      out: "insert \"dog\": nothing in common, so nothing shared",
-      cap: "No shared prefix means a separate branch. A trie is only compact when the words actually overlap, which is the honest limit of the idea." },
-    { show: ["root","c","a","r","t","e","d","o","g"], on: ["c","a"], bad: ["a"],
-      dim: ["r","t","e","d","o","g"],
-      out: "search \"ca\": the node exists, but it is not an end",
-      cap: "Walking to a node only proves the <b>prefix</b> exists. Without the end flag the trie would happily claim it contains \"ca\", which is the first bug everyone writes." },
-    { show: ["root","c","a","r","t","e","d","o","g"], on: ["c","a","r"], hot: ["t","e"],
-      dim: ["d","o","g"],
-      out: "prefix \"car\" -> everything below is a match",
-      cap: "Autocomplete is this: walk the prefix, then collect whatever hangs beneath. Cost is <b>the length of the prefix</b> plus the number of answers, and crucially not the number of words stored." },
+    { scene: `<span class="kicker">Why this example</span><p>An autocomplete box. Type <code>car</code>, and it should offer every stored word that starts that way.</p><table><tr><td>dictionary</td><td>car, cart, care, dog</td></tr><tr><td>typed so far</td><td>car</td></tr><tr><td>should offer</td><td>car, cart, care</td></tr></table><p>A hash set would test all four words, and with 10⁶ words that is 10⁶ tests per keystroke. Goal: answer with a walk of 3 steps, one per typed letter.</p>`,
+      cap: "The dot at the top is the root, the empty prefix. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Ek autocomplete box. <code>car</code> type karo, aur woh har stored word dikhaye jo aise shuru hota hai.</p><table><tr><td>dictionary</td><td>car, cart, care, dog</td></tr><tr><td>ab tak type</td><td>car</td></tr><tr><td>dikhana chahiye</td><td>car, cart, care</td></tr></table><p>Hash set chaaron words test karta, aur 10⁶ words ke saath yeh har keystroke par 10⁶ tests. Goal: 3 steps ki walk se answer, har typed letter ka ek.</p>`,
+            cap: "Upar ka dot root hai, khaali prefix. Next dabao." } },
+
+    { show: ["root","c","a","r"], on: ["c","a","r"], out: "insert \"car\": one node per letter",
+      cap: "Each <b>edge</b> is a letter, so a node is not a letter: it is the whole prefix spelled by the path to it. The node marked <i>end</i> says a real word finishes here.",
+      ask: { q: "Now insert \"cart\". How many new nodes does it need?", opts: ["1: the t", "4: c, a, r, t"], a: 0,
+             why: "“cart” agrees with “car” for three letters, so it reuses that path." },
+      hi: { out: "\"car\" insert: har letter ka ek node",
+            cap: "Har <b>edge</b> ek letter hai, to node letter nahi: woh wahan tak ke raaste se bana poora prefix hai. <i>end</i> wala node batata hai ki yahan ek asli word khatam hota hai.",
+            ask: { q: "Ab \"cart\" insert karo. Kitne naye nodes chahiye?", opts: ["1: t", "4: c, a, r, t"],
+                   why: "“cart” teen letters tak “car” se agree karta hai, to wahi raasta dobara use karta hai." } } },
+
+    { show: ["root","c","a","r","t"], on: ["c","a","r"], hot: ["t"], out: "insert \"cart\": one new node, not four",
+      cap: "“cart” reuses c, a, r and adds a single node. <b>Shared prefixes are never paid for twice.</b>",
+      hi: { out: "\"cart\" insert: ek naya node, chaar nahi",
+            cap: "“cart” c, a, r dobara use karta hai aur sirf ek node jodta hai. <b>Shared prefixes ki keemat kabhi do baar nahi.</b>" } },
+
+    { show: ["root","c","a","r","t","e"], on: ["c","a","r"], hot: ["e"], out: "insert \"care\": again, one new node",
+      cap: "Three words, one spine. The likeness that a hash table deliberately destroys is exactly what this structure is built from.",
+      ask: { q: "Insert \"dog\". How much of the existing trie can it share?", opts: ["nothing: a new branch", "the c branch"], a: 0,
+             why: "“dog” starts with d, and no stored word does, so it shares nothing." },
+      hi: { out: "\"care\" insert: phir ek naya node",
+            cap: "Teen words, ek reedh. Jo milaap hash table jaan-boojh kar mitaata hai, yeh structure theek usi se bana hai.",
+            ask: { q: "\"dog\" insert karo. Maujooda trie ka kitna hissa share kar sakta hai?", opts: ["kuch nahi: nayi branch", "c wali branch"],
+                   why: "“dog” d se shuru hota hai, aur koi stored word nahi, to kuch share nahi karta." } } },
+
+    { show: ["root","c","a","r","t","e","d","o","g"], on: ["d","o","g"], dim: ["c","a","r","t","e"], out: "insert \"dog\": nothing shared",
+      cap: "No shared prefix means a separate branch. A trie is only compact when the words really overlap: the honest limit of the idea.",
+      ask: { q: "search(\"ca\"): you walk c, then a, and arrive at a real node. Is \"ca\" a stored word?", opts: ["no: that node is not marked end", "yes: the node exists"], a: 0,
+             why: "The node exists because “car” passed through it. Only nodes marked end are words." },
+      hi: { out: "\"dog\" insert: kuch shared nahi",
+            cap: "Shared prefix nahi, to alag branch. Trie tabhi chhota hai jab words sach mein overlap karein: idea ki imaandaar hadd.",
+            ask: { q: "search(\"ca\"): c, phir a chalte ho, aur ek asli node par pahunchte ho. Kya \"ca\" stored word hai?", opts: ["nahi: node end marked nahi", "haan: node hai"],
+                   why: "Node isliye hai kyunki “car” usse guzra. Sirf end marked nodes words hain." } } },
+
+    { show: ["root","c","a","r","t","e","d","o","g"], on: ["c"], bad: ["a"], dim: ["r","t","e","d","o","g"], out: "search \"ca\": node exists, not an end",
+      cap: "Reaching a node only proves the <b>prefix</b> exists. Without the end flag, the trie would claim to contain “ca”: the first bug everyone writes.",
+      ask: { q: "startsWith(\"car\"): walk c, a, r. What do you collect below?", opts: ["car, cart, care", "only car"], a: 0,
+             why: "Every end-marked node at or below “car” is a word with that prefix." },
+      hi: { out: "search \"ca\": node hai, end nahi",
+            cap: "Node par pahunchna sirf <b>prefix</b> ka hona saabit karta hai. End flag ke bina trie daava karta ki “ca” hai: pehla bug jo sab likhte hain.",
+            ask: { q: "startsWith(\"car\"): c, a, r chalo. Neeche kya jama karoge?", opts: ["car, cart, care", "sirf car"],
+                   why: "“car” par ya uske neeche har end-marked node us prefix wala word hai." } } },
+
+    { show: ["root","c","a","r","t","e","d","o","g"], on: ["c","a","r"], hot: ["t","e"], dim: ["d","o","g"], out: "prefix \"car\": car, cart, care",
+      cap: "Autocomplete is exactly this: walk the prefix, then collect what hangs below. The cost is <b>the length of the prefix</b> plus the answers, and not the number of words stored.",
+      hi: { out: "prefix \"car\": car, cart, care",
+            cap: "Autocomplete theek yahi hai: prefix chalo, phir neeche latka hua jama karo. Cost <b>prefix ki length</b> plus answers hai, stored words ki ginti nahi." } },
   ]
 },
+
 });
 
 /* ---- greedy, union-find, topological order, monotonic stack ---- */
@@ -1939,6 +2136,8 @@ Object.assign(VIZ, {
     hi: { cap: "Isiliye problems <b>10⁹ + 7</b> lete hain. Yeh prime hai, to kisi bhi chhote <var>b</var> ke saath common factor nahi, aur har <var>b</var> ka inverse milta hai. Arab ghante ki ghadi koi nahi ghoomta: Fermat ka shortcut <code>inv(b) = b^(m−2) mod m</code> lagbhag 30 squaring mein ho jaata hai. Yahan try karo: 2⁵ = 32, jo dabba 4 hai." } },
 ]},
 
+/* Readings [3, 1, 4, 1]: one range question (positions 1..3) and one
+   change (position 2 from 4 to 6), each touching one node per level. */
 "segment-tree": {
   kind: "tree", w: 600, h: 260,
   nodes: {
@@ -1952,20 +2151,47 @@ Object.assign(VIZ, {
   },
   edges: [["root","l"],["root","r"],["l","a"],["l","b"],["r","c"],["r","d"]],
   frames: [
-    { on: ["root"], out: "array [3, 1, 4, 1]. Each node stores its range's total.",
-      cap: "Split the array in half, then in half again, and store an aggregate at every node. The leaves are the elements, the root covers everything." },
-    { on: ["b","r"], hot: ["b","r"], dim: ["a","c","d"],
-      out: "query [1,3] = node [1] + node [2,3] = 1 + 5 = 6",
-      cap: "A query does not walk the leaves. It <b>tiles the range with whole nodes</b>, and any range needs at most O(log n) of them. Two nodes here instead of three elements, and the gap widens fast." },
-    { t: { c: "6", r: "7", root: "11" }, hot: ["c"], on: ["r","root"], dim: ["a","b","d"],
-      out: "update a[2] = 6: fix the leaf, then every ancestor",
-      cap: "An update changes one leaf and every node above it, which is one root-to-leaf path: <b>O(log n)</b>. Both operations are logarithmic, which is the whole reason to build this." },
-    { on: ["root","l","r","a","b","c","d"],
-      out: "the operation only has to be ASSOCIATIVE",
-      cap: "Nothing here assumed addition. Swap in min, max or gcd and the same tree answers those instead. That generality is what justifies the code, because a prefix array can only ever do sums." },
-    { bad: ["root","l","r"], dim: ["a","b","c","d"],
-      out: "if the array never changes, do not build this",
-      cap: "Static data means prefix sums: O(1) queries, ten lines, no tree. Reach for a segment tree only when the array is <b>changing between queries</b>." },
+    { scene: `<span class="kicker">Why this example</span><p>Readings keep changing, and people keep asking for the total of a stretch. Here are four:</p><table><tr><td>readings</td><td>[3, 1, 4, 1]</td></tr><tr><td>total of positions 1..3</td><td>1 + 4 + 1 = 6</td></tr><tr><td>then position 2 becomes</td><td>6, so the total is 8</td></tr></table><p>A plain array is slow at the total; running totals are slow at the change. Goal: both in about log₂ <var>n</var> steps, using stored totals of blocks.</p>`,
+      cap: "Each box stores the total of the range under it; the small label is that range. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Readings badalti rehti hain, aur log hisse ka total poochhte rehte hain. Yeh rahi chaar:</p><table><tr><td>readings</td><td>[3, 1, 4, 1]</td></tr><tr><td>positions 1..3 ka total</td><td>1 + 4 + 1 = 6</td></tr><tr><td>phir position 2 banti hai</td><td>6, to total 8</td></tr></table><p>Plain array total mein slow, running totals change mein. Goal: dono lagbhag log₂ <var>n</var> steps mein, blocks ke stored totals se.</p>`,
+            cap: "Har box apne neeche ki range ka total rakhta hai; chhota label wahi range hai. Next dabao." } },
+
+    { on: ["root"], out: "[3, 1, 4, 1]: every node stores its range's total",
+      cap: "The root covers everything: 9. Its halves hold 4 and 5, and the leaves are the readings. Every node is the sum of its two children.",
+      ask: { q: "Total of positions 1..3. Which stored boxes cover exactly that range?", opts: ["[1] and [2,3]: two boxes", "[1], [2] and [3]: three leaves"], a: 0,
+             why: "The box [2,3] already holds 4 + 1. Reading it beats reading its two leaves." },
+      hi: { out: "[3, 1, 4, 1]: har node apni range ka total rakhta hai",
+            cap: "Root sab cover karta hai: 9. Uske aadhe 4 aur 5 rakhte hain, aur leaves readings hain. Har node apne do children ka sum hai.",
+            ask: { q: "Positions 1..3 ka total. Kaunse stored boxes theek wahi range dhakte hain?", opts: ["[1] aur [2,3]: do boxes", "[1], [2] aur [3]: teen leaves"],
+                   why: "Box [2,3] pehle se 4 + 1 rakhta hai. Use padhna uske do leaves padhne se behtar." } } },
+
+    { on: ["b","r"], hot: ["b","r"], dim: ["a","c","d"], out: "positions 1..3 = [1] + [2,3] = 1 + 5 = 6",
+      cap: "A question does not walk the leaves. It <b>covers the range with whole boxes</b>, at most two per level: <b>O(log <var>n</var>)</b>. Two boxes here instead of three readings, and the gap grows fast.",
+      ask: { q: "Now position 2 changes from 4 to 6. Which boxes must be fixed?", opts: ["the leaf [2], then [2,3], then the root", "every box in the tree"], a: 0,
+             why: "Only boxes whose range contains position 2 are now wrong: one per level." },
+      hi: { out: "positions 1..3 = [1] + [2,3] = 1 + 5 = 6",
+            cap: "Sawaal leaves nahi chalta. Woh <b>range ko poore boxes se dhakta hai</b>, har level par zyada se zyada do: <b>O(log <var>n</var>)</b>. Yahan teen readings ki jagah do boxes, aur farak tezi se badhta hai.",
+            ask: { q: "Ab position 2, 4 se 6 hoti hai. Kaunse boxes theek karne hain?", opts: ["leaf [2], phir [2,3], phir root", "tree ka har box"],
+                   why: "Sirf woh boxes galat hain jinki range mein position 2 hai: har level par ek." } } },
+
+    { t: { c: "6", r: "7", root: "11" }, hot: ["c"], on: ["r","root"], dim: ["a","b","d"], out: "change a[2] = 6: leaf, then [2,3] = 7, then root = 11",
+      cap: "One leaf and its ancestors: one root-to-leaf path, <b>O(log <var>n</var>)</b>. The question from before now reads 1 + 7 = 8, still from two boxes.",
+      ask: { q: "Could the same tree answer the <b>minimum</b> of a range instead of the sum?", opts: ["yes: store the min of the two halves", "no: this only works for sums"], a: 0,
+             why: "A box only needs to be built from its two halves. Minimum works that way too." },
+      hi: { out: "a[2] = 6: leaf, phir [2,3] = 7, phir root = 11",
+            cap: "Ek leaf aur uske ancestors: ek root-to-leaf raasta, <b>O(log <var>n</var>)</b>. Pehle wala sawaal ab 1 + 7 = 8 padhta hai, ab bhi do boxes se.",
+            ask: { q: "Kya yahi tree sum ki jagah range ka <b>minimum</b> de sakta hai?", opts: ["haan: do aadhon ka min rakho", "nahi: yeh sirf sums ke liye"],
+                   why: "Box ko bas apne do aadhon se banna hai. Minimum bhi aise hi banta hai." } } },
+
+    { on: ["root","l","r","a","b","c","d"], out: "any ASSOCIATIVE operation works",
+      cap: "Nothing here assumed addition. Swap in min, max or gcd and the same tree answers those. A running-totals array can only ever do sums, and a Fenwick tree only things you can subtract.",
+      hi: { out: "koi bhi ASSOCIATIVE operation chalta hai",
+            cap: "Yahan kuch addition maan kar nahi hua. Min, max ya gcd daalo aur wahi tree unka answer deta hai. Running-totals array sirf sums kar sakta hai, aur Fenwick tree sirf woh jo ghataya ja sake." } },
+
+    { bad: ["root","l","r"], dim: ["a","b","c","d"], out: "if the readings never change, do not build this",
+      cap: "Static data means running totals: O(1) questions, ten lines, no tree. Reach for a segment tree only when the array <b>changes between questions</b>.",
+      hi: { out: "readings kabhi na badlein, to yeh mat banao",
+            cap: "Static data matlab running totals: O(1) sawaal, das lines, koi tree nahi. Segment tree tabhi lo jab array <b>sawaalon ke beech badle</b>." } },
   ]
 },
 
@@ -2079,6 +2305,8 @@ Object.assign(VIZ, {
 ]},
 
 /* ---- LCA: one post-order pass, and what each subtree reports back ---- */
+/* The nine-person org chart. LCA(6, 4) = 5 is found by reports flowing up;
+   LCA(5, 4) = 5 shows why a target is its own ancestor. */
 "lca": {
   kind: "tree", w: 600, h: 336,
   nodes: {
@@ -2094,33 +2322,72 @@ Object.assign(VIZ, {
   },
   edges: [["r","a"],["r","b"],["a","c"],["a","d"],["b","e"],["b","f"],["d","g"],["d","h"]],
   frames: [
-    { on: ["c", "h"], dim: ["r", "b", "e", "f", "g"], out: "LCA(6, 4) = the LOWEST node with both of them below it",
-      cap: "Every node above the answer also has both targets below it, so 'an ancestor of both' is not enough. The word doing the work is <b>lowest</b>: the last node where the two paths are still the same path." },
-    { on: ["r", "a", "c", "d", "h"], edge: [["r","a"],["a","c"],["a","d"],["d","h"]], dim: ["b", "e", "f", "g"],
-      out: "root to 6 is [3, 5, 6] · root to 4 is [3, 5, 2, 4]",
-      cap: "The obvious method: record both root-to-target paths, walk them side by side, and the <b>last node they agree on</b> is the answer. Correct, and it costs O(n) extra space plus two full searches." },
-    { on: ["c", "h"], t: { g: "nil", e: "nil", f: "nil" }, dim: ["r", "a", "b", "d", "e", "f", "g"],
-      out: "ask every node one question: did you find either target below you?",
-      cap: "Now do it in one pass. Recurse to the bottom first, and have each node <b>report upward</b>. A node that is a target reports itself. A node that found nothing reports nothing." },
-    { on: ["c", "h", "d"], t: { g: "nil", e: "nil", f: "nil", d: "4" }, dim: ["r", "b", "e", "f", "g"],
-      out: "node 2 heard from ONE side only, so it forwards 4 unchanged",
-      cap: "Node 2 got 4 from the right and nothing from the left. One report means the other target is somewhere else entirely, so 2 is not the answer. It <b>passes the one report up</b> and stays out of the way." },
-    { on: ["a"], t: { g: "nil", e: "nil", f: "nil", d: "4", a: "5 LCA", b: "nil" }, dim: ["r", "b", "e", "f", "g"],
-      out: "node 5 heard from BOTH sides. That is the answer, and there is only one such node.",
-      cap: "Two non-empty reports means the targets are in different subtrees of this node, so the paths split <b>here</b> and nowhere lower. Report yourself upward instead of either child." },
-    { on: ["a", "r"], t: { g: "nil", e: "nil", f: "nil", d: "4", a: "5 LCA", b: "nil", r: "5" }, dim: ["b", "e", "f", "g"],
-      out: "everything above just forwards the single non-empty report",
-      cap: "The root hears 5 from the left and nothing from the right, so by the same rule it forwards 5. <b>The answer floats to the top on its own</b>, which is why the whole thing is one post-order function with no extra storage." },
-    { on: ["a", "d", "h"], edge: [["a","d"],["d","h"]], t: { a: "5 LCA" }, dim: ["r", "b", "c", "e", "f", "g"],
-      out: "LCA(5, 4): the recursion stops AT 5, and that is correct",
-      cap: "The case people try to special-case. When one target is an ancestor of the other, the walk hits 5, returns it immediately, and never looks below. <b>A node is its own ancestor</b>, so no extra branch is needed. Adding one usually breaks it." },
-    { on: ["r", "a", "b"], dim: ["c", "d", "e", "f", "g", "h"],
-      out: "O(n) per query, O(1) space. For many queries: O(n log n) build, O(log n) each.",
-      cap: "One query is a single traversal. Thousands of queries on the same tree are not: then you precompute, for every node, its ancestor 1, 2, 4, 8 steps up, and each query becomes a handful of jumps. That table is <b>binary lifting</b>." },
+    { scene: `<span class="kicker">Why this example</span><p>Employees 6 and 4 have a dispute. It goes to the <b>lowest</b> manager with both of them below. The chart only links managers down to their reports.</p><table><tr><td>3</td><td>top; 5 and 1 report to 3</td></tr><tr><td>5</td><td>6 and 2 report to 5</td></tr><tr><td>2</td><td>7 and 4 report to 2</td></tr><tr><td>1</td><td>0 and 8 report to 1</td></tr></table><p>Goal: find that manager in one pass, with nothing stored, by letting answers flow <b>up</b>.</p>`,
+      cap: "Each box is a person; lines join a manager to their reports. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Employees 6 aur 4 ka jhagda hai. Woh us <b>sabse neeche</b> wale manager ke paas jaata hai jiske neeche dono hon. Chart managers ko sirf neeche unke reports se jodta hai.</p><table><tr><td>3</td><td>top; 5 aur 1, 3 ko report karte hain</td></tr><tr><td>5</td><td>6 aur 2, 5 ko report karte hain</td></tr><tr><td>2</td><td>7 aur 4, 2 ko report karte hain</td></tr><tr><td>1</td><td>0 aur 8, 1 ko report karte hain</td></tr></table><p>Goal: woh manager ek pass mein dhoondhna, kuch store kiye bina, answers ko <b>upar</b> behne dekar.</p>`,
+            cap: "Har box ek insaan hai; lines manager ko reports se jodti hain. Next dabao." } },
+
+    { on: ["c", "h"], dim: ["b", "e", "f", "g"], out: "targets: 6 and 4",
+      cap: "Both 3 and 5 have 6 and 4 somewhere below them. So “above both” describes a whole chain of people. The question asks for the <b>lowest</b> one.",
+      ask: { q: "Which one is the answer?", opts: ["5, the lower one", "3, the top"], a: 0,
+             why: "Below 5 the two chains split: 6 on the left, 2 and then 4 on the right. 5 is the last person on both chains." },
+      hi: { out: "targets: 6 aur 4",
+            cap: "3 aur 5 dono ke neeche kahin 6 aur 4 hain. To “dono ke upar” logon ki poori chain batata hai. Sawaal <b>sabse neeche</b> wala maangta hai.",
+            ask: { q: "Answer kaun hai?", opts: ["5, neeche wala", "3, top"],
+                   why: "5 ke neeche do chains alag hoti hain: left mein 6, right mein 2 aur phir 4. 5 dono chains ka aakhri insaan hai." } } },
+
+    { on: ["r", "a", "c", "d", "h"], edge: [["r","a"],["a","c"],["a","d"],["d","h"]], dim: ["b", "e", "f", "g"], out: "paths: 3, 5, 6  and  3, 5, 2, 4",
+      cap: "The direct method: write out both paths from the top, walk them side by side, and keep the <b>last node they share</b>: 5. Correct, but it costs two full searches and two stored paths.",
+      hi: { out: "raaste: 3, 5, 6  aur  3, 5, 2, 4",
+            cap: "Seedha tareeka: upar se dono raaste likho, saath saath chalo, aur <b>aakhri shared node</b> rakho: 5. Sahi, par do poori searches aur do stored raaste lagte hain." } },
+
+    { on: ["c", "h"], t: { g: "nil", e: "nil", f: "nil" }, dim: ["r", "a", "b", "d", "e", "f", "g"], out: "the bottom reports first",
+      cap: "Now in one pass. Recurse to the bottom first; each person <b>reports up</b> one thing. A target reports itself: 6 says 6, and 4 says 4. Anyone who found nothing, like 7, 0 and 8, reports nil.",
+      ask: { q: "Person 2 hears 4 from the right and nil from the left. What does 2 report up?", opts: ["4, unchanged", "itself, 2"], a: 0,
+             why: "Only one target is below 2, so the other must be elsewhere. 2 is not where the chains split, so it just passes 4 along." },
+      hi: { out: "neeche wale pehle report karte hain",
+            cap: "Ab ek pass mein. Pehle neeche tak recurse karo; har insaan ek cheez <b>upar report</b> karta hai. Target khud ko report karta hai: 6 kehta hai 6, aur 4 kehta hai 4. Jise kuch nahi mila, jaise 7, 0 aur 8, woh nil report karta hai.",
+            ask: { q: "Insaan 2 right se 4 aur left se nil sunta hai. 2 upar kya report karta hai?", opts: ["4, bina badle", "khud ko, 2"],
+                   why: "2 ke neeche sirf ek target hai, to doosra kahin aur hai. 2 woh jagah nahi jahan chains alag hoti hain, to bas 4 aage bhejta hai." } } },
+
+    { on: ["c", "h", "d"], t: { g: "nil", e: "nil", f: "nil", d: "4" }, dim: ["r", "b", "e", "f", "g"], out: "2 forwards 4",
+      cap: "Node 2 heard from one side only, so it <b>forwards the single report</b> and stays out of the way.",
+      ask: { q: "Person 5 hears 6 from the left and 4 from the right. What does 5 report?", opts: ["itself: 5 is the answer", "just 6, the first it heard"], a: 0,
+             why: "Two reports mean the targets are in different subtrees of 5, so the chains split exactly here." },
+      hi: { out: "2, 4 aage bhejta hai",
+            cap: "Node 2 ne sirf ek taraf se suna, to woh <b>akeli report aage bhejta hai</b> aur beech mein nahi aata.",
+            ask: { q: "Insaan 5 left se 6 aur right se 4 sunta hai. 5 kya report karta hai?", opts: ["khud ko: 5 answer hai", "sirf 6, jo pehle suna"],
+                   why: "Do reports ka matlab targets 5 ke alag subtrees mein hain, to chains theek yahin alag hoti hain." } } },
+
+    { on: ["a"], t: { g: "nil", e: "nil", f: "nil", d: "4", a: "5 LCA", b: "nil" }, dim: ["r", "b", "e", "f", "g"], out: "5 heard from both sides: the answer",
+      cap: "Two non-empty reports: the paths split <b>here</b>, and nowhere lower. 5 reports itself upward, instead of either child's report.",
+      hi: { out: "5 ne dono taraf se suna: answer",
+            cap: "Do non-empty reports: raaste <b>yahin</b> alag hote hain, kahin neeche nahi. 5 kisi child ki report ki jagah khud ko upar report karta hai." } },
+
+    { on: ["a", "r"], t: { g: "nil", e: "nil", f: "nil", d: "4", a: "5 LCA", b: "nil", r: "5" }, dim: ["b", "e", "f", "g"], out: "3 hears 5 and nil: forwards 5",
+      cap: "The top hears 5 from the left and nil from the right, so by the same rule it forwards 5. <b>The answer floats to the top on its own.</b> One post-order function, nothing stored.",
+      ask: { q: "Now find LCA(5, 4): 4 is below 5. Where does the recursion stop on the left side?", opts: ["at 5 itself, which is the answer", "it must search below 5 for 4 first"], a: 0,
+             why: "A target returns itself at once. 5 is its own ancestor, so 5 is correct without looking below." },
+      hi: { out: "3 ne 5 aur nil suna: 5 aage",
+            cap: "Top left se 5 aur right se nil sunta hai, to usi niyam se 5 aage bhejta hai. <b>Answer khud upar tair aata hai.</b> Ek post-order function, kuch store nahi.",
+            ask: { q: "Ab LCA(5, 4) nikaalo: 4, 5 ke neeche hai. Left side par recursion kahan rukti hai?", opts: ["5 par hi, jo answer hai", "pehle 5 ke neeche 4 dhoondhna padega"],
+                   why: "Target turant khud ko lautata hai. 5 khud ka ancestor hai, to neeche dekhe bina 5 sahi hai." } } },
+
+    { on: ["a"], t: { a: "5 LCA" }, dim: ["r", "b", "c", "d", "e", "f", "g", "h"], out: "LCA(5, 4) = 5: the walk stops at 5",
+      cap: "The case people try to special-case. The walk reaches 5, sees a target, and returns it without looking below. <b>A node is its own ancestor</b>, so no extra branch is needed.",
+      hi: { out: "LCA(5, 4) = 5: walk 5 par rukti hai",
+            cap: "Woh case jise log alag se likhna chahte hain. Walk 5 par pahunchti hai, target dekhti hai, aur neeche dekhe bina lautaati hai. <b>Node khud ka ancestor hai</b>, to extra branch nahi chahiye." } },
+
+    { on: ["r", "a", "b"], dim: ["c", "d", "e", "f", "g", "h"], out: "one query O(n); many queries: binary lifting",
+      cap: "One query is one traversal: O(<var>n</var>) time, O(<var>h</var>) stack. For 10⁵ queries on the same chart, precompute each person's manager 1, 2, 4, 8 levels up. Then each query is a handful of jumps: <b>binary lifting</b>.",
+      hi: { out: "ek query O(n); bahut queries: binary lifting",
+            cap: "Ek query ek traversal hai: O(<var>n</var>) time, O(<var>h</var>) stack. Usi chart par 10⁵ queries ke liye har insaan ka 1, 2, 4, 8 level upar wala manager pehle nikaal lo. Phir har query kuch jumps hai: <b>binary lifting</b>." } },
   ]
 },
 
 /* ---- LRU: two structures, each covering the other's blind spot ---- */
+/* A three-entry cache holding A, B and C, with C used longest ago. Top row:
+   the hash map's keys. Bottom row: the list nodes, most recent on the left. */
 "lru": {
   kind: "tree", w: 620, h: 300, arrows: true,
   nodes: {
@@ -2135,27 +2402,56 @@ Object.assign(VIZ, {
   },
   edges: [["m1","n1"],["m2","n2"],["m3","n3"],["n1","n2"],["n2","n3"]],
   frames: [
-    { on: ["m1", "m2", "m3"], dim: ["n1", "n2", "n3"], edges: [],
-      out: "a hash map: O(1) get, and no idea which entry is oldest",
-      cap: "Start with what a cache obviously needs. A map answers <b>get</b> in O(1) and that is the easy half. When it fills up it cannot tell you what to throw away, because a hash map has no order at all." },
-    { on: ["n1", "n2", "n3"], dim: ["m1", "m2", "m3"], edges: [["n1","n2"],["n2","n3"]],
-      out: "a list in recency order: head = just used, tail = evict this one",
-      cap: "So add the missing half. Keep the same entries in a list ordered by <b>when they were last touched</b>. Now eviction is free: it is whatever sits at the tail. But finding a key in a list is O(n), which undoes the map." },
-    { on: ["m2", "n2"], edge: [["m2","n2"]], dim: ["m1", "m3", "n1", "n3"],
-      out: "get(B): the map stores the NODE, not the value",
-      cap: "The join that makes both halves work: the map's value is a <b>pointer to the list node</b>. One lookup and you are standing on the node itself, with no walking. Store the plain value instead and you are back to an O(n) search." },
-    { on: ["n2", "n1", "n3"], dim: ["m1", "m2", "m3"],
-      edges: [["m1","n1"],["m2","n2"],["m3","n3"],["n2","n1"],["n1","n3"]],
-      out: "unlink B, relink it at the head: 4 pointer writes, O(1)",
-      cap: "To unlink a node you must reach the one <b>before</b> it, and in a singly linked list that means walking from the head. This single requirement is the entire reason the list is <b>doubly</b> linked. Nothing moved in memory; only links changed." },
-    { show: ["m4", "n4"], dim: ["m3", "n3"],
-      edges: [["m1","n1"],["m2","n2"],["m4","n4"],["n4","n2"],["n2","n1"]],
-      out: "put(D) while full: C was the tail, so C is evicted",
-      cap: "Insert at the head, then drop the tail. The half people forget: the evicted node must be deleted from <b>both</b> structures. Leave the key in the map and it points at a node no longer in the list, and get returns a value the cache no longer holds." },
-    { show: ["m4", "n4"], on: ["m1", "m2", "m4", "n1", "n2", "n4"], dim: ["m3", "n3"],
-      edges: [["m1","n1"],["m2","n2"],["m4","n4"],["n4","n2"],["n2","n1"]],
-      out: "get and put are both O(1), worst case, not amortised",
-      cap: "Nothing here is searched, sorted or scanned. That is the pattern worth taking away: when one structure is fast at exactly what another is slow at, <b>hold the same objects in both</b> and keep the two in step on every write." },
+    { scene: `<span class="kicker">Why this example</span><p>A cache with room for 3 entries. When it is full, it throws out whatever was <b>used longest ago</b>.</p><table><tr><td>holding</td><td>A, B, C (C used longest ago)</td></tr><tr><td>then</td><td>get(B)</td></tr><tr><td>then</td><td>put(D): something must go</td></tr></table><p>The right answer is to evict C. Goal: do each step in O(1), with no searching at all.</p>`,
+      cap: "Top row: the hash map's keys. Bottom row: the entries. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>3 entries ki jagah wala cache. Bhar jaaye to woh nikaalta hai jo <b>sabse der pehle use hua</b>.</p><table><tr><td>rakha hai</td><td>A, B, C (C sabse pehle use hua)</td></tr><tr><td>phir</td><td>get(B)</td></tr><tr><td>phir</td><td>put(D): kuch jaana hai</td></tr></table><p>Sahi answer C nikaalna hai. Goal: har step O(1) mein, bina kuch dhoondhe.</p>`,
+            cap: "Upar ki row: hash map ki keys. Neeche ki row: entries. Next dabao." } },
+
+    { on: ["m1", "m2", "m3"], dim: ["n1", "n2", "n3"], edges: [], out: "a hash map: O(1) get, no idea which entry is oldest",
+      cap: "Start with what a cache obviously needs. A hash map answers <b>get</b> in O(1). But its slots are computed from the keys, so it keeps no order at all.",
+      ask: { q: "The cache is full and D arrives. Can the map alone say which of A, B, C was used longest ago?", opts: ["no: it stores no order", "yes: the first key inserted"], a: 0,
+             why: "Nothing in a hash map records when an entry was last used. You would have to scan and compare stored times." },
+      hi: { out: "hash map: O(1) get, pata nahi kaunsa sabse purana",
+            cap: "Cache ko jo seedha chahiye usse shuru karo. Hash map <b>get</b> O(1) mein deta hai. Par uske slots keys se nikalte hain, to woh koi order nahi rakhta.",
+            ask: { q: "Cache bhara hai aur D aata hai. Kya akela map bata sakta hai ki A, B, C mein kaun sabse pehle use hua?", opts: ["nahi: woh order nahi rakhta", "haan: pehli daali key"],
+                   why: "Hash map mein kuch record nahi karta ki entry aakhri baar kab use hui. Stored times scan karke compare karne padte." } } },
+
+    { on: ["n1", "n2", "n3"], dim: ["m1", "m2", "m3"], edges: [["n1","n2"],["n2","n3"]], out: "a list by recency: arrows run newest -> oldest",
+      cap: "So add the missing half: a list ordered by <b>last use</b>, the arrows running from newest to oldest. Eviction is now free: the oldest end, C. But finding a key in a list means walking it.",
+      ask: { q: "get(B). How do you reach B's node without walking the list?", opts: ["the map points straight at it", "you cannot: walk from the newest end"], a: 0,
+             why: "Store the list node itself as the map's value, and one lookup lands on it." },
+      hi: { out: "recency ki list: arrows naye -> purane",
+            cap: "To kami wala aadha jodo: <b>aakhri use</b> ke order wali list, arrows naye se purane ki taraf. Eviction ab muft: purana sira, C. Par list mein key dhoondhna use chalna hai.",
+            ask: { q: "get(B). List chale bina B ke node tak kaise pahunchoge?", opts: ["map seedha usko point karta hai", "nahi pahunch sakte: naye sire se chalo"],
+                   why: "List node ko hi map ki value banao, aur ek lookup us par le jaata hai." } } },
+
+    { on: ["m2", "n2"], edge: [["m2","n2"]], dim: ["m1", "m3", "n1", "n3"], out: "get(B): the map stores the NODE, not the value",
+      cap: "The join that makes both halves work: the map's value is a <b>pointer to the list node</b>. One lookup and you stand on B's node. B was just used, so it must move to the front.",
+      ask: { q: "To unlink B you must reach A, the node before it. How do you get there in O(1)?", opts: ["B's back pointer: the list is doubly linked", "walk from the front"], a: 0,
+             why: "Walking from the front is the O(n) you were avoiding. A back pointer gives the node before B directly." },
+      hi: { out: "get(B): map NODE rakhta hai, value nahi",
+            cap: "Woh jod jo dono aadhon ko chalata hai: map ki value <b>list node ka pointer</b> hai. Ek lookup aur aap B ke node par. B abhi use hua, to use aage jaana hai.",
+            ask: { q: "B unlink karne ke liye usse pehle wala A chahiye. O(1) mein wahan kaise?", opts: ["B ka back pointer: list doubly linked hai", "aage se chalo"],
+                   why: "Aage se chalna wahi O(n) hai jisse bach rahe the. Back pointer B se pehle wala node seedha deta hai." } } },
+
+    { on: ["n2", "n1", "n3"], dim: ["m1", "m2", "m3"], edges: [["m1","n1"],["m2","n2"],["m3","n3"],["n2","n1"],["n1","n3"]], out: "B moved to the front: 6 pointer writes. Order: B, A, C",
+      cap: "Unlink B (2 writes), relink it at the front (4 writes), and nothing moved in memory. The order is now B, A, C, so C is still the one used longest ago.",
+      ask: { q: "Now put(D) while full. Which entry is evicted?", opts: ["C, at the oldest end", "A, the first ever inserted"], a: 0,
+             why: "C has gone longest without being touched. When A was inserted does not matter." },
+      hi: { out: "B aage aaya: 6 pointer writes. Order: B, A, C",
+            cap: "B unlink (2 writes), aage relink (4 writes), aur memory mein kuch nahi hila. Order ab B, A, C hai, to C ab bhi sabse pehle use hua.",
+            ask: { q: "Ab bhare cache mein put(D). Kaun evict hoga?", opts: ["C, purane sire par", "A, sabse pehle daala gaya"],
+                   why: "C sabse der se chhua nahi gaya. A kab daala gaya, isse farak nahi padta." } } },
+
+    { show: ["m4", "n4"], dim: ["m3", "n3"], edges: [["m1","n1"],["m2","n2"],["m4","n4"],["n4","n2"],["n2","n1"]], out: "put(D): evict C from BOTH, insert D at the front",
+      cap: "Take C off the oldest end <b>and</b> delete key C from the map. Leave the key and it points at a node that is no longer cached. That is why each node stores its own key. Order now: D, B, A.",
+      hi: { out: "put(D): C ko DONO se nikaalo, D aage daalo",
+            cap: "C ko purane sire se hatao <b>aur</b> map se key C mitao. Key chhodi to woh aise node ko point karegi jo ab cached nahi. Isiliye har node apni key rakhta hai. Order ab: D, B, A." } },
+
+    { show: ["m4", "n4"], on: ["m1", "m2", "m4", "n1", "n2", "n4"], dim: ["m3", "n3"], edges: [["m1","n1"],["m2","n2"],["m4","n4"],["n4","n2"],["n2","n1"]], out: "get and put: O(1) each, on average",
+      cap: "Nothing was searched, sorted or scanned. The pattern to keep: when one structure is fast at exactly what another is slow at, <b>hold the same objects in both</b> and keep them in step on every write.",
+      hi: { out: "get aur put: har ek O(1), average",
+            cap: "Kuch dhoondha, sort ya scan nahi hua. Yaad rakhne wala pattern: jab ek structure theek wahan tez ho jahan doosra slow, <b>same objects dono mein rakho</b> aur har write par dono ko saath rakho." } },
   ]
 },
 

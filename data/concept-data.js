@@ -6058,46 +6058,74 @@ function minFeasible(low, high, ok) {
   id: "linked-list",
   n: "Linked List",
   group: "Data structures",
-  one: "Give up the requirement that items sit next to each other, and inserting anywhere you already stand becomes <b>O(1)</b>, but reaching position i now costs i steps.",
+  need: {
+    ask: `<p>A music app keeps a queue of <b>10⁵ songs</b>. People tap “play next” all the time, which puts a song straight after the one playing now. Over an evening that happens <b>10⁵ times</b>, in the middle of the queue.</p>
+<p>Shrink it to four songs: <code>3 → 1 → 4 → 9</code>, with song 1 playing. “Play next” on song 7 must give <code>3 → 1 → 7 → 4 → 9</code>.</p>`,
+    tries: [
+      ["Keep the queue in an array and insert in place", "Every insert shifts all the songs after it one slot right: on average 5 × 10⁴ moves. 10⁵ inserts make that 5 × 10⁹ moves."],
+      ["Append to the end, and sort it out later", "Appending is cheap, but then 7 plays after 9, not after 1. The order is the whole point of a queue."],
+      ["Rebuild the array after every batch of taps", "Each rebuild copies all 10⁵ songs. Rebuild after every tap and you are back at 10¹⁰ copies; rebuild rarely and “play next” is wrong until you do."],
+    ],
+    so: `<p>Stop keeping the songs side by side. Make each one a <b>node</b>: the song, plus the address of the next node. Now “play next” rewrites two arrows: <code>7.next = 4</code>, then <code>1.next = 7</code>. <b>Two writes, whatever the queue's length</b>, and nothing moves.</p>
+<p>The price: there is no arithmetic to jump to song 50,000. You follow 50,000 arrows. That is a <b>linked list</b>. The page follows <code>3 → 1 → 4 → 9</code> throughout.</p>`,
+  },
 
-  plain: `<p>An array keeps everything in one unbroken block, which is what makes <code>a[i]</code> instant and what makes inserting in the middle expensive. A linked list makes the opposite trade.</p>
-<p>Each item becomes a <b>node</b>: a value, plus the address of the next node. The nodes can live anywhere in memory, in any order. The only thing holding the sequence together is the chain of addresses.</p>
-<p>So splicing something in is just rewriting two of those addresses, no shifting, no copying, no resizing. And getting to the fiftieth item means following forty-nine arrows, because there is no arithmetic that can jump there.</p>
-<p><b>Analogy.</b> A treasure hunt. Each clue tells you where the next clue is. Adding a new stop is easy, rewrite one clue and slip yours in. But there is no way to skip to clue 50; you walk the whole trail.</p>`,
+  one: "Give up the requirement that items sit next to each other, and inserting anywhere you already stand becomes <b>O(1)</b>, but reaching position <var>i</var> now costs <var>i</var> steps.",
+
+  plain: `<p>An array keeps everything in one unbroken block. That is what makes <code>a[i]</code> instant, and what makes inserting in the middle expensive. A linked list makes the opposite trade.</p>
+<p>Each item becomes a <b>node</b>: a value, plus the address of the next node. The nodes can live anywhere in memory, in any order. Only the chain of addresses holds the sequence together. In <code>3 → 1 → 4 → 9</code>, node 3 holds where node 1 lives, and so on.</p>
+<p>So splicing 7 in after 1 is just rewriting two addresses: no shifting, no copying, no resizing. But getting to 4, the third item, means following two arrows, because no arithmetic can jump there.</p>
+<p><b>Analogy.</b> A treasure hunt. Each clue says where the next clue is. Adding a stop is easy: rewrite one clue and slip yours in. But you cannot skip to clue 50; you walk the whole trail.</p>`,
 
   why: [
-    { t: "Ask what contiguity was costing us", d: "An array is fast to index precisely because everything is packed together, and expensive to insert into for exactly the same reason. So the question is: what if we drop that requirement entirely?" },
-    { t: "Then every item has to say where the next one is", d: "Without a fixed layout, position can no longer be computed, so it must be <b>stored</b>. Each node becomes value + next-address. The order lives in the pointers, not in the memory layout." },
-    { t: "What you buy: rewiring instead of shifting", d: "To insert between two nodes you point the new node at the second and the first at the new node. <b>Two writes, O(1)</b>, regardless of list length, and no reallocation ever, because nothing needs to be contiguous." },
-    { t: "What you pay: no address arithmetic", d: "Reaching position i means following i pointers, <b>O(n)</b>, and binary search becomes impossible because there is no cheap way to find the middle. You also pay one pointer of memory per node, and every hop lands somewhere unrelated in memory, so the cache cannot help you. The constant factor is genuinely worse than the Big-O suggests." },
-    { t: "So the O(1) insert has a condition attached", d: "It is O(1) only once you are <i>already holding</i> the node. Insert at a given index is O(n) to walk there plus O(1) to rewire. That distinction is what interview questions are built on. The problem is shaped so that you arrive at the right node by other means: a fast pointer, a previous pointer, a hash map." },
-    { t: "A dummy head deletes half the bugs", d: "Most linked-list bugs are the special case \"what if it is the head?\". Put one throwaway node in front of the real list and the head stops being special. Every node now has a node before it, and you return <code>dummy.next</code> at the end." },
-    { t: "Reversal is the archetype, and it needs three pointers", d: "The moment you point <code>curr.next</code> backwards, you have destroyed your only route forward. So the loop is always: <b>save next, flip, advance</b>. Everyone who writes it with two pointers loses the rest of the list." },
+    { t: "Ask what side-by-side storage was costing",
+      d: "An array is fast to index precisely because everything is packed together. It is slow to insert into for exactly the same reason: putting 7 after 1 in 3, 1, 4, 9 shifts 4 and 9. So what if we drop the packing entirely?" },
+    { t: "Then every item must say where the next one is",
+      d: "Without a fixed layout, position can no longer be computed, so it must be <b>stored</b>. Each node becomes a value plus the address of the next. The order lives in the arrows, not in where things sit in memory." },
+    { t: "What you buy: rewiring instead of shifting",
+      d: "To put 7 after 1, point 7 at 4, then point 1 at 7. <b>Two writes, O(1)</b>, whatever the length, and no copying ever, because nothing needs to be packed. The order matters: set <code>1.next</code> first and the only route to 4 is gone." },
+    { t: "What you pay: no address arithmetic",
+      d: "Reaching position <var>i</var> means following <var>i</var> arrows, <b>O(<var>i</var>)</b>. Binary search is impossible, since the middle cannot be found cheaply. Each node also carries a pointer, and each hop lands somewhere unrelated in memory, so the cache cannot help. In practice it is slower than the Big-O suggests." },
+    { t: "So the O(1) insert has a condition attached",
+      d: "It is O(1) only once you are <i>already holding</i> the node, like song 1 while it plays. “Insert at index <var>i</var>” is <var>i</var> hops to get there, then O(1). Interview questions are built around this. They arrange for you to reach the right node another way: a second pointer, a previous pointer, a hash map." },
+    { t: "A dummy head deletes half the bugs",
+      d: "Most linked-list bugs are the special case “what if it is the head?”. Put one throwaway node before 3, and 3 stops being special: every real node now has a node before it. Return <code>dummy.next</code> at the end." },
+    { t: "Reversal is the classic, and it needs three pointers",
+      d: "Reversing 3 → 1 → 4 → 9 means turning every arrow around. The moment you point 3 backwards, you lose your only route to 1. So each step is: <b>save next, flip, advance</b>. Written with two pointers, the rest of the list is lost." },
   ],
 
-  hing: `<p><b>Array ki dikkat kya thi?</b> Sab kuch ek saath, judaa hua rakhna padta hai. Isi wajah se <code>a[i]</code> turant milta hai, aur isi wajah se beech mein kuch daalna mehnga hai. Linked list ne bilkul <b>ulta sauda</b> kiya hai.</p>
+  hing: `<p><b>Array ki dikkat kya thi?</b> Sab kuch ek saath, juda hua rakhna padta hai. Isi wajah se <code>a[i]</code> turant milta hai, aur isi wajah se beech mein kuch daalna mehnga hai. Linked list ne bilkul <b>ulta sauda</b> kiya hai.</p>
 <p><b>Naya idea:</b> har item ab ek <b>node</b> hai, value, aur agle node ka <b>pata (address)</b>. Nodes memory mein kahin bhi pade ho sakte hain, kisi bhi order mein. Sequence ko sirf yeh arrows jod kar rakhte hain.</p>
 <p><b>Faayda:</b> beech mein insert karna matlab sirf <b>do pointers</b> badalna. Kuch khisakna nahi, kuch copy nahi, <b>O(1)</b>.</p>
-<p><b>Nuksan:</b> ab position <b>calculate</b> nahi hoti, isliye i-th node tak pahunchne ke liye i arrows follow karne padte hain, <b>O(n)</b>. Binary search yahan possible hi nahi, kyunki beech wala node sasta mein milta hi nahi. Upar se har node ka apna pointer memory khaata hai aur har hop memory mein kahin door jaata hai, to <b>cache</b> madad nahi kar pata. Practically array se dheema hai, chahe Big-O barabar dikhe.</p>
-<p><b>Yeh baat sabse zaroori hai:</b> insert O(1) tabhi hai jab tum <b>us node par pehle se khade ho</b>. "i-th position par insert karo" to O(n) hi hai, chalna to padega. Interview problems isi cheez par bani hoti hain. Woh aise design hoti hain ki tum sahi node tak kisi aur tareeke se pahunch jao: fast pointer, prev pointer, ya hash map.</p>
-<p><b>Dummy head ka jugaad:</b> aadhe bugs sirf isliye aate hain ki "agar head hi delete karna ho to?". Ek nakli node list ke aage laga do, ab head special nahi raha, har node ka ek previous hai. Aakhir mein <code>dummy.next</code> return kar do. Bahut saare if-else khatam.</p>
-<p><b>Reverse karna (yeh zaroor samajhna):</b> jaise hi tumne <code>curr.next</code> ko peeche modha, aage jaane ka raasta khatam. Isliye har step mein teen kaam, isi order mein, <b>next ko save karo, arrow palto, aage badho</b>. Do pointers se likhoge to baaki list gum ho jaayegi. Aur end mein <b>prev</b> return karna hai, <b>curr</b> nahi, curr to null par khada hai.</p>`,
+<p><b>Nuksan:</b> ab position <b>calculate</b> nahi hoti, isliye <var>i</var>-th node tak pahunchne ke liye <var>i</var> arrows follow karne padte hain, <b>O(<var>n</var>)</b>. Binary search yahan possible hi nahi, kyunki beech wala node saste mein milta hi nahi. Upar se har node ka apna pointer memory khaata hai aur har hop memory mein kahin door jaata hai, to <b>cache</b> madad nahi kar pata.</p>
+<p><b>Yeh baat sabse zaroori hai:</b> insert O(1) tabhi hai jab tum <b>us node par pehle se khade ho</b>. "<var>i</var>-th position par insert karo" to O(<var>n</var>) hi hai, chalna to padega. Interview problems isi cheez par bani hoti hain: fast pointer, prev pointer, ya hash map se sahi node tak pahunchna.</p>
+<p><b>Dummy head ka jugaad:</b> aadhe bugs sirf isliye aate hain ki "agar head hi delete karna ho to?". Ek nakli node list ke aage laga do, ab head special nahi raha, har node ka ek previous hai. Aakhir mein <code>dummy.next</code> return kar do.</p>
+<p><b>Reverse karna (yeh zaroor samajhna):</b> jaise hi tumne <code>curr.next</code> ko peeche modha, aage jaane ka raasta khatam. Isliye har step mein teen kaam, isi order mein: <b>next ko save karo, arrow palto, aage badho</b>. Aur end mein <b>prev</b> return karna hai, <b>curr</b> nahi, curr to null par khada hai.</p>`,
 
   viz: ["linked-list", "linked-list-reverse"],
   see: [["VA", "https://visualgo.net/en/list", "VisuAlgo, linked list operations, animated"]],
 
   math: [
-    { t: "The trade, priced on both sides", d: "Giving up contiguity is not a win, it is an exchange. Two columns, and the right structure is whichever column matches the operation you actually do most.", w:
-`n = 1,000,000
+    { t: "The trade, priced on both sides", d: "Giving up side-by-side storage is not a win, it is an exchange. The right structure is whichever column matches the operation you do most.", w:
+`n = 100,000 songs
 
                           array        linked list
-read a[i]                 1 op         i hops
-insert at the front       n shifts     1 rewire
-insert where you stand    n shifts     1 rewire
-find, then insert         log n + n    n + 1
-bytes per int             4            4 + 8 pointer = 12+
-cache misses on a scan    n / 16       n` },
-    { t: "The O(1) insert has a condition attached", d: "Rewiring is constant. Getting to the place where you rewire is not, and if you restart from the head every time the constant is irrelevant.", w:
+reach song i              1 op         i hops
+play next, where you are  n - i moves  2 writes
+insert at the front       n moves      2 writes
+bytes per int value       4            4 + 8 pointer = 12+
+cache misses on a scan    n / 16       n
+
+10^5 "play next" taps:    5 x 10^9     2 x 10^5` },
+    { t: "Play next on 3 -> 1 -> 4 -> 9, and why the order of writes matters", d: "Two writes, but only one order works. The second write destroys the only route to the rest of the list, so the first must have saved it already.", w:
+`holding node 1 (it is playing), new node 7
+
+right order:   7.next = 1.next     7 -> 4 -> 9
+               1.next = 7          3 -> 1 -> 7 -> 4 -> 9
+
+wrong order:   1.next = 7          3 -> 1 -> 7 -> ?
+               7.next = 1.next     7 -> 7, a loop; 4 and 9 lost` },
+    { t: "The O(1) insert has a condition attached", d: "Rewiring is constant. Getting to where you rewire is not, and walking from the head each time wipes out the saving.", w:
 `insert after a node you already hold:      O(1)
 insert after the k-th node, from the head: k hops
 
@@ -6106,38 +6134,29 @@ do that n times at the middle, from the head each time:
   n = 100,000  ->  5 x 10^9
 
 the O(1) is real only while you are already standing there` },
-    { t: "Floyd: why the two pointers must meet", d: "Once both are inside the cycle, the fast one closes the distance by exactly one node per step. A gap that falls by one cannot be stepped over.", w:
-`slow moves 1, fast moves 2, so fast gains 1 per step
+    { t: "Repeat mode makes a cycle: Floyd finds it", d: "Turn on repeat and 9 points back to 1. Slow moves one node a step, fast moves two. Inside the loop, fast closes the gap by exactly one each step, so it cannot jump over slow.", w:
+`3 -> 1 -> 4 -> 9 -> (back to 1)
+m = 1 node before the loop (3),  L = 3 nodes in the loop
 
-let the gap from fast to slow, measured around the cycle,
-be g. Each step: g -> g - 1. It cannot skip zero.
-so they meet within L steps, where L = cycle length
+step    slow   fast
+0       3      3
+1       1      4
+2       4      1
+3       9      9      meet, after 3 steps
 
-no cycle: fast reaches null first, in n/2 steps` },
-    { t: "And why the second pointer starts at the head", d: "The place they meet is not arbitrary. Write down both distances travelled and the rule for finding the cycle entrance drops out in two lines.", w:
-`m = nodes before the cycle,  L = cycle length
-a = steps into the cycle where they meet
+slow walked m + a = 3, so a = 2.  m + a = 3 = 1 x L
+from the meeting point, m = 1 more step reaches 1,
+and so does one step from the head: the loop starts at 1` },
+    { t: "Finding the middle, and the guard that the count forces", d: "Fast travels twice as far, so wherever it stops, slow is halfway. The only care needed is odd against even.", w:
+`3 -> 1 -> 4 -> 9, n = 4, positions 0 1 2 3
 
-slow walked   m + a
-fast walked   2(m + a),  and also  m + a + kL
-
-  2(m + a) = m + a + kL
-      m + a = kL
-          m = kL - a
-
-so from the meeting point, m more steps land on the entrance.
-Walk one pointer from the head and one from the meeting
-point, one step each, and they collide there.` },
-    { t: "Finding the middle, and the guard that the count forces", d: "Fast travels twice as far, so it finishes in half the steps, and wherever it stops slow is halfway. The only care needed is the parity.", w:
-`n = 4, indices 0 1 2 3
-
-fast:  0 -> 2 -> 4 (past the end)
-slow:  0 -> 1 -> 2        lands on the SECOND middle
+fast:  0 -> 2 -> past the end
+slow:  0 -> 1 -> 2        lands on 4, the SECOND middle
 
 n = 5:  fast 0 -> 2 -> 4, slow 0 -> 1 -> 2   the true middle
 
 so the loop guard is (fast and fast.next), two checks.
-Testing only fast.next dereferences null on even n.` },
+Testing only fast.next reads null on even n.` },
   ],
 
   costs: [
@@ -6146,22 +6165,22 @@ Testing only fast.next dereferences null on even n.` },
     ["insert / delete at index i", "O(n)", "O(n) to walk there, then O(1) to rewire"],
     ["insert at head", "O(1)", "the one position that is always cheap"],
     ["search for a value", "O(n)", "no order to exploit, no binary search"],
-    ["memory", "O(n) + a pointer per node", "plus poor cache locality, worse in practice than the Big-O"],
+    ["memory", "O(n) + a pointer per node", "plus poor cache locality: worse in practice than the Big-O"],
   ],
 
   traps: [
     "<b>Reversing with two pointers.</b> You must save <code>next</code> before flipping <code>curr.next</code>, or the rest of the list is unreachable.",
-    "<b>Returning the wrong node after a reversal.</b> The loop ends with <code>curr</code> at null, return <code>prev</code>.",
+    "<b>Returning the wrong node after a reversal.</b> The loop ends with <code>curr</code> at null. Return <code>prev</code>.",
     "<b>Not guarding <code>fast</code> and <code>fast.next</code></b> before stepping two at a time. This is the standard null-pointer crash.",
     "<b>Special-casing the head with if-else.</b> Use a dummy node instead; it removes the branch entirely.",
-    "<b>Looping forever on a cycle.</b> If the list may loop, you cannot rely on reaching null, detect it with fast and slow pointers first.",
+    "<b>Looping forever on a cycle.</b> If the list may loop, like the queue on repeat, you cannot rely on reaching null. Detect it with fast and slow pointers first.",
   ],
 
   impl: [
     ["Python", "hand-rolled class Node", "No built-in singly linked list. deque is a doubly linked list of blocks, not the same thing."],
     ["Java", "hand-rolled ListNode", "java.util.LinkedList exists and is doubly linked, but interviews want your own node."],
     ["C++", "hand-rolled, or std::forward_list", "forward_list is singly linked; std::list is doubly linked. Delete nodes you allocated."],
-    ["JavaScript", "plain objects {val, next}", "No built-in. null vs undefined for the tail, pick one and be consistent."],
+    ["JavaScript", "plain objects {val, next}", "No built-in. null against undefined for the tail: pick one and be consistent."],
   ],
 
   code: {
@@ -6326,19 +6345,19 @@ function middle(head) {
   return slow;
 }`,
   },
-  codecap: "Reverse, dummy head, and fast/slow are the three moves nearly every linked-list question is assembled from.",
+  codecap: "Reverse, dummy head, and fast/slow are the three moves nearly every linked-list question is built from.",
 
   q: [
-    ["What is the trade a linked list makes, in one sentence?", "It gives up contiguous memory, losing O(1) indexing and binary search, to gain O(1) insert and delete at a node you are already holding, with no shifting or reallocation."],
+    ["What is the trade a linked list makes, in one sentence?", "It gives up side-by-side memory, losing O(1) indexing and binary search, to gain O(1) insert and delete at a node you already hold, with no shifting or copying."],
     ["Why does reversal need three pointers?", "Flipping curr.next overwrites the only reference to the rest of the list, so next must be saved before the flip. The loop is save, flip, advance."],
-    ["After the reversal loop, why return prev and not curr?", "The loop exits when curr becomes null, having walked off the end. prev is left pointing at the last node visited, which is the new head."],
+    ["After the reversal loop, why return prev and not curr?", "The loop ends when curr becomes null, having walked off the end. prev is left on the last node visited, which is the new head."],
     ["What does a dummy head node buy you?", "Every real node gains a previous node, so deleting or inserting at the head stops being a special case. You return dummy.next at the end."],
     ["Insert is O(1), so why is 'insert at index i' O(n)?", "The O(1) is only the rewiring. Getting to index i still means following i pointers, because position cannot be computed."],
-    ["Insert at a node is O(1). Why is that claim only half true?", "The rewiring is two writes, so it really is O(1), but only once you are already holding the node. Insert at index i costs O(n) to walk there first. Interview problems are shaped so you arrive at the node by other means: a fast pointer, a previous pointer, a hash map."],
+    ["When inserting 7 after node 1, which pointer do you set first, and why?", "7.next = 1.next first. Setting 1.next = 7 first overwrites the only reference to 4 and the rest of the list."],
   ],
 
   p: [
-    [206, "reverse-linked-list", "Reverse Linked List, the archetype", "E"],
+    [206, "reverse-linked-list", "Reverse Linked List, the classic", "E"],
     [21, "merge-two-sorted-lists", "Merge Two Sorted Lists, dummy head", "E"],
     [876, "middle-of-the-linked-list", "Middle of the Linked List, fast & slow", "E"],
     [141, "linked-list-cycle", "Linked List Cycle", "E"],
@@ -6346,104 +6365,203 @@ function middle(head) {
     [2, "add-two-numbers", "Add Two Numbers, carry along the walk", "M"],
     [143, "reorder-list", "Reorder List, middle, reverse, merge", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek music app <b>10⁵ songs</b> ki queue rakhta hai. Log baar baar “play next” dabaate hain, jo song ko abhi chal rahe song ke theek baad rakhta hai. Ek shaam mein yeh <b>10⁵ baar</b> hota hai, queue ke beech mein.</p>
+<p>Ise chaar songs tak chhota karo: <code>3 → 1 → 4 → 9</code>, song 1 chal raha hai. Song 7 par “play next” se <code>3 → 1 → 7 → 4 → 9</code> milna chahiye.</p>`,
+      tries: [
+        ["Queue array mein rakho aur wahin insert karo", "Har insert uske baad ke saare songs ek slot right khisakata hai: average 5 × 10⁴ moves. 10⁵ inserts matlab 5 × 10⁹ moves."],
+        ["End mein jodo, order baad mein theek karo", "Jodna sasta hai, par phir 7, 1 ke baad nahi, 9 ke baad bajta hai. Queue ka poora matlab order hi hai."],
+        ["Har batch ke baad array dobara banao", "Har rebuild saare 10⁵ songs copy karta hai. Har tap ke baad karo to phir 10¹⁰ copies; kabhi kabhi karo to tab tak “play next” galat hai."],
+      ],
+      so: `<p>Songs ko saath saath rakhna band karo. Har ek ko <b>node</b> banao: song, plus agle node ka address. Ab “play next” do arrows badalta hai: <code>7.next = 4</code>, phir <code>1.next = 7</code>. <b>Do writes, queue kitni bhi lambi ho</b>, aur kuch nahi hilta.</p>
+<p>Keemat: song 50,000 par kood jaane ka koi hisaab nahi. 50,000 arrows follow karne padte hain. Yahi <b>linked list</b> hai. Page poore mein <code>3 → 1 → 4 → 9</code> follow karta hai.</p>`,
+    },
+
+    one: "Items ke saath saath baithne ki shart chhod do. Tab jahan khade ho wahan insert karna <b>O(1)</b> ho jaata hai, par position <var>i</var> tak pahunchna ab <var>i</var> steps ka hai.",
+
+    plain: `<p>Array sab kuch ek bina toote block mein rakhta hai. Isi se <code>a[i]</code> turant hai, aur isi se beech mein insert mehnga. Linked list ulta sauda karti hai.</p>
+<p>Har item ek <b>node</b> ban jaata hai: ek value, plus agle node ka address. Nodes memory mein kahin bhi, kisi bhi order mein reh sakte hain. Sequence ko sirf addresses ki chain jodti hai. <code>3 → 1 → 4 → 9</code> mein node 3 rakhta hai ki node 1 kahan hai, aur aise hi aage.</p>
+<p>To 1 ke baad 7 jodna bas do addresses badalna hai: na khisakna, na copy, na resize. Par 4 tak, teesre item tak, pahunchne ke liye do arrows follow karne padte hain, kyunki koi hisaab wahan kood nahi sakta.</p>
+<p><b>Analogy.</b> Treasure hunt. Har clue batata hai agla clue kahan hai. Ek stop jodna aasaan hai: ek clue badlo aur apna daal do. Par clue 50 par kood nahi sakte; poora raasta chalna padta hai.</p>`,
+
+    why: [
+      { t: "Poocho saath saath rakhne ki keemat kya thi",
+        d: "Array index karne mein tez hai kyunki sab ek saath packed hai. Insert mein slow bhi isi wajah se: 3, 1, 4, 9 mein 1 ke baad 7 daalna 4 aur 9 ko khisakata hai. To agar packing poori chhod dein?" },
+      { t: "Tab har item ko batana padta hai agla kahan hai",
+        d: "Fixed layout ke bina position calculate nahi ho sakti, to use <b>store</b> karna padta hai. Har node ek value plus agle ka address. Order arrows mein rehta hai, memory mein kahan baithe hain usme nahi." },
+      { t: "Kya milta hai: khisakane ki jagah rewiring",
+        d: "1 ke baad 7 daalne ke liye 7 ko 4 par point karo, phir 1 ko 7 par. <b>Do writes, O(1)</b>, length chahe jo ho, aur kabhi copy nahi, kyunki kuch packed hona zaroori nahi. Order maayne rakhta hai: pehle <code>1.next</code> set kiya to 4 tak ka ek hi raasta gaya." },
+      { t: "Kya dete ho: address ka hisaab nahi",
+        d: "Position <var>i</var> tak pahunchna matlab <var>i</var> arrows follow karna, <b>O(<var>i</var>)</b>. Binary search naamumkin, kyunki beech sasta nahi milta. Har node ek pointer bhi rakhta hai, aur har hop memory mein kahin door girta hai, to cache madad nahi karta. Practice mein Big-O se slow hai." },
+      { t: "To O(1) insert ke saath ek shart judi hai",
+        d: "Yeh O(1) tabhi hai jab node pehle se <i>haath mein</i> ho, jaise chalta hua song 1. “Index <var>i</var> par insert” wahan tak <var>i</var> hops hai, phir O(1). Interview sawaal isi par bane hain. Woh aapko sahi node tak kisi aur tareeke se pahunchaate hain: doosra pointer, previous pointer, hash map." },
+      { t: "Dummy head aadhe bugs mita deta hai",
+        d: "Zyadatar linked-list bugs special case hain “agar yeh head ho to?”. 3 se pehle ek phenkne wala node laga do, aur 3 special nahi rehta: har asli node ke pehle ab ek node hai. End mein <code>dummy.next</code> return karo." },
+      { t: "Reversal classic hai, aur teen pointers chahiye",
+        d: "3 → 1 → 4 → 9 reverse karna matlab har arrow ulta karna. Jaise hi 3 ko peeche point kiya, 1 tak ka ek hi raasta gaya. To har step: <b>next save karo, palto, aage badho</b>. Do pointers se likha to baaki list kho jaati hai." },
+    ],
+
+    math: [
+      { t: "Sauda, dono taraf ki keemat ke saath", d: "Saath saath rakhna chhodna jeet nahi, adla-badli hai. Sahi structure woh column hai jo aapke sabse zyada hone wale operation se match kare." },
+      { t: "3 -> 1 -> 4 -> 9 par play next, aur writes ka order kyun maayne rakhta hai", d: "Do writes, par sirf ek order chalta hai. Doosra write baaki list ka ek hi raasta mitata hai, to pehle ne use save kar liya hona chahiye." },
+      { t: "O(1) insert ke saath ek shart judi hai", d: "Rewiring constant hai. Jahan rewire karna hai wahan tak pahunchna nahi, aur har baar head se chalna saari bachat mita deta hai." },
+      { t: "Repeat mode cycle banata hai: Floyd use pakadta hai", d: "Repeat on karo to 9 wapas 1 ko point karta hai. Slow har step ek node chalta hai, fast do. Loop ke andar fast har step gap theek ek se kam karta hai, to slow ke upar se kood nahi sakta." },
+      { t: "Beech dhoondhna, aur ginti jo guard maangti hai", d: "Fast dugna chalta hai, to jahan woh ruke, slow aadhe par hai. Bas odd aur even ka dhyan rakhna hai." },
+    ],
+
+    costs: [
+      ["position i tak pahunchna", "O(n)", "i pointers follow; koi hisaab ka shortcut nahi"],
+      ["haath ke node par insert / delete", "O(1)", "do pointers badlo, kuch nahi khisakta"],
+      ["index i par insert / delete", "O(n)", "wahan chalne mein O(n), phir rewire O(1)"],
+      ["head par insert", "O(1)", "ek hi position jo hamesha sasti hai"],
+      ["value dhoondhna", "O(n)", "koi order nahi, koi binary search nahi"],
+      ["memory", "O(n) + a pointer per node", "plus kharab cache locality: practice mein Big-O se bura"],
+    ],
+
+    traps: [
+      "<b>Do pointers se reverse karna.</b> <code>curr.next</code> palatne se pehle <code>next</code> save karna hi hai, warna baaki list pahunch ke bahar.",
+      "<b>Reversal ke baad galat node lautana.</b> Loop <code>curr</code> ke null par khatam hota hai. <code>prev</code> return karo.",
+      "<b>Do do step chalne se pehle <code>fast</code> aur <code>fast.next</code> check na karna.</b> Yahi standard null-pointer crash hai.",
+      "<b>Head ko if-else se special banana.</b> Iski jagah dummy node lo; branch hi khatam.",
+      "<b>Cycle par hamesha ghoomte rehna.</b> List loop kar sakti ho, jaise repeat par queue, to null tak pahunchne par bharosa mat karo. Pehle fast aur slow pointers se pakdo.",
+    ],
+
+    impl: [
+      ["Python", "hand-rolled class Node", "Built-in singly linked list nahi. deque blocks ki doubly linked list hai, same cheez nahi."],
+      ["Java", "hand-rolled ListNode", "java.util.LinkedList hai aur doubly linked hai, par interviews apna node chahte hain."],
+      ["C++", "hand-rolled, or std::forward_list", "forward_list singly linked hai; std::list doubly. Jo nodes allocate kiye unhe delete karo."],
+      ["JavaScript", "plain objects {val, next}", "Built-in nahi. Tail ke liye null ya undefined: ek chuno aur usi par tike raho."],
+    ],
+
+    codecap: "Reverse, dummy head, aur fast/slow, yahi teen moves lagbhag har linked-list sawaal banate hain.",
+
+    q: [
+      ["Linked list ek sentence mein kya sauda karti hai?", "Saath saath memory chhodti hai, O(1) indexing aur binary search kho kar, taaki haath ke node par O(1) insert aur delete mile, bina khisakaaye ya copy kiye."],
+      ["Reversal ko teen pointers kyun chahiye?", "curr.next palatna baaki list ka ek hi reference mitata hai, to palatne se pehle next save karna padta hai. Loop hai: save, palto, aage."],
+      ["Reversal loop ke baad curr nahi, prev kyun return karein?", "Loop tab khatam hota hai jab curr null ho jaata hai, end ke paar chal kar. prev aakhri dekhe node par rehta hai, jo naya head hai."],
+      ["Dummy head node se kya milta hai?", "Har asli node ko ek previous node milta hai, to head par delete ya insert special case nahi rehta. End mein dummy.next return karo."],
+      ["Insert O(1) hai, to 'index i par insert' O(n) kyun?", "O(1) sirf rewiring hai. Index i tak pahunchne ke liye ab bhi i pointers follow karne padte hain, kyunki position calculate nahi hoti."],
+      ["Node 1 ke baad 7 daalte waqt pehle kaunsa pointer set karte ho, aur kyun?", "Pehle 7.next = 1.next. Pehle 1.next = 7 kiya to 4 aur baaki list ka ek hi reference mit jaata hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "binary-tree",
   n: "Binary Tree",
   group: "Data structures",
+  need: {
+    ask: `<p>A company's org chart has <b>10⁵ people</b>. Each manager has at most two direct reports. For every person, HR wants the headcount of everyone under them, direct or not.</p>
+<p>Shrink it to six people. 1 runs the company. 2 and 3 report to 1. 4 and 5 report to 2, and 6 reports to 3. So 2 has 3 people counting themselves, and 1 has all 6.</p>`,
+    tries: [
+      ["For each person, walk down and count", "Every walk repeats the walks below it. If the chart is one long chain, the walks cost 1 + 2 + … + 10⁵, about 5 × 10⁹ steps."],
+      ["Keep a flat list of (person, manager) rows and scan it", "Finding one person's reports scans all 10⁵ rows, and you need to do that for everyone: about 10¹⁰ row reads."],
+      ["Loop level by level with nested loops", "You do not know how many levels there are. One more level of management needs one more nested loop, so no fixed program works."],
+    ],
+    so: `<p>Notice that person 2, with everyone under them, is itself a small org chart of the same shape. So <b>solve the left, solve the right, combine</b>: <code>count(p) = 1 + count(left) + count(right)</code>, with an empty spot counting 0. Every person is visited once: 10⁵ steps, not 5 × 10⁹.</p>
+<p>A structure where each node points to at most two children is a <b>binary tree</b>. The page uses the six-person chart throughout: <code>1</code> over <code>2, 3</code>, with <code>4, 5</code> under 2 and <code>6</code> under 3.</p>`,
+  },
+
   one: "Every node is itself the root of a smaller tree, so almost every tree problem is the same three lines: <b>solve the left, solve the right, combine</b>.",
 
-  plain: `<p>Take a linked list and give each node <b>two</b> next-pointers instead of one. That is a binary tree. The consequence is out of all proportion to the change. Instead of a line you get branching, and the number of nodes you can reach doubles with every step down.</p>
-<p>That is why trees are shallow. A million nodes arranged in a line is a million steps deep; the same million arranged as a balanced tree is about twenty. Every fast tree operation is really just "the depth is small".</p>
-<p>The second consequence is structural. A node's left child is itself a perfectly good tree. So any solution that works for the whole thing works for the part. That is why tree code is almost always recursive, and almost always short.</p>
-<p><b>Analogy.</b> An org chart. Any manager, taken with everyone below them, is a smaller org chart with the same shape. "How many people are under you?" is answered the same way at every level: ask both reports, add one for yourself.</p>`,
+  plain: `<p>Take a linked list and give each node <b>two</b> next-pointers instead of one. That is a binary tree. The top node is the <b>root</b>, the nodes it points to are its <b>children</b>, and a node with no children is a <b>leaf</b>. In the chart, 1 is the root, 2 and 3 are its children, and 4, 5 and 6 are leaves.</p>
+<p>Branching makes trees shallow. Each level can hold twice as many nodes as the one above. A million nodes in a line are a million steps deep; as a balanced tree they are about twenty.</p>
+<p>The second consequence is the useful one. Node 2 with 4 and 5 below it is itself a perfectly good tree. So any solution that works for the whole works for the part, which is why tree code is almost always recursive, and short.</p>
+<p><b>Analogy.</b> An org chart. Any manager, taken with everyone below them, is a smaller org chart. “How many people are under you?” is answered the same way at every level: ask both reports, add one for yourself.</p>`,
 
   why: [
-    { t: "One extra pointer changes the geometry", d: "One next-pointer per node gives you a line of length n. Two gives you branching, and level d can hold 2<sup>d</sup> nodes. Turned around: n nodes only need <b>log₂n levels</b>. Depth is the resource trees are cheap in." },
-    { t: "The structure is self-similar, so the code is recursive", d: "A child is not a piece of a tree. It <b>is</b> a tree. So the recipe is always the same: assume the left and right subtrees are already solved, then combine their answers with this node's value. The base case is the empty node, which is why every tree function starts by checking for null." },
-    { t: "The three depth-first orders are one algorithm, reordered", d: "Visit the node <i>before</i> recursing (<b>pre-order</b>), <i>between</i> the two calls (<b>in-order</b>), or <i>after</i> both (<b>post-order</b>). Same three lines, three positions. Choose by dependency: pre-order when children need the parent's answer, post-order when the parent needs the children's." },
-    { t: "Depth-first versus breadth-first is a choice of container", d: "DFS rides the call stack and naturally answers path-shaped questions. Swap the stack for a <b>queue</b> and the same walk becomes BFS, visiting level by level. That is the shape you need for \"minimum depth\", for anything per level, and for anything about distance from the root." },
-    { t: "Every cost is O(h), and h is not free", d: "Search, insert and delete all walk one root-to-leaf path, so they cost <b>O(height)</b>. That is O(log n) only while the tree stays bushy. Insert sorted data into an unbalanced tree and it degenerates into a linked list: h = n, and every operation is O(n). Balance is a promise someone has to keep, which is what AVL and red-black trees exist to do." },
-    { t: "Space is the height too", d: "A recursive traversal holds one frame per level, so it uses <b>O(h)</b> memory. On a balanced tree that is O(log n) and fine. On a skewed tree it is O(n), which is deep enough to overflow the stack at 10⁵ nodes. BFS instead holds one level at a time, up to O(n/2) nodes at the widest point. Neither is free; they just fail differently." },
+    { t: "One extra pointer changes the shape",
+      d: "One next-pointer per node gives a line of length <var>n</var>. Two gives branching, and level <var>d</var> can hold 2<sup><var>d</var></sup> nodes. Turned round, <var>n</var> nodes need only about <b>log₂ <var>n</var> levels</b>. Depth is what trees are cheap in." },
+    { t: "The structure repeats itself, so the code is recursive",
+      d: "Node 2's part of the chart is not a piece of a tree. It <b>is</b> a tree. So assume the left and right parts are already solved, and combine: count(2) = 1 + count(4) + count(5) = 3. The base case is the empty spot, which counts 0. That is why every tree function starts by checking for null." },
+    { t: "The three depth-first orders are one walk, reordered",
+      d: "Handle the node <i>before</i> its children (<b>pre-order</b>: 1, 2, 4, 5, 3, 6), <i>between</i> them (<b>in-order</b>: 4, 2, 5, 1, 3, 6), or <i>after</i> both (<b>post-order</b>: 4, 5, 2, 6, 3, 1). The headcount needs its children's answers first, so it is post-order." },
+    { t: "Depth-first against breadth-first is a choice of container",
+      d: "DFS rides the call stack and suits path-shaped questions. Swap the stack for a <b>queue</b> and the same walk goes level by level: 1, then 2 and 3, then 4, 5 and 6. That is the shape for minimum depth, anything per level, or distance from the root." },
+    { t: "Every cost is O(h), and h is not free",
+      d: "Walking one path from the root costs <b>O(<var>h</var>)</b>, where <var>h</var> is the height. That is O(log <var>n</var>) only while the tree stays bushy. If every manager had one report, the chart would be a line: <var>h</var> = <var>n</var>. Keeping trees balanced is someone's job, and AVL and red-black trees exist to do it." },
+    { t: "Space is the height too",
+      d: "A recursive walk holds one frame per level, so it uses <b>O(<var>h</var>)</b> memory. That is O(log <var>n</var>) on a balanced tree, and O(<var>n</var>) on a line: 10⁵ frames overflows the stack. BFS holds one level at a time instead, up to about <var>n</var>/2 nodes at the widest. They fail differently." },
   ],
 
   hing: `<p><b>Ek chhota sa badlav, bahut bada asar.</b> Linked list ke har node ko <b>do</b> pointers de do, bas, binary tree ban gaya. Ab line nahi, <b>branching</b> hai: har level neeche jaane par nodes <b>double</b> ho sakte hain.</p>
-<p><b>Isi se sab kuch aata hai.</b> 10 lakh nodes ek line mein = 10 lakh steps gehra. Wahi 10 lakh balanced tree mein = sirf <b>~20</b>. Tree ki saari speed bas ek baat se aati hai: <b>gehrai kam hai</b>.</p>
-<p><b>Doosri baat, tree apne aap mein dohraata hai.</b> Kisi node ka left child ek "hissa" nahi hai, woh khud ek <b>poora tree</b> hai. Isliye jo tarika poore tree par chalta hai wahi chhote par bhi chalega. Yahi wajah hai ki tree ka code hamesha <b>recursive</b> aur hamesha chhota hota hai: <i>left solve karo, right solve karo, jodo</i>. Base case hamesha khaali node (null).</p>
-<p><b>Teen traversals asal mein ek hi cheez hain.</b> Sirf itna farak hai ki node ko <b>kab</b> visit karte ho. Dono calls se <b>pehle</b>, unke <b>beech</b> mein, ya dono ke <b>baad</b>. Yahi pre-order, in-order aur post-order hain. Kaunsa chuno? Dependency dekho: agar bachchon ko parent ka answer chahiye to pre-order; agar parent ko bachchon ka answer chahiye (jaise height, sum) to <b>post-order</b>.</p>
+<p><b>Isi se sab kuch aata hai.</b> 10 lakh nodes ek line mein = 10 lakh steps gehra. Wahi 10 lakh balanced tree mein = sirf <b>lagbhag 20</b>. Tree ki saari speed bas ek baat se aati hai: <b>gehrai kam hai</b>.</p>
+<p><b>Doosri baat, tree apne aap mein dohraata hai.</b> Kisi node ka left child ek "hissa" nahi hai, woh khud ek <b>poora tree</b> hai. Isliye jo tarika poore tree par chalta hai wahi chhote par bhi chalega. Yahi wajah hai ki tree ka code hamesha <b>recursive</b> aur chhota hota hai: <i>left solve karo, right solve karo, jodo</i>. Base case hamesha khaali node (null).</p>
+<p><b>Teen traversals asal mein ek hi cheez hain.</b> Sirf itna farak hai ki node ko <b>kab</b> visit karte ho: dono calls se <b>pehle</b>, unke <b>beech</b> mein, ya dono ke <b>baad</b>. Yahi pre-order, in-order aur post-order hain. Dependency dekho: bachchon ko parent ka answer chahiye to pre-order; parent ko bachchon ka answer chahiye (jaise height, sum) to <b>post-order</b>.</p>
 <p><b>DFS aur BFS ka farak sirf container ka hai.</b> DFS call stack par chalta hai. Usi walk mein stack ki jagah <b>queue</b> laga do, BFS ban gaya, level by level. "Minimum depth", "har level ka answer", "root se distance", yeh sab BFS wale sawaal hain.</p>
-<p><b>Sabse zaroori warning:</b> har operation <b>O(h)</b> hai, O(log n) nahi. O(log n) tabhi jab tree <b>balanced</b> ho. Sorted data daal do bina balance kiye, to tree seedhi line ban jaata hai, h = n, aur sab kuch O(n). Interview mein "O(log n)" bolne se pehle sochо ki balance ki guarantee de kaun raha hai.</p>
-<p><b>Space bhi height jitni hi hai.</b> Recursive traversal har level ka ek frame rakhta hai → O(h). Skewed tree par 10⁵ nodes matlab stack overflow. BFS ek poora level rakhta hai → sabse chaude point par O(n/2). Dono free nahi hain, bas alag tarike se fail hote hain.</p>`,
+<p><b>Sabse zaroori warning:</b> har operation <b>O(<var>h</var>)</b> hai, O(log <var>n</var>) nahi. O(log <var>n</var>) tabhi jab tree <b>balanced</b> ho. Sorted data bina balance kiye daal do, to tree seedhi line ban jaata hai, <var>h</var> = <var>n</var>, aur sab kuch O(<var>n</var>).</p>
+<p><b>Space bhi height jitni hi hai.</b> Recursive traversal har level ka ek frame rakhta hai, to O(<var>h</var>). Skewed tree par 10⁵ nodes matlab stack overflow. BFS ek poora level rakhta hai, to sabse chaude point par O(<var>n</var>/2). Dono free nahi hain, bas alag tarike se fail hote hain.</p>`,
 
   viz: ["tree-traversal"],
   see: [["VA", "https://visualgo.net/en/bst", "VisuAlgo, tree traversals, animated"]],
 
   math: [
-    { t: "Height against node count, at both extremes", d: "Every tree operation is O(h). So the whole question is what h is, and the answer spans five orders of magnitude for the same n.", w:
+    { t: "The headcount on the six-person chart, post-order", d: "Each person is counted after both reports, so every answer is ready when it is needed. Six people, six calls, one visit each.", w:
+`count(p) = 1 + count(left) + count(right),   count(empty) = 0
+
+count(4) = 1 + 0 + 0 = 1
+count(5) = 1 + 0 + 0 = 1
+count(2) = 1 + 1 + 1 = 3
+count(6) = 1 + 0 + 0 = 1
+count(3) = 1 + 0 + 1 = 2
+count(1) = 1 + 3 + 2 = 6
+
+10^5 people: 10^5 calls, against 5 x 10^9 for walking down
+from every person separately on a long chain` },
+    { t: "Three orders are one walk, recorded at three moments", d: "There are not three algorithms. One depth-first walk passes each node three times, and the order you get depends on which pass writes it down.", w:
+`the walk touches every node 3 times:
+
+  arriving          -> record here = preorder   1 2 4 5 3 6
+  between children  -> record here = inorder    4 2 5 1 3 6
+  leaving           -> record here = postorder  4 5 2 6 3 1
+
+touches = 3n,  records = n,  so every order is O(n)` },
+    { t: "Height against node count, at both extremes", d: "Every path operation is O(h). So the question is what h is, and the answer spans five orders of magnitude for the same n.", w:
 `a perfect tree of height h holds 2^(h+1) - 1 nodes
-  h = 3   ->        15
+  h = 2   ->         7    (the chart has 6, height 2)
   h = 19  ->  1,048,575
 
 so for n = 10^6 nodes:
   perfectly balanced   h = 19
   one long chain       h = 999,999
 
-50,000x, for identical data inserted in a different order` },
-    { t: "Half the nodes are leaves, which is what BFS pays for", d: "A binary tree is bottom-heavy. That decides the memory of a level-order walk, and it is the reason depth-first is usually the cheaper habit.", w:
-`perfect tree, n nodes:
+50,000x, for identical data in a different shape` },
+    { t: "Half the nodes are leaves, which is what BFS pays for", d: "A binary tree is bottom-heavy. That sets the memory of a level-by-level walk, and makes depth-first the cheaper habit.", w:
+`the chart: 3 leaves (4, 5, 6) out of 6 people
+
+perfect tree, n nodes:
   leaves           = (n + 1) / 2        about half
-  bottom 2 levels  = about 3/4 of all nodes
 
 n = 10^6:
   BFS queue at its widest   500,000 nodes
-  DFS stack at its deepest       20 frames
-
-same traversal, same output order-of-work, 25,000x memory` },
-    { t: "Three orders are one walk, recorded at three different moments", d: "There are not three algorithms. There is one depth-first walk that passes each node three times, and the traversal you get depends on which pass writes it down.", w:
-`the walk touches every node 3 times:
-
-  arriving          -> record here = preorder
-  between children  -> record here = inorder
-  leaving           -> record here = postorder
-
-touches = 3n,  records = n,  so every order is O(n)
-and a BST read in-order comes out sorted, by definition` },
-    { t: "Time is the node count, space is the depth", d: "These are two different numbers and mixing them up is where tree answers go wrong in interviews.", w:
-`T(n) = T(left) + T(right) + O(1)
-every node is entered exactly once  ->  O(n) time
-
-space is the deepest pending call, not the node count:
-  balanced     O(log n)   20 frames at n = 10^6
-  degenerate   O(n)       10^6 frames  ->  overflow
-
-Morris traversal trades that to O(1) by rewiring, at the
-cost of temporarily mutating the tree` },
+  DFS stack at its deepest       20 frames` },
   ],
 
   costs: [
-    ["traverse every node", "O(n)", "each node is visited exactly once"],
-    ["search / insert / delete", "O(h)", "one root-to-leaf path; h, not log n"],
+    ["visit every node", "O(n)", "each node is visited exactly once"],
+    ["search / insert / delete on a path", "O(h)", "one root-to-leaf path; h, not log n"],
     ["h when balanced", "log₂n", "1,000,000 nodes is about 20 levels"],
-    ["h when degenerate", "n", "sorted input into an unbalanced tree is a linked list"],
+    ["h when it is a chain", "n", "sorted input into an unbalanced tree is a linked list"],
     ["recursive traversal space", "O(h)", "one stack frame per level"],
     ["BFS space", "O(width)", "up to about n/2 nodes on the widest level"],
   ],
 
   traps: [
-    "<b>Forgetting the null base case.</b> Every tree function starts with \"if the node is empty, return the identity\", 0, true, or null.",
-    "<b>Confusing height with depth.</b> Height is measured downward from a node to its deepest leaf; depth is measured downward from the root to the node.",
-    "<b>Assuming balance.</b> Nothing keeps a plain binary tree bushy; state your answer as O(h) and say what h is in the worst case.",
-    "<b>Recursing on a skewed tree with 10⁵ nodes.</b> That is 10⁵ stack frames, go iterative with an explicit stack.",
-    "<b>Reading one level in BFS without freezing its size first.</b> Capture the queue length before the inner loop, or you will run into the next level.",
+    "<b>Forgetting the null base case.</b> Every tree function starts with “if the node is empty, return the neutral answer”: 0, true, or null.",
+    "<b>Confusing height with depth.</b> Height is measured down from a node to its deepest leaf. Depth is measured down from the root to the node.",
+    "<b>Assuming balance.</b> Nothing keeps a plain binary tree bushy. State your answer as O(<var>h</var>), and say what <var>h</var> is in the worst case.",
+    "<b>Recursing on a chain of 10⁵ nodes.</b> That is 10⁵ stack frames. Use a loop with an explicit stack.",
+    "<b>Reading one level in BFS without fixing its size first.</b> Capture the queue length before the inner loop, or you run into the next level.",
   ],
 
   impl: [
-    ["Python", "class TreeNode / collections.deque for BFS", "Recursion limit ~1000: use an explicit stack on deep trees."],
+    ["Python", "class TreeNode / collections.deque for BFS", "Recursion limit about 1000: use an explicit stack on deep trees."],
     ["Java", "TreeNode class / ArrayDeque for BFS", "Check for null before touching left or right; there is no safe navigation."],
     ["C++", "struct TreeNode* / std::queue for BFS", "Nodes are raw pointers unless you use smart pointers; free what you allocate."],
-    ["JavaScript", "{val, left, right} objects", "Array.shift() is O(n), use a head index for the BFS queue."],
+    ["JavaScript", "{val, left, right} objects", "Array.shift() is O(n): use a head index for the BFS queue."],
   ],
 
   code: {
@@ -6601,170 +6719,267 @@ function levelOrder(root) {
   return out;
 }`,
   },
-  codecap: "The null base case, the two recursive calls, and the level-frozen BFS loop cover most tree questions between them.",
+  codecap: "The null base case, the two recursive calls, and the level-fixed BFS loop cover most tree questions between them.",
 
   q: [
-    ["Why is tree code almost always recursive?", "Because the structure is self-similar: a child is itself a complete tree, so the same function that solves the whole thing solves the part. Assume the subtrees are solved and combine."],
-    ["What is the difference between the three depth-first orders?", "Only when the node is visited relative to its two recursive calls: before (pre), between (in), or after (post). Pre-order when children need the parent's result, post-order when the parent needs the children's."],
-    ["What changes if you swap the stack for a queue?", "DFS becomes BFS. The walk visits level by level instead of path by path, which is what questions about depth, distance, or per-level results need."],
-    ["Tree operations are O(log n). What is wrong with that claim?", "They are O(h). h is log n only if the tree is balanced; a tree built from sorted data degenerates into a line, giving h = n and O(n) operations."],
-    ["What is the space cost of a recursive traversal, and when does it bite?", "O(h) stack frames. On a balanced tree that is O(log n), but on a skewed tree with 10⁵ nodes it is 10⁵ frames and will overflow the stack."],
-    ["In level-order BFS, why capture the queue size before the inner loop?", "Because the loop pushes the next level onto the same queue. Freezing the size marks where the current level ends."],
+    ["Why is tree code almost always recursive?", "Because the structure repeats: a child is itself a complete tree, so the function that solves the whole solves the part. Assume the subtrees are solved and combine."],
+    ["What is the difference between the three depth-first orders?", "Only when the node is handled relative to its two recursive calls: before (pre), between (in), or after (post). Pre-order when children need the parent's result, post-order when the parent needs the children's."],
+    ["What changes if you swap the stack for a queue?", "DFS becomes BFS. The walk goes level by level instead of path by path, which is what questions about depth, distance, or per-level results need."],
+    ["Tree operations are O(log n). What is wrong with that claim?", "They are O(h). h is log n only if the tree is balanced. A tree built from sorted data becomes a line, giving h = n and O(n) operations."],
+    ["What is the space cost of a recursive traversal, and when does it bite?", "O(h) stack frames. On a balanced tree that is O(log n), but on a chain of 10⁵ nodes it is 10⁵ frames and overflows the stack."],
+    ["In level-order BFS, why capture the queue size before the inner loop?", "Because the loop pushes the next level onto the same queue. Fixing the size marks where the current level ends."],
   ],
 
   p: [
     [104, "maximum-depth-of-binary-tree", "Maximum Depth, the template", "E"],
     [100, "same-tree", "Same Tree", "E"],
     [226, "invert-binary-tree", "Invert Binary Tree", "E"],
-    [102, "binary-tree-level-order-traversal", "Level Order Traversal, BFS by level", "M"],
     [543, "diameter-of-binary-tree", "Diameter, return one thing, track another", "E"],
+    [102, "binary-tree-level-order-traversal", "Level Order Traversal, BFS by level", "M"],
     [236, "lowest-common-ancestor-of-a-binary-tree", "Lowest Common Ancestor, and it has its own page", "M"],
     [124, "binary-tree-maximum-path-sum", "Maximum Path Sum", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek company ke org chart mein <b>10⁵ log</b> hain. Har manager ke zyada se zyada do direct reports hain. Har insaan ke liye HR ko unke neeche ke sab logon ki ginti chahiye, direct ho ya nahi.</p>
+<p>Ise chhe logon tak chhota karo. 1 company chalata hai. 2 aur 3, 1 ko report karte hain. 4 aur 5, 2 ko, aur 6, 3 ko. To 2 ke paas khud milakar 3 log hain, aur 1 ke paas saare 6.</p>`,
+      tries: [
+        ["Har insaan ke liye neeche chal kar gino", "Har walk apne neeche ki walks dohraati hai. Chart ek lambi chain ho, to walks ki cost 1 + 2 + … + 10⁵, lagbhag 5 × 10⁹ steps."],
+        ["(person, manager) rows ki flat list rakho aur scan karo", "Ek insaan ke reports dhoondhna saari 10⁵ rows scan karta hai, aur yeh sabke liye karna hai: lagbhag 10¹⁰ row reads."],
+        ["Nested loops se level by level chalo", "Pata nahi kitne levels hain. Management ka ek aur level matlab ek aur nested loop, to koi fixed program nahi chalta."],
+      ],
+      so: `<p>Dhyan do ki 2, apne neeche sabke saath, khud ek chhota org chart hai, usi shape ka. To <b>left solve karo, right solve karo, jodo</b>: <code>count(p) = 1 + count(left) + count(right)</code>, khaali jagah ka count 0. Har insaan ek baar dekha jaata hai: 10⁵ steps, 5 × 10⁹ nahi.</p>
+<p>Aisa structure jisme har node zyada se zyada do children ko point kare, <b>binary tree</b> hai. Page poore mein chhe logon wala chart use karta hai: <code>1</code> ke neeche <code>2, 3</code>, 2 ke neeche <code>4, 5</code> aur 3 ke neeche <code>6</code>.</p>`,
+    },
+
+    one: "Har node khud ek chhote tree ka root hai, to lagbhag har tree problem wahi teen lines hai: <b>left solve karo, right solve karo, jodo</b>.",
+
+    plain: `<p>Linked list lo aur har node ko ek ki jagah <b>do</b> next-pointers do. Yahi binary tree hai. Sabse upar wala node <b>root</b> hai, jin nodes ko woh point karta hai woh uske <b>children</b>, aur jiske koi children nahi woh <b>leaf</b>. Chart mein 1 root hai, 2 aur 3 uske children, aur 4, 5 aur 6 leaves.</p>
+<p>Branching trees ko uthla banati hai. Har level upar wale se dugne nodes rakh sakta hai. Das lakh nodes line mein das lakh steps gehre hain; balanced tree mein lagbhag bees.</p>
+<p>Doosra nateeja kaam ka hai. Node 2, neeche 4 aur 5 ke saath, khud ek poora tree hai. To jo solution poore par chalta hai woh hisse par bhi chalta hai. Isiliye tree ka code lagbhag hamesha recursive aur chhota hota hai.</p>
+<p><b>Analogy.</b> Org chart. Koi bhi manager, apne neeche sab logon ke saath, ek chhota org chart hai. “Tumhare neeche kitne log hain?” har level par ek hi tarah se answer hota hai: dono reports se poocho, apna ek jodo.</p>`,
+
+    why: [
+      { t: "Ek extra pointer shape badal deta hai",
+        d: "Har node par ek next-pointer <var>n</var> lambi line deta hai. Do branching dete hain, aur level <var>d</var> 2<sup><var>d</var></sup> nodes rakh sakta hai. Ulta dekho to <var>n</var> nodes ko sirf lagbhag <b>log₂ <var>n</var> levels</b> chahiye. Trees gehrai mein saste hain." },
+      { t: "Structure khud ko dohraata hai, isliye code recursive hai",
+        d: "Chart ka node 2 wala hissa tree ka tukda nahi. Woh khud ek tree <b>hai</b>. To maan lo left aur right hisse pehle se solved hain, aur jodo: count(2) = 1 + count(4) + count(5) = 3. Base case khaali jagah hai, jiska count 0. Isiliye har tree function null check se shuru hota hai." },
+      { t: "Teen depth-first orders ek hi walk hain, alag order mein",
+        d: "Node ko children se <i>pehle</i> sambhalo (<b>pre-order</b>: 1, 2, 4, 5, 3, 6), unke <i>beech</i> (<b>in-order</b>: 4, 2, 5, 1, 3, 6), ya dono ke <i>baad</i> (<b>post-order</b>: 4, 5, 2, 6, 3, 1). Headcount ko pehle children ke answers chahiye, to yeh post-order hai." },
+      { t: "Depth-first vs breadth-first container ka chunaav hai",
+        d: "DFS call stack par chalta hai aur path wale sawaalon ke liye theek hai. Stack ki jagah <b>queue</b> lagao aur wahi walk level by level chalti hai: 1, phir 2 aur 3, phir 4, 5 aur 6. Minimum depth, har level ka kuch, ya root se doori, iske liye yahi shape hai." },
+      { t: "Har cost O(h) hai, aur h muft nahi",
+        d: "Root se ek raasta chalna <b>O(<var>h</var>)</b> hai, jahan <var>h</var> height hai. Yeh O(log <var>n</var>) tabhi hai jab tree ghana rahe. Har manager ka ek hi report hota, to chart ek line hota: <var>h</var> = <var>n</var>. Trees ko balanced rakhna kisi ka kaam hai, aur AVL aur red-black trees isi ke liye hain." },
+      { t: "Space bhi height hai",
+        d: "Recursive walk har level ka ek frame rakhti hai, to <b>O(<var>h</var>)</b> memory. Balanced tree par O(log <var>n</var>), aur line par O(<var>n</var>): 10⁵ frames stack overflow karte hain. BFS ek baar mein ek level rakhta hai, sabse chaude par lagbhag <var>n</var>/2 nodes. Dono alag tarah fail hote hain." },
+    ],
+
+    math: [
+      { t: "Chhe logon ke chart par headcount, post-order", d: "Har insaan dono reports ke baad gina jaata hai, to har answer zaroorat par taiyaar hai. Chhe log, chhe calls, har ek ek baar." },
+      { t: "Teen orders ek walk hain, teen palon par likhi hui", d: "Teen algorithms nahi hain. Ek depth-first walk har node se teen baar guzarti hai, aur order is par depend hai ki kaunsa guzarna use likhta hai." },
+      { t: "Height vs node count, dono siron par", d: "Har path operation O(h) hai. To sawaal hai h kya hai, aur same n ke liye answer paanch orders of magnitude tak phaila hai." },
+      { t: "Aadhe nodes leaves hain, aur BFS isi ki keemat deta hai", d: "Binary tree neeche se bhari hoti hai. Yahi level by level walk ki memory tay karta hai, aur depth-first ko sasti aadat banata hai." },
+    ],
+
+    costs: [
+      ["har node visit", "O(n)", "har node theek ek baar"],
+      ["path par search / insert / delete", "O(h)", "ek root-to-leaf raasta; h, log n nahi"],
+      ["balanced ho to h", "log₂n", "10,00,000 nodes lagbhag 20 levels"],
+      ["chain ho to h", "n", "unbalanced tree mein sorted input linked list hai"],
+      ["recursive traversal space", "O(h)", "har level ka ek stack frame"],
+      ["BFS space", "O(width)", "sabse chaude level par lagbhag n/2 nodes tak"],
+    ],
+
+    traps: [
+      "<b>Null base case bhoolna.</b> Har tree function shuru hota hai “node khaali ho to neutral answer do”: 0, true, ya null.",
+      "<b>Height aur depth mein confusion.</b> Height node se uske sabse gehre leaf tak neeche naapi jaati hai. Depth root se node tak neeche.",
+      "<b>Balance maan lena.</b> Simple binary tree ko kuch ghana nahi rakhta. Answer O(<var>h</var>) mein batao, aur batao worst case mein <var>h</var> kya hai.",
+      "<b>10⁵ nodes ki chain par recursion.</b> Yeh 10⁵ stack frames hain. Explicit stack wala loop use karo.",
+      "<b>BFS mein level ka size pehle fix kiye bina padhna.</b> Andar ke loop se pehle queue ki length pakdo, warna agle level mein ghus jaoge.",
+    ],
+
+    impl: [
+      ["Python", "class TreeNode / collections.deque for BFS", "Recursion limit lagbhag 1000: gehre trees par explicit stack use karo."],
+      ["Java", "TreeNode class / ArrayDeque for BFS", "left ya right chhoone se pehle null check karo; safe navigation nahi hai."],
+      ["C++", "struct TreeNode* / std::queue for BFS", "Smart pointers na lo to nodes raw pointers hain; jo allocate kiya use free karo."],
+      ["JavaScript", "{val, left, right} objects", "Array.shift() O(n) hai: BFS queue ke liye head index use karo."],
+    ],
+
+    codecap: "Null base case, do recursive calls, aur level-fixed BFS loop milkar zyadatar tree sawaal cover karte hain.",
+
+    q: [
+      ["Tree ka code lagbhag hamesha recursive kyun hota hai?", "Kyunki structure dohraata hai: child khud ek poora tree hai, to jo function poora solve karta hai woh hissa bhi. Maan lo subtrees solved hain aur jodo."],
+      ["Teen depth-first orders mein kya farak hai?", "Sirf yeh ki node apni do recursive calls ke hisaab se kab sambhala jaata hai: pehle (pre), beech (in), ya baad (post). Children ko parent ka result chahiye to pre-order, parent ko children ka chahiye to post-order."],
+      ["Stack ki jagah queue lagao to kya badalta hai?", "DFS BFS ban jaata hai. Walk path by path ki jagah level by level chalti hai, jo depth, doori ya har level ke result wale sawaalon ko chahiye."],
+      ["Tree operations O(log n) hain. Is claim mein kya galat hai?", "Woh O(h) hain. h log n tabhi hai jab tree balanced ho. Sorted data se bana tree line ban jaata hai, h = n aur operations O(n)."],
+      ["Recursive traversal ki space cost kya hai, aur kab chubhti hai?", "O(h) stack frames. Balanced tree par O(log n), par 10⁵ nodes ki chain par 10⁵ frames, aur stack overflow."],
+      ["Level-order BFS mein inner loop se pehle queue size kyun pakadte hain?", "Kyunki loop agla level usi queue par push karta hai. Size fix karna batata hai ki current level kahan khatam hota hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "bst",
   n: "Binary Search Tree",
   group: "Data structures",
+  need: {
+    ask: `<p>A room-booking system stores the start times of <b>10⁵ bookings</b>. New bookings arrive all day, <b>10⁵ of them</b>, and the most common question is <b>“what is the first booking at or after time t?”</b></p>
+<p>Shrink it to six bookings: <code>1, 3, 6, 8, 10, 14</code>. The first booking at or after 7 is 8. Then a new booking at 7 arrives, and must slot in between 6 and 8.</p>`,
+    tries: [
+      ["Keep a sorted array and binary search it", "The question is fast: about 17 comparisons. But every new booking shifts half the array on average, 5 × 10⁴ moves. 10⁵ bookings make 5 × 10⁹ moves."],
+      ["Use a hash set", "Adding a booking and checking an exact time are instant. But a hash set has no order, so it cannot say what comes after 7."],
+      ["Keep an unsorted list and scan it", "Adding is instant. Every question scans all 10⁵ bookings, so 10⁵ questions cost 10¹⁰ comparisons."],
+    ],
+    so: `<p>Keep binary search's halving, but store it in the <b>shape</b> instead of in array positions. Put 8 at the top. Everything smaller goes in the left part, everything larger in the right, and the same rule repeats inside each part. Finding 6 is then 8, go left, 3, go right, 6: three comparisons.</p>
+<p>Inserting 7 follows the same path and hangs 7 off the end: nothing shifts. That is a <b>binary search tree</b>, and every operation costs one walk from the top. The page uses the tree of 1, 3, 6, 8, 10, 14 throughout.</p>`,
+  },
+
   one: "One extra rule turns a tree into a search structure: <b>everything left is smaller, everything right is larger</b>. Lose the balance and you have built a linked list with ceremony.",
 
-  plain: `<p>Binary search is wonderful and needs a sorted array, which is wonderful until something needs inserting, at which point half the array shuffles along to make room.</p>
-<p>A search tree keeps the halving and drops the shuffling. Put a middling value at the root, everything smaller in the left subtree, everything larger in the right, and repeat. Now finding a value is the same sequence of decisions binary search makes, except the decisions are baked into the shape instead of recomputed from indices.</p>
-<p>Insert costs the same walk, and nothing moves afterwards, because there is no single unbroken block of memory to keep tidy. You have traded array locality, values sitting side by side in memory, for the ability to insert in the middle without apologising to everything after it.</p>
-<p>There is one condition, and the whole page hinges on it: the tree has to stay bushy. Nothing in a plain search tree makes that happen.</p>
-<p><b>Analogy.</b> A pub quiz where every question is "higher or lower". You get there in about twenty guesses out of a million, provided the person answering is picking sensible midpoints and not counting up from one.</p>`,
+  plain: `<p>Binary search needs a sorted array. That is fine until something must be inserted, and half the array shuffles along to make room.</p>
+<p>A search tree keeps the halving and drops the shuffling. The root holds 8. Everything smaller, 1, 3 and 6, lives in the left subtree. Everything larger, 10 and 14, lives in the right. The same rule holds inside each subtree. Finding a value makes the same decisions binary search makes, but the decisions are built into the shape.</p>
+<p>Inserting costs the same walk, and nothing moves afterwards. You have traded array locality for inserting in the middle cheaply.</p>
+<p>There is one condition, and the whole page hinges on it: the tree must stay bushy. Nothing in a plain search tree makes that happen.</p>
+<p><b>Analogy.</b> A game of “higher or lower”. You find a number out of a million in about twenty guesses, provided the person answering picks sensible midpoints and does not count up from one.</p>`,
 
   why: [
-    { t: "Store the decision instead of recomputing it", d: "Binary search needs an array so it can jump to the middle. A tree cannot jump anywhere, but it can <b>remember</b> what the middle was: the root is the split point, and the two subtrees are the halves. The structure is the search, which is why the code is a walk rather than arithmetic." },
-    { t: "The rule is about whole subtrees, not about children", d: "Every value in the left subtree must be smaller than the node, not merely its immediate left child. This distinction is invisible in a diagram and fatal in code. The classic broken validator compares each parent with its child, passes happily, and accepts a tree where a grandchild sits on completely the wrong side." },
-    { t: "So validating is a range problem", d: "Walk down carrying a permitted range. The root may be anything; going left tightens the upper bound to the node's value, going right tightens the lower bound. A node outside its inherited range is a violation. Once you see the rule as a range rather than a comparison, the correct check writes itself." },
-    { t: "In-order traversal is the invariant read aloud", d: "Left, then node, then right, means smaller things, then this thing, then larger things, at every level. So an in-order walk emits the values in <b>sorted order</b>, and \"kth smallest\" is that walk with a counter and an early exit rather than anything cleverer." },
-    { t: "Everything costs O(h), and h is a promise nobody made", d: "Search, insert and delete each follow one root-to-leaf path. On a bushy tree that is log n. Insert already-sorted data and every value goes right. What you have built is a linked list with extra pointers: <b>h = n</b>, and every operation degrades to O(n). Sorted input is not an exotic edge case, it is what most real data looks like on arrival." },
-    { t: "Which is the entire reason self-balancing trees exist", d: "AVL and red-black trees do the same job while performing rotations to keep the height near log n. They are not a different idea, they are this idea with the promise actually kept. In interviews you use the balanced version by name; in libraries it is what <code>TreeMap</code> and <code>std::map</code> already are." },
-    { t: "Choose it over a hash map only for the ordering", d: "A hash map gives O(1) average and no order whatsoever. A balanced search tree gives O(log n) and keeps everything sorted, which buys range queries, floor and ceiling, predecessor and successor, and ordered iteration. If you never ask an ordered question, you are paying log n for nothing." },
+    { t: "Store the decision instead of recomputing it",
+      d: "Binary search needs an array so it can jump to the middle. A tree cannot jump, but it can <b>remember</b> the middle: the root, 8, is the split point, and its two subtrees are the halves. So searching is a walk, not arithmetic: 8, then 3, then 6." },
+    { t: "The rule covers whole subtrees, not just children",
+      d: "Every value in 8's left subtree must be smaller than 8, not merely its left child 3. Put 9 where 6 is, and 9 &gt; 3 looks fine locally. But 9 sits on 8's left, so the tree is broken. A validator that only compares parent with child accepts it." },
+    { t: "So validating is a range problem",
+      d: "Walk down carrying a permitted range. The root may be anything. Going left from 8 sets the upper limit to 8. Going right from 3 sets the lower limit to 3. So that spot must hold a value between 3 and 8: 6 passes, 9 fails." },
+    { t: "In-order traversal reads the rule aloud",
+      d: "Left, then node, then right means smaller, then this, then larger, at every level. So an in-order walk gives 1, 3, 6, 8, 10, 14: <b>sorted</b>. “The <var>k</var>-th smallest” is that walk with a counter and an early stop." },
+    { t: "Everything costs O(h), and h is a promise nobody made",
+      d: "Search, insert and delete each follow one root-to-leaf path: <b>O(<var>h</var>)</b>. On a bushy tree that is log <var>n</var>. Insert 1, 3, 6, 8 in that order and every value goes right: a line, <var>h</var> = <var>n</var>. Sorted input is not rare; times and ids usually arrive in order." },
+    { t: "Which is why self-balancing trees exist",
+      d: "AVL and red-black trees do the same job, and rotate nodes to keep the height near log <var>n</var>. They are this idea with the promise actually kept. Java's <code>TreeMap</code> and C++'s <code>std::map</code> already are one." },
+    { t: "Choose it over a hash map only for the order",
+      d: "A hash map gives O(1) on average and no order at all. A balanced tree gives O(log <var>n</var>) and keeps everything sorted. That buys the booking question, “first at or after 7”, plus ranges and sorted iteration. With no ordered question, you are paying log <var>n</var> for nothing." },
   ],
 
   variants: [
     { n: "Plain BST", cost: "O(h), and h is whatever you were given",
-      idea: "What this page teaches. Nothing keeps it bushy, so the height is a consequence of the insertion order rather than a guarantee.",
-      when: "Interviews, where you are asked to implement one, and any case where you control the insertion order.",
-      watch: "Sorted input gives h = n. If you built it from sorted data, you built a linked list." },
-
+      idea: "What this page teaches. Nothing keeps it bushy, so the height depends on the order of inserts, not on any guarantee.",
+      when: "Interviews that ask you to write one, and cases where you control the insert order.",
+      watch: "Sorted input gives <var>h</var> = <var>n</var>. Built from sorted data, it is a linked list." },
     { n: "AVL tree", cost: "O(log n) guaranteed, strictly balanced",
-      idea: "Store a height at each node and rotate whenever the two subtrees differ by more than one. Rotations are local, at most two per insert.",
+      idea: "Store a height at each node, and rotate whenever the two subtrees differ by more than one. Rotations are local: at most two per insert.",
       when: "Read-heavy workloads, where the tighter balance pays for the extra rotations.",
-      watch: "More rotations on write than a red-black tree, in exchange for a shallower tree on read. Rarely what a library picks." },
-
+      watch: "More rotations on writes than a red-black tree, for a shallower tree on reads. Libraries rarely pick it." },
     { n: "Red-black tree", cost: "O(log n) guaranteed, loosely balanced",
-      idea: "Colour each node red or black and maintain rules that keep the longest path within twice the shortest. Looser than AVL, so fewer rotations.",
-      when: "What almost every standard library actually uses, because mixed read and write workloads are the common case.",
-      watch: "Nobody expects you to implement one under interview pressure. Name it, say what it guarantees, and use the library." },
-
+      idea: "Colour each node red or black, and keep rules that hold the longest path within twice the shortest. Looser than AVL, so fewer rotations.",
+      when: "What almost every standard library uses, because mixed reads and writes are the common case.",
+      watch: "Nobody expects you to write one in an interview. Name it, say what it guarantees, and use the library." },
     { n: "B-tree and B+ tree", cost: "O(log n) with an enormous base",
       idea: "Let each node hold many keys and many children, so the tree is very wide and only a few levels deep.",
-      when: "Databases and filesystems, where a node is sized to one disk page and the cost you care about is the number of reads, not comparisons.",
-      watch: "This is the answer to why database indexes are B-trees and not binary trees: the bottleneck is fetching a page, so you want fewer, fatter nodes." },
-
+      when: "Databases and filesystems, where a node is one disk page and the real cost is page reads, not comparisons.",
+      watch: "This is why database indexes are B-trees, not binary trees: fetching a page is the bottleneck, so you want fewer, fatter nodes." },
     { n: "What your language gives you", cost: "O(log n), already balanced",
-      idea: "Java TreeMap and TreeSet, C++ std::map and std::set. All red-black trees underneath.",
-      when: "Production, always. Range queries, floor and ceiling, ordered iteration.",
-      watch: "Python and JavaScript ship nothing equivalent. Python usually reaches for a sorted list plus bisect, or a third-party library." },
+      idea: "Java <code>TreeMap</code> and <code>TreeSet</code>, C++ <code>std::map</code> and <code>std::set</code>. All red-black trees underneath.",
+      when: "Production, always: ranges, floor and ceiling, sorted iteration.",
+      watch: "Python and JavaScript ship nothing like it. Python usually uses a sorted list plus <code>bisect</code>, or a third-party library." },
   ],
 
-  hing: `<p><b>Shuruaat yahan se karo:</b> binary search ke liye <b>sorted array</b> chahiye, taaki beech wala element turant mil jaaye. Par array mein beech mein kuch daalo to aadha array khisakna padta hai. <b>O(n)</b>.</p>
+  hing: `<p><b>Shuruaat yahan se karo:</b> binary search ke liye <b>sorted array</b> chahiye, taaki beech wala element turant mil jaaye. Par array mein beech mein kuch daalo to aadha array khisakna padta hai. <b>O(<var>n</var>)</b>.</p>
 <p><b>Search tree ka idea:</b> halving rakho, khisakna hatao. Beech wali value ko root banao, chhoti sab left mein, badi sab right mein, aur yahi baat har node par dohrao. Ab dhoondhna wahi decisions hain jo binary search leta hai, bas woh decisions <b>pehle se tree ki shakal mein likhe hue hain</b>.</p>
-<p><b>Sabse zaroori baat, aur yahin log galti karte hain:</b> niyam <b>poore subtree</b> par lagta hai, sirf bachche par nahi. Left subtree ka <b>har</b> element node se chhota hona chahiye, sirf uska left child nahi. Isiliye "isValidBST" ka galat solution itna common hai. Woh sirf parent aur child compare karta hai aur khush ho kar pass kar deta hai. Galat jagah baithe grandchild ko woh pakad hi nahi paata.</p>
+<p><b>Sabse zaroori baat, aur yahin log galti karte hain:</b> niyam <b>poore subtree</b> par lagta hai, sirf bachche par nahi. Left subtree ka <b>har</b> element node se chhota hona chahiye, sirf uska left child nahi. Isiliye "isValidBST" ka galat solution itna common hai. Woh sirf parent aur child compare karta hai aur galat jagah baithe grandchild ko pakad hi nahi paata.</p>
 <p><b>To validate kaise karein?</b> Range leke neeche jao. Root kuch bhi ho sakta hai. Left jaate waqt <b>upper limit</b> chhoti karo, right jaate waqt <b>lower limit</b> badi karo. Jo node apni range se bahar hai, wahi galat hai.</p>
-<p><b>In-order traversal (left, node, right)</b> ka matlab hai: pehle chhote, phir yeh, phir bade. Isliye values <b>sorted</b> nikalti hain. Yeh koi ittefaq nahi, yeh wahi invariant hai bol kar sunaya gaya. "Kth smallest" bas isi walk mein ek counter lagana hai.</p>
-<p><b>Ab woh baat jo sab bhool jaate hain:</b> har operation <b>O(h)</b> hai, O(log n) nahi. Agar data pehle se <b>sorted</b> aa gaya, to har value right mein jaayegi aur tree ek seedhi line ban jaayega. <b>h = n</b>, sab kuch O(n). Aur sorted data koi ajeeb edge case nahi hai, asli duniya mein data aksar aise hi aata hai.</p>
-<p><b>Isiliye AVL aur red-black trees bane hain.</b> Woh koi naya idea nahi hain, bas yahi idea hai jisme rotations se height log n ke aas-paas rakhi jaati hai. Java ka <code>TreeMap</code> aur C++ ka <code>std::map</code> pehle se yahi hain.</p>
-<p><b>Aur BST kab lena hai, hash map ke bajaye?</b> Sirf tab jab <b>order</b> chahiye: range query, floor/ceiling, next bada ya pichhla chhota, sorted iteration. Agar yeh kuch nahi chahiye, to hash map O(1) deta hai aur tum bina wajah log n de rahe ho.</p>`,
+<p><b>In-order traversal (left, node, right)</b> ka matlab hai: pehle chhote, phir yeh, phir bade. Isliye values <b>sorted</b> nikalti hain. "Kth smallest" bas isi walk mein ek counter lagana hai.</p>
+<p><b>Ab woh baat jo sab bhool jaate hain:</b> har operation <b>O(<var>h</var>)</b> hai, O(log <var>n</var>) nahi. Agar data pehle se <b>sorted</b> aa gaya, to har value right mein jaayegi aur tree ek seedhi line ban jaayega. <b><var>h</var> = <var>n</var></b>, sab kuch O(<var>n</var>).</p>
+<p><b>Isiliye AVL aur red-black trees bane hain.</b> Woh koi naya idea nahi hain, bas yahi idea hai jisme rotations se height log <var>n</var> ke aas-paas rakhi jaati hai. Java ka <code>TreeMap</code> aur C++ ka <code>std::map</code> pehle se yahi hain.</p>
+<p><b>Aur BST kab lena hai, hash map ke bajaye?</b> Sirf tab jab <b>order</b> chahiye: range query, floor/ceiling, agla bada ya pichhla chhota, sorted iteration. Yeh kuch nahi chahiye, to hash map O(1) deta hai.</p>`,
 
   viz: ["bst"],
   see: [["VA", "https://visualgo.net/en/bst", "VisuAlgo, insert and delete on a BST"]],
 
   math: [
-    { t: "What the ordering rule buys, compared with the alternatives", d: "A balanced BST matches a sorted array on lookup and beats it on update, which is the only reason to accept the extra pointers.", w:
-`n = 1,000,000
+    { t: "Search for 6, and the booking question for 7, traced", d: "Both walks start at the root and make one comparison per level. The second one remembers the last place it turned left: that is the answer.", w:
+`tree:  8 -> left 3 (1, 6), right 10 (-, 14)
 
-                        lookup      insert      in order?
-unsorted array          10^6        1           no
-sorted array            20          10^6 shift  yes
-hash map                1           1           no
-balanced BST            20          20          yes
+find 6:   8: 6 < 8, go left
+          3: 6 > 3, go right
+          6: found                     3 comparisons
+
+first >= 7:
+          8: 8 >= 7, best so far 8, go left
+          3: 3 < 7, go right
+          6: 6 < 7, go right: empty    answer 8
+
+insert 7: the same walk ends at 6's empty right: hang 7 there` },
+    { t: "What the ordering rule buys, against the alternatives", d: "A balanced search tree matches a sorted array on lookups and beats it on inserts. That is the only reason to accept the extra pointers.", w:
+`n = 100,000 bookings
+
+                        first >= t   insert       in order?
+unsorted list           10^5         1            no
+sorted array            17           5 x 10^4     yes
+hash set                can't        1            no
+balanced BST            17           17           yes
 
 the last row is the only one with three usable columns` },
-    { t: "Sorted input is the disaster case, and it is the common case", d: "The degenerate tree is not a contrived adversary. It is what you get from ids, timestamps, or anything already in order.", w:
-`insert 1, 2, 3, ..., n into an unbalanced BST
-every key becomes a right child: h = n - 1
+    { t: "Sorted input is the disaster case, and it is the common case", d: "The line-shaped tree is not a contrived attack. It is what you get from ids, timestamps, or anything already in order.", w:
+`insert 1, 3, 6, 8 in that order:
+  1 -> right 3 -> right 6 -> right 8      h = n - 1
 
+n keys in order: every key becomes a right child
 total insert cost  1 + 2 + ... + n  =  n^2 / 2
 n = 100,000  ->  5 x 10^9 comparisons
 
-the same keys shuffled first: h ~ 40, cost ~ 4 x 10^6` },
-    { t: "Random order is fine, and here is how fine", d: "Between the two extremes sits the average case, which is a constant factor away from balanced and nowhere near the worst case.", w:
-`random insertion order, n keys:
-  average node depth   ~ 2 ln n    = 1.39 log2 n
-  expected height      ~ 4.31 ln n = 2.99 log2 n
+the same keys shuffled first: h ~ 40, cost ~ 2 x 10^6` },
+    { t: "Validation is a range question, and the parent test fails", d: "Replace 6 with 9. Comparing each node with its parent checks only a local fact. The rule is about whole subtrees, so the check must carry a range down.", w:
+`        8
+       / \\
+      3   10
+     / \\    \\
+    1   9    14
 
-n = 10^6:
-  average depth  ~ 28      height ~ 60
-  balanced tree:   20              20
-
-random is survivable. Sorted is not. Only one of the two
-is something the caller decides for you.` },
-    { t: "Validation is a range question, and the parent test fails on it", d: "Comparing each node with its parent checks a local fact. The BST rule is about entire subtrees, so the check has to carry a range down.", w:
-`        10
-       /  \\
-      5    15
-          /  \\
-         6    20
-
-parent checks: 5 < 10 ok, 15 > 10 ok, 6 < 15 ok, 20 > 15 ok
-all four pass, and the tree is invalid: 6 sits in the
-right subtree of 10, so it must exceed 10
+parent checks: 3 < 8, 10 > 8, 1 < 3, 9 > 3, 14 > 10
+all five pass, and the tree is invalid: 9 sits in the
+left subtree of 8, so it must be below 8
 
 carry (low, high) instead:
-  left of 10   gets (-inf, 10)
-  right of 10  gets (10, +inf)
-  6 arrives with (10, 15) and is rejected` },
-    { t: "In-order is the invariant, read aloud", d: "Because the rule is a range rule, walking left-node-right emits the keys in sorted order. Several separate problems collapse into that one sentence.", w:
-`in-order walk of a valid BST is strictly increasing
+  left of 8    gets (-inf, 8)
+  right of 3   gets (3, 8)
+  9 arrives with (3, 8) and is rejected` },
+    { t: "In-order is the rule, read aloud", d: "Because the rule is a range rule, walking left, node, right gives the keys in sorted order. Several separate problems reduce to that one sentence.", w:
+`in-order walk of the tree:  1, 3, 6, 8, 10, 14
 
 so:
   validate       one pass, check each key > the previous
-  k-th smallest  stop after k emissions   O(h + k)
-  successor      the next emission after x
-  range [a, b]   prune subtrees that cannot contain it
+  k-th smallest  stop after k keys          O(h + k)
+  successor      the key after x in the walk
+  range [a, b]   skip subtrees that cannot hold it
 
-all O(h) or O(h + output), none of them O(n)` },
+validate is a full O(n) walk; the other three cost
+O(h) or O(h + output), never O(n)` },
   ],
 
   costs: [
     ["search / insert / delete", "O(h)", "one root-to-leaf path, every time"],
     ["h when balanced", "log n", "what you are promised, not what you are given"],
     ["h after sorted input", "n", "a linked list wearing a tree costume"],
-    ["in-order traversal", "O(n)", "emits the values already sorted"],
-    ["kth smallest", "O(h + k)", "in-order walk with a counter and an early exit"],
-    ["min / max", "O(h)", "walk left forever, or right forever"],
-    ["balanced tree (TreeMap, std::map)", "O(log n) guaranteed", "the same idea with rotations keeping the promise"],
+    ["in-order traversal", "O(n)", "gives the values already sorted"],
+    ["kth smallest", "O(h + k)", "in-order walk with a counter and an early stop"],
+    ["min / max", "O(h)", "walk left until you cannot, or right"],
+    ["balanced tree (TreeMap, std::map)", "O(log n) guaranteed", "the same idea, with rotations keeping the promise"],
   ],
 
   traps: [
-    "<b>Validating with parent and child only.</b> The rule covers whole subtrees, so carry a permitted range down instead. This is the single most common wrong answer to isValidBST.",
-    "<b>Assuming balance.</b> A plain BST does nothing to keep itself bushy. Say O(h), then say what h is in the worst case, before the interviewer does.",
-    "<b>Forgetting the two-child delete case.</b> Replace the node with its in-order successor (leftmost node of the right subtree), then delete that one instead.",
-    "<b>Using the integer limits as the initial range</b> and then meeting a value equal to the limit. Use nullable bounds, or a comparison that treats absent as unbounded.",
-    "<b>Reaching for a BST when a hash map would do.</b> Unless you ask an ordered question, you are paying O(log n) for the privilege of nothing.",
+    "<b>Validating with parent and child only.</b> The rule covers whole subtrees, so carry a permitted range down instead. This is the most common wrong answer to isValidBST.",
+    "<b>Assuming balance.</b> A plain BST does nothing to stay bushy. Say O(<var>h</var>), then say what <var>h</var> is in the worst case, before the interviewer does.",
+    "<b>Forgetting the two-child delete case.</b> Replace the node with its in-order successor, the leftmost node of its right subtree, then delete that one instead.",
+    "<b>Using the integer limits as the starting range</b>, then meeting a value equal to the limit. Use empty bounds, or a comparison that treats a missing bound as no limit.",
+    "<b>Reaching for a BST when a hash map would do.</b> Unless you ask an ordered question, you are paying O(log <var>n</var>) for nothing.",
   ],
 
   impl: [
-    ["Python", "no built-in tree; use dict, or bisect on a sorted list", "sortedcontainers is the usual third-party answer. Interviews expect the hand-rolled node."],
-    ["Java", "TreeMap and TreeSet are red-black trees", "floorKey, ceilingKey, headMap, subMap. This is the ordered map you actually want in production."],
-    ["C++", "std::map and std::set are red-black trees", "lower_bound on the container, not the free function. unordered_map is the hash version."],
-    ["JavaScript", "nothing built in at all", "Map keeps insertion order, not sorted order. Hand-roll it or keep a sorted array."],
+    ["Python", "no built-in tree; use dict, or bisect on a sorted list", "sortedcontainers is the usual third-party answer. Interviews expect the hand-written node."],
+    ["Java", "TreeMap and TreeSet are red-black trees", "floorKey, ceilingKey, headMap, subMap. This is the ordered map you want in production."],
+    ["C++", "std::map and std::set are red-black trees", "Use lower_bound on the container, not the free function. unordered_map is the hash version."],
+    ["JavaScript", "nothing built in at all", "Map keeps insertion order, not sorted order. Write it yourself or keep a sorted array."],
   ],
 
   code: {
@@ -6938,117 +7153,237 @@ function kthSmallest(root, k) {
   codecap: "Carry a range when validating, walk in-order when you need order, and say O(h) rather than O(log n) unless someone is keeping the tree balanced.",
 
   q: [
-    ["What exactly does the BST invariant say, and what is the common misreading?", "Every value in the left subtree is smaller than the node and every value in the right subtree is larger. The misreading is checking only the immediate children, which accepts trees where a deeper node sits on the wrong side."],
-    ["How do you validate a BST correctly?", "Carry a permitted range down the tree. Going left tightens the upper bound to the node's value, going right tightens the lower bound, and any node outside its inherited range is a violation."],
-    ["Why does in-order traversal produce sorted output?", "In-order visits smaller, then the node, then larger, and that holds at every level. It is the invariant expressed as a walk rather than a comparison."],
-    ["Why is it wrong to say a BST is O(log n)?", "It is O(h). h is log n only when the tree is balanced, and a plain BST never enforces that. Sorted input produces h = n, making every operation O(n)."],
-    ["How do you delete a node with two children?", "Replace its value with the in-order successor, the leftmost node of the right subtree, then delete that successor, which by construction has at most one child."],
-    ["When should you choose a balanced BST over a hash map?", "When you need order: range queries, floor and ceiling, predecessor and successor, or sorted iteration. Without an ordered question, the hash map's O(1) is strictly better."],
+    ["What exactly does the BST rule say, and what is the common misreading?", "Every value in the left subtree is smaller than the node, and every value in the right subtree is larger. The misreading checks only the immediate children, which accepts trees where a deeper node sits on the wrong side."],
+    ["How do you validate a BST correctly?", "Carry a permitted range down the tree. Going left sets the upper bound to the node's value, going right sets the lower bound, and any node outside its range is a violation."],
+    ["Why does in-order traversal produce sorted output?", "In-order visits smaller, then the node, then larger, and that holds at every level. It is the rule expressed as a walk."],
+    ["Why is it wrong to say a BST is O(log n)?", "It is O(h). h is log n only when the tree is balanced, and a plain BST never enforces that. Sorted input gives h = n, making every operation O(n)."],
+    ["How do you delete a node with two children?", "Replace its value with the in-order successor, the leftmost node of its right subtree. Then delete that successor, which by construction has at most one child."],
+    ["When should you choose a balanced BST over a hash map?", "When you need order: range queries, floor and ceiling, predecessor and successor, or sorted iteration. Without an ordered question, the hash map's O(1) is better."],
   ],
 
   p: [
     [700, "search-in-a-binary-search-tree", "Search in a BST, the walk itself", "E"],
+    [108, "convert-sorted-array-to-binary-search-tree", "Sorted Array to BST, balance on purpose", "E"],
     [98, "validate-binary-search-tree", "Validate BST, the range trick", "M"],
     [230, "kth-smallest-element-in-a-bst", "Kth Smallest, in-order with a counter", "M"],
     [235, "lowest-common-ancestor-of-a-binary-search-tree", "LCA in a BST, easier than in a plain tree, and it has its own page", "M"],
     [701, "insert-into-a-binary-search-tree", "Insert into a BST", "M"],
     [450, "delete-node-in-a-bst", "Delete Node, including the awkward case", "M"],
-    [108, "convert-sorted-array-to-binary-search-tree", "Sorted Array to BST, balance on purpose", "E"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek room-booking system <b>10⁵ bookings</b> ke start times rakhta hai. Din bhar nayi bookings aati hain, <b>10⁵</b>, aur sabse common sawaal hai <b>“time t par ya uske baad pehli booking kaunsi hai?”</b></p>
+<p>Ise chhe bookings tak chhota karo: <code>1, 3, 6, 8, 10, 14</code>. 7 par ya uske baad pehli booking 8 hai. Phir 7 par nayi booking aati hai, jise 6 aur 8 ke beech jaana hai.</p>`,
+      tries: [
+        ["Sorted array rakho aur binary search karo", "Sawaal tez hai: lagbhag 17 comparisons. Par har nayi booking average aadha array khisakati hai, 5 × 10⁴ moves. 10⁵ bookings matlab 5 × 10⁹ moves."],
+        ["Hash set use karo", "Booking jodna aur exact time check karna turant. Par hash set mein order nahi, to woh nahi bata sakta 7 ke baad kya aata hai."],
+        ["Unsorted list rakho aur scan karo", "Jodna turant. Har sawaal saari 10⁵ bookings scan karta hai, to 10⁵ sawaal 10¹⁰ comparisons."],
+      ],
+      so: `<p>Binary search ka aadha karna rakho, par use array positions ki jagah <b>shape</b> mein store karo. 8 ko upar rakho. Chhota sab left hisse mein, bada sab right mein, aur har hisse ke andar yahi niyam dohrao. 6 dhoondhna phir hai 8, left jao, 3, right jao, 6: teen comparisons.</p>
+<p>7 insert karna wahi raasta chalta hai aur 7 ko end par latka deta hai: kuch nahi khisakta. Yahi <b>binary search tree</b> hai, aur har operation upar se ek walk hai. Page poore mein 1, 3, 6, 8, 10, 14 wala tree use karta hai.</p>`,
+    },
+
+    one: "Ek extra niyam tree ko search structure bana deta hai: <b>left mein sab chhota, right mein sab bada</b>. Balance kho diya to aapne dhoom-dhaam wali linked list bana di.",
+
+    plain: `<p>Binary search ko sorted array chahiye. Yeh tab tak theek hai jab tak kuch insert na karna ho, aur jagah banane ke liye aadha array khisakta hai.</p>
+<p>Search tree aadha karna rakhta hai aur khisakana chhodta hai. Root mein 8 hai. Chhota sab, 1, 3 aur 6, left subtree mein. Bada sab, 10 aur 14, right mein. Har subtree ke andar bhi yahi niyam. Value dhoondhna wahi decisions leta hai jo binary search, par decisions shape mein bane hue hain.</p>
+<p>Insert wahi walk hai, aur baad mein kuch nahi hilta. Aapne array ki locality ke badle beech mein sasta insert liya.</p>
+<p>Ek shart hai, aur poora page usi par tika hai: tree ghana rehna chahiye. Simple search tree mein kuch aisa nahi karta.</p>
+<p><b>Analogy.</b> “Upar ya neeche” ka khel. Das lakh mein se number lagbhag bees guesses mein milta hai, agar jawab dene wala samajhdaar beech chune aur ek se ginti na kare.</p>`,
+
+    why: [
+      { t: "Faisla dobara nikaalne ki jagah store karo",
+        d: "Binary search ko array chahiye taaki beech par kood sake. Tree kood nahi sakta, par beech <b>yaad</b> rakh sakta hai: root, 8, split point hai, aur uske do subtrees aadhe. To search ek walk hai, hisaab nahi: 8, phir 3, phir 6." },
+      { t: "Niyam poore subtrees par hai, sirf children par nahi",
+        d: "8 ke left subtree ki har value 8 se chhoti honi chahiye, sirf uska left child 3 nahi. 6 ki jagah 9 rakho, aur 9 &gt; 3 local roop se theek dikhta hai. Par 9 8 ke left mein hai, to tree toota hai. Sirf parent aur child compare karne wala validator ise maan leta hai." },
+      { t: "To validate karna range ka sawaal hai",
+        d: "Allowed range leke neeche chalo. Root kuch bhi ho sakta hai. 8 se left jaana upper limit 8 karta hai. 3 se right jaana lower limit 3 karta hai. To us jagah 3 aur 8 ke beech ki value chahiye: 6 pass, 9 fail." },
+      { t: "In-order traversal niyam ko zor se padhta hai",
+        d: "Left, phir node, phir right matlab chhota, phir yeh, phir bada, har level par. To in-order walk deti hai 1, 3, 6, 8, 10, 14: <b>sorted</b>. “<var>k</var>-th sabse chhota” wahi walk hai ek counter aur jaldi rukne ke saath." },
+      { t: "Sab kuch O(h) hai, aur h ka vaada kisi ne nahi kiya",
+        d: "Search, insert aur delete har ek ek root-to-leaf raasta chalta hai: <b>O(<var>h</var>)</b>. Ghane tree par yeh log <var>n</var> hai. 1, 3, 6, 8 isi order mein daalo to har value right jaati hai: ek line, <var>h</var> = <var>n</var>. Sorted input rare nahi; times aur ids aksar order mein aate hain." },
+      { t: "Isiliye self-balancing trees hain",
+        d: "AVL aur red-black trees yahi kaam karte hain, aur height log <var>n</var> ke paas rakhne ke liye nodes rotate karte hain. Yeh wahi idea hai jiska vaada sach mein nibhaya gaya. Java ka <code>TreeMap</code> aur C++ ka <code>std::map</code> pehle se yahi hain." },
+      { t: "Hash map ki jagah ise sirf order ke liye chuno",
+        d: "Hash map average O(1) deta hai aur koi order nahi. Balanced tree O(log <var>n</var>) deta hai aur sab sorted rakhta hai. Isse booking wala sawaal milta hai, “7 par ya baad pehla”, plus ranges aur sorted iteration. Koi ordered sawaal nahi, to aap bekaar log <var>n</var> de rahe ho." },
+    ],
+
+    variants: [
+      { n: "Plain BST", cost: "O(h), aur h jo mila woh",
+        idea: "Yahi page sikhata hai. Ise ghana koi nahi rakhta, to height inserts ke order par depend hai, kisi guarantee par nahi.",
+        when: "Interviews jo likhwaate hain, aur jahan insert order aap control karte ho.",
+        watch: "Sorted input <var>h</var> = <var>n</var> deta hai. Sorted data se bana, to linked list hai." },
+      { n: "AVL tree", cost: "O(log n) guaranteed, strictly balanced",
+        idea: "Har node par height rakho, aur jab dono subtrees mein ek se zyada farak ho to rotate karo. Rotations local hain: har insert par zyada se zyada do.",
+        when: "Padhne wale bhaari workloads, jahan tight balance extra rotations ki keemat vasool karta hai.",
+        watch: "Writes par red-black se zyada rotations, reads par uthle tree ke badle. Libraries ise kam chunti hain." },
+      { n: "Red-black tree", cost: "O(log n) guaranteed, loosely balanced",
+        idea: "Har node ko red ya black rang do, aur aise niyam rakho jo sabse lambe raaste ko sabse chhote ke dugne ke andar rakhein. AVL se dheela, to kam rotations.",
+        when: "Lagbhag har standard library yahi use karti hai, kyunki mile-jule reads aur writes aam hain.",
+        watch: "Interview mein koi ise likhwaane ki ummeed nahi karta. Naam lo, guarantee batao, aur library use karo." },
+      { n: "B-tree and B+ tree", cost: "O(log n), bahut bade base ke saath",
+        idea: "Har node mein bahut saari keys aur bahut saare children, to tree bahut chauda aur sirf kuch levels gehra.",
+        when: "Databases aur filesystems, jahan ek node ek disk page hai aur asli cost page reads hai, comparisons nahi.",
+        watch: "Isiliye database indexes B-trees hain, binary trees nahi: page laana bottleneck hai, to kam aur mote nodes chahiye." },
+      { n: "What your language gives you", cost: "O(log n), pehle se balanced",
+        idea: "Java <code>TreeMap</code> aur <code>TreeSet</code>, C++ <code>std::map</code> aur <code>std::set</code>. Sab andar se red-black trees.",
+        when: "Production mein hamesha: ranges, floor aur ceiling, sorted iteration.",
+        watch: "Python aur JavaScript mein aisa kuch nahi. Python aam taur par sorted list plus <code>bisect</code>, ya third-party library use karta hai." },
+    ],
+
+    math: [
+      { t: "6 ki search, aur 7 wala booking sawaal, trace karke", d: "Dono walks root se shuru hoti hain aur har level par ek comparison karti hain. Doosri yaad rakhti hai ki aakhri baar left kahan mudi: wahi answer hai." },
+      { t: "Ordering niyam kya deta hai, alternatives ke against", d: "Balanced search tree lookups mein sorted array ke barabar aur inserts mein usse behtar hai. Extra pointers maanne ki sirf yahi wajah hai." },
+      { t: "Sorted input tabaahi wala case hai, aur wahi common case hai", d: "Line jaisa tree koi banaya hua attack nahi. Ids, timestamps, ya pehle se order mein kuch bhi yahi deta hai." },
+      { t: "Validation range ka sawaal hai, aur parent test fail hota hai", d: "6 ki jagah 9 rakho. Har node ko parent se compare karna sirf local baat check karta hai. Niyam poore subtrees ka hai, to check ko range neeche le jaani padti hai." },
+      { t: "In-order niyam hai, zor se padha hua", d: "Niyam range ka hai, isliye left, node, right chalne se keys sorted aati hain. Kai alag problems isi ek sentence par aa jaati hain." },
+    ],
+
+    costs: [
+      ["search / insert / delete", "O(h)", "har baar ek root-to-leaf raasta"],
+      ["balanced ho to h", "log n", "jiska vaada hai, jo milta hai woh nahi"],
+      ["sorted input ke baad h", "n", "tree ke kapdon mein linked list"],
+      ["in-order traversal", "O(n)", "values pehle se sorted deta hai"],
+      ["kth smallest", "O(h + k)", "counter aur jaldi rukne wali in-order walk"],
+      ["min / max", "O(h)", "jab tak ho sake left chalo, ya right"],
+      ["balanced tree (TreeMap, std::map)", "O(log n) guaranteed", "wahi idea, rotations vaada nibhaati hain"],
+    ],
+
+    traps: [
+      "<b>Sirf parent aur child se validate karna.</b> Niyam poore subtrees par hai, to allowed range neeche le jao. isValidBST ka yahi sabse common galat answer hai.",
+      "<b>Balance maan lena.</b> Plain BST ghana rehne ke liye kuch nahi karta. O(<var>h</var>) bolo, phir batao worst case mein <var>h</var> kya hai, interviewer se pehle.",
+      "<b>Do children wala delete case bhoolna.</b> Node ko uske in-order successor se badlo, jo right subtree ka sabse left node hai, phir use delete karo.",
+      "<b>Integer limits ko shuruaati range banana</b>, phir limit ke barabar value milna. Khaali bounds use karo, ya aisa comparison jo missing bound ko no limit maane.",
+      "<b>Hash map chal jaata, phir bhi BST lena.</b> Koi ordered sawaal nahi, to bekaar O(log <var>n</var>) de rahe ho.",
+    ],
+
+    impl: [
+      ["Python", "no built-in tree; use dict, or bisect on a sorted list", "sortedcontainers aam third-party answer hai. Interviews haath se likha node chahte hain."],
+      ["Java", "TreeMap and TreeSet are red-black trees", "floorKey, ceilingKey, headMap, subMap. Production mein yahi ordered map chahiye."],
+      ["C++", "std::map and std::set are red-black trees", "Container ka lower_bound use karo, free function nahi. unordered_map hash wala version hai."],
+      ["JavaScript", "nothing built in at all", "Map insertion order rakhta hai, sorted order nahi. Khud likho ya sorted array rakho."],
+    ],
+
+    codecap: "Validate karte waqt range le jao, order chahiye to in-order chalo, aur O(log n) ki jagah O(h) bolo jab tak koi tree ko balanced na rakh raha ho.",
+
+    q: [
+      ["BST ka niyam exactly kya kehta hai, aur common galat samajh kya hai?", "Left subtree ki har value node se chhoti hai, aur right subtree ki har value badi. Galat samajh sirf seedhe children check karti hai, jo aise trees maan leti hai jahan gehra node galat taraf baitha hai."],
+      ["BST sahi tarike se validate kaise karte ho?", "Allowed range tree mein neeche le jao. Left jaana upper bound ko node ki value banata hai, right jaana lower bound ko, aur apni range ke bahar ka koi bhi node galat hai."],
+      ["In-order traversal sorted output kyun deta hai?", "In-order pehle chhota, phir node, phir bada dekhta hai, aur yeh har level par sach hai. Yeh niyam hai, walk ki shakal mein."],
+      ["BST ko O(log n) kehna galat kyun hai?", "Yeh O(h) hai. h log n tabhi hai jab tree balanced ho, aur plain BST yeh kabhi lagu nahi karta. Sorted input h = n deta hai, aur har operation O(n)."],
+      ["Do children wala node kaise delete karte ho?", "Uski value ko in-order successor se badlo, jo uske right subtree ka sabse left node hai. Phir us successor ko delete karo, jiska banaawat se zyada se zyada ek child hai."],
+      ["Hash map ki jagah balanced BST kab chunna chahiye?", "Jab order chahiye: range queries, floor aur ceiling, predecessor aur successor, ya sorted iteration. Koi ordered sawaal nahi, to hash map ka O(1) behtar hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "lca",
   n: "Lowest common ancestor",
   group: "Data structures",
+  need: {
+    ask: `<p>In an org chart, two employees, 6 and 4, have a dispute. It goes to the <b>lowest</b> manager who has both of them somewhere below. The chart only stores who reports to whom, downwards.</p>
+<p>The small chart: 3 is at the top. 5 and 1 report to 3. 6 and 2 report to 5. 7 and 4 report to 2. 0 and 8 report to 1. Both 3 and 5 are above 6 and 4, but the answer is <b>5</b>, the lower one.</p>`,
+    tries: [
+      ["Send it to the top boss", "3 is above everyone, so 3 is above both. But so is 5, which is lower. “Above both” picks a whole chain of people; the question wants the lowest."],
+      ["Write out both chains from the top and compare", "3, 5, 6 and 3, 5, 2, 4: the last shared name is 5. Correct, but it takes two full searches of the chart and two stored chains before comparing anything."],
+      ["Walk up from each employee until the chains meet", "That needs a link from each person to their manager. This chart only links managers down to their reports, so there is no way up."],
+    ],
+    so: `<p>Ask every manager one question, from the bottom up: <b>did you find 6 or 4 below you?</b> A manager who hears “yes” from <b>both</b> sides is where the two chains split. That is the answer, and exactly one manager can hear it. Everyone above just passes the answer up.</p>
+<p>That is one pass over the chart, O(<var>n</var>), with nothing stored. The spot where two root-to-node paths split is the <b>lowest common ancestor</b>. The page uses this nine-person chart throughout.</p>`,
+  },
+
   one: "Recurse to the bottom and let every node report what it found. The one node that hears back from <b>both</b> sides is the answer, and there is exactly one.",
 
-  plain: `<p>Two nodes sit somewhere in a tree. Walk down from the root towards each of them and, for a while, you take the same turns. At some node the two routes disagree for the first time, one goes left and the other goes right. That node is the lowest common ancestor: the last place they were still together.</p>
-<p>Every node above it is also an ancestor of both, so "an ancestor of both" is not a strong enough description. The word carrying the meaning is <b>lowest</b>. And notice that if one of the two nodes sits directly above the other, the answer is that node itself, because a node counts as its own ancestor. That sounds like a technicality and it is the single most useful fact on this page.</p>
-<p>You could find it by writing down both root-to-node paths and comparing them. That works and costs a second array. The better method never builds a path at all: it walks to the bottom first and lets the answer come back up.</p>
-<p><b>Analogy.</b> Two people trace their family tree back through their parents. The first shared name is the answer. You find it not by reading the tree from the top, but by both of you walking upward until you meet.</p>`,
+  plain: `<p>Two nodes sit somewhere in a tree. Walk down from the root towards each one, and for a while you take the same turns. For 6 and 4, both walks go 3, then 5. Then they split: 6 goes left, 4 goes right, through 2. The last node they share, 5, is the <b>lowest common ancestor</b>: the last place they were together.</p>
+<p>Every node above it, here 3, is also above both, so “above both” is not enough. The word that matters is <b>lowest</b>. And if one target sits directly above the other, the answer is that target itself: a node counts as its own ancestor. That sounds like a technicality, and it is the most useful fact on the page.</p>
+<p>You could find it by writing out both root-to-node paths and comparing them. The better method builds no path at all. It walks to the bottom first and lets the answer come back up.</p>
+<p><b>Analogy.</b> Two cousins trace their families back through their parents. The first name they share is the answer.</p>`,
 
   why: [
-    { t: "Say precisely what is being asked", d: "From the root there is exactly one path to each node. The two paths start identically and separate at most once, because a tree has no second route anywhere. So the question is not really about ancestry, it is: <b>where do the two paths stop agreeing?</b>" },
-    { t: "The direct method works and costs memory", d: "Record both root-to-node paths, then walk them in step and keep the last node they share. That is correct and it is what most people write first. It costs O(n) time to find each node and O(h) space to hold each path, and it needs two full searches before any comparison can start." },
-    { t: "Turn the recursion around", d: "Instead of asking a node what is above it, ask what is <b>below</b> it. Recurse into both children first and let each one report back a single thing: a target it found down there, or nothing at all. This is a post-order traversal, the same shape as computing a height." },
-    { t: "Three cases, and only one of them is interesting", d: "A node looks at its two reports. <b>Both non-empty</b>: the targets are in different subtrees, so the paths split right here, and this node is the answer. <b>Exactly one</b>: both targets, or the only one found so far, are on that side, so pass the report up unchanged. <b>Neither</b>: report nothing." },
-    { t: "Being your own ancestor removes the hard case", d: "What if one target sits above the other? Define the base case as \"if this node is either target, return it immediately and do not look below\". The recursion then stops at the upper one and returns it, which is the correct answer. People who add a branch for this case usually break the ordinary case doing it." },
-    { t: "Only one node can ever see both", d: "Once a node reports itself, every node above it sees exactly one non-empty report and just forwards it. So the answer floats to the root untouched, and no node above can mistake itself for the split point. That is why no extra bookkeeping is needed and the whole thing is six lines." },
-    { t: "What one pass cannot do", d: "It assumes both nodes are actually in the tree. If only one is present you get that one back, silently, and the caller believes it. It is also <b>O(n) per query</b>, which is fine once and hopeless for a hundred thousand queries on a fixed tree. That is the case preprocessing exists for." },
+    { t: "Say exactly what is being asked",
+      d: "From the root there is exactly one path to each node. The two paths start the same and split at most once, because a tree has no second route anywhere. For 6 and 4: 3, 5, then apart. So the real question is: <b>where do the two paths stop agreeing?</b>" },
+    { t: "The direct method works, and costs memory",
+      d: "Record both paths, 3, 5, 6 and 3, 5, 2, 4, then walk them together and keep the last shared node: 5. It is correct, and most people write it first. But it needs two full searches, O(<var>n</var>) each, plus O(<var>h</var>) memory to hold each path." },
+    { t: "Turn the recursion around",
+      d: "Instead of asking a node what is above it, ask what is <b>below</b> it. Recurse into both children first. Each reports back one thing: a target it found down there, or nothing. That is post-order, the same shape as counting a subtree." },
+    { t: "Three cases, and only one is interesting",
+      d: "A node looks at its two reports. <b>Both non-empty</b>: the targets are in different subtrees, so the paths split here. 5 hears 6 from the left and 4 from the right, so 5 is the answer. <b>Exactly one</b>: pass it up unchanged, as 2 does with 4. <b>Neither</b>: report nothing." },
+    { t: "Being your own ancestor removes the hard case",
+      d: "What if one target is above the other, as in LCA(5, 4)? Make the base case “if this node is a target, return it at once and do not look below”. The walk stops at 5 and returns it, which is correct. People who add a separate branch for this usually break the ordinary case." },
+    { t: "Only one node can ever see both",
+      d: "Once 5 reports itself, every node above sees exactly one non-empty report and forwards it. So 3 hears 5 from the left and nothing from the right, and passes 5 up. No node above can mistake itself for the split point." },
+    { t: "What one pass cannot do",
+      d: "It assumes both nodes are in the tree. If only one is present, you get that one back, silently. It is also <b>O(<var>n</var>) per query</b>: fine once, hopeless for 10⁵ queries on a fixed tree. That is the case where preprocessing pays." },
   ],
 
   variants: [
     { n: "Recursive post-order", cost: "O(n) time, O(h) space",
-      idea: "The six-line function above. Recurse both ways, return this node if both sides reported, otherwise forward the single report.",
+      idea: "The six-line function. Recurse both ways, return this node if both sides reported, otherwise forward the single report.",
       when: "A general binary tree and one or a few queries. This is the interview answer.",
-      watch: "O(h) space is the call stack, and h is n on a skewed tree. It also cannot tell you that a node was absent." },
-
+      watch: "The O(<var>h</var>) space is the call stack, and <var>h</var> is <var>n</var> on a skewed tree. It also cannot tell you that a node was missing." },
     { n: "BST walk", cost: "O(h) time, O(1) space",
-      idea: "In a search tree the values tell you the way. Walk down from the root; while both targets are smaller go left, while both are larger go right. The first node they straddle is the answer.",
+      idea: "In a search tree the values show the way. Walk down: while both targets are smaller, go left; while both are larger, go right. The first node that sits between them is the answer.",
       when: "The tree is a BST. Then there is no reason to recurse at all.",
-      watch: "The stopping condition is straddling, which includes the case where the node IS one of the targets. Testing for equality first is redundant." },
-
+      watch: "“Sits between” includes the node being one of the targets, so no separate equality test is needed." },
     { n: "Parent pointers", cost: "O(h) time, O(1) space",
-      idea: "With a parent link on every node, walk both upward. Equalise the depths first, or use the two-runner trick: when one walker hits the root, restart it at the other node, and they meet at the answer.",
-      when: "The node objects carry a parent reference, which some versions of the problem hand you.",
-      watch: "This is the same trick as finding where two linked lists intersect, because it is literally the same problem." },
-
+      idea: "With a link from every node to its parent, walk both upward. Line up the depths first, or use two walkers: when one reaches the root, restart it at the other node, and they meet at the answer.",
+      when: "The nodes carry a parent link, which some versions of the problem give you.",
+      watch: "This is the same trick as finding where two linked lists meet, because it is the same problem." },
     { n: "Binary lifting", cost: "O(n log n) build, O(log n) per query",
-      idea: "Precompute, for every node, its ancestor 1, 2, 4, 8 ... steps up. A query lifts the deeper node to the other's depth, then lifts both together by the largest jump that keeps them apart. One more step and they meet.",
+      idea: "For every node, precompute its ancestor 1, 2, 4, 8, … steps up. A query lifts the deeper node to the other's depth, then lifts both together by the biggest jump that keeps them apart. One more step and they meet.",
       when: "Many queries on one tree that never changes. This is the standard answer.",
-      watch: "The second loop must go from the largest jump downwards, and must only jump while the two ancestors differ. Jumping when they match overshoots past the answer." },
-
+      watch: "The second loop must try the biggest jump first and shrink, jumping only while the two ancestors differ. Jumping when they match overshoots." },
     { n: "Euler tour plus range minimum", cost: "O(n log n) build, O(1) per query",
-      idea: "Flatten the tree by recording every node as you enter and leave it. The LCA of two nodes is the shallowest node in the stretch between their first appearances, which is a range minimum query.",
+      idea: "Flatten the tree by writing a node down every time the walk arrives at it, including each return from a child. The answer is the shallowest node between the two nodes' first appearances: a range minimum question.",
       when: "Query cost matters more than build cost, or you already have a sparse table.",
-      watch: "Constant factors and the flattening code are both worse than binary lifting. Name it, reach for it rarely." },
+      watch: "The constants and the flattening code are both worse than binary lifting. Name it; reach for it rarely." },
   ],
 
   hing: `<p><b>Sawaal ko theek se samjho.</b> Tree mein root se har node tak <b>sirf ek</b> raasta hota hai. Do nodes ke raaste shuru mein same hote hain, phir ek jagah alag ho jaate hain. Bas wahi jagah answer hai. "Dono ka ancestor" kaafi nahi, kyunki uske upar wale sab bhi ancestor hain. Asli lafz hai <b>lowest</b>.</p>
 <p><b>Ulta socho.</b> Node se mat poocho "tere upar kya hai". Poocho <b>"tere neeche kya mila"</b>. Pehle dono bacchon mein utro, phir har node ek hi cheez wapas bhejta hai: ya to koi target jo usne neeche dhoonda, ya kuch nahi. Yeh post-order hai, wahi shape jo height nikalne mein use hota hai.</p>
-<p><b>Teen case, aur sirf ek dilchasp.</b> Dono taraf se kuch aaya, matlab targets alag-alag subtree mein hain, to raaste <b>yahin</b> alag hue, yeh node answer hai. Sirf ek taraf se aaya, to woh report upar bhej do. Kuch nahi aaya, to kuch nahi bhejo. Ek baar koi node khud ko report kar de, uske upar wale sabko sirf ek hi report dikhti hai, to woh bas aage badha dete hain. Isliye answer apne aap root tak tair kar aa jaata hai.</p>
-<p><b>Yeh line yaad rakho:</b> "agar yeh node khud target hai, to isi ko turant return kar do, neeche mat dekho". Isi ek line se woh case handle ho jaata hai jahan ek node doosre ke upar baitha hai. Log yahan extra if lagate hain aur baaki sab tod dete hain. Aur interview mein bolna: ek query O(n), lekin agar bahut saari queries hain to <b>binary lifting</b>, O(n log n) build aur O(log n) per query.</p>`,
+<p><b>Teen case, aur sirf ek dilchasp.</b> Dono taraf se kuch aaya, matlab targets alag-alag subtree mein hain, to raaste <b>yahin</b> alag hue, yeh node answer hai. Sirf ek taraf se aaya, to woh report upar bhej do. Kuch nahi aaya, to kuch nahi bhejo. Ek baar koi node khud ko report kar de, uske upar wale sabko sirf ek hi report dikhti hai, to woh bas aage badha dete hain.</p>
+<p><b>Yeh line yaad rakho:</b> "agar yeh node khud target hai, to isi ko turant return kar do, neeche mat dekho". Isi ek line se woh case handle ho jaata hai jahan ek node doosre ke upar baitha hai. Aur interview mein bolna: ek query O(<var>n</var>), lekin agar bahut saari queries hain to <b>binary lifting</b>, O(<var>n</var> log <var>n</var>) build aur O(log <var>n</var>) per query.</p>`,
 
   viz: ["lca"],
   see: [["VA", "https://visualgo.net/en/bst", "VisualGo, walk a tree one node at a time"]],
 
   math: [
-    { t: "The direct method, priced honestly", d: "Storing both root-to-node paths works. In a general binary tree the finding of those paths is itself a full traversal, which is the part people forget to count.", w:
-`general binary tree, n nodes, height h
+    { t: "LCA(6, 4) on the chart: every report, bottom up", d: "Each node reports a target it found below, or nothing. The one node with two reports is the answer; everyone above forwards it.", w:
+`chart: 3 -> (5, 1);  5 -> (6, 2);  2 -> (7, 4);  1 -> (0, 8)
 
-path method:
+node   left says   right says   reports
+6      -           -            6       it is a target
+7      nil         nil          nil
+4      -           -            4       it is a target
+2      nil (7)     4            4       one side: forward
+5      6           4            5       BOTH sides: the LCA
+0, 8   nil         nil          nil
+1      nil         nil          nil
+3      5           nil          5       one side: forward
+
+answer: 5, found in one pass, nothing stored` },
+    { t: "The direct method, priced honestly", d: "Storing both root-to-node paths works. In a general binary tree, finding those paths is itself a full traversal, which is the part people forget to count.", w:
+`path to 6:  3, 5, 6          path to 4:  3, 5, 2, 4
+last shared node: 5
+
+cost, n nodes, height h:
   find the path to p      O(n)
   find the path to q      O(n)
   compare the prefixes    O(h)
   extra memory            2 x O(h) for the two paths
 
-one recursive pass:
-  every node entered once O(n)
-  extra memory            O(h), the call stack, nothing else` },
-    { t: "Why exactly one node can be the answer", d: "The set of nodes that contain p is not an arbitrary set. It is a chain, and two chains from the root can only overlap in a prefix.", w:
-`A = the nodes whose subtree contains p
-every element of A is an ancestor of p, so A is the chain
-root -> ... -> p, and |A| = depth(p) + 1
+one recursive pass:       O(n) time, O(h) call stack` },
+    { t: "Why exactly one node can be the answer", d: "The nodes above p are not an arbitrary set. They form one chain, and two chains from the root can only share a prefix.", w:
+`A = the nodes whose subtree contains 6:  3, 5, 6
+B = the nodes whose subtree contains 4:  3, 5, 2, 4
 
-B = the same chain for q
-
-A and B both start at the root, so their intersection is
-a prefix of both: another chain. Its deepest element is
-the LCA. A chain has one deepest element, so the answer
-exists and is unique.` },
-    { t: "Three cases at every node, and only one of them is the answer", d: "Ask both children what they found. There are four possible replies and the interesting one fires exactly once in the whole tree.", w:
-`at node x, after recursing:
-
-  left != null and right != null   ->  x is the LCA
-  left != null, right == null      ->  pass left up
-  left == null, right != null      ->  pass right up
-  both null                        ->  pass null up
-
-the first case fires exactly once across all n nodes,
-which is why a single pass is enough` },
-    { t: "Many queries change the answer: binary lifting", d: "One pass per query is fine for one query. For 100,000 of them the arithmetic stops working, and the fix is to precompute ancestors at power-of-two distances.", w:
+both start at the root, so they share a prefix:  3, 5
+a chain has one deepest element: 5. So the answer exists
+and is unique, for any two nodes in any tree.` },
+    { t: "Many queries change the answer: binary lifting", d: "One pass per query is fine for one query. For 10^5 of them the numbers stop working, and the fix is to precompute ancestors at power-of-two distances.", w:
 `n nodes, q queries
 
 one pass per query:   q x n
@@ -7057,34 +7392,34 @@ binary lifting:       n log2 n to build, log2 n per query
 n = 10^5, q = 10^5:
   10^10             vs   1.7 x 10^6 + 1.7 x 10^6
 
-up[k][v] = the 2^(k)-th ancestor of v, k = 0 .. 17
-any jump of distance d is the set bits of d: at most 17 hops` },
+up[k][v] = the 2^k-th ancestor of v, k = 0 .. 16
+any jump of distance d follows the set bits of d: at most 17 hops` },
   ],
 
   costs: [
-    ["recursive LCA, one query", "O(n) time", "worst case every node is visited once, and it must be, since the tree gives no hint where the targets are"],
-    ["recursion space", "O(h)", "one frame per level, so O(log n) balanced and O(n) on a path-shaped tree"],
-    ["LCA in a BST", "O(h) time, O(1) space", "the values steer the walk, so there is nothing to recurse into and nothing to remember"],
-    ["path comparison method", "O(n) time, O(h) space", "two searches plus two stored paths, correct and strictly more machinery"],
-    ["binary lifting, build", "O(n log n) time and space", "one row per power of two, each row read straight off the row below it"],
+    ["recursive LCA, one query", "O(n) time", "worst case every node is visited once, and must be: the tree gives no hint where the targets are"],
+    ["recursion space", "O(h)", "one frame per level: O(log n) balanced, O(n) on a path-shaped tree"],
+    ["LCA in a BST", "O(h) time, O(1) space", "the values steer the walk, so nothing to recurse into and nothing to remember"],
+    ["path comparison method", "O(n) time, O(h) space", "two searches plus two stored paths: correct, and more machinery"],
+    ["binary lifting, build", "O(n log n) time and space", "one row per power of two, each row read off the row below it"],
     ["binary lifting, query", "O(log n)", "at most one jump per bit of the depth difference, then one paired descent"],
-    ["q queries, no preprocessing", "O(q · n)", "the number that decides whether preprocessing is worth it, and the constraints will tell you"],
+    ["q queries, no preprocessing", "O(q · n)", "the number that decides whether preprocessing is worth it"],
   ],
 
   traps: [
-    "<b>Comparing values instead of nodes.</b> The classic version hands you node references. With duplicate values in the tree, comparing <code>node.val == p.val</code> finds the wrong node and the wrong answer.",
-    "<b>Adding a special case for \"one is the ancestor of the other\".</b> The base case already handles it. The extra branch is where the bug goes.",
-    "<b>Returning early from the left recursion.</b> Both sides must be explored before deciding. Returning as soon as the left side reports something skips the split point entirely.",
-    "<b>Assuming both nodes exist.</b> If one is missing you get the other one back and nothing complains. If absence is possible, count the matches on the way up and check the count at the end.",
-    "<b>Using the BST walk on a plain binary tree.</b> It is faster and it is wrong: without the ordering invariant the comparisons mean nothing.",
-    "<b>Binary lifting with the jump loop running upwards.</b> The paired descent must start from the largest power and shrink, and must jump only while the ancestors differ.",
+    "<b>Comparing values instead of nodes.</b> The classic version hands you node references. With duplicate values, comparing <code>node.val == p.val</code> finds the wrong node and the wrong answer.",
+    "<b>Adding a special case for “one is above the other”.</b> The base case already handles it. The extra branch is where the bug goes.",
+    "<b>Returning early from the left recursion.</b> Both sides must be explored before deciding. Returning as soon as the left side reports skips the split point.",
+    "<b>Assuming both nodes exist.</b> If one is missing, you get the other back and nothing complains. If absence is possible, count the targets seen and check the count at the end.",
+    "<b>Using the BST walk on a plain binary tree.</b> It is faster and it is wrong: without the ordering rule, the comparisons mean nothing.",
+    "<b>Binary lifting with the jump loop running upwards.</b> The paired descent must start from the biggest jump and shrink, jumping only while the ancestors differ.",
   ],
 
   impl: [
     ["Python", "sys.setrecursionlimit", "The default limit is about 1000 frames, so a skewed tree of 10^5 nodes needs the limit raised or an explicit stack."],
     ["Java", "TreeNode ==", "Compare references with ==, not equals. The problem gives you the actual nodes, which is what makes reference comparison correct."],
-    ["C++", "TreeNode*", "Pointer comparison is the natural fit. Return nullptr for nothing found, and the truthiness tests read exactly like the pseudocode."],
-    ["JavaScript", "left || right", "Returning left || right is idiomatic and safe here, because a node object is never falsy. Do not copy the idiom to values."],
+    ["C++", "TreeNode*", "Pointer comparison fits naturally. Return nullptr for nothing found, and the tests read exactly like the pseudocode."],
+    ["JavaScript", "left || right", "Returning left || right is safe here, because a node object is never falsy. Do not copy the idiom to values."],
   ],
 
   code: {
@@ -7246,90 +7581,209 @@ function build(n, parent, LOG = 17) {
 // No tail-call elimination in practice, so deep recursion still blows the
 // stack. On a skewed tree, convert to an explicit stack.`,
   },
-  codecap: "Six lines do the whole job, and the base case is where the cleverness hides: returning the node itself covers the case people try to special-case. Everything below the first function is an optimisation for a tree you will query more than once.",
+  codecap: "Six lines do the whole job, and the base case is where the cleverness hides: returning the node itself covers the case people try to special-case. Everything after the first function is an optimisation for a tree you will query more than once.",
 
   q: [
-    ["Why is \"an ancestor of both\" not a definition of the answer?", "Because every node above the answer also has both targets below it, all the way up to the root. The constraint that picks out one node is lowest: the last node before the two root-to-target paths separate."],
-    ["What exactly does each recursive call return?", "One of three things: a target node it found somewhere below, the answer once the answer has been identified, or nothing. The caller cannot tell those apart and does not need to, because the rule it applies is the same in every case."],
-    ["Why does the base case return the node when it is one of the targets, instead of looking below it?", "Because a node is its own ancestor. If the other target is underneath, this node is genuinely the lowest common ancestor, and stopping here returns it. If the other target is elsewhere, this report travels up and meets the second report at the real split point."],
-    ["Why can only one node ever see two non-empty reports?", "Once a node returns itself, every node above it receives exactly one non-empty report and forwards it unchanged. There is never a second non-empty report to pair it with, so no ancestor can mistake itself for the split point."],
-    ["Why is the BST version O(1) space when the general one is O(h)?", "The values say which way to go, so the walk never needs to try both sides and never needs to come back. With no branching there is nothing to remember, so the recursion collapses into a loop."],
-    ["A tree of 10^5 nodes and 10^5 queries. What changes?", "The plain recursion is O(q·n), which is 10^10 operations. Precompute the 2^k-th ancestor of every node in O(n log n), then each query lifts the deeper node level and walks both up together in O(log n), for about 10^6 total."],
-    ["What does this algorithm do if one of the two nodes is not in the tree?", "It returns the other one, confidently and without error, because a single report is indistinguishable from the answer. If absence is possible you must count how many targets were actually seen and check the count at the end."],
+    ["Why is \"an ancestor of both\" not a definition of the answer?", "Because every node above the answer also has both targets below it, all the way to the root. What picks out one node is lowest: the last node before the two root-to-target paths separate."],
+    ["What exactly does each recursive call return?", "One of three things: a target found below, the answer once it has been identified, or nothing. The caller does not need to tell them apart, because it applies the same rule in every case."],
+    ["Why does the base case return the node when it is a target, instead of looking below it?", "Because a node is its own ancestor. If the other target is underneath, this node really is the answer, and stopping returns it. If the other target is elsewhere, this report travels up and meets the second report at the real split point."],
+    ["Why can only one node ever see two non-empty reports?", "Once a node returns itself, every node above it gets exactly one non-empty report and forwards it. There is never a second report to pair it with, so no ancestor can mistake itself for the split point."],
+    ["Why is the BST version O(1) space when the general one is O(h)?", "The values say which way to go, so the walk never tries both sides and never comes back. With no branching there is nothing to remember, so the recursion becomes a loop."],
+    ["A tree of 10^5 nodes and 10^5 queries. What changes?", "Plain recursion is O(q·n), which is 10^10 operations. Precompute the 2^k-th ancestor of every node in O(n log n). Then each query lifts the deeper node level and walks both up together in O(log n). That is about 3.4 × 10^6 in total, build included."],
+    ["What does this algorithm do if one of the two nodes is not in the tree?", "It returns the other one, confidently and without error, because one report looks exactly like the answer. If absence is possible, count how many targets were seen and check the count at the end."],
   ],
 
   p: [
     [235, "lowest-common-ancestor-of-a-binary-search-tree", "LCA in a BST, where the values steer", "M"],
-    [236, "lowest-common-ancestor-of-a-binary-tree", "LCA, the archetype, six lines", "M"],
+    [236, "lowest-common-ancestor-of-a-binary-tree", "LCA, the classic, six lines", "M"],
     [1123, "lowest-common-ancestor-of-deepest-leaves", "LCA of the deepest leaves, return two things at once", "M"],
     [865, "smallest-subtree-with-all-the-deepest-nodes", "The same problem wearing a different title", "M"],
     [863, "all-nodes-distance-k-in-binary-tree", "Distance K, parent pointers turn the tree into a graph", "M"],
     [2096, "step-by-step-directions-from-a-binary-tree-node-to-another", "Directions between two nodes, LCA plus two paths", "M"],
     [1483, "kth-ancestor-of-a-tree-node", "Kth Ancestor, binary lifting on its own", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek org chart mein do employees, 6 aur 4, ka jhagda hai. Woh us <b>sabse neeche</b> wale manager ke paas jaata hai jiske neeche dono kahin hon. Chart sirf yeh rakhta hai ki kaun kisko report karta hai, neeche ki taraf.</p>
+<p>Chhota chart: sabse upar 3. 5 aur 1, 3 ko report karte hain. 6 aur 2, 5 ko. 7 aur 4, 2 ko. 0 aur 8, 1 ko. 3 aur 5 dono 6 aur 4 ke upar hain, par answer <b>5</b> hai, neeche wala.</p>`,
+      tries: [
+        ["Sabse bade boss ke paas bhej do", "3 sabke upar hai, to dono ke upar bhi. Par 5 bhi hai, jo neeche hai. “Dono ke upar” logon ki poori chain chunta hai; sawaal sabse neeche wala maangta hai."],
+        ["Upar se dono chains likho aur compare karo", "3, 5, 6 aur 3, 5, 2, 4: aakhri shared naam 5. Sahi hai, par compare karne se pehle chart ki do poori searches aur do stored chains lagti hain."],
+        ["Har employee se upar chalo jab tak chains milein", "Iske liye har insaan se uske manager tak link chahiye. Yeh chart sirf managers ko neeche unke reports se jodta hai, to upar ka koi raasta nahi."],
+      ],
+      so: `<p>Har manager se ek sawaal poocho, neeche se upar: <b>kya tumhare neeche 6 ya 4 mila?</b> Jo manager <b>dono</b> taraf se “haan” sune, wahi jagah hai jahan do chains alag hoti hain. Wahi answer hai, aur sirf ek manager ise sun sakta hai. Upar sab bas answer aage badhaate hain.</p>
+<p>Yeh chart par ek pass hai, O(<var>n</var>), kuch store kiye bina. Jahan do root-to-node raaste alag hote hain, use <b>lowest common ancestor</b> kehte hain. Page poore mein yahi nau logon ka chart use karta hai.</p>`,
+    },
+
+    one: "Neeche tak recurse karo aur har node ko batane do usne kya paaya. Jo ek node <b>dono</b> taraf se sunta hai woh answer hai, aur aisa theek ek hai.",
+
+    plain: `<p>Tree mein kahin do nodes hain. Root se har ek ki taraf neeche chalo, aur kuch der tak same mod lete ho. 6 aur 4 ke liye dono walks 3, phir 5 jaati hain. Phir alag: 6 left jaata hai, 4 right, 2 se hokar. Aakhri shared node, 5, <b>lowest common ancestor</b> hai: aakhri jagah jahan dono saath the.</p>
+<p>Uske upar ka har node, yahan 3, bhi dono ke upar hai, to “dono ke upar” kaafi nahi. Zaroori lafz <b>lowest</b> hai. Aur agar ek target seedha doosre ke upar ho, to answer wahi target hai: node khud ka ancestor gina jaata hai. Yeh technicality lagti hai, aur page ki sabse kaam ki baat hai.</p>
+<p>Dono root-to-node raaste likh kar compare karke bhi mil sakta hai. Behtar tareeka koi raasta nahi banata. Pehle neeche tak jaata hai aur answer ko upar aane deta hai.</p>
+<p><b>Analogy.</b> Do cousins apne parents ke through parivaar peeche tak dhoondhte hain. Pehla shared naam hi answer hai.</p>`,
+
+    why: [
+      { t: "Theek se batao kya poocha ja raha hai",
+        d: "Root se har node tak theek ek raasta hai. Do raaste same shuru hote hain aur zyada se zyada ek baar alag hote hain, kyunki tree mein kahin doosra raasta nahi. 6 aur 4 ke liye: 3, 5, phir alag. To asli sawaal: <b>do raaste kahan agree karna band karte hain?</b>" },
+      { t: "Seedha tareeka chalta hai, par memory leta hai",
+        d: "Dono raaste record karo, 3, 5, 6 aur 3, 5, 2, 4, phir saath chalo aur aakhri shared node rakho: 5. Sahi hai, aur zyadatar log pehle yahi likhte hain. Par do poori searches chahiye, har ek O(<var>n</var>), plus har raasta rakhne ki O(<var>h</var>) memory." },
+      { t: "Recursion ulat do",
+        d: "Node se yeh poochne ki jagah ki uske upar kya hai, poocho uske <b>neeche</b> kya hai. Pehle dono children mein recurse karo. Har ek ek hi cheez batata hai: neeche mila koi target, ya kuch nahi. Yeh post-order hai, subtree ginne jaisi shape." },
+      { t: "Teen cases, aur sirf ek dilchasp",
+        d: "Node apni do reports dekhta hai. <b>Dono non-empty</b>: targets alag subtrees mein hain, to raaste yahin alag hote hain. 5 left se 6 aur right se 4 sunta hai, to 5 answer hai. <b>Theek ek</b>: bina badle upar bhejo, jaise 2, 4 ke saath karta hai. <b>Koi nahi</b>: kuch mat bhejo." },
+      { t: "Khud ka ancestor hona mushkil case hata deta hai",
+        d: "Agar ek target doosre ke upar ho, jaise LCA(5, 4)? Base case banao “yeh node target hai to turant return, neeche mat dekho”. Walk 5 par rukti hai aur use lautaati hai, jo sahi hai. Iske liye alag branch jodne wale aksar normal case tod dete hain." },
+      { t: "Sirf ek node dono ko dekh sakta hai",
+        d: "Jaise hi 5 khud ko report karta hai, upar ka har node theek ek non-empty report dekhta hai aur aage bhejta hai. To 3 left se 5 aur right se kuch nahi sunta, aur 5 upar bhejta hai. Upar ka koi node khud ko split point nahi samajh sakta." },
+      { t: "Ek pass kya nahi kar sakta",
+        d: "Yeh maanta hai ki dono nodes tree mein hain. Sirf ek ho, to wahi wapas milta hai, chupchaap. Yeh <b>har query O(<var>n</var>)</b> bhi hai: ek baar theek, fixed tree par 10⁵ queries ke liye bekaar. Wahi case hai jahan preprocessing ki keemat vasool hoti hai." },
+    ],
+
+    variants: [
+      { n: "Recursive post-order", cost: "O(n) time, O(h) space",
+        idea: "Chhe line ka function. Dono taraf recurse karo, dono taraf se report aaye to yeh node lautao, warna akeli report aage bhejo.",
+        when: "General binary tree aur ek do queries. Yahi interview answer hai.",
+        watch: "O(<var>h</var>) space call stack hai, aur skewed tree par <var>h</var> = <var>n</var>. Yeh yeh bhi nahi bata sakta ki koi node missing tha." },
+      { n: "BST walk", cost: "O(h) time, O(1) space",
+        idea: "Search tree mein values raasta dikhaati hain. Neeche chalo: jab tak dono targets chhote, left; jab tak dono bade, right. Pehla node jo dono ke beech baithe, wahi answer.",
+        when: "Tree BST hai. Tab recurse karne ki koi wajah nahi.",
+        watch: "“Beech baithna” mein node ka khud target hona bhi aata hai, to alag equality test nahi chahiye." },
+      { n: "Parent pointers", cost: "O(h) time, O(1) space",
+        idea: "Har node se uske parent tak link ho, to dono upar chalo. Pehle depths barabar karo, ya do walkers: ek root par pahunche to use doosre node se dobara shuru karo, aur woh answer par milte hain.",
+        when: "Nodes ke paas parent link ho, jo problem ke kuch versions dete hain.",
+        watch: "Yeh wahi trick hai jo do linked lists ke milne ki jagah dhoondhti hai, kyunki yeh wahi problem hai." },
+      { n: "Binary lifting", cost: "O(n log n) build, O(log n) per query",
+        idea: "Har node ke liye uska 1, 2, 4, 8, … step upar wala ancestor pehle nikaal lo. Query gehre node ko doosre ki depth tak uthaati hai, phir dono ko sabse bade jump se uthaati hai jo unhe alag rakhe. Ek aur step aur woh milte hain.",
+        when: "Ek kabhi na badalne wale tree par bahut saari queries. Yahi standard answer hai.",
+        watch: "Doosra loop sabse bada jump pehle try kare aur chhota ho, aur sirf tab jump kare jab dono ancestors alag hon. Match hone par jump overshoot karta hai." },
+      { n: "Euler tour plus range minimum", cost: "O(n log n) build, O(1) per query",
+        idea: "Walk jab bhi kisi node par pahunche, har child se lautne par bhi, use likh kar tree ko seedha karo. Answer dono nodes ki pehli appearance ke beech ka sabse uthla node hai: range minimum ka sawaal.",
+        when: "Query cost build cost se zyada maayne rakhe, ya sparse table pehle se ho.",
+        watch: "Constants aur flatten karne ka code dono binary lifting se bure hain. Naam lo; kabhi kabhi hi use karo." },
+    ],
+
+    math: [
+      { t: "Chart par LCA(6, 4): har report, neeche se upar", d: "Har node ya to neeche mila target batata hai, ya kuch nahi. Do reports wala ek node answer hai; upar sab use aage bhejte hain." },
+      { t: "Seedha tareeka, imaandaar keemat ke saath", d: "Dono root-to-node raaste store karna chalta hai. General binary tree mein un raaston ko dhoondhna khud ek poora traversal hai, jo log ginna bhool jaate hain." },
+      { t: "Sirf ek node answer kyun ho sakta hai", d: "p ke upar ke nodes koi bhi set nahi. Woh ek chain banaate hain, aur root se do chains sirf ek prefix share kar sakti hain." },
+      { t: "Bahut saari queries answer badal deti hain: binary lifting", d: "Har query par ek pass ek query ke liye theek hai. 10^5 ke liye numbers kaam nahi karte, aur fix hai power-of-two dooriyon par ancestors pehle se nikaalna." },
+    ],
+
+    costs: [
+      ["recursive LCA, ek query", "O(n) time", "worst case har node ek baar, aur zaroori hai: tree koi ishaara nahi deta targets kahan hain"],
+      ["recursion space", "O(h)", "har level ka ek frame: balanced O(log n), raaste jaise tree par O(n)"],
+      ["BST mein LCA", "O(h) time, O(1) space", "values walk chalaati hain, to recurse karne aur yaad rakhne ko kuch nahi"],
+      ["path comparison method", "O(n) time, O(h) space", "do searches plus do stored raaste: sahi, aur zyada mashinari"],
+      ["binary lifting, build", "O(n log n) time and space", "har power of two ki ek row, har row neeche wali se padhi"],
+      ["binary lifting, query", "O(log n)", "depth ke farak ke har bit par zyada se zyada ek jump, phir ek saath utarna"],
+      ["q queries, bina preprocessing", "O(q · n)", "yahi number tay karta hai ki preprocessing ki keemat vasool hogi ya nahi"],
+    ],
+
+    traps: [
+      "<b>Nodes ki jagah values compare karna.</b> Classic version node references deta hai. Duplicate values ho to <code>node.val == p.val</code> galat node aur galat answer deta hai.",
+      "<b>“Ek doosre ke upar” ke liye special case jodna.</b> Base case pehle se sambhalta hai. Extra branch mein hi bug jaata hai.",
+      "<b>Left recursion se jaldi return.</b> Faisle se pehle dono taraf dekhni hain. Left ke report karte hi lautna split point chhod deta hai.",
+      "<b>Maan lena ki dono nodes hain.</b> Ek missing ho to doosra wapas milta hai aur koi shikayat nahi. Missing ho sakta ho, to dekhe targets gino aur end mein ginti check karo.",
+      "<b>Simple binary tree par BST walk.</b> Tez hai aur galat hai: ordering niyam ke bina comparisons ka koi matlab nahi.",
+      "<b>Upar ki taraf chalne wala jump loop, binary lifting mein.</b> Saath utarna sabse bade jump se shuru ho aur chhota ho, aur sirf tab jump ho jab ancestors alag hon.",
+    ],
+
+    impl: [
+      ["Python", "sys.setrecursionlimit", "Default limit lagbhag 1000 frames hai, to 10^5 nodes ke skewed tree ko limit badhani ya explicit stack chahiye."],
+      ["Java", "TreeNode ==", "References ko == se compare karo, equals se nahi. Problem asli nodes deti hai, isliye reference comparison sahi hai."],
+      ["C++", "TreeNode*", "Pointer comparison seedha fit hota hai. Kuch na mile to nullptr lautao, aur tests bilkul pseudocode jaise padhte hain."],
+      ["JavaScript", "left || right", "left || right lautana yahan safe hai, kyunki node object kabhi falsy nahi. Yeh idiom values par mat lagao."],
+    ],
+
+    codecap: "Chhe lines poora kaam karti hain, aur hoshiyaari base case mein chhupi hai: node khud lautana woh case sambhalta hai jise log alag se likhne ki koshish karte hain. Pehle function ke baad sab kuch us tree ke liye optimisation hai jise baar baar query karoge.",
+
+    q: [
+      ["\"Dono ka ancestor\" answer ki definition kyun nahi?", "Kyunki answer ke upar ke har node ke neeche bhi dono targets hain, root tak. Ek node ko lowest chunta hai: do root-to-target raaste alag hone se pehle ka aakhri node."],
+      ["Har recursive call exactly kya lautati hai?", "Teen mein se ek: neeche mila target, pehchan liya gaya answer, ya kuch nahi. Caller ko inhe alag nahi pehchanna, kyunki har case mein wahi niyam lagta hai."],
+      ["Node target ho to base case use lautata kyun hai, neeche kyun nahi dekhta?", "Kyunki node khud ka ancestor hai. Doosra target neeche ho, to yahi node sach mein answer hai, aur rukna use lautata hai. Doosra target kahin aur ho, to yeh report upar jaakar doosri report se asli split point par milti hai."],
+      ["Sirf ek node do non-empty reports kyun dekh sakta hai?", "Jaise hi ek node khud ko lautata hai, uske upar ka har node theek ek non-empty report paata hai aur aage bhejta hai. Uske saath jodne ko doosri report kabhi nahi hoti, to koi ancestor khud ko split point nahi samajh sakta."],
+      ["BST version O(1) space kyun hai jab general O(h) hai?", "Values batati hain kidhar jaana hai, to walk kabhi dono taraf try nahi karti aur wapas nahi aati. Branching nahi to yaad rakhne ko kuch nahi, aur recursion loop ban jaati hai."],
+      ["10^5 nodes ka tree aur 10^5 queries. Kya badalta hai?", "Simple recursion O(q·n) hai, yaani 10^10 operations. Har node ka 2^k-th ancestor O(n log n) mein pehle nikaalo. Phir har query gehre node ko barabar uthaati hai aur dono ko O(log n) mein saath upar le jaati hai. Build milakar kul lagbhag 3.4 × 10^6."],
+      ["Do mein se ek node tree mein na ho to yeh algorithm kya karta hai?", "Doosra lautata hai, bharose ke saath aur bina error, kyunki ek report bilkul answer jaisi dikhti hai. Missing ho sakta ho, to gino kitne targets dikhe aur end mein ginti check karo."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "trie",
   n: "Trie (prefix tree)",
   group: "Data structures",
+  need: {
+    ask: `<p>A search box holds a dictionary of <b>10⁶ words</b>, and new words are added every day. With every keystroke it must list the words that start with what has been typed so far. Type <code>car</code>, and it should offer <b>car, cart, care</b>.</p>
+<p>The small version: the dictionary is <code>car, cart, care, dog</code>, and the prefix is <code>car</code>.</p>`,
+    tries: [
+      ["Put the words in a hash set", "“Is <i>car</i> a word?” is instant. “Which words start with <i>car</i>?” means testing every stored word: about 10⁶ × 10 character reads, on every keystroke."],
+      ["Keep the words sorted, and binary search to the prefix", "Finding where the <i>car</i> words start takes about 20 comparisons, which is fast. But every new word shifts half the list: 5 × 10⁵ moves per insert."],
+      ["Store every prefix of every word in a hash map", "Each 10-letter word adds 10 keys, each pointing at its word list. 10⁶ words become 10⁷ keys plus copies of the lists, and memory runs out long before speed does."],
+    ],
+    so: `<p>Store the words as <b>paths</b>, one letter per step, so words that start alike share their first steps. <code>car</code>, <code>cart</code> and <code>care</code> share the path c, a, r. To answer <code>car</code>, walk three steps and collect everything below.</p>
+<p>That is a <b>trie</b>, or prefix tree. A walk costs the length of the prefix, however many words are stored. The page builds the trie for <code>car, cart, care, dog</code>.</p>`,
+  },
+
   one: "Store words as <b>shared paths, one character per edge</b>, so a prefix stops being a search and becomes a walk of length equal to the prefix.",
 
-  plain: `<p>A hash set answers one question superbly: is this exact word present? Ask it anything softer and it has nothing for you. "Which stored words start with <b>pre</b>?" forces it to check every single word it holds.</p>
-<p>The reason is that hashing deliberately scrambles similar keys into unrelated slots. "cat" and "cats" look like neighbours to you. To the table they are strangers.</p>
-<p>A trie keeps that resemblance instead of destroying it. Each edge carries one letter. Each node is the prefix you have spelled by walking down from the root. Two words that start the same way share those first edges, so "car", "cart" and "care" cost you <code>c</code>, <code>a</code>, <code>r</code> once between them.</p>
-<p>A lookup is then: start at the root, follow one edge per letter, and see whether you fall off the tree. That costs the length of your word and nothing else. A million stored words do not slow it down, because you only ever walk your own word.</p>
-<p><b>Analogy.</b> Filing by street address rather than by name. Everyone on Baker Street is filed down the same corridor. So "who lives on Baker Street" is a walk to one cabinet, not a sweep of the building. The price is that you keep a whole corridor even for a street with one resident.</p>`,
+  plain: `<p>A hash set answers one question superbly: is this exact word present? Ask it anything softer and it has nothing for you. “Which stored words start with <i>car</i>?” forces it to check every word it holds.</p>
+<p>The reason is that hashing deliberately scatters similar keys into unrelated slots. “car” and “cart” look like neighbours to you; to the table they are strangers.</p>
+<p>A trie keeps that resemblance. Each <b>edge</b> carries one letter. Each <b>node</b> is the prefix spelled by walking down from the root to it. Words that start the same way share those edges, so car, cart and care pay for c, a, r once between them.</p>
+<p>A lookup starts at the root, follows one edge per letter, and checks whether you fall off. That costs the length of your word and nothing else.</p>
+<p><b>Analogy.</b> Filing by street rather than by name. Everyone on Baker Street is down one corridor, so “who lives on Baker Street?” is a walk to one cabinet. The price: a whole corridor even for a street with one resident.</p>`,
 
   why: [
     { t: "Start from the question a hash set cannot answer",
-      d: "A hash set tells you whether a word is present in O(1) and refuses everything else. Asking it for all words starting with \"pre\" means testing every stored word, O(total characters), because <b>hashing throws away the relationship between similar keys on purpose</b>. Good hashing spreads \"cat\" and \"cats\" as far apart as any two random strings." },
+      d: "A hash set says whether a word is present, fast, and refuses everything else. Asking it for all words starting with “car” means testing every stored word, because <b>hashing throws away the likeness between similar keys on purpose</b>. It puts “car” and “cart” as far apart as any two random strings." },
     { t: "If prefixes matter, store them once and share them",
-      d: "The words in a dictionary overlap heavily at the front. Give each character its own edge and let words that agree so far travel the same edges. A node then <b>is</b> a prefix, spelled by the path that reached it, and nothing is stored twice at the front." },
+      d: "Words in a dictionary overlap heavily at the front. Give each letter its own edge, and let words that agree so far walk the same edges. A node then <b>is</b> a prefix: the node reached by c, a, r is “car”. Nothing is stored twice at the front." },
     { t: "Now the prefix question is just a walk",
-      d: "Follow one edge per character of the prefix. Arrive at a node and every word underneath it starts with that prefix, by construction. Fall off the tree and no stored word does. There is no searching anywhere in that sentence." },
-    { t: "So cost depends on the word, not on the collection",
-      d: "Insert, search and prefix check each touch <b>L nodes for a word of length L</b>. Ten words or ten million, the walk is the same length, because you never look at anyone else's letters. That, not raw speed, is the actual argument against a hash map." },
+      d: "Follow one edge per letter of the prefix. If you arrive at a node, every word below it starts with that prefix: here car, cart and care. If you fall off, no stored word does. There is no searching anywhere in that." },
+    { t: "So the cost depends on the word, not the collection",
+      d: "Insert, search and prefix check each touch <b><var>L</var> nodes for a word of length <var>L</var></b>. Ten words or ten million, the walk is the same length, because you never read anyone else's letters. That is the real argument against a hash map." },
     { t: "Reaching a node is not the same as a word ending there",
-      d: "Insert \"cat\" and you have created nodes for c, ca and cat. If arriving somewhere meant a hit, the trie would claim to contain \"ca\". So each node carries an <b>isEnd flag</b>, set only where a word actually stops. Search checks the flag; a prefix query does not, and that one difference is the whole API." },
+      d: "Inserting “car” creates nodes for c, ca and car. If arriving somewhere meant a hit, the trie would claim to hold “ca”. So each node carries an <b>isEnd flag</b>, set only where a word stops. Search checks the flag; a prefix query does not. That one difference is the whole API." },
     { t: "The honest cost is memory",
-      d: "Every node needs a way to reach its children: a map keyed by character, or a fixed array of 26 pointers. The array is faster and wastes most of itself on sparse data, since a node with one child still pays for 26 slots. A trie buys prefix walks with space, and on short unrelated strings that is a bad trade." },
+      d: "Every node needs a way to reach its children: a map keyed by letter, or a fixed array of 26 pointers. The array is faster, and wastes most of itself on sparse data: a node with one child still pays for 26 slots. On short, unrelated strings, that is a bad trade." },
     { t: "Which decides when to use it",
-      d: "Use it when prefixes are the question. Autocomplete. Counting the words that start with something. Word search on a board, where one walk tests many candidate words at once. And the <b>bit trie</b>, where numbers are stored as their bits, so finding the maximum XOR becomes walking to the opposite bit at every level. If you only ever ask about whole exact strings, a hash set is smaller, simpler and better." },
+      d: "Use it when prefixes are the question: autocomplete, counting words with a prefix, or word search on a board, where one walk tests many words at once. Also the <b>bit trie</b>, which stores numbers as bits to find maximum XOR. For whole exact strings only, a hash set is smaller and simpler." },
   ],
 
   hing: `<p><b>Sawal yeh hai:</b> hash set batata hai "yeh exact word hai ya nahi", O(1) mein. Par "kaunse words 'pre' se shuru hote hain" par woh bilkul bekaar hai. Kyun? Kyunki hashing <b>jaan bujh kar</b> similar keys ka rishta tod deta hai. "cat" aur "cats" tumhare liye padosi hain, hash table ke liye do ajnabi.</p>
 <p><b>Trie ka idea:</b> rishta todo mat, <b>rishta hi structure bana do</b>. Har edge par ek character, aur jo words shuru mein match karte hain woh wahi edges share karte hain. Matlab har node khud ek <b>prefix</b> hai, jo root se us tak ka raasta bolta hai. "car", "cart", "care" ke liye c, a, r sirf ek baar bane.</p>
 <p><b>Ab prefix ka sawaal search nahi, walk hai.</b> Prefix ke har character par ek edge chalo. Node mil gaya to uske neeche ke saare words us prefix se shuru hote hain, definition se. Edge nahi mila to koi word nahi hai. Bas.</p>
-<p><b>Asli selling point (interview mein yahi bolo):</b> cost <b>O(L)</b> hai, L = word ki length, aur yeh <b>store kitne words hain uspar depend hi nahi karta</b>. 10 words ho ya 10 lakh, tum sirf apne word ke letters chalte ho. Hash map ki O(1) bhi asal mein key ko hash karti hai, yaani O(L) hi hai, par woh prefix ka jawab de hi nahi sakta.</p>
-<p><b>isEnd flag kyun chahiye, yeh sabse zyada miss hota hai.</b> "cat" daala to c, ca, cat, teeno nodes ban gaye. Agar node par pahunchna hi "mil gaya" maana jaaye to trie kahega "ca" bhi present hai, jo galat hai. Isliye har node par <b>isEnd</b> rakho, sirf wahan true jahan koi word khatam hota hai. <code>search()</code> flag check karta hai, <code>startsWith()</code> nahi karta. Poora difference yahi ek line hai.</p>
-<p><b>Kimat kya hai? Memory.</b> Har node ko children chahiye: ya to ek map, ya 26 pointers ka fixed array. Array tez hai par ek child wale node par bhi poore 26 slots ka kharcha deta hai, yaani sparse data par zyaadatar memory khaali padi rehti hai. Map memory bachata hai, thoda slow hai. Interview mein yeh trade-off khud bolo, achha lagta hai.</p>
-<p><b>Kab lena hai:</b> autocomplete, prefix count, aur board par word search, jahan ek DFS walk se kai words ek saath test ho jaate hain.</p>
-<p><b>Aur ek aur jagah: bit trie.</b> Numbers ko unke bits ke roop mein daal do. Ab maximum XOR nikalna bas itna hai ki har level par <b>ulta bit</b> chun lo. <b>Kab nahi lena:</b> jab sirf poore exact strings poochhe jaayein. Wahan hash set chhota bhi hai aur simple bhi.</p>`,
+<p><b>Asli selling point (interview mein yahi bolo):</b> cost <b>O(<var>L</var>)</b> hai, <var>L</var> = word ki length, aur yeh <b>store kitne words hain uspar depend hi nahi karta</b>. 10 words ho ya 10 lakh, tum sirf apne word ke letters chalte ho.</p>
+<p><b>isEnd flag kyun chahiye, yeh sabse zyada miss hota hai.</b> "cat" daala to c, ca, cat, teeno nodes ban gaye. Agar node par pahunchna hi "mil gaya" maana jaaye to trie kahega "ca" bhi present hai, jo galat hai. Isliye har node par <b>isEnd</b> rakho, sirf wahan true jahan koi word khatam hota hai. <code>search()</code> flag check karta hai, <code>startsWith()</code> nahi karta.</p>
+<p><b>Kimat kya hai? Memory.</b> Har node ko children chahiye: ya to ek map, ya 26 pointers ka fixed array. Array tez hai par ek child wale node par bhi poore 26 slots ka kharcha deta hai. Map memory bachata hai, thoda slow hai. Interview mein yeh trade-off khud bolo.</p>
+<p><b>Kab lena hai:</b> autocomplete, prefix count, aur board par word search, jahan ek DFS walk se kai words ek saath test ho jaate hain. <b>Kab nahi lena:</b> jab sirf poore exact strings poochhe jaayein. Wahan hash set chhota bhi hai aur simple bhi.</p>`,
 
   viz: ["trie"],
 
   math: [
-    { t: "The question a hash set cannot answer, priced", d: "Exact lookup is a tie. The prefix question is not, and the gap grows with the number of stored words rather than staying flat.", w:
+    { t: "The question a hash set cannot answer, priced", d: "Exact lookup is a tie. The prefix question is not, and the gap grows with the number of stored words.", w:
 `n words, average length L, query prefix of length P
 
                    hash set            trie
 contains(word)     O(L) hash + compare O(L)
 startsWith(p)      O(n x L) scan all   O(P)
 
-n = 10^6 words, P = 5:
-  hash set   5 x 10^6 character reads
-  trie       5` },
-    { t: "Count characters, not words", d: "Shared prefixes are stored once, so the node count is bounded by the total length of everything inserted, and is usually far below it.", w:
-`insert car, cart, care
+n = 10^6 words, L = 10, P = 3 ("car"):
+  hash set   10^7 character reads
+  trie       3 steps, then collect car, cart, care` },
+    { t: "Count letters, not words", d: "Shared prefixes are stored once, so the node count is at most the total length of everything inserted, and usually far below it.", w:
+`insert car, cart, care, dog
 
-stored separately: 3 + 4 + 4 = 11 characters
-as a trie:         c - a - r  then t, then e = 5 nodes
+stored separately:  3 + 4 + 4 + 3 = 14 letters
+as a trie:          c - a - r, then t, then e   5 nodes
+                    d - o - g                   3 nodes
+                    8 nodes below the root
 
 worst case, no shared prefixes at all:
-  nodes = total characters = n x L
-  10^5 words x 10 chars = 10^6 nodes` },
+  nodes = total letters = n x L
+  10^5 words x 10 letters = 10^6 nodes` },
     { t: "The memory bill, which is the real reason to stop and think", d: "Time is never why a trie gets rejected. It is that every node holds a whole alphabet of mostly empty slots.", w:
 `one node as a 26-slot reference array:
   26 x 8 bytes = 208, plus a header ~ 16 = 224 bytes
@@ -7338,42 +7792,42 @@ worst case, no shared prefixes at all:
 
 one node as a hash map of present children only:
   ~48 bytes + ~40 per child actually there
-a sparse trie shrinks by roughly 10x this way, and pays
-with a hash lookup per character instead of an index` },
-    { t: "Arriving at a node is not the same as a word ending there", d: "One boolean per node separates the two, and without it the structure quietly claims to contain every prefix of everything inserted.", w:
-`insert "car" only
+a trie averages about 1 child per node, so 88 bytes
+against 224: about 2.5x smaller, and it pays
+with a hash lookup per letter instead of an index` },
+    { t: "Arriving at a node is not the same as a word ending there", d: "One flag per node separates the two. Without it, the structure quietly claims to hold every prefix of everything inserted.", w:
+`insert car, cart, care, dog
 
 walk "ca": you arrive at a real, existing node
-  contains("ca")    must be false
+  contains("ca")    must be false: not marked end
   startsWith("ca")  must be true
 
-so each node carries isEnd. Without it, inserting n words
-of length L silently defines n x L words:
-  10^5 words x 10 chars = 10^6 false positives` },
+marked end: car, cart, care, dog     4 of 8 nodes
+unmarked:   c, ca, d, do             4 false words without it` },
   ],
 
   costs: [
-    ["insert a word of length L", "O(L)", "one node created or reused per character, nothing else is touched"],
-    ["search an exact word", "O(L)", "same walk, plus one isEnd check at the last node"],
-    ["startsWith(prefix)", "O(len prefix)", "the reason the structure exists, a hash set cannot do this at all"],
-    ["cost vs number of stored words", "independent", "you only ever walk your own letters, never anyone else's"],
-    ["collect all words under a prefix", "O(len prefix + output)", "walk to the node, then DFS, and the DFS pays only for what it emits"],
+    ["insert a word of length L", "O(L)", "one node created or reused per letter, nothing else is touched"],
+    ["search an exact word", "O(L)", "the same walk, plus one isEnd check at the last node"],
+    ["startsWith(prefix)", "O(len prefix)", "the reason the structure exists: a hash set cannot do this at all"],
+    ["cost against number of stored words", "independent", "you only ever walk your own letters"],
+    ["collect all words under a prefix", "O(len prefix + output)", "walk to the node, then DFS, and the DFS pays only for what it returns"],
     ["memory, array children", "O(total chars × 26)", "fast indexing, most slots empty on sparse data"],
     ["memory, map children", "O(total chars)", "pays only for real children, slightly slower per step"],
   ],
 
   traps: [
-    "<b>Forgetting isEnd.</b> Without it, inserting \"cat\" makes the trie claim it contains \"ca\". Reaching a node means the prefix exists, not the word.",
-    "<b>Using a trie where a hash set belongs.</b> If the only question is exact membership, you have paid a large memory bill for a structure that is not faster.",
+    "<b>Forgetting isEnd.</b> Without it, inserting “car” makes the trie claim it holds “ca”. Reaching a node means the prefix exists, not the word.",
+    "<b>Using a trie where a hash set belongs.</b> If the only question is exact membership, you paid a large memory bill for a structure that is not faster.",
     "<b>Hardcoding 26 slots</b> and then meeting uppercase letters, digits or a hyphen. Index out of range if you are lucky, silent corruption if you are not.",
-    "<b>Deleting by unlinking the last node.</b> A word can be a prefix of another, so delete clears isEnd first and only prunes nodes upward while they have no children and no isEnd.",
-    "<b>Board word search that restarts the trie at every cell.</b> Pass the current trie node into the DFS instead, and prune the moment a child edge is missing, which is the entire speedup.",
-    "<b>Building a bit trie with variable-length numbers.</b> Insert every number with the same fixed bit width, most significant bit first, or the greedy XOR walk compares different positions.",
+    "<b>Deleting by unlinking the last node.</b> “car” is a prefix of “cart”, so delete clears isEnd first. Then it prunes upward only while a node has no children and no isEnd.",
+    "<b>Board word search that restarts the trie at every cell.</b> Pass the current trie node into the DFS, and stop the moment a child edge is missing. That is the entire speedup.",
+    "<b>Building a bit trie with numbers of different lengths.</b> Insert every number with the same bit width, highest bit first, or the greedy XOR walk compares different positions.",
   ],
 
   impl: [
-    ["Python", "no built-in; dict of dicts, or a Node class with a dict", "A plain nested dict with a sentinel key for isEnd is the fastest thing to write under time pressure."],
-    ["Java", "no built-in; TrieNode with TrieNode[26] or HashMap", "The array version needs c - 'a' indexing. Guard the input alphabet, there is no bounds help until it throws."],
+    ["Python", "no built-in; dict of dicts, or a Node class with a dict", "A nested dict with a sentinel key for isEnd is the fastest thing to write under time pressure."],
+    ["Java", "no built-in; TrieNode with TrieNode[26] or HashMap", "The array version needs c - 'a' indexing. Guard the input alphabet: there is no help until it throws."],
     ["C++", "no built-in; struct with array<Node*,26> or unordered_map", "Raw new leaks unless you keep a vector of nodes and index into it, which is also faster."],
     ["JavaScript", "no built-in; plain object or Map per node", "Use Map or Object.create(null): a plain object literal inherits keys like constructor, which pollute lookups."],
   ],
@@ -7558,88 +8012,201 @@ class Trie {
 // split in half the way word[i] would. Rarely what a Trie problem asks,
 // always what a production autocomplete needs.`,
   },
-  codecap: "One walk serves everything: search reads isEnd at the end of it, startsWith does not, and every other trie problem is that walk with a DFS bolted on.",
+  codecap: "One walk serves everything: search reads isEnd at the end of it, startsWith does not, and every other trie problem is that walk with a DFS added.",
 
   q: [
-    ["Why can a hash set not answer prefix queries?", "Hashing deliberately destroys the relationship between similar keys, so \"cat\" and \"cats\" land in unrelated slots. Finding words with a prefix means testing every stored word."],
-    ["What makes a trie lookup O(L) rather than depending on n?", "You follow one edge per character of your own word and never look at any other word's letters, so the walk length is the word length no matter how many words are stored."],
-    ["What is isEnd for, and what breaks without it?", "It marks nodes where a word actually stops. Without it, inserting \"cat\" would make the trie report \"c\" and \"ca\" as stored words, because reaching a node only proves the prefix exists."],
-    ["Where does search differ from startsWith?", "Only in the last line. Both walk the string and fail if an edge is missing; search additionally requires isEnd on the final node, startsWith does not."],
-    ["What does a trie cost you, and what is the choice between array and map children?", "Memory. A 26-slot array per node indexes fastest but wastes most slots on sparse data; a map pays only for real children and costs a little speed per step."],
-    ["Name two problems where a trie beats the obvious approach.", "Board word search, where one DFS carrying a trie node tests many candidate words at once and prunes on a missing edge, and maximum XOR, where numbers are stored as fixed-width bits and you greedily walk to the opposite bit at each level."],
+    ["Why can a hash set not answer prefix queries?", "Hashing deliberately destroys the likeness between similar keys, so \"cat\" and \"cats\" land in unrelated slots. Finding words with a prefix means testing every stored word."],
+    ["What makes a trie lookup O(L) rather than depending on n?", "You follow one edge per letter of your own word and never read any other word's letters. So the walk length is the word length, however many words are stored."],
+    ["What is isEnd for, and what breaks without it?", "It marks nodes where a word actually stops. Without it, inserting \"cat\" makes the trie report \"c\" and \"ca\" as stored words, because reaching a node only proves the prefix exists."],
+    ["Where does search differ from startsWith?", "Only in the last line. Both walk the string and fail if an edge is missing. search also requires isEnd on the final node; startsWith does not."],
+    ["What does a trie cost you, and what is the choice between array and map children?", "Memory. A 26-slot array per node indexes fastest but wastes most slots on sparse data. A map pays only for real children and costs a little speed per step."],
+    ["Name two problems where a trie beats the obvious approach.", "Board word search, where one DFS carrying a trie node tests many words at once and stops on a missing edge. And maximum XOR, where numbers are stored as fixed-width bits and you walk to the opposite bit at each level."],
   ],
 
   p: [
     [208, "implement-trie-prefix-tree", "Implement Trie, the structure itself", "M"],
-    [1268, "search-suggestions-system", "Search Suggestions, autocomplete as a walk plus DFS", "M"],
+    [1268, "search-suggestions-system", "Search Suggestions, the running example: autocomplete", "M"],
     [648, "replace-words", "Replace Words, shortest matching prefix root", "M"],
     [211, "design-add-and-search-words-data-structure", "Add and Search Words, the dot wildcard branches the walk", "M"],
     [677, "map-sum-pairs", "Map Sum Pairs, prefix sums stored on nodes", "M"],
-    [212, "word-search-ii", "Word Search II, trie-pruned DFS on a board", "H"],
     [421, "maximum-xor-of-two-numbers-in-an-array", "Maximum XOR, the bit trie", "M"],
+    [212, "word-search-ii", "Word Search II, trie-pruned DFS on a board", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek search box mein <b>10⁶ words</b> ki dictionary hai, aur roz naye words judte hain. Har keystroke par use woh words dikhane hain jo ab tak type kiye hisse se shuru hote hain. <code>car</code> type karo, to <b>car, cart, care</b> dikhne chahiye.</p>
+<p>Chhota version: dictionary hai <code>car, cart, care, dog</code>, aur prefix <code>car</code>.</p>`,
+      tries: [
+        ["Words hash set mein daalo", "“Kya <i>car</i> word hai?” turant. “Kaunse words <i>car</i> se shuru hote hain?” matlab har stored word test karna: lagbhag 10⁶ × 10 character reads, har keystroke par."],
+        ["Words sorted rakho, aur prefix tak binary search karo", "<i>car</i> wale words kahan shuru hote hain, yeh lagbhag 20 comparisons mein, jo tez hai. Par har naya word aadhi list khisakata hai: har insert par 5 × 10⁵ moves."],
+        ["Har word ka har prefix hash map mein rakho", "Har 10-letter word 10 keys jodta hai, har ek apni word list ki taraf. 10⁶ words 10⁷ keys plus lists ki copies ban jaate hain, aur speed se bahut pehle memory khatam."],
+      ],
+      so: `<p>Words ko <b>raaston</b> ki tarah rakho, har step par ek letter, taaki ek jaise shuru hone wale words pehle steps share karein. <code>car</code>, <code>cart</code> aur <code>care</code> raasta c, a, r share karte hain. <code>car</code> ka answer dene ke liye teen steps chalo aur neeche ka sab jama karo.</p>
+<p>Yahi <b>trie</b> hai, yaani prefix tree. Walk ki cost prefix ki length hai, chahe kitne bhi words stored hon. Page <code>car, cart, care, dog</code> ka trie banata hai.</p>`,
+    },
+
+    one: "Words ko <b>shared raaston, har edge par ek character</b>, ki tarah rakho. Tab prefix search nahi rehta, prefix ki length jitni ek walk ban jaata hai.",
+
+    plain: `<p>Hash set ek sawaal shaandaar tareeke se answer karta hai: kya yeh exact word hai? Isse kuch halka poocho to uske paas kuch nahi. “Kaunse stored words <i>car</i> se shuru hote hain?” use har word check karne par majboor karta hai.</p>
+<p>Wajah yeh hai ki hashing jaan-boojh kar similar keys ko alag slots mein bikher deta hai. “car” aur “cart” aapko padosi lagte hain; table ke liye ajnabi hain.</p>
+<p>Trie yeh milaap bachata hai. Har <b>edge</b> ek letter rakhta hai. Har <b>node</b> woh prefix hai jo root se wahan tak chal kar banta hai. Ek jaise shuru hone wale words woh edges share karte hain, to car, cart aur care c, a, r ki keemat milkar ek baar dete hain.</p>
+<p>Lookup root se shuru hota hai, har letter par ek edge follow karta hai, aur dekhta hai ki kahin gire to nahi. Iski cost aapke word ki length hai, aur kuch nahi.</p>
+<p><b>Analogy.</b> Naam ki jagah street se file karna. Baker Street ke sab log ek corridor mein, to “Baker Street par kaun rehta hai?” ek cabinet tak ki walk hai. Keemat: ek resident wali street ke liye bhi poora corridor.</p>`,
+
+    why: [
+      { t: "Us sawaal se shuru karo jo hash set nahi de sakta",
+        d: "Hash set tez batata hai ki word hai ya nahi, aur baaki sab se mana karta hai. “car” se shuru hone wale sab words poochna har stored word test karna hai, kyunki <b>hashing similar keys ka milaap jaan-boojh kar phenk deti hai</b>. Yeh “car” aur “cart” ko do random strings jitna door rakhti hai." },
+      { t: "Prefixes maayne rakhein to unhe ek baar rakho aur share karo",
+        d: "Dictionary ke words aage se bahut milte hain. Har letter ko apni edge do, aur jo words ab tak agree karte hain unhe wahi edges chalne do. Tab node <b>hi</b> prefix hai: c, a, r se pahuncha node “car” hai. Aage kuch do baar store nahi hota." },
+      { t: "Ab prefix ka sawaal bas ek walk hai",
+        d: "Prefix ke har letter par ek edge follow karo. Node par pahunche to uske neeche har word us prefix se shuru hota hai: yahan car, cart aur care. Gir gaye to koi stored word nahi. Isme kahin dhoondhna nahi hai." },
+      { t: "To cost word par depend hai, collection par nahi",
+        d: "Insert, search aur prefix check har ek <b><var>L</var> length ke word ke liye <var>L</var> nodes</b> chhoote hain. Das words ho ya ek crore, walk utni hi lambi, kyunki aap kisi aur ke letters nahi padhte. Hash map ke against asli daleel yahi hai." },
+      { t: "Node par pahunchna word ke khatam hone jaisa nahi",
+        d: "“car” insert karne se c, ca aur car ke nodes bante hain. Agar kahin pahunchna hit maana jaaye, to trie kahega “ca” bhi hai. Isliye har node par <b>isEnd flag</b> hai, sirf wahan set jahan word rukta hai. Search flag check karta hai; prefix query nahi. Poori API ka farak bas yahi hai." },
+      { t: "Imaandaar keemat memory hai",
+        d: "Har node ko children tak pahunchne ka tareeka chahiye: letter se keyed map, ya 26 pointers ka fixed array. Array tez hai, aur sparse data par zyadatar khaali: ek child wala node bhi 26 slots deta hai. Chhoti, alag strings par yeh bura sauda hai." },
+      { t: "Yahi tay karta hai kab use karein",
+        d: "Jab sawaal prefixes ka ho: autocomplete, prefix wale words ginna, ya board par word search, jahan ek walk kai words ek saath test karti hai. <b>Bit trie</b> bhi, jo maximum XOR ke liye numbers ko bits ki tarah rakhta hai. Sirf poore exact strings ke liye hash set chhota aur simple hai." },
+    ],
+
+    math: [
+      { t: "Woh sawaal jo hash set nahi de sakta, keemat ke saath", d: "Exact lookup barabar hai. Prefix ka sawaal nahi, aur farak stored words ki ginti ke saath badhta hai." },
+      { t: "Words nahi, letters gino", d: "Shared prefixes ek baar store hote hain, to nodes ki ginti daale gaye sab ki kul length se zyada nahi, aur aam taur par kahin kam." },
+      { t: "Memory ka bill, rukne aur sochne ki asli wajah", d: "Trie time ki wajah se kabhi reject nahi hota. Wajah yeh hai ki har node zyadatar khaali slots ka poora alphabet rakhta hai." },
+      { t: "Node par pahunchna word ke khatam hone jaisa nahi", d: "Har node par ek flag dono ko alag karta hai. Iske bina structure chupchaap har daale gaye word ke har prefix ko rakhne ka daava karta hai." },
+    ],
+
+    costs: [
+      ["L length ka word insert", "O(L)", "har letter par ek node banta ya dobara use hota hai, aur kuch nahi chhua jaata"],
+      ["exact word search", "O(L)", "wahi walk, plus aakhri node par ek isEnd check"],
+      ["startsWith(prefix)", "O(len prefix)", "structure isi liye hai: hash set yeh kar hi nahi sakta"],
+      ["stored words ki ginti ke against cost", "independent", "aap sirf apne letters chalte ho"],
+      ["prefix ke neeche sab words jama karna", "O(len prefix + output)", "node tak chalo, phir DFS, aur DFS sirf jo lautata hai uski keemat deta hai"],
+      ["memory, array children", "O(total chars × 26)", "tez indexing, sparse data par zyadatar slots khaali"],
+      ["memory, map children", "O(total chars)", "sirf asli children ki keemat, har step thoda slow"],
+    ],
+
+    traps: [
+      "<b>isEnd bhoolna.</b> Iske bina “car” insert karne se trie daava karta hai ki “ca” bhi hai. Node par pahunchna matlab prefix hai, word nahi.",
+      "<b>Hash set ki jagah trie lena.</b> Agar sawaal sirf exact membership ka hai, to aapne aise structure ka bada memory bill diya jo tez bhi nahi.",
+      "<b>26 slots hardcode karna</b> aur phir uppercase letters, digits ya hyphen milna. Kismat achhi to index out of range, nahi to chupchaap kachra.",
+      "<b>Aakhri node unlink karke delete karna.</b> “car”, “cart” ka prefix hai, to delete pehle isEnd hataata hai. Phir upar tabhi kaat-ta hai jab node ke na children hon na isEnd.",
+      "<b>Board word search jo har cell par trie dobara shuru kare.</b> Current trie node DFS mein pass karo, aur child edge na mile to wahin ruko. Poori speedup yahi hai.",
+      "<b>Alag lengths ke numbers se bit trie banana.</b> Har number same bit width mein daalo, highest bit pehle, warna greedy XOR walk alag positions compare karti hai.",
+    ],
+
+    impl: [
+      ["Python", "no built-in; dict of dicts, or a Node class with a dict", "isEnd ke liye sentinel key wala nested dict time pressure mein sabse jaldi likha jaata hai."],
+      ["Java", "no built-in; TrieNode with TrieNode[26] or HashMap", "Array version ko c - 'a' indexing chahiye. Input alphabet check karo: throw hone tak koi madad nahi."],
+      ["C++", "no built-in; struct with array<Node*,26> or unordered_map", "Raw new leak karta hai jab tak nodes ka vector rakh kar usme index na karo, jo tez bhi hai."],
+      ["JavaScript", "no built-in; plain object or Map per node", "Map ya Object.create(null) lo: plain object literal constructor jaisi keys inherit karta hai, jo lookups bigaadti hain."],
+    ],
+
+    codecap: "Ek walk sab kuch karti hai: search uske end par isEnd padhta hai, startsWith nahi, aur baaki har trie problem usi walk mein DFS jodna hai.",
+
+    q: [
+      ["Hash set prefix queries ka answer kyun nahi de sakta?", "Hashing similar keys ka milaap jaan-boojh kar mitaati hai, to \"cat\" aur \"cats\" alag slots mein girte hain. Prefix wale words dhoondhna har stored word test karna hai."],
+      ["Trie lookup n par depend karne ki jagah O(L) kyun hai?", "Aap apne word ke har letter par ek edge follow karte ho aur kisi aur word ke letters nahi padhte. To walk ki length word ki length hai, kitne bhi words stored hon."],
+      ["isEnd kis liye hai, aur iske bina kya tootta hai?", "Yeh un nodes ko mark karta hai jahan word sach mein rukta hai. Iske bina \"cat\" insert karne par trie \"c\" aur \"ca\" ko stored words batata hai, kyunki node par pahunchna sirf prefix ka hona saabit karta hai."],
+      ["search startsWith se kahan alag hai?", "Sirf aakhri line mein. Dono string chalte hain aur edge na mile to fail. search aakhri node par isEnd bhi maangta hai; startsWith nahi."],
+      ["Trie ki keemat kya hai, aur array vs map children ka chunaav kya hai?", "Memory. Har node par 26-slot array sabse tez index karta hai par sparse data par zyadatar slots bekaar. Map sirf asli children ki keemat deta hai aur har step par thodi speed leta hai."],
+      ["Do problems batao jahan trie obvious tareeke se behtar hai.", "Board word search, jahan trie node le jaati ek DFS kai words ek saath test karti hai aur missing edge par rukti hai. Aur maximum XOR, jahan numbers fixed-width bits mein stored hain aur har level par ulte bit ki taraf chalte ho."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "lru",
   n: "LRU cache, two structures at once",
   group: "Data structures",
+  need: {
+    ask: `<p>A web server keeps the <b>10⁵</b> most recently used user profiles in memory, so it can skip the database. It serves <b>10⁶ requests</b>. On a miss it loads the profile, and if memory is full it must throw out the profile <b>used longest ago</b>: “least recently used”, or LRU.</p>
+<p>The small version: room for 3 entries, holding A, B and C, with C the one used longest ago. A request reads B. Then D arrives, and one of them must go. It should be C.</p>`,
+    tries: [
+      ["A hash map with a last-used time on each entry", "Reading B is instant. But finding the oldest entry means checking all 10⁵ times on every eviction: up to 10⁶ × 10⁵ = 10¹¹ checks."],
+      ["A list kept in order of use", "The oldest is always at the end, free. But reading B means walking the list to find it: up to 10⁵ steps per request."],
+      ["A hash map plus a min-heap of last-used times", "Eviction pops the heap. But every read changes an entry's time, and a heap cannot find that entry to fix it without scanning."],
+    ],
+    so: `<p>The map is fast at finding, the list is fast at ordering, and neither can do both. So use <b>both, over the same objects</b>. The map stores, for each key, <b>the list node itself</b>. Reading B: one map lookup lands on B's node, and a few pointer writes move it to the front. Evicting: take the node at the back, and delete its key from the map.</p>
+<p>Every operation is O(1). The page follows the three-entry cache A, B, C through reading B and adding D.</p>`,
+  },
+
   one: "Neither structure can do the job alone: a hash map has no order, a list has no lookup. <b>Hold the same nodes in both</b> and every operation is O(1).",
 
-  plain: `<p>A cache has a fixed capacity. It has to answer "what is the value for this key" quickly, and when it fills up it has to throw something away. Least recently used means it throws away whatever has gone longest without being touched.</p>
-<p>A hash map does the first half perfectly and the second half not at all. It finds a key in O(1). It has no idea of order, so it cannot tell you what is oldest. A linked list does the opposite. Keep it ordered by how recently things were used and eviction is free: it is whatever sits at the tail. But finding a key means walking the list, which is O(n).</p>
-<p>The move is to use both, over the same objects. The map's value is not the cached value, it is a <b>pointer to the list node</b> holding it. One map lookup and you are standing on the node, with no walking, and from there you can unlink and relink it in constant time. Every operation touches both structures, and they must stay in step: anything evicted has to leave the list and the map.</p>
-<p><b>Analogy.</b> A library with a card index and a shelf of returns. The index tells you instantly where a book is. The shelf keeps them in the order they were last read, so the one at the far end is the one nobody wants. Remove a book and you must pull its card too, or the index sends the next reader to an empty slot.</p>`,
+  plain: `<p>A cache has a fixed capacity. It must answer “what is the value for this key?” quickly. When it fills up, it must throw something away. <b>Least recently used</b> means throwing away whatever has gone longest without being touched.</p>
+<p>A hash map does the first half perfectly and the second not at all. It finds a key in O(1), but it has no order, so it cannot say what is oldest. A linked list does the opposite. Keep it ordered by last use, and eviction is free: it is the node at the back. But finding a key means walking the list.</p>
+<p>The move is to use both, over the same objects. The map's value is not the cached value; it is a <b>pointer to the list node</b> holding it. One lookup and you stand on B's node, and from there you can unlink it and move it to the front in constant time. Anything evicted must leave both the list and the map.</p>
+<p><b>Analogy.</b> A library with a card index and a shelf of returns. The index tells you instantly where a book is. The shelf keeps books in the order they were last read, so the one at the far end is the one nobody wants. Remove a book and you must pull its card too.</p>`,
 
   why: [
-    { t: "Write down what the thing must do", d: "Two operations, both required to be O(1): <b>get</b> a value by key, and <b>put</b> a key, evicting the least recently used entry if that would exceed capacity. Reading a key counts as using it. The word 'both' is doing all the work, because each operation on its own is easy." },
-    { t: "A hash map answers half the question", d: "get is O(1) and put is O(1), and then capacity arrives and the map has nothing to offer. Hash maps are <b>unordered by construction</b>: the slot is computed from the key, so there is no sense in which one entry is older than another. Scanning for the oldest is O(n), which loses the requirement." },
-    { t: "A list answers the other half", d: "Keep entries in a list ordered by when they were last touched, newest at the head. Eviction is now free: the tail is the answer, by definition. But looking up a key means walking the list, <b>O(n)</b>, which loses the other requirement. Each structure is fast at exactly what the other is slow at." },
-    { t: "So hold the same objects in both", d: "Do not store values in the map. Store, for each key, <b>the list node itself</b>. The map turns a key into a position in O(1), and the list turns a position into an order in O(1). Neither structure duplicates the data; they are two indexes over one set of nodes." },
-    { t: "Unlinking is why the list must be doubly linked", d: "To remove a node you must reach the one <b>before</b> it, so its next pointer can be redirected. A singly linked list only offers that by walking from the head, which is the O(n) you just paid to avoid. A back pointer turns unlink into four assignments and nothing else." },
-    { t: "Two sentinel nodes delete every null check", d: "Put a permanent dummy at the head and another at the tail. Now every real node has a genuine neighbour on both sides. Unlink and insert become the same two lines, whether the list is empty, full, or holding one item. This is the same trick as a dummy head on any linked-list problem." },
-    { t: "The two structures must never disagree", d: "Every write touches both. Evicting means unlinking the node <b>and</b> deleting its key from the map. That is why the node has to store its own key. Standing on the tail node, you need to know what to delete. Miss that and the map points at a node no longer in the list, and get returns a value the cache does not hold." },
-    { t: "What this does not give you", d: "LRU is a guess, not a prediction: it assumes recent use predicts future use, which is false for a single long scan through cold data. And if you need frequency rather than recency, this shape does not stretch, LFU needs a second layer of lists grouped by count." },
+    { t: "Write down what it must do",
+      d: "Two operations, both required to be O(1): <b>get</b> a value by key, and <b>put</b> a key, evicting the least recently used entry if the cache is full. Reading a key counts as using it. The word “both” does all the work, because each operation alone is easy." },
+    { t: "A hash map answers half the question",
+      d: "get and put are O(1), until the cache is full. Then the map has nothing to offer: its slots are computed from keys, so no entry is older than another. Finding C, the oldest of A, B and C, means scanning every entry: O(<var>n</var>)." },
+    { t: "A list answers the other half",
+      d: "Keep entries in a list ordered by last use, newest at the front. Eviction is free: the back is the answer, by definition. But looking up B means walking the list, <b>O(<var>n</var>)</b>. Each structure is fast at exactly what the other is slow at." },
+    { t: "So hold the same objects in both",
+      d: "Do not store values in the map. Store, for each key, <b>the list node itself</b>. The map turns a key into a position in O(1); the list turns positions into an order in O(1). No data is duplicated. They are two indexes over one set of nodes." },
+    { t: "Unlinking is why the list must be doubly linked",
+      d: "To move B to the front, you first unlink it, which means redirecting the pointer of the node <b>before</b> B. A singly linked list only reaches that node by walking from the front: the O(<var>n</var>) you were avoiding. A back pointer makes unlinking two assignments." },
+    { t: "Two sentinel nodes delete every null check",
+      d: "Put a permanent dummy node at the front and another at the back. Now every real node has a real neighbour on both sides. Unlink and insert become the same two lines, whether the list is empty, full or holds one item." },
+    { t: "The two structures must never disagree",
+      d: "Every write touches both. Evicting C means unlinking its node <b>and</b> deleting key C from the map. That is why each node stores its own key: standing on the back node, you must know which key to delete. Miss it and the map points at a node no longer cached." },
+    { t: "What this does not give you",
+      d: "LRU is a guess that recent use predicts future use. One long scan through cold data breaks it. And if you need <i>how often</i> rather than <i>how recently</i>, this shape does not stretch: LFU needs a second layer of lists grouped by count." },
   ],
 
   variants: [
     { n: "LRU: map plus doubly linked list", cost: "O(1) get, O(1) put",
-      idea: "Key to node, nodes ordered by recency. Touching a node moves it to the head; eviction takes the tail.",
+      idea: "Key to node, nodes ordered by recency. Touching a node moves it to the front; eviction takes the back.",
       when: "The default cache question, asked more often than almost anything else on this page.",
-      watch: "The node must carry its own key, or the eviction cannot find what to delete from the map." },
-
+      watch: "The node must carry its own key, or eviction cannot find what to delete from the map." },
     { n: "LFU: map plus one list per frequency", cost: "O(1) get, O(1) put",
-      idea: "Two maps: key to node, and frequency count to a doubly linked list of the nodes with that count. A hit moves the node to the next count's list. Track the minimum live count so eviction knows where to look.",
+      idea: "Two maps: key to node, and use-count to a doubly linked list of nodes with that count. A hit moves the node to the next count's list. Track the lowest live count so eviction knows where to look.",
       when: "Eviction should be by how often, not how recently.",
-      watch: "The minimum count only ever increases by one, or resets to one on an insert. That is what keeps the eviction O(1) instead of a search." },
-
+      watch: "The lowest count only ever rises by one, or resets to one on an insert. That is what keeps eviction O(1) instead of a search." },
     { n: "Insert, delete and get random in O(1)", cost: "O(1) all three",
-      idea: "A hash map from value to array index, plus an array of values. Deleting swaps the doomed element with the last one, fixes that one index in the map, and pops.",
-      when: "Random selection must be O(1), which a hash map alone cannot do.",
-      watch: "The swap has to update the map entry for the element that moved. Forgetting it leaves one stale index that fails much later." },
-
+      idea: "A hash map from value to array index, plus an array of values. Deleting swaps the doomed item with the last one, fixes that one index in the map, and pops.",
+      when: "Picking a random element must be O(1), which a hash map alone cannot do.",
+      watch: "The swap must update the map entry for the item that moved. Forget it and one stale index fails much later." },
     { n: "Min stack", cost: "O(1) push, pop and min",
-      idea: "The stack, plus a second stack holding the minimum as of each push. The same composition idea at its smallest: one structure for order, one for the aggregate.",
-      when: "Any \"and also report the min or max in O(1)\" wrapper around a stack.",
-      watch: "Push onto the min stack every time, including duplicates of the current minimum, or pop stops lining up with it." },
-
+      idea: "The stack, plus a second stack holding the minimum as of each push. The same idea at its smallest: one structure for order, one for the summary.",
+      when: "Any “and also report the min or max in O(1)” wrapper around a stack.",
+      watch: "Push onto the min stack every time, including repeats of the current minimum, or the two stacks stop lining up." },
     { n: "What your language already ships", cost: "O(1) amortised",
-      idea: "Python's OrderedDict, Java's LinkedHashMap with access order enabled, and C++'s std::list with iterators stored in a map are all this structure, already written.",
+      idea: "Python's <code>OrderedDict</code>, Java's <code>LinkedHashMap</code> in access order, and C++'s <code>std::list</code> with iterators stored in a map are all this structure, already written.",
       when: "Production. Also an interview, if you ask first and then offer to write it out.",
-      watch: "Reaching for it without being asked reads as dodging the question. Name it, then hand-roll the version the interviewer wanted." },
+      watch: "Reaching for it without asking reads as dodging the question. Name it, then write the version the interviewer wanted." },
   ],
 
   viz: ["lru"],
 
-  hing: `<p><b>Do cheezein chahiye, aur koi ek structure dono nahi de sakta.</b> Hash map se key ka value O(1) mein mil jaata hai. Par usme <b>order hai hi nahi</b>, to woh bata hi nahi sakta ki purana kaun hai. Linked list: recency ke hisaab se rakho to eviction free hai, tail utha lo, lekin key dhoondhne ke liye poori list chalni padegi, O(n). Har structure theek wahan tez hai jahan doosra slow hai.</p>
+  hing: `<p><b>Do cheezein chahiye, aur koi ek structure dono nahi de sakta.</b> Hash map se key ka value O(1) mein mil jaata hai. Par usme <b>order hai hi nahi</b>, to woh bata hi nahi sakta ki purana kaun hai. Linked list: recency ke hisaab se rakho to eviction free hai, tail utha lo, lekin key dhoondhne ke liye poori list chalni padegi, O(<var>n</var>). Har structure theek wahan tez hai jahan doosra slow hai.</p>
 <p><b>To dono use karo, ek hi nodes ke upar.</b> Map mein value mat rakho, <b>node ka pointer</b> rakho. Ek lookup aur tum seedhe us node par khade ho, chalna nahi pada. Yeh join hi poora answer hai.</p>
-<p><b>List doubly linked kyun?</b> Kisi node ko nikalne ke liye uske <b>pehle wale</b> node tak pahunchna padta hai. Singly list mein head se chalna padega, matlab wahi O(n) wapas. Back pointer se unlink char assignment ka kaam hai. Aur do <b>sentinel</b> nodes daal do, ek head par ek tail par, phir null check kabhi nahi karna padega, list khaali ho ya bhari, code same.</p>
-<p><b>Sabse badi galti:</b> evict karte waqt sirf list se nikaal dena aur map se bhoolna. Phir map ek aise node ko point karta rahega jo list mein hai hi nahi, aur get galat value de dega. Isliye <b>node apni key khud store karta hai</b>, taki tail par khade ho kar pata chale map se kya delete karna hai. Yeh line interview mein khud bol dena, poochne se pehle.</p>`,
+<p><b>List doubly linked kyun?</b> Kisi node ko nikalne ke liye uske <b>pehle wale</b> node tak pahunchna padta hai. Singly list mein head se chalna padega, matlab wahi O(<var>n</var>) wapas. Back pointer se unlink do assignment ka kaam hai. Aur do <b>sentinel</b> nodes daal do, ek head par ek tail par, phir null check kabhi nahi karna padega.</p>
+<p><b>Sabse badi galti:</b> evict karte waqt sirf list se nikaal dena aur map se bhoolna. Phir map ek aise node ko point karta rahega jo list mein hai hi nahi, aur get galat value de dega. Isliye <b>node apni key khud store karta hai</b>, taaki tail par khade ho kar pata chale map se kya delete karna hai.</p>`,
 
   math: [
-    { t: "Each structure answers half, and half is worthless here", d: "Both operations have to be O(1), because a cache that is slower than the thing it caches has no reason to exist.", w:
-`capacity C, n operations
+    { t: "Read B, then add D, traced through both structures", d: "Capacity 3. The list runs from most recent at the front to least recent at the back. Every step touches the map and the list together.", w:
+`start     list: A, B, C          map: A, B, C -> their nodes
+          (C is at the back: used longest ago)
+
+get(B)    map lookup lands on B's node          1 step
+          unlink B (2 writes), relink at front  6 writes
+          list: B, A, C
+
+put(D)    full, so evict the back: C
+          unlink C, and delete key C from the map
+          insert D at the front, add key D to the map
+          list: D, B, A          map: A, B, D
+
+nothing was searched: every step is O(1)` },
+    { t: "Each structure answers half, and half is worthless here", d: "Both operations must be O(1). A cache slower than the thing it caches has no reason to exist.", w:
+`capacity C, n requests
 
 hash map only:  get O(1), "which is least recent?" O(C)
 list only:      order is free, find(key) is O(C)
@@ -7647,68 +8214,61 @@ both, sharing the same node objects: every operation O(1)
 
 C = 100,000, n = 10^6:
   one structure   10^6 x 100,000 = 10^11
-  both            10^6` },
-    { t: "Why the list must be doubly linked, counted in pointer writes", d: "Eviction is not the hard part. Moving a node you found through the map to the front is, and that needs the node before it.", w:
-`to unlink x you need x's predecessor
+  both            about 10^6` },
+    { t: "Why the list must be doubly linked, counted in pointer writes", d: "Eviction is not the hard part. Moving a node found through the map to the front is, and that needs the node before it.", w:
+`to unlink B you need A, the node before it
 
-singly linked:  walk from the head to find it      O(C)
-doubly linked:  x.prev and x.next are right there  O(1)
+singly linked:  walk from the front to find A      O(C)
+doubly linked:  B.prev and B.next are right there  O(1)
 
-  x.prev.next = x.next
-  x.next.prev = x.prev
+  B.prev.next = B.next
+  B.next.prev = B.prev
 
-2 reads, 2 writes, wherever x happens to sit` },
-    { t: "Two sentinels delete six cases", d: "Head and tail specials are where this implementation goes wrong under time pressure. Two dummy nodes make every real node an interior node.", w:
-`without sentinels, each of unlink and insert must ask
-  is it the head?  is it the tail?  is it the only node?
-  3 questions x 2 operations = 6 branches to get right
-
-with a head and tail sentinel
-  every real node has a real prev and a real next
-  0 branches, 2 nodes of extra memory, for ever` },
-    { t: "What a capacity actually costs in bytes", d: "The bookkeeping is not free, and it is what decides the capacity you can afford, quite apart from the values being cached.", w:
+2 reads, 2 writes, wherever B happens to sit` },
+    { t: "What a capacity actually costs in bytes", d: "The bookkeeping is not free, and it decides the capacity you can afford, quite apart from the values being cached.", w:
 `one entry: key, value, prev, next, plus the map's own entry
   8 + 8 + 8 + 8 + ~48  =  ~80 bytes of overhead
 
-capacity 1,000,000  ->  ~80 MB before a single value
+capacity 100,000   ->  ~8 MB before a single profile
+capacity 1,000,000 ->  ~80 MB
 
 which is why "unbounded LRU" is not a cache. It is a
 memory leak that reports a hit rate.` },
-    { t: "The access pattern LRU is worst at, in one number", d: "Least-recently-used is a guess about the future. There is one very ordinary pattern where the guess is wrong every single time.", w:
+    { t: "The access pattern LRU is worst at, in one number", d: "Least-recently-used is a guess about the future. There is one very ordinary pattern where the guess is wrong every time.", w:
 `cache of size C = 1,000
-a loop that scans 1,001 items, repeatedly
+a loop that scans 1,001 items, over and over
 
 every access evicts the item needed next
 hits: 0 out of 10^6 accesses. Hit rate 0 %.
 
-random eviction on the same pattern keeps about
-C / (C+1) of the working set and gets ~ 99 %` },
+random eviction on the same pattern still hits often,
+because it does not always throw out the next item needed` },
   ],
 
   costs: [
-    ["get(key), hit or miss", "O(1)", "one map lookup lands on the node, then four pointer writes move it, and nothing is scanned"],
-    ["put(key, value)", "O(1)", "map insert plus a relink, and the eviction is the tail, which is already known"],
-    ["eviction", "O(1)", "the tail sentinel's previous node is the victim, with no search and no comparison"],
-    ["unlink a node in a DOUBLY linked list", "O(1)", "the predecessor is one field away, which is the entire reason for the back pointer"],
-    ["unlink a node in a SINGLY linked list", "O(n)", "the predecessor has to be found by walking from the head, which undoes the map"],
-    ["space", "O(capacity)", "one node and one map entry per cached key, so roughly two references of overhead each"],
-    ["find the oldest with a hash map alone", "O(n)", "hash maps have no order at all, and this is the gap the list exists to fill"],
+    ["get(key), hit or miss", "O(1)", "one map lookup lands on the node, then six pointer writes move it; nothing is scanned"],
+    ["put(key, value)", "O(1)", "map insert plus a relink; the eviction is the back node, which is already known"],
+    ["eviction", "O(1)", "the node before the back sentinel is the victim, with no search and no comparison"],
+    ["unlink a node in a DOUBLY linked list", "O(1)", "the node before is one field away, which is the whole reason for the back pointer"],
+    ["unlink a node in a SINGLY linked list", "O(n)", "the node before must be found by walking from the front, which undoes the map"],
+    ["space", "O(capacity)", "one node and one map entry per cached key"],
+    ["find the oldest with a hash map alone", "O(n)", "hash maps have no order at all: the gap the list exists to fill"],
   ],
 
   traps: [
-    "<b>Storing the value in the map instead of the node.</b> Then a hit still has to find the node in the list to move it, which is O(n), and the whole design collapses.",
-    "<b>Evicting from the list but not the map.</b> The map keeps a key pointing at a node that is no longer cached, and get happily returns it. The node must store its own key so the eviction knows what to delete.",
-    "<b>Using a singly linked list.</b> Unlinking needs the predecessor. Without a back pointer you walk to find it, and the O(1) promise is gone.",
-    "<b>Treating get as a read-only operation.</b> A successful get is a use, so it must move the node to the head. Skipping that evicts entries that were just read.",
-    "<b>Forgetting that put on an existing key is also a use.</b> Overwriting a value must refresh recency too, and must not insert a second node for the same key.",
-    "<b>Skipping the sentinels.</b> Without them, every insert and unlink needs branches for empty, single-element and head or tail cases, and one of those four branches will be wrong.",
+    "<b>Storing the value in the map instead of the node.</b> Then a hit still has to find the node in the list to move it, which is O(<var>n</var>), and the design collapses.",
+    "<b>Evicting from the list but not the map.</b> The map keeps a key pointing at a node that is no longer cached, and get happily returns it. The node must store its own key so eviction knows what to delete.",
+    "<b>Using a singly linked list.</b> Unlinking needs the node before. Without a back pointer you walk to find it, and O(1) is gone.",
+    "<b>Treating get as read-only.</b> A successful get is a use, so it must move the node to the front. Skip that and you evict entries that were just read.",
+    "<b>Forgetting that put on an existing key is also a use.</b> Overwriting a value must refresh its recency too, and must not insert a second node for the same key.",
+    "<b>Skipping the sentinels.</b> Without them, every insert and unlink needs branches for empty, one item, front and back, and one of those will be wrong.",
   ],
 
   impl: [
-    ["Python", "collections.OrderedDict", "move_to_end and popitem(last=False) are exactly this structure. A plain dict preserves insertion order but cannot re-order in O(1)."],
+    ["Python", "collections.OrderedDict", "move_to_end and popitem(last=False) are exactly this structure. A plain dict can fake it with d[k] = d.pop(k) and next(iter(d))."],
     ["Java", "LinkedHashMap(cap, 0.75f, true)", "The third argument switches to access order; override removeEldestEntry and the cache is four lines. Say you know this, then write the real one."],
-    ["C++", "std::list + unordered_map", "splice moves a node between positions in O(1) and leaves iterators valid, which is why the map can store iterators safely."],
-    ["JavaScript", "Map", "Map keeps insertion order, so delete-then-set is a move-to-back and keys().next() is the oldest key. Convenient, and not the doubly linked list you were asked for."],
+    ["C++", "std::list + unordered_map", "splice moves a node in O(1) and keeps iterators valid, which is why the map can safely store iterators."],
+    ["JavaScript", "Map", "Map keeps insertion order, so delete-then-set moves a key to the back, and keys().next() is the oldest. Convenient, and not the linked list you were asked for."],
   ],
 
   code: {
@@ -7888,95 +8448,227 @@ const pushFront = (head, n) => {
   codecap: "The C++ and Java versions look like cheating and are not: knowing that std::list keeps iterators valid across a splice, or that LinkedHashMap has an access-order mode, is the same knowledge as writing the pointers by hand. Say which one you are doing, and why.",
 
   q: [
-    ["Why can a hash map not implement an LRU cache on its own?", "It has no order. The slot is computed from the key, so nothing records which entry was touched longest ago, and finding the oldest would mean scanning every entry, which is O(n)."],
-    ["Why can a linked list not do it on its own?", "It has the order for free, newest at the head and the victim at the tail, but locating a key means walking the list, which is O(n). Each structure is fast at exactly the thing the other is slow at."],
-    ["What does the hash map actually store, and why does that choice matter?", "The list node, not the value. Storing the value would leave you still needing to find that node in the list to move it, which is the O(n) walk you were avoiding. Storing the node means one lookup lands you on it."],
-    ["Why must the list be doubly linked?", "Unlinking a node requires redirecting the pointer of the node before it, and only a back pointer gives you that in O(1). With a singly linked list you would walk from the head to find the predecessor."],
-    ["Why does each node store its own key?", "Eviction starts from the tail node and must also delete that entry from the map. Standing on a node, the only way to know which map key to remove is for the node to carry it."],
-    ["What are the two sentinel nodes for?", "They give every real node a genuine neighbour on both sides, so insert and unlink are the same two lines whether the list is empty, holds one item, or the node is at either end. It removes four branches, one of which would have been wrong."],
-    ["Is a successful get a read or a write?", "A write. Reading a key counts as using it, so the node must move to the head. Treating get as read-only means recently read entries get evicted, and the cache passes small tests while behaving wrongly under load."],
-    ["What is the general pattern worth taking from this?", "When one structure is fast at exactly what another is slow at, hold the same objects in both and keep them in step on every write. LFU, insert-delete-get-random and min stack are all the same move with different partners."],
+    ["Why can a hash map not implement an LRU cache on its own?", "It has no order. The slot is computed from the key, so nothing records which entry was touched longest ago. Finding the oldest would mean scanning every entry, which is O(n)."],
+    ["Why can a linked list not do it on its own?", "It has the order for free, newest at the front and the victim at the back. But finding a key means walking the list, which is O(n). Each structure is fast at exactly what the other is slow at."],
+    ["What does the hash map actually store, and why does that choice matter?", "The list node, not the value. Storing the value leaves you needing to find the node in the list to move it, which is the O(n) walk you were avoiding. Storing the node means one lookup lands on it."],
+    ["Why must the list be doubly linked?", "Unlinking a node means redirecting the pointer of the node before it, and only a back pointer gives you that in O(1). With a singly linked list you would walk from the front to find it."],
+    ["Why does each node store its own key?", "Eviction starts from the back node and must also delete that entry from the map. Standing on a node, the only way to know which key to remove is for the node to carry it."],
+    ["What are the two sentinel nodes for?", "They give every real node a real neighbour on both sides. So insert and unlink are the same two lines whether the list is empty, holds one item, or the node is at either end."],
+    ["Is a successful get a read or a write?", "A write. Reading a key counts as using it, so the node must move to the front. Treating get as read-only means recently read entries get evicted: it passes small tests and misbehaves under load."],
+    ["What is the general pattern worth taking from this?", "When one structure is fast at exactly what another is slow at, hold the same objects in both and keep them in step on every write. LFU, insert-delete-get-random and min stack are the same move with different partners."],
   ],
 
   p: [
     [706, "design-hashmap", "Design HashMap, the buckets by hand", "E"],
     [155, "min-stack", "Min Stack, the smallest version of the same idea", "M"],
     [380, "insert-delete-getrandom-o1", "Insert Delete GetRandom, map plus array, swap with last", "M"],
-    [146, "lru-cache", "LRU Cache, the archetype", "M"],
-    [1472, "design-browser-history", "Browser History, when a plain list is genuinely enough", "M"],
+    [146, "lru-cache", "LRU Cache, the running example", "M"],
+    [1472, "design-browser-history", "Browser History, when a plain list really is enough", "M"],
     [895, "maximum-frequency-stack", "Maximum Frequency Stack, a stack per count", "H"],
     [460, "lfu-cache", "LFU Cache, one list per frequency", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek web server <b>10⁵</b> sabse recently use hue user profiles memory mein rakhta hai, taaki database chhod sake. Woh <b>10⁶ requests</b> serve karta hai. Miss par profile load karta hai, aur memory bhari ho to woh profile nikaalta hai jo <b>sabse pehle use hua tha</b>: “least recently used”, yaani LRU.</p>
+<p>Chhota version: 3 entries ki jagah, A, B aur C ke saath, C sabse pehle use hua. Ek request B padhti hai. Phir D aata hai, aur ek ko jaana hai. C jaana chahiye.</p>`,
+      tries: [
+        ["Har entry par last-used time wala hash map", "B padhna turant. Par sabse purani entry dhoondhne ke liye har eviction par saare 10⁵ times check karne padte hain: 10⁶ × 10⁵ = 10¹¹ checks tak."],
+        ["Use ke order mein rakhi list", "Sabse purani hamesha end par, muft. Par B padhne ke liye use dhoondhne ko list chalni padti hai: har request par 10⁵ steps tak."],
+        ["Hash map plus last-used times ka min-heap", "Eviction heap se pop karta hai. Par har read ek entry ka time badalta hai, aur heap scan kiye bina us entry ko dhoondh kar theek nahi kar sakta."],
+      ],
+      so: `<p>Map dhoondhne mein tez hai, list order mein, aur koi dono nahi kar sakta. To <b>dono use karo, same objects par</b>. Map har key ke liye <b>khud list node</b> rakhta hai. B padhna: ek map lookup B ke node par le jaata hai, aur kuch pointer writes use aage kar dete hain. Evict karna: peeche ka node lo, aur uski key map se hatao.</p>
+<p>Har operation O(1) hai. Page teen entries wale cache A, B, C ko B padhne aur D jodne tak follow karta hai.</p>`,
+    },
+
+    one: "Koi ek structure akele kaam nahi kar sakta: hash map mein order nahi, list mein lookup nahi. <b>Same nodes dono mein rakho</b> aur har operation O(1).",
+
+    plain: `<p>Cache ki capacity fixed hai. Use jaldi batana hai “is key ki value kya hai?”. Bhar jaaye to kuch phenkna hai. <b>Least recently used</b> matlab woh phenko jo sabse der se chhua nahi gaya.</p>
+<p>Hash map pehla aadha perfect karta hai aur doosra bilkul nahi. Key O(1) mein dhoondhta hai, par order nahi, to nahi bata sakta sabse purana kya hai. Linked list ulta karti hai. Use aakhri use ke order mein rakho, aur eviction muft: peeche wala node. Par key dhoondhna matlab list chalna.</p>
+<p>Chaal hai dono use karna, same objects par. Map ki value cached value nahi; woh use rakhne wale <b>list node ka pointer</b> hai. Ek lookup aur aap B ke node par khade ho, aur wahan se use unlink karke constant time mein aage le ja sakte ho. Jo evict ho, woh list aur map dono se jaana chahiye.</p>
+<p><b>Analogy.</b> Card index aur returns ki shelf wali library. Index turant batata hai kitaab kahan hai. Shelf kitaabein aakhri baar padhne ke order mein rakhti hai, to door wale kinaare ki kitaab koi nahi chahta. Kitaab hataao to uska card bhi nikaalo.</p>`,
+
+    why: [
+      { t: "Likho isse kya karna hai",
+        d: "Do operations, dono O(1) chahiye: key se value <b>get</b> karna, aur key <b>put</b> karna, cache bhara ho to least recently used entry nikaal kar. Key padhna use karna gina jaata hai. “Dono” shabd hi saara kaam karta hai, kyunki akela har operation aasaan hai." },
+      { t: "Hash map aadha sawaal answer karta hai",
+        d: "get aur put O(1) hain, jab tak cache bhar na jaaye. Tab map ke paas kuch nahi: slots keys se nikalte hain, to koi entry doosri se purani nahi. A, B aur C mein sabse purana C dhoondhna har entry scan karna hai: O(<var>n</var>)." },
+      { t: "List doosra aadha answer karti hai",
+        d: "Entries ko aakhri use ke order mein list mein rakho, naya aage. Eviction muft: peeche wala answer hai, definition se. Par B dhoondhna list chalna hai, <b>O(<var>n</var>)</b>. Har structure theek wahan tez hai jahan doosra slow." },
+      { t: "To same objects dono mein rakho",
+        d: "Map mein values mat rakho. Har key ke liye <b>khud list node</b> rakho. Map key ko O(1) mein position banata hai; list positions ko O(1) mein order. Koi data duplicate nahi. Yeh nodes ke ek set par do indexes hain." },
+      { t: "Unlink karna hi list ko doubly linked banata hai",
+        d: "B ko aage le jaane ke liye pehle use unlink karo, matlab B se <b>pehle</b> wale node ka pointer badlo. Singly linked list us node tak sirf aage se chal kar pahunchti hai: wahi O(<var>n</var>) jisse bach rahe the. Back pointer unlink ko do assignments bana deta hai." },
+      { t: "Do sentinel nodes har null check mita dete hain",
+        d: "Aage ek permanent dummy node rakho aur peeche ek aur. Ab har asli node ke dono taraf asli padosi hain. Unlink aur insert wahi do lines ban jaate hain, list khaali ho, bhari ho, ya ek item rakhe." },
+      { t: "Dono structures kabhi disagree nahi karne chahiye",
+        d: "Har write dono ko chhoota hai. C evict karna matlab uska node unlink karna <b>aur</b> map se key C hataana. Isiliye har node apni key rakhta hai: peeche ke node par khade hokar pata hona chahiye kaunsi key hataani hai. Chooka to map aise node ko point karta hai jo ab cached nahi." },
+      { t: "Isse kya nahi milta",
+        d: "LRU ek andaaza hai ki recent use aage ka use batata hai. Thande data par ek lamba scan ise tod deta hai. Aur agar <i>kitni baar</i> chahiye, <i>kitni haal mein</i> nahi, to yeh shape nahi khinchti: LFU ko count se grouped lists ki doosri layer chahiye." },
+    ],
+
+    variants: [
+      { n: "LRU: map plus doubly linked list", cost: "O(1) get, O(1) put",
+        idea: "Key se node, nodes recency ke order mein. Node chhoona use aage le jaata hai; eviction peeche wala leta hai.",
+        when: "Default cache sawaal, is page par lagbhag kisi bhi cheez se zyada poocha jaane wala.",
+        watch: "Node ko apni key rakhni hi hai, warna eviction ko nahi pata map se kya hataana hai." },
+      { n: "LFU: map plus one list per frequency", cost: "O(1) get, O(1) put",
+        idea: "Do maps: key se node, aur use-count se us count wale nodes ki doubly linked list. Hit node ko agle count ki list mein le jaata hai. Sabse kam zinda count track karo taaki eviction ko pata ho kahan dekhna hai.",
+        when: "Eviction kitni baar se ho, kitni haal mein se nahi.",
+        watch: "Sabse kam count sirf ek se badhta hai, ya insert par ek par reset hota hai. Isi se eviction search ki jagah O(1) rehta hai." },
+      { n: "Insert, delete and get random in O(1)", cost: "O(1) teeno",
+        idea: "Value se array index ka hash map, plus values ka array. Delete hataane wale item ko aakhri se swap karta hai, map mein us ek index ko theek karta hai, aur pop.",
+        when: "Random element chunna O(1) hona chahiye, jo akela hash map nahi kar sakta.",
+        watch: "Swap ko hile hue item ki map entry update karni hai. Bhoole to ek purana index baad mein fail hota hai." },
+      { n: "Min stack", cost: "O(1) push, pop and min",
+        idea: "Stack, plus ek doosra stack jo har push ke waqt ka minimum rakhe. Wahi idea sabse chhota: ek structure order ke liye, ek summary ke liye.",
+        when: "Stack ke upar koi bhi “aur O(1) mein min ya max bhi batao” wrapper.",
+        watch: "Min stack par har baar push karo, current minimum ke repeats bhi, warna do stacks line mein nahi rehte." },
+      { n: "What your language already ships", cost: "O(1) amortised",
+        idea: "Python ka <code>OrderedDict</code>, access order wala Java ka <code>LinkedHashMap</code>, aur map mein iterators rakhne wali C++ ki <code>std::list</code>, sab yahi structure hain, pehle se likhe.",
+        when: "Production. Interview mein bhi, agar pehle poocho aur phir likhne ki offer do.",
+        watch: "Bina pooche iske paas jaana sawaal se bachna lagta hai. Naam lo, phir woh version likho jo interviewer chahta tha." },
+    ],
+
+    math: [
+      { t: "B padho, phir D jodo, dono structures mein trace karke", d: "Capacity 3. List aage sabse recent se peeche sabse kam recent tak chalti hai. Har step map aur list dono ko saath chhoota hai." },
+      { t: "Har structure aadha answer karta hai, aur aadha yahan bekaar hai", d: "Dono operations O(1) hone chahiye. Jo cache us cheez se slow ho jise cache karta hai, uska koi matlab nahi." },
+      { t: "List doubly linked kyun, pointer writes mein gin kar", d: "Eviction mushkil hissa nahi. Map se mile node ko aage le jaana mushkil hai, aur usko pehle wala node chahiye." },
+      { t: "Capacity asal mein bytes mein kitni padti hai", d: "Bookkeeping muft nahi, aur yahi tay karti hai kitni capacity afford kar sakte ho, cached values ke alawa." },
+      { t: "Woh access pattern jisme LRU sabse bura hai, ek number mein", d: "Least-recently-used future ke baare mein andaaza hai. Ek bilkul aam pattern hai jahan andaaza har baar galat hai." },
+    ],
+
+    costs: [
+      ["get(key), hit ya miss", "O(1)", "ek map lookup node par, phir chhe pointer writes use hilaate hain; kuch scan nahi"],
+      ["put(key, value)", "O(1)", "map insert plus relink; eviction peeche wala node hai, jo pehle se pata hai"],
+      ["eviction", "O(1)", "peeche wale sentinel se pehle ka node shikaar hai, na search na comparison"],
+      ["DOUBLY linked list mein node unlink", "O(1)", "pehle wala node ek field door hai, back pointer ki poori wajah yahi"],
+      ["SINGLY linked list mein node unlink", "O(n)", "pehle wala node aage se chal kar dhoondhna padta hai, jo map ka fayda mita deta hai"],
+      ["space", "O(capacity)", "har cached key ka ek node aur ek map entry"],
+      ["sirf hash map se sabse purana dhoondhna", "O(n)", "hash maps mein koi order nahi: wahi kami jise list bharti hai"],
+    ],
+
+    traps: [
+      "<b>Map mein node ki jagah value rakhna.</b> Tab hit ko bhi node hilaane ke liye list mein dhoondhna padta hai, jo O(<var>n</var>) hai, aur design gir jaata hai.",
+      "<b>List se evict karna par map se nahi.</b> Map ek key rakhta hai jo aise node ko point karti hai jo ab cached nahi, aur get khushi se use lautata hai. Node apni key rakhe taaki eviction ko pata ho kya hataana hai.",
+      "<b>Singly linked list use karna.</b> Unlink ko pehle wala node chahiye. Back pointer ke bina use dhoondhne chalte ho, aur O(1) gaya.",
+      "<b>get ko sirf read maanna.</b> Safal get ek use hai, to node ko aage jaana chahiye. Chhoda to abhi padhi entries evict hoti hain.",
+      "<b>Bhoolna ki maujooda key par put bhi use hai.</b> Value overwrite karne se recency bhi refresh honi chahiye, aur same key ka doosra node nahi banna chahiye.",
+      "<b>Sentinels chhodna.</b> Unke bina har insert aur unlink ko khaali, ek item, aage aur peeche ke branches chahiye, aur unme se ek galat hoga.",
+    ],
+
+    impl: [
+      ["Python", "collections.OrderedDict", "move_to_end aur popitem(last=False) theek yahi structure hain. Plain dict bhi d[k] = d.pop(k) aur next(iter(d)) se kaam chala sakta hai."],
+      ["Java", "LinkedHashMap(cap, 0.75f, true)", "Teesra argument access order chalu karta hai; removeEldestEntry override karo aur cache chaar lines ka. Batao ki yeh jaante ho, phir asli wala likho."],
+      ["C++", "std::list + unordered_map", "splice node ko O(1) mein hilata hai aur iterators valid rakhta hai, isiliye map safely iterators rakh sakta hai."],
+      ["JavaScript", "Map", "Map insertion order rakhta hai, to delete-then-set key ko peeche le jaata hai, aur keys().next() sabse purani hai. Aasaan, par woh linked list nahi jo maangi gayi thi."],
+    ],
+
+    codecap: "C++ aur Java versions cheating lagte hain aur hain nahi: yeh jaanna ki std::list splice ke baad iterators valid rakhti hai, ya LinkedHashMap mein access-order mode hai, wahi gyaan hai jo haath se pointers likhna. Batao kaunsa kar rahe ho, aur kyun.",
+
+    q: [
+      ["Akela hash map LRU cache kyun nahi bana sakta?", "Usme order nahi. Slot key se nikalta hai, to kuch record nahi karta ki kaunsi entry sabse der pehle chhui gayi. Sabse purani dhoondhna har entry scan karna hai, jo O(n) hai."],
+      ["Akeli linked list yeh kyun nahi kar sakti?", "Order muft hai, naya aage aur shikaar peeche. Par key dhoondhna list chalna hai, jo O(n) hai. Har structure theek wahan tez hai jahan doosra slow."],
+      ["Hash map asal mein kya rakhta hai, aur yeh chunaav kyun maayne rakhta hai?", "List node, value nahi. Value rakhne se node hilaane ke liye use list mein dhoondhna padta hai, wahi O(n) walk jisse bach rahe the. Node rakhne se ek lookup seedha us par le jaata hai."],
+      ["List doubly linked kyun honi chahiye?", "Node unlink karne ke liye usse pehle wale node ka pointer badalna padta hai, aur sirf back pointer yeh O(1) mein deta hai. Singly linked list mein use dhoondhne aage se chalna padta."],
+      ["Har node apni key kyun rakhta hai?", "Eviction peeche wale node se shuru hota hai aur use map se bhi entry hataani hai. Node par khade hokar kaunsi key hataani hai, yeh jaanne ka ek hi tareeka hai ki node use rakhe."],
+      ["Do sentinel nodes kis liye hain?", "Yeh har asli node ko dono taraf asli padosi dete hain. To insert aur unlink wahi do lines hain, list khaali ho, ek item rakhe, ya node kisi bhi sire par ho."],
+      ["Safal get read hai ya write?", "Write. Key padhna use karna hai, to node aage jaana chahiye. get ko sirf read maanne se haal hi mein padhi entries evict hoti hain: chhote tests pass, load par galat."],
+      ["Isse kaunsa general pattern lena chahiye?", "Jab ek structure theek wahan tez ho jahan doosra slow, same objects dono mein rakho aur har write par dono ko saath rakho. LFU, insert-delete-get-random aur min stack wahi chaal hain, alag partners ke saath."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "range-structures",
   n: "Fenwick and segment trees",
   group: "Data structures",
-  one: "A plain array is O(1) update and O(n) query, a prefix array is the reverse. These trees refuse both extremes: <b>O(log n) for the update and the query alike</b>.",
+  need: {
+    ask: `<p>A live dashboard holds <b>10⁶ sensor readings</b>. Two things keep happening, <b>10⁶ times</b> in all, mixed together: one reading changes, or someone asks for the total of a stretch, say readings 3 to 700.</p>
+<p>The small version: readings <code>[3, 1, 4, 1]</code>. The total of positions 1 to 3 is 1 + 4 + 1 = <b>6</b>. Then reading 2 changes from 4 to 6, and the same question must now say 8.</p>`,
+    tries: [
+      ["Keep the plain array and add up the stretch each time", "Changing a reading is one write. But a wide stretch reads up to 10⁶ values, so 10⁶ questions cost up to 10¹² steps."],
+      ["Keep running totals, so a stretch is one subtraction", "Questions become instant. But changing one reading means fixing every total after it: up to 10⁶ writes per change, 10¹² again."],
+      ["Split into blocks of 1,000 and store each block's total", "A change is one write plus one block total. A question adds up to 1,000 blocks and 1,000 loose readings: 2,000 steps. Over 10⁶ operations that is 2 × 10⁹: better, still too slow."],
+    ],
+    so: `<p>Let the blocks contain blocks. Store the total of the whole array, of each half, of each quarter, down to single readings. A change fixes one block per level; a question adds up at most two blocks per level. Both come to about <b>20 to 40 steps</b> at 10⁶ readings.</p>
+<p>That is a <b>segment tree</b>. When the only question is a total from the start, a smaller cousin, the <b>Fenwick tree</b>, does it in ten lines. The page follows <code>[3, 1, 4, 1]</code> throughout.</p>`,
+  },
 
-  plain: `<p>You have a list of numbers. Two things keep happening: someone changes one number, and someone asks for the total of a stretch of them. Say positions 3 to 700.</p>
-<p>You have two obvious options and both are bad at one of the jobs. Keep the plain list: changing a number is instant, but adding up a stretch means walking every one of them. Or keep a running-totals list: the stretch becomes one subtraction, but changing a single number means rebuilding every total after it.</p>
-<p>So one is fast to write and slow to read. The other is fast to read and slow to write. If your problem does both, you lose either way.</p>
-<p>The fix is to stop storing single numbers or whole totals, and store the totals of <b>blocks</b> instead. A block knows its own sum. Change one number and you fix only the blocks containing it. Ask for a stretch and you add up a few whole blocks instead of hundreds of numbers. Both jobs become about twenty steps at a million items.</p>
-<p><b>Analogy.</b> A company reporting sales. Asking every salesperson takes all day. A single printed total is instant to read and stale the moment one sale changes. So you keep totals per team, per office, per region. One sale updates three totals, and any question is answered from a handful of them.</p>`,
+  one: "A plain array is O(1) update and O(<var>n</var>) query, a prefix array is the reverse. These trees refuse both extremes: <b>O(log <var>n</var>) for the update and the query alike</b>.",
+
+  plain: `<p>You have a list of numbers, say <code>[3, 1, 4, 1]</code>. Two things keep happening: someone changes one number, and someone asks for the total of a stretch, like positions 1 to 3.</p>
+<p>The two obvious options are each bad at one job. Keep the plain list: changing a number is instant, but a total means walking every number in the stretch. Keep a list of running totals: a stretch becomes one subtraction, but changing one number means rebuilding every total after it.</p>
+<p>The fix is to store the totals of <b>blocks</b>. The whole list is a block with total 9. Its halves, [3, 1] and [4, 1], have totals 4 and 5. Change one number and you fix only the blocks containing it. Ask for a stretch and you add a few whole blocks instead of every number: 1 + 5 = 6 for positions 1 to 3.</p>
+<p><b>Analogy.</b> A company reporting sales. Asking every salesperson takes all day. One printed grand total is stale after one sale. So you keep totals per team, per office, per region. One sale updates three totals, and any question is answered from a handful.</p>`,
 
   why: [
-    { t: "Write down the two structures you already have, and what each one costs", d: "A plain array: changing one value is one write. Asking for the sum of a stretch means touching every value in it, so a wide stretch costs <b>O(n)</b>. A running-totals array is the mirror image. The stretch is one subtraction, <b>O(1)</b>, but changing one value means fixing every total after it, <b>O(n)</b>. Each is perfect at one job and worst at the other." },
-    { t: "A workload with both operations lands in the bad half whichever you pick", d: "With a million values and a million operations, either choice does about 10^12 steps. Notice what is going wrong: both structures store something at the two extremes. One stores single values. The other stores totals that reach all the way back to the start. Nothing sits in between." },
-    { t: "So store the totals of blocks, which is the in-between thing", d: "Cut the array into blocks of size k and store each block's sum. Changing one value fixes its own block, so that is <b>O(k)</b> at worst. A stretch is now some whole blocks, plus a few loose values at each end. That is about <code>n/k</code> blocks plus <code>2k</code> leftovers. Pick <code>k = sqrt(n)</code> and both come to about <b>sqrt(n)</b>, which at a million is a thousand. Better than a million, and still not good." },
-    { t: "Stop choosing a block size and let the blocks contain blocks", d: "The block size was a compromise, so remove it. Take the whole array as one block, split it in half, split each half in half, and keep going until each block holds one value. Every block stores the sum of its two children. That is a <b>segment tree</b>, and it has <code>log n</code> levels because you halved each time. Twenty levels at a million." },
-    { t: "Now read the two costs straight off the picture", d: "An update changes one leaf. Only the blocks containing that leaf are now wrong, and those are its ancestors: one per level. So an update fixes <b>log n</b> blocks. A query covers the stretch with whole blocks, and at each level at most two blocks stick out at the ends. So a query reads at most <b>2 log n</b> blocks. At a million values that is 20 writes and about 40 reads, instead of a million of either." },
-    { t: "The operation only has to be associative, and that is the real payoff", d: "Nothing above mentioned addition. The only thing used was that a block can be built from its two halves, in that order. Any operation where <code>(a then b) then c</code> equals <code>a then (b then c)</code> works unchanged: minimum, maximum, gcd, product, even matrix multiplication. Averages do not, because an average of averages is not the average. Store the sum and the count instead, then divide at the very end." },
-    { t: "Fenwick does the same job for prefixes, in a tenth of the code", d: "Suppose you only ever need totals that start at the beginning. Then a Fenwick tree stores a cleverer set of partial sums in one flat array. It gets the same <b>log n</b> for both jobs, in about ten lines. The catch is how it answers a middle stretch: it takes the total up to the end and subtracts the total up to the start. That subtraction is the requirement. Sums can be subtracted, so a Fenwick can do sums. Minimums cannot, so it cannot do minimums." },
-    { t: "Three places where this is the wrong answer", d: "If the values never change, a sparse table answers minimum and maximum in one step after a heavier build, so the tree is wasted effort. If n and the number of questions are both small, say a thousand each, a plain loop is a million steps and you are done in three lines. And if there is exactly one update at the start, build the running totals once. A segment tree is a hundred lines that lose to a loop in all three cases." },
+    { t: "Write down the two structures you already have, and their costs",
+      d: "A plain array: changing one value is one write, but a stretch's total touches every value in it, <b>O(<var>n</var>)</b>. A running-totals array is the mirror image: a stretch is one subtraction, but changing one value fixes every total after it, <b>O(<var>n</var>)</b>. Each is perfect at one job and worst at the other." },
+    { t: "A mix of both operations lands in the bad half, whichever you pick",
+      d: "With 10⁶ values and 10⁶ operations, either choice does about 10¹² steps. Both store something at an extreme: single values, or totals reaching all the way back to the start. Nothing sits in between." },
+    { t: "So store the totals of blocks: the in-between thing",
+      d: "Cut the array into blocks of size <var>k</var> and store each block's sum. A change fixes its own block. A stretch is some whole blocks plus a few loose values at each end. With <var>k</var> = √<var>n</var>, both cost about √<var>n</var>: 1,000 at 10⁶. Better than 10⁶, and still not good." },
+    { t: "Stop choosing a block size: let blocks contain blocks",
+      d: "Take the whole array as one block, split it in half, and keep splitting until each block is one value. Every block stores the sum of its two halves: [3, 1, 4, 1] has total 9, from 4 and 5. That is a <b>segment tree</b>, with log₂ <var>n</var> levels: 20 at 10⁶." },
+    { t: "Now read both costs off the picture",
+      d: "A change alters one leaf, and only the blocks containing it go wrong: one per level. Change 4 to 6 and you fix the leaf, the block [4, 1], and the root. A question covers the stretch with whole blocks, at most two per level: positions 1 to 3 are the leaf 1 plus the block [4, 1]. So <b>O(log <var>n</var>)</b> for both." },
+    { t: "The operation only has to be associative",
+      d: "Nothing above needed addition, only that a block can be built from its two halves. Any operation where (<var>a</var> then <var>b</var>) then <var>c</var> equals <var>a</var> then (<var>b</var> then <var>c</var>) works unchanged: minimum, maximum, gcd, product. Averages do not: an average of averages is not the average. Store the sum and the count, and divide at the end." },
+    { t: "Fenwick does the same job for prefixes, in a tenth of the code",
+      d: "If you only need totals that start at the beginning, a <b>Fenwick tree</b> stores a cleverer set of partial sums in one flat array. It gets O(log <var>n</var>) for both jobs in about ten lines. For a middle stretch, it subtracts one prefix from another. So it needs an operation you can undo: sums, yes; minimums, no." },
+    { t: "Three places where this is the wrong answer",
+      d: "If the values never change, running totals answer sums in one step, and a sparse table does minimums. If the array and the questions are both small, say 1,000 each, a plain loop is 10⁶ steps. If there is one change at the start, rebuild the running totals once. In all three, the tree is a hundred lines that lose to something simpler." },
   ],
+
   hing: `<p><b>Problem pehle, structure baad mein.</b> Ek list hai. Do cheezein baar-baar hoti hain: koi ek number badal deta hai, aur koi poochhta hai "position 3 se 700 tak ka total kya hai".</p>
-<p><b>Do seedhe options hain, aur dono ek kaam mein bekaar hain.</b> Plain array rakho: number badalna instant, par total nikalne ke liye saare numbers jodne padenge. Prefix sums rakho: total ek ghatav mein mil jaata hai, par ek number badla to uske aage ke saare totals dobara banane padenge. Ek likhne mein tez hai, doosra padhne mein. Problem dono maangti hai to dono fail.</p>
+<p><b>Do seedhe options hain, aur dono ek kaam mein bekaar hain.</b> Plain array rakho: number badalna instant, par total nikalne ke liye saare numbers jodne padenge. Prefix sums rakho: total ek ghatav mein mil jaata hai, par ek number badla to uske aage ke saare totals dobara banane padenge.</p>
 <p><b>Asli idea: na single numbers store karo, na poore totals. Blocks ke totals store karo.</b> Array ko tukdon mein baanto, har tukde ka apna sum rakho. Ek number badla to sirf uske tukde ka sum theek karo. Total poochha to poore tukde jodo, ek-ek number nahi.</p>
-<p><b>Tukda kitna bada ho? Yahi sawaal tang karta hai, to hata do.</b> Poore array ko ek tukda maano. Usko do hisson mein baanto, phir har hisse ko do mein. Yeh chalta raho jab tak ek-ek number na bach jaye. Har tukda apne do bachchon ka sum rakhta hai. Yeh <b>segment tree</b> hai. Har baar aadha kiya, isliye <b>log n</b> levels, matlab 10 lakh par sirf 20.</p>
-<p><b>Ab dono cost picture se seedhe padh lo.</b> Update mein ek leaf badla, to sirf uske upar wale tukde galat hue, har level par ek: <b>log n</b>. Query mein range ko poore tukdon se dhako, har level par zyada se zyada do tukde bahar nikalte hain: <b>2 log n</b>. 10 lakh par 20 aur 40, dono jagah.</p>
-<p><b>Yeh sirf sum ke liye nahi hai, aur yeh pooch liya jaata hai.</b> Upar kahin addition ki zaroorat nahi padi. Bas itna chahiye ki tukda apne do hisson se ban jaye. To min, max, gcd, product, sab chalega. <b>Average nahi chalega</b>, kyunki averages ka average, average nahi hota. Sum aur count alag rakho, divide aakhir mein karo.</p>
-<p><b>Fenwick kab? Aur kab nahi?</b> Sirf shuruaat se lekar kisi point tak ka total chahiye, to Fenwick 10 line mein wahi log n de deta hai. Par beech ki range woh <b>ghata kar</b> nikalta hai: end tak ka total minus start tak ka total. Sum ghataya ja sakta hai, isliye Fenwick sum karta hai. <b>Minimum ghataya nahi ja sakta, isliye Fenwick min nahi karta.</b> Yeh line interview mein seedha poochhi jaati hai.</p>
-<p><b>Aur kab yeh galat jawab hai:</b> data badalta hi nahi to sparse table lo. n aur queries dono chhote hain, jaise 1000-1000, to simple loop 10 lakh steps mein ho jayega, 100 line ka tree mat likho.</p>`,
+<p><b>Tukda kitna bada ho? Yahi sawaal tang karta hai, to hata do.</b> Poore array ko ek tukda maano. Usko do hisson mein baanto, phir har hisse ko do mein, jab tak ek-ek number na bach jaye. Har tukda apne do bachchon ka sum rakhta hai. Yeh <b>segment tree</b> hai. Har baar aadha kiya, isliye <b>log <var>n</var></b> levels, matlab 10 lakh par sirf 20.</p>
+<p><b>Ab dono cost picture se seedhe padh lo.</b> Update mein ek leaf badla, to sirf uske upar wale tukde galat hue, har level par ek: <b>log <var>n</var></b>. Query mein range ko poore tukdon se dhako, har level par zyada se zyada do tukde: <b>2 log <var>n</var></b>.</p>
+<p><b>Yeh sirf sum ke liye nahi hai.</b> Bas itna chahiye ki tukda apne do hisson se ban jaye. To min, max, gcd, product, sab chalega. <b>Average nahi chalega</b>, kyunki averages ka average, average nahi hota. Sum aur count alag rakho, divide aakhir mein karo.</p>
+<p><b>Fenwick kab? Aur kab nahi?</b> Sirf shuruaat se lekar kisi point tak ka total chahiye, to Fenwick 10 line mein wahi log <var>n</var> de deta hai. Par beech ki range woh <b>ghata kar</b> nikalta hai. Sum ghataya ja sakta hai, isliye Fenwick sum karta hai. <b>Minimum ghataya nahi ja sakta, isliye Fenwick min nahi karta.</b></p>
+<p><b>Aur kab yeh galat jawab hai:</b> data badalta hi nahi to prefix sums ya sparse table lo. <var>n</var> aur queries dono chhote hain, to simple loop se ho jayega, 100 line ka tree mat likho.</p>`,
 
   viz: ["segment-tree"],
 
   math: [
-    { t: "Build a tiny tree, then one query and one update", d: "Array [3, 1, 4, 1]. Each node holds the sum of its two children. Then ask one range, and change one value.", w:
+    { t: "Build a tiny tree, then one question and one change", d: "Array [3, 1, 4, 1]. Each node holds the sum of its two children. Ask one stretch, then change one value.", w:
 `array [3, 1, 4, 1], each node = sum of its two children:
 
   root      [9]              = 3+1+4+1, the whole range
   next    [4]   [5]          = 3+1  and  4+1
   leaves [3][1] [4][1]       the four original values
 
-query sum of indices 1..3:
-  take [1] then the whole block [5]:  1 + 5 = 6
+sum of positions 1..3:
+  take leaf [1] and the whole block [5]:  1 + 5 = 6
   two nodes read, not three values
 
-update index 0 from 3 to 8:
-  fix only its ancestors: [3]->8, [4]->9, [9]->14
-  three nodes touched, the rest still correct` },
-    { t: "The two structures you already have are both extreme", d: "Neither is bad. They are optimal at opposite ends, and a workload with both operations in it lands in the worst case of whichever you picked.", w:
-`n = 10^6, q = 10^6 operations, mixed updates and queries
+change position 2 from 4 to 6:
+  fix only its ancestors: leaf 4->6, [5]->7, [9]->11
+  three nodes touched, the rest still correct
+sum of positions 1..3 is now 1 + 7 = 8` },
+    { t: "The two structures you already have are both extreme", d: "Neither is bad. They are best at opposite ends, and a mix of both operations lands in the worst case of whichever you picked.", w:
+`n = 10^6, q = 10^6 operations, mixed changes and questions
 
-plain array    update 1       query n      ->  10^12
-prefix sums    update n       query 1      ->  10^12
-segment tree   update log n   query log n  ->  4 x 10^7
+plain array    change 1       question n     ->  10^12
+prefix sums    change n       question 1     ->  10^12
+blocks of 10^3 change 1       question 2x10^3 -> 2 x 10^9
+segment tree   change log n   question log n -> 4 x 10^7
 
-20 and 20, instead of 1 and 1,000,000` },
-    { t: "Why a query reads only about 2 log n nodes", d: "The range is covered by whole blocks. At each level of the tree at most two partial blocks survive, and everything inside them is already summarised.", w:
+about 20 and 40, instead of 1 and 1,000,000` },
+    { t: "Why a question reads only about 2 log n nodes", d: "The stretch is covered by whole blocks. At each level at most two partial blocks survive, and everything inside them is already summed.", w:
 `a segment tree over n leaves: 2n - 1 nodes, height log2 n
 
-any range is covered by at most 2 nodes per level
+any stretch is covered by at most 2 nodes per level
   ->  at most 2 log2 n nodes in total
 
 n = 10^6: at most 40 nodes read, out of 2 x 10^6
 
 allocate 4n, not 2n: the bottom level is padded up to
 the next power of two, and 2 x 2^ceil(log2 n) <= 4n` },
-    { t: "Fenwick: the lowbit jump, traced on real indices", d: "The whole structure is i & (-i), the lowest set bit. Queries walk it off, updates walk it on, and both stop after one step per bit.", w:
+    { t: "Fenwick: the lowbit jump, traced on real indexes", d: "The whole structure is i & (-i), the lowest set bit. Questions walk it off, changes walk it on, and both stop after one step per bit.", w:
 `i & (-i) isolates the lowest set bit
 
 prefix(13):  13 = 1101, subtract the lowbit each time
@@ -7986,71 +8678,61 @@ prefix(13):  13 = 1101, subtract the lowbit each time
 update(5):   5 = 0101, add the lowbit each time
   5 -> 6 -> 8 -> 16 -> ... while <= n
   at most log2 n writes` },
-    { t: "What the combine function has to satisfy", d: "Associativity is the whole requirement for a segment tree. Fenwick asks for one thing more, and that extra requirement is why it cannot answer range minimum.", w:
+    { t: "What the combine operation has to satisfy", d: "Associativity is the whole requirement for a segment tree. Fenwick asks for one more thing, and that is why it cannot answer range minimum.", w:
 `segment tree needs: (a . b) . c = a . (b . c)
   sum, min, max, gcd, product, matrix product   yes
   average                                       no
-
   (store sum and count, divide at the very end)
 
 Fenwick needs an inverse as well, because it builds a
 range from two prefixes by subtracting:
   sum has one (minus), min has none
   hence no Fenwick for range minimum` },
-    { t: "Three situations where this is the wrong answer", d: "The tree is the right structure for interleaved updates and queries. Remove either half of that and something simpler wins outright.", w:
-`no updates at all       sparse table
-                        build n log n, query O(1)
-n and q both small      a plain loop
-                        n = q = 1000  ->  10^6, fine
-one update, then reads  prefix sums, rebuilt once
-                        build n, query 1
-
-a segment tree here is 100 lines that lose on both axes` },
   ],
 
   costs: [
-    ["build a segment tree", "O(n) time, O(4n) space", "one pass over n leaves and n-1 internal nodes, 4n is the safe array size"],
+    ["build a segment tree", "O(n) time, O(4n) space", "one pass over n leaves and n-1 inner nodes; 4n is the safe array size"],
     ["segment tree point update", "O(log n)", "one root-to-leaf path, recombined on the way back up"],
-    ["segment tree range query", "O(log n)", "at most two straddling nodes per level, the rest return whole or nothing"],
-    ["Fenwick build", "O(n) in place, O(n log n) naively", "n calls to add is the version everybody writes without thinking"],
-    ["Fenwick update or prefix", "O(log n)", "one iteration per set bit added or stripped, never more than 32"],
+    ["segment tree range query", "O(log n)", "at most two straddling nodes per level; the rest count whole or not at all"],
+    ["Fenwick build", "O(n) in place, O(n log n) naively", "n calls to add is the version everyone writes without thinking"],
+    ["Fenwick update or prefix", "O(log n)", "one step per set bit added or removed, never more than 32"],
     ["range update with lazy propagation", "O(log n)", "the change parks at O(log n) nodes and is pushed down only when read"],
-    ["static array, prefix sums instead", "O(n) build, O(1) query", "no tree, no pointers, no cache misses: use this when nothing is written"],
+    ["static array, prefix sums instead", "O(n) build, O(1) query", "no tree, no pointers: use this when nothing is written"],
   ],
 
   variants: [
     { n: "Prefix sums",
       cost: "build O(n), query O(1), update O(n)",
       idea: "Store every running total, so a range is one subtraction.",
-      when: "The array is fixed. Read only workloads, and 2-D rectangles.",
-      watch: "A single write invalidates the whole tail. If updates exist at all, this is the wrong page." },
+      when: "The array is fixed: read-only workloads, and 2-D rectangles.",
+      watch: "One write spoils every total after it. If there are any updates, this is the wrong page." },
     { n: "Sqrt decomposition",
       cost: "query and update O(sqrt n)",
-      idea: "One aggregate per block of size sqrt(n): whole blocks in the middle, loose elements at the ends.",
-      when: "You want something you can derive under pressure, or the operation is too awkward to fit a tree.",
-      watch: "Worse asymptotics than a tree. Fine at n = 100000, a timeout at n = 1000000." },
+      idea: "One total per block of size √<var>n</var>: whole blocks in the middle, loose values at the ends.",
+      when: "You want something you can work out under pressure, or the operation is too awkward for a tree.",
+      watch: "Worse than a tree as <var>n</var> grows. Fine at <var>n</var> = 10⁵, a timeout at <var>n</var> = 10⁶." },
     { n: "Fenwick tree (BIT)",
       cost: "update and prefix O(log n)",
-      idea: "Node i covers the last <code>i &amp; -i</code> elements. Walk the bits of the index instead of the tree.",
+      idea: "Node <var>i</var> covers the last <code>i &amp; -i</code> values. Walk the bits of the index instead of a tree.",
       when: "Prefix sums or counts under point updates, especially counting inversions. The default in contests.",
-      watch: "One indexed, invertible operations only. No minimum, and index 0 loops forever." },
+      watch: "One-indexed, and only operations you can undo. No minimum, and index 0 loops forever." },
     { n: "Segment tree",
       cost: "build O(n), update and query O(log n)",
-      idea: "Aggregate per node over a halved range, any associative op.",
-      when: "Min, max, gcd, or anything a subtraction cannot recover. Also when you must query a node during the descent.",
-      watch: "Size the array 4n, not 2n. Get the identity right: 0 for sum, infinity for min, and they are not interchangeable." },
+      idea: "A total per node over a halved range, for any associative operation.",
+      when: "Min, max, gcd, or anything a subtraction cannot recover. Also when you must inspect nodes on the way down.",
+      watch: "Size the array 4<var>n</var>, not 2<var>n</var>. Get the identity right: 0 for sum, infinity for min, and they are not interchangeable." },
     { n: "Segment tree with lazy propagation",
       cost: "range update and range query O(log n)",
-      idea: "Park a pending change on a node and push it to the children only when someone descends through it.",
-      when: "Range updates, add v to all of l..r, or assign over a range.",
-      watch: "Composing two pending updates is the part that goes wrong. Rarely asked in interviews, so name it and move on." },
+      idea: "Park a pending change on a node, and push it to the children only when someone walks through it.",
+      when: "Range updates: add <var>v</var> to all of <var>l</var>..<var>r</var>, or set a whole range.",
+      watch: "Combining two pending changes is the part that goes wrong. Rarely asked in interviews: name it and move on." },
   ],
 
   impl: [
-    ["Python", "no stdlib structure, write the class", "Depth is only log n so recursion is safe here, unlike on a skewed tree. Ints never overflow, but a pure Python segment tree at n = 200000 is slow enough to fail a tight limit."],
-    ["Java", "no built-in, use long[] and int[]", "Use long for sums. Compute mid as (lo + hi) >>> 1 to dodge signed overflow, and remember Arrays.fill for a non-zero identity."],
-    ["C++", "no standard structure, vector<long long>", "__builtin_ctz gives the lowest set bit index. Use long long for sums and LLONG_MAX, not INT_MAX, as the min identity."],
-    ["JavaScript", "plain arrays or Int32Array", "Bitwise operators coerce to 32-bit signed, so i & -i is only correct below 2^31. Sums past 2^53 need BigInt."],
+    ["Python", "no stdlib structure, write the class", "Depth is only log n, so recursion is safe here. Ints never overflow, but a pure Python segment tree at n = 200000 is slow enough to fail a tight limit."],
+    ["Java", "no built-in, use long[] and int[]", "Use long for sums. Compute mid as (lo + hi) >>> 1 to dodge overflow, and use Arrays.fill for a non-zero identity."],
+    ["C++", "no standard structure, vector<long long>", "__builtin_ctz gives the lowest set bit's index. Use long long for sums and LLONG_MAX, not INT_MAX, as the min identity."],
+    ["JavaScript", "plain arrays or Int32Array", "Bitwise operators work on 32-bit signed ints, so i & -i is only right below 2^31. Sums past 2^53 need BigInt."],
   ],
 
   code: {
@@ -8316,34 +8998,147 @@ class SegTree {
   codecap: "Fenwick is ten lines and one bit trick. The segment tree is longer, and answers the questions Fenwick cannot even be asked.",
 
   q: [
-    ["The array changes between queries. Why do prefix sums stop working, and what is the fix?", "One write invalidates every prefix after it, so an update costs a full O(n) rebuild. A Fenwick or segment tree keeps both the update and the query at O(log n), which is the entire reason to type more code."],
-    ["Why does a segment tree query touch only O(log n) nodes?", "At each level, a node fully inside the range returns its stored value and a node fully outside returns the identity. Only nodes straddling one of the two endpoints are split further, so at most a constant number per level across log n levels, and those nodes tile the range exactly."],
-    ["What property must the operation have for a segment tree, and what extra does a Fenwick need?", "A segment tree needs only associativity, so sum, min, max, gcd and bitwise or all work with the same code. A Fenwick additionally needs the operation to be invertible, because a range is two prefixes subtracted, which is why it can do sums but not minimum."],
-    ["What does i & -i compute, and why is it the whole trick?", "It isolates the lowest set bit of i, and that value is exactly how many elements node i covers. Stripping the bit walks down through the prefix, adding it walks up through the nodes that must be updated, and each loop runs once per bit."],
-    ["Why is a Fenwick tree one indexed?", "Index 0 has no lowest set bit, so i & -i is 0 and both loops stop moving. The structure does not crash, it just quietly does nothing, which is worse."],
-    ["What does lazy propagation buy, and when would you not bother?", "It extends range queries to range updates by parking a pending change at a node and pushing it down only when someone descends through it, keeping both at O(log n). Skip it if updates are single points, and skip both trees entirely if the array never changes at all."],
+    ["The array changes between queries. Why do prefix sums stop working, and what is the fix?", "One write spoils every prefix after it, so an update costs a full O(n) rebuild. A Fenwick or segment tree keeps both the update and the query at O(log n), which is the whole reason to write more code."],
+    ["Why does a segment tree query touch only O(log n) nodes?", "A node fully inside the range returns its stored value, and a node fully outside returns the identity. Only nodes straddling one of the two ends are split further: a constant number per level, across log n levels."],
+    ["What property must the operation have for a segment tree, and what extra does a Fenwick need?", "A segment tree needs only associativity, so sum, min, max, gcd and bitwise or all work with the same code. A Fenwick also needs an inverse, because a range is one prefix minus another. That is why it does sums but not minimum."],
+    ["What does i & -i compute, and why is it the whole trick?", "It isolates the lowest set bit of i, which is exactly how many values node i covers. Removing the bit walks down through the prefix; adding it walks up through the nodes to update. Each loop runs once per bit."],
+    ["Why is a Fenwick tree one-indexed?", "Index 0 has no lowest set bit, so i & -i is 0. The update loop never advances and runs forever, while the prefix loop quietly returns nothing. Starting at 1 avoids both."],
+    ["What does lazy propagation buy, and when would you not bother?", "It adds range updates by parking a pending change at a node and pushing it down only when someone walks through, keeping both at O(log n). Skip it if updates are single points. Skip both trees if the array never changes."],
   ],
 
   traps: [
-    "<b>Calling <code>add</code> from index 0 on a Fenwick.</b> <code>0 &amp; -0</code> is 0, so the update loop never advances and the query loop never terminates the way you expect. The structure is one indexed and there is nothing optional about it.",
-    "<b>Sizing the segment tree array at 2n.</b> The recursive form with children at 2*node and 2*node+1 needs <b>4n</b> when n is not a power of two, and the overflow lands in whatever memory follows.",
-    "<b>Returning 0 as the identity for a min query.</b> Every disjoint node then reports a minimum of zero and the answer is zero forever. Sum wants 0, min wants positive infinity, max wants negative infinity, gcd wants 0 again, and they are not interchangeable.",
-    "<b>Building a Fenwick with n calls to add.</b> That is O(n log n) for something with a known O(n) in-place build. It matters when n is 200000 and the build sits inside another loop.",
-    "<b>Reaching for a Fenwick to answer range minimum.</b> Two prefixes only become a range if you can subtract, and min has no inverse. Use a segment tree, or a sparse table if nothing ever changes.",
-    "<b>Building a tree for a static array.</b> If there are no updates, prefix sums are shorter, faster and impossible to get wrong. Reaching for a segment tree here reads as pattern matching rather than thinking.",
+    "<b>Calling <code>add</code> from index 0 on a Fenwick.</b> <code>0 &amp; -0</code> is 0, so the loop never advances. The structure is one-indexed, and there is nothing optional about it.",
+    "<b>Sizing the segment tree array at 2<var>n</var>.</b> The recursive form, with children at 2·node and 2·node + 1, needs <b>4<var>n</var></b> when <var>n</var> is not a power of two. The overflow lands in whatever memory follows.",
+    "<b>Returning 0 as the identity for a min query.</b> Every node outside the range then reports a minimum of zero, and the answer is zero forever. Sum wants 0, min wants +∞, max wants −∞.",
+    "<b>Building a Fenwick with <var>n</var> calls to add.</b> That is O(<var>n</var> log <var>n</var>) for something with a known O(<var>n</var>) in-place build. It matters when the build sits inside another loop.",
+    "<b>Reaching for a Fenwick to answer range minimum.</b> Two prefixes only make a range if you can subtract, and min cannot be undone. Use a segment tree, or a sparse table if nothing changes.",
+    "<b>Building a tree for a static array.</b> With no updates, prefix sums are shorter, faster and hard to get wrong. A segment tree here reads as pattern matching rather than thinking.",
   ],
 
   p: [
-    [303, "range-sum-query-immutable", "Range Sum Query Immutable, the static case that needs no tree at all", "E"],
-    [307, "range-sum-query-mutable", "Range Sum Query Mutable, the exact problem", "M"],
-    [315, "count-of-smaller-numbers-after-self", "Count of Smaller Numbers After Self, a Fenwick over values instead of indices", "H"],
+    [303, "range-sum-query-immutable", "Range Sum Query Immutable, the static case that needs no tree", "E"],
+    [307, "range-sum-query-mutable", "Range Sum Query Mutable, the running example", "M"],
+    [315, "count-of-smaller-numbers-after-self", "Count of Smaller Numbers After Self, a Fenwick over values", "H"],
     [327, "count-of-range-sum", "Count of Range Sum, a Fenwick over prefix sums", "H"],
     [493, "reverse-pairs", "Reverse Pairs, the same counting trick with a scaled comparison", "H"],
     [699, "falling-squares", "Falling Squares, range maximum with range assignment, lazy territory", "H"],
     [218, "the-skyline-problem", "The Skyline Problem, the segment tree finale", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek live dashboard <b>10⁶ sensor readings</b> rakhta hai. Do cheezein baar baar hoti hain, kul <b>10⁶ baar</b>, mili-juli: ek reading badalti hai, ya koi ek hisse ka total poochhta hai, jaise readings 3 se 700.</p>
+<p>Chhota version: readings <code>[3, 1, 4, 1]</code>. Positions 1 se 3 ka total 1 + 4 + 1 = <b>6</b> hai. Phir reading 2, 4 se 6 ho jaati hai, aur wahi sawaal ab 8 bolna chahiye.</p>`,
+      tries: [
+        ["Plain array rakho aur har baar hissa jodo", "Reading badalna ek write. Par chauda hissa 10⁶ values tak padhta hai, to 10⁶ sawaal 10¹² steps tak."],
+        ["Running totals rakho, taaki hissa ek subtraction ho", "Sawaal turant. Par ek reading badalna uske baad ke har total ko theek karna hai: har change par 10⁶ writes tak, phir 10¹²."],
+        ["1,000 ke blocks mein baanto aur har block ka total rakho", "Change ek write plus ek block total hai. Sawaal 1,000 blocks aur 1,000 akeli readings jodta hai: 2,000 steps. 10⁶ operations par yeh 2 × 10⁹: behtar, phir bhi slow."],
+      ],
+      so: `<p>Blocks ke andar blocks rakho. Poore array ka total, har aadhe ka, har chauthai ka, ek ek reading tak rakho. Ek change har level par ek block theek karta hai; ek sawaal har level par zyada se zyada do blocks jodta hai. 10⁶ readings par dono lagbhag <b>20 se 40 steps</b>.</p>
+<p>Yahi <b>segment tree</b> hai. Jab sawaal sirf shuru se total ka ho, ek chhota rishtedaar, <b>Fenwick tree</b>, das lines mein kar deta hai. Page poore mein <code>[3, 1, 4, 1]</code> follow karta hai.</p>`,
+    },
+
+    one: "Plain array O(1) update aur O(<var>n</var>) query hai, prefix array ulta. Yeh trees dono siron ko mana karte hain: <b>update aur query dono O(log <var>n</var>)</b>.",
+
+    plain: `<p>Numbers ki ek list hai, jaise <code>[3, 1, 4, 1]</code>. Do cheezein hoti rehti hain: koi ek number badalta hai, aur koi ek hisse ka total poochhta hai, jaise positions 1 se 3.</p>
+<p>Do obvious options har ek ek kaam mein bure hain. Plain list rakho: number badalna turant, par total ke liye hisse ka har number chalna. Running totals ki list rakho: hissa ek subtraction, par ek number badalna uske baad ka har total dobara banana.</p>
+<p>Fix hai <b>blocks</b> ke totals rakhna. Poori list ek block hai jiska total 9. Uske aadhe, [3, 1] aur [4, 1], ke totals 4 aur 5. Ek number badlo to sirf uske blocks theek karo. Hissa poocho to har number ki jagah kuch poore blocks jodo: positions 1 se 3 ke liye 1 + 5 = 6.</p>
+<p><b>Analogy.</b> Company ki sales report. Har salesperson se poochna poora din leta hai. Ek chhapa hua grand total ek sale ke baad purana. To team, office, region ke totals rakho. Ek sale teen totals badalti hai, aur har sawaal kuch totals se answer hota hai.</p>`,
+
+    why: [
+      { t: "Jo do structures pehle se hain, unki keemat likho",
+        d: "Plain array: ek value badalna ek write, par hisse ka total usme har value chhoota hai, <b>O(<var>n</var>)</b>. Running-totals array ulta: hissa ek subtraction, par ek value badalna uske baad ka har total theek karta hai, <b>O(<var>n</var>)</b>. Har ek ek kaam mein perfect aur doosre mein sabse bura." },
+      { t: "Dono operations ka mishran bure aadhe mein girta hai, jo bhi chuno",
+        d: "10⁶ values aur 10⁶ operations ke saath koi bhi chunaav lagbhag 10¹² steps. Dono ek sire par kuch rakhte hain: akeli values, ya shuru tak jaate totals. Beech mein kuch nahi." },
+      { t: "To blocks ke totals rakho: beech wali cheez",
+        d: "Array ko <var>k</var> size ke blocks mein kaato aur har block ka sum rakho. Change apna block theek karta hai. Hissa kuch poore blocks plus har sire par kuch akeli values hai. <var>k</var> = √<var>n</var> ho to dono lagbhag √<var>n</var>: 10⁶ par 1,000. 10⁶ se behtar, phir bhi achha nahi." },
+      { t: "Block size chunna chhodo: blocks mein blocks rakho",
+        d: "Poore array ko ek block lo, aadha karo, aur tab tak kaat-te raho jab tak har block ek value ho. Har block apne do aadhon ka sum rakhta hai: [3, 1, 4, 1] ka total 9, 4 aur 5 se. Yeh <b>segment tree</b> hai, log₂ <var>n</var> levels ke saath: 10⁶ par 20." },
+      { t: "Ab dono costs picture se padho",
+        d: "Change ek leaf badalta hai, aur sirf use rakhne wale blocks galat hote hain: har level par ek. 4 ko 6 karo to leaf, block [4, 1], aur root theek karo. Sawaal hisse ko poore blocks se dhakta hai, har level par zyada se zyada do: positions 1 se 3 hain leaf 1 plus block [4, 1]. Dono ke liye <b>O(log <var>n</var>)</b>." },
+      { t: "Operation ko bas associative hona hai",
+        d: "Upar kahin addition nahi chahiye tha, bas yeh ki block apne do aadhon se ban sake. Koi bhi operation jahan (<var>a</var> phir <var>b</var>) phir <var>c</var> = <var>a</var> phir (<var>b</var> phir <var>c</var>) bina badle chalta hai: minimum, maximum, gcd, product. Averages nahi: averages ka average, average nahi. Sum aur count rakho, aur end mein divide karo." },
+      { t: "Fenwick prefixes ke liye yahi kaam dasve hisse ke code mein karta hai",
+        d: "Agar sirf shuru se shuru hone wale totals chahiye, to <b>Fenwick tree</b> ek flat array mein partial sums ka hoshiyaar set rakhta hai. Das lines mein dono kaamon ke liye O(log <var>n</var>). Beech ke hisse ke liye ek prefix mein se doosra ghataata hai. To aisa operation chahiye jo undo ho sake: sums haan; minimums nahi." },
+      { t: "Teen jagah jahan yeh galat answer hai",
+        d: "Values kabhi na badlein, to running totals sums ek step mein dete hain, aur sparse table minimums. Array aur sawaal dono chhote hon, jaise 1,000-1,000, to simple loop 10⁶ steps. Shuru mein ek hi change ho, to running totals ek baar dobara banao. Teeno mein tree sau lines ka hai jo kisi simple cheez se haarta hai." },
+    ],
+
+    math: [
+      { t: "Chhota tree banao, phir ek sawaal aur ek change", d: "Array [3, 1, 4, 1]. Har node apne do children ka sum rakhta hai. Ek hissa poocho, phir ek value badlo." },
+      { t: "Jo do structures pehle se hain, dono ek sire par hain", d: "Koi bura nahi. Dono ulte siron par best hain, aur dono operations ka mishran jo bhi chuna uske worst case mein girta hai." },
+      { t: "Sawaal sirf lagbhag 2 log n nodes kyun padhta hai", d: "Hissa poore blocks se dhaka jaata hai. Har level par zyada se zyada do adhoore blocks bachte hain, aur unke andar sab pehle se juda hai." },
+      { t: "Fenwick: lowbit jump, asli indexes par trace karke", d: "Poora structure i & (-i) hai, sabse neeche wala set bit. Sawaal use hataate chalte hain, changes jodte chalte hain, aur dono har bit par ek step ke baad rukte hain." },
+      { t: "Combine operation ko kya satisfy karna hai", d: "Segment tree ki poori zaroorat associativity hai. Fenwick ek cheez aur maangta hai, aur isiliye range minimum nahi de sakta." },
+    ],
+
+    costs: [
+      ["segment tree banana", "O(n) time, O(4n) space", "n leaves aur n-1 andar ke nodes par ek pass; 4n safe array size"],
+      ["segment tree point update", "O(log n)", "ek root-to-leaf raasta, wapas upar aate hue jodta hua"],
+      ["segment tree range query", "O(log n)", "har level par zyada se zyada do beech mein phanse nodes; baaki poore gine jaate ya bilkul nahi"],
+      ["Fenwick build", "O(n) in place, O(n log n) naively", "add ki n calls woh version hai jo sab bina soche likhte hain"],
+      ["Fenwick update ya prefix", "O(log n)", "har set bit jodne ya hataane par ek step, kabhi 32 se zyada nahi"],
+      ["lazy propagation ke saath range update", "O(log n)", "change O(log n) nodes par rukta hai aur padhne par hi neeche jaata hai"],
+      ["static array, iski jagah prefix sums", "O(n) build, O(1) query", "na tree, na pointers: jab kuch likha na jaaye tab yahi"],
+    ],
+
+    variants: [
+      { n: "Prefix sums",
+        cost: "build O(n), query O(1), update O(n)",
+        idea: "Har running total rakho, taaki range ek subtraction ho.",
+        when: "Array fixed hai: sirf padhne wale kaam, aur 2-D rectangles.",
+        watch: "Ek write uske baad ka har total bigaad deta hai. Koi bhi update ho, to yeh galat page hai." },
+      { n: "Sqrt decomposition",
+        cost: "query and update O(sqrt n)",
+        idea: "√<var>n</var> size ke har block ka ek total: beech mein poore blocks, siron par akeli values.",
+        when: "Aisa kuch chahiye jo pressure mein nikaal sako, ya operation tree ke liye bahut ajeeb ho.",
+        watch: "<var>n</var> badhne par tree se bura. <var>n</var> = 10⁵ par theek, <var>n</var> = 10⁶ par timeout." },
+      { n: "Fenwick tree (BIT)",
+        cost: "update and prefix O(log n)",
+        idea: "Node <var>i</var> aakhri <code>i &amp; -i</code> values cover karta hai. Tree ki jagah index ke bits chalo.",
+        when: "Point updates ke saath prefix sums ya counts, khaaskar inversions ginna. Contests mein default.",
+        watch: "One-indexed, aur sirf undo hone wale operations. Minimum nahi, aur index 0 hamesha loop karta hai." },
+      { n: "Segment tree",
+        cost: "build O(n), update and query O(log n)",
+        idea: "Aadhi ki gayi range par har node ka ek total, kisi bhi associative operation ke liye.",
+        when: "Min, max, gcd, ya kuch bhi jo subtraction se wapas na mile. Neeche jaate hue nodes dekhne hon tab bhi.",
+        watch: "Array 4<var>n</var> size ka rakho, 2<var>n</var> nahi. Identity sahi rakho: sum ke liye 0, min ke liye infinity, aur yeh adla-badli nahi hote." },
+      { n: "Segment tree with lazy propagation",
+        cost: "range update and range query O(log n)",
+        idea: "Pending change node par rok do, aur children tak tabhi bhejo jab koi usse guzre.",
+        when: "Range updates: <var>l</var>..<var>r</var> sab mein <var>v</var> jodo, ya poori range set karo.",
+        watch: "Do pending changes jodna woh hissa hai jo galat hota hai. Interviews mein kam poocha jaata hai: naam lo aur aage badho." },
+    ],
+
+    impl: [
+      ["Python", "no stdlib structure, write the class", "Depth sirf log n hai, to recursion yahan safe hai. Ints overflow nahi karte, par n = 200000 par pure Python segment tree tight limit mein fail hone jitna slow hai."],
+      ["Java", "no built-in, use long[] and int[]", "Sums ke liye long. Overflow se bachne ke liye mid (lo + hi) >>> 1 se nikaalo, aur non-zero identity ke liye Arrays.fill."],
+      ["C++", "no standard structure, vector<long long>", "__builtin_ctz sabse neeche set bit ka index deta hai. Sums ke liye long long aur min identity ke liye LLONG_MAX, INT_MAX nahi."],
+      ["JavaScript", "plain arrays or Int32Array", "Bitwise operators 32-bit signed ints par kaam karte hain, to i & -i sirf 2^31 se neeche sahi hai. 2^53 se upar sums ko BigInt chahiye."],
+    ],
+
+    codecap: "Fenwick das lines aur ek bit trick hai. Segment tree lamba hai, aur woh sawaal answer karta hai jo Fenwick se poochhe hi nahi ja sakte.",
+
+    q: [
+      ["Queries ke beech array badalta hai. Prefix sums kyun kaam nahi karte, aur fix kya hai?", "Ek write uske baad ka har prefix bigaadta hai, to update poora O(n) rebuild hai. Fenwick ya segment tree update aur query dono O(log n) rakhta hai, zyada code likhne ki poori wajah yahi."],
+      ["Segment tree query sirf O(log n) nodes kyun chhooti hai?", "Range ke poori tarah andar ka node apni stored value lautata hai, aur poori tarah bahar ka identity. Sirf do siron mein se kisi par phanse nodes aage tootte hain: har level par gine chune, log n levels tak."],
+      ["Segment tree ke liye operation mein kya property chahiye, aur Fenwick ko extra kya chahiye?", "Segment tree ko sirf associativity chahiye, to sum, min, max, gcd aur bitwise or sab wahi code se chalte hain. Fenwick ko inverse bhi chahiye, kyunki range ek prefix minus doosra hai. Isiliye woh sums karta hai par minimum nahi."],
+      ["i & -i kya nikaalta hai, aur yahi poori trick kyun hai?", "Yeh i ka sabse neeche wala set bit alag karta hai, jo theek utni values hai jitni node i cover karta hai. Bit hataana prefix mein neeche chalta hai; jodna update wale nodes mein upar. Har loop har bit par ek baar chalta hai."],
+      ["Fenwick tree one-indexed kyun hai?", "Index 0 ka koi set bit nahi, to i & -i 0 hai. Update loop kabhi aage nahi badhta aur hamesha chalta hai, jabki prefix loop chupchaap kuch nahi lautata. 1 se shuru karna dono se bachata hai."],
+      ["Lazy propagation se kya milta hai, aur kab zaroorat nahi?", "Yeh range updates jodta hai, pending change ko node par rok kar aur tabhi neeche bhej kar jab koi guzre, dono ko O(log n) rakhte hue. Updates single points hon to chhodo. Array kabhi na badle to dono trees chhodo."],
+    ],
+
+    traps: [
+      "<b>Fenwick par index 0 se <code>add</code> call karna.</b> <code>0 &amp; -0</code> 0 hai, to loop kabhi aage nahi badhta. Structure one-indexed hai, aur isme kuch optional nahi.",
+      "<b>Segment tree array 2<var>n</var> ka rakhna.</b> Recursive form, children 2·node aur 2·node + 1 par, ko <b>4<var>n</var></b> chahiye jab <var>n</var> power of two na ho. Overflow uske baad ki memory mein girta hai.",
+      "<b>Min query ke liye identity 0 lautana.</b> Range ke bahar ka har node minimum zero batata hai, aur answer hamesha zero. Sum ko 0 chahiye, min ko +∞, max ko −∞.",
+      "<b><var>n</var> add calls se Fenwick banana.</b> Yeh O(<var>n</var> log <var>n</var>) hai jabki O(<var>n</var>) in-place build pata hai. Tab maayne rakhta hai jab build kisi aur loop ke andar ho.",
+      "<b>Range minimum ke liye Fenwick lena.</b> Do prefixes range tabhi banate hain jab ghata sako, aur min undo nahi hota. Segment tree lo, ya kuch na badle to sparse table.",
+      "<b>Static array ke liye tree banana.</b> Updates na hon to prefix sums chhote, tez aur galat karna mushkil. Yahan segment tree sochne ki jagah pattern matching lagta hai.",
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "graphs",
@@ -8688,7 +9483,6 @@ function bfsShortest(start, goal) {
     [417, "pacific-atlantic-water-flow", "Pacific Atlantic, traverse backwards from the edges", "M"],
   ],
 },
-
 /* ==================================================================== */
 {
   id: "shortest-paths",
