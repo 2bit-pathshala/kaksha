@@ -44,8 +44,8 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
     if (c.need && (!c.need.ask || !c.need.so || (c.need.tries || []).length < 2))
       problems.push(c.id + " has a thin 'why you need this'");
     // the Hinglish mirrors the English one for one, or the switch shows a mismatch
-    if (c.hi) for (const k of ["why", "math", "costs", "traps", "impl", "q"]) {
-      if (c.hi[k] && c.hi[k].length !== c[k].length)
+    if (c.hi) for (const k of ["why", "math", "costs", "traps", "impl", "q", "variants"]) {
+      if (c.hi[k] && c.hi[k].length !== (c[k] || []).length)
         problems.push(c.id + " hi." + k + " has " + c.hi[k].length + " entries, English has " + c[k].length);
     }
     if (c.hi && c.hi.need && c.need && (c.hi.need.tries || []).length !== (c.need.tries || []).length)
@@ -197,6 +197,75 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
   test("plain english", over.length === 0,
     counted + " sentences across plain, why, need, hing, Hinglish and the derivations, none over " + LIMIT + " words" +
     (over.length ? "   <-- " + over.slice(0, 4).join(", ") : ""));
+}
+
+/* ---------- 4d. the rewritten pages, held to the whole standard ----------
+   A page with `need` and `hi` has been rewritten, so every sentence on it counts,
+   not only the four prose fields: captions, questions, costs, answers, both
+   languages. And <var> may only sit where it is rendered as HTML, and never
+   inside <code>, where it would print as a literal tag. */
+{
+  const LIMIT = 28;
+  const SPLIT = /<\/p>|<p>|<br>|<\/td>|<\/tr>|<\/li>|(?<=[.!?:])(?:["”’)]|<\/[a-z]+>)*\s+/;
+  const strip = t => String(t).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const over = [], misplaced = [];
+  let pages = 0, counted = 0;
+  const words = (label, text) => String(text || "").split(SPLIT).forEach(sent => {
+    const s = strip(sent); if (!s) return;
+    counted++;
+    // a lone symbol such as × or = is not a word the reader has to hold
+    const n = s.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+    if (n > LIMIT) over.push(label + " (" + n + "w)");
+  });
+  // html: may carry <var>, plain: must not
+  const html = (label, t) => {
+    words(label, t);
+    const inCode = String(t || "").match(/<code>(?:(?!<\/code>).)*<var>/s);
+    if (inCode) misplaced.push(label + " has <var> inside <code>");
+  };
+  const plain = (label, t) => {
+    words(label, t);
+    if (/<var>/.test(String(t || ""))) misplaced.push(label + " shows <var> as text");
+  };
+  const page = (c, tag) => {
+    if (c.need) {
+      html(tag + "need.ask", c.need.ask); html(tag + "need.so", c.need.so);
+      (c.need.tries || []).forEach((t, i) => { html(tag + "need.try" + i, t[0]); html(tag + "need.try" + i, t[1]); });
+    }
+    html(tag + "one", c.one); html(tag + "plain", c.plain);
+    if (c.hing) html(tag + "hing", c.hing);
+    (c.why || []).forEach((w, i) => { html(tag + "why" + i, w.t); html(tag + "why" + i, w.d); });
+    (c.variants || []).forEach((v, i) => {
+      plain(tag + "variant" + i, v.n); plain(tag + "variant" + i, v.cost);
+      ["idea", "when", "watch"].forEach(k => html(tag + "variant" + i + "." + k, v[k]));
+    });
+    (c.math || []).forEach((m, i) => { plain(tag + "math" + i + ".t", m.t); html(tag + "math" + i, m.d); });
+    (c.costs || []).forEach((r, i) => r.forEach(x => plain(tag + "costs" + i, x)));
+    (c.traps || []).forEach((t, i) => html(tag + "trap" + i, t));
+    (c.impl || []).forEach((r, i) => r.forEach(x => plain(tag + "impl" + i, x)));
+    if (c.codecap) plain(tag + "codecap", c.codecap);
+    (c.q || []).forEach((r, i) => r.forEach(x => plain(tag + "q" + i, x)));
+  };
+  for (const c of CONCEPTS) {
+    if (!c.need || !c.hi) continue;
+    pages++;
+    page(c, c.id + "/"); page(c.hi, c.id + "/hi.");
+    (c.viz || []).forEach(id => (VIZ[id] ? VIZ[id].frames : []).forEach((f, i) => {
+      [[f, id + " f" + i], [f.hi || {}, id + " f" + i + " hi"]].forEach(([g, lab]) => {
+        if (g.cap) html(lab + " cap", g.cap);
+        if (g.scene) html(lab + " scene", g.scene);
+        if (g.out) plain(lab + " out", g.out);
+        if (g.ask) {
+          html(lab + " ask", g.ask.q); if (g.ask.why) html(lab + " ask.why", g.ask.why);
+          (g.ask.opts || []).forEach(o => html(lab + " ask.opt", o));
+        }
+      });
+    }));
+  }
+  test("rewritten pages", over.length === 0 && misplaced.length === 0,
+    pages + " pages, " + counted + " sentences in every field and frame, none over " + LIMIT + " words, <var> only where it renders" +
+    (over.length ? "   <-- " + over.slice(0, 40).join(", ") : "") +
+    (misplaced.length ? "   <-- " + misplaced.slice(0, 4).join(", ") : ""));
 }
 
 /* ---------- 5. no escape sequence may survive into the rendered text ----------

@@ -11,7 +11,8 @@
                        ptr?:{LABEL:index}, out?:"running value", cap }
      curve, growth curves for complexity          frame: { show:[names], mark?:n, cap }
      tree, nodes + edges, optional array strip    frame: { on:[ids], dim:[ids], edge:[[a,b]], cap }
-     hash, keys -> hash function -> buckets       frame: { k:"key", b:bucketIndex, cap }
+     hash, keys -> hash function -> buckets       frame: { k:"key", b:bucketIndex, look?:bool, cap }
+              (look: a lookup, so the key is shown but not stored in the bucket)
 
    any frame, any kind:
      scene:"<html>"   a text card drawn instead of the diagram. The opening frame
@@ -53,7 +54,11 @@ function drawCells(spec, f) {
   const arr = f.arr || spec.arr;
   const maxN = Math.max(...spec.frames.map(fr => (fr.arr || spec.arr).length));
   const BW = 46, GAP = 6, X0 = 34, Y = 46, H = 46;
-  const W = X0 * 2 + maxN * (BW + GAP);
+  // a short row must still leave room for its longest caption line, in either
+  // language, or that line is squeezed to an unreadable size
+  const longest = Math.max(0, ...spec.frames.flatMap(fr => [fr.out, fr.hi && fr.hi.out])
+    .filter(Boolean).map(o => String(o).length));
+  const W = Math.max(X0 * 2 + maxN * (BW + GAP), Math.ceil(X0 * 2 + longest * 0.62 * 11.5));
   const cx = i => X0 + i * (BW + GAP) + BW / 2;
   const has = (list, i) => Array.isArray(list) && list.includes(i);
   let s = "";
@@ -196,7 +201,7 @@ function drawTree(spec, f) {
 function drawHash(spec, f) {
   const idx = spec.frames.indexOf(f);
   const placed = {};
-  spec.frames.slice(0, idx + 1).forEach(fr => { if (fr.k != null) (placed[fr.b] = placed[fr.b] || []).push(fr.k); });
+  spec.frames.slice(0, idx + 1).forEach(fr => { if (fr.k != null && !fr.look) (placed[fr.b] = placed[fr.b] || []).push(fr.k); });
 
   const nb = spec.buckets;
   const KX = 20,  KW = 130;                 // key box
@@ -452,105 +457,476 @@ function mountViz(id, host, lang, start) {
 Object.assign(VIZ, {
 
 /* ---- complexity ---- */
+/* One problem, three solutions: find a repeated number in a list. Each
+   solution is a different growth curve, so the chart meets them in the order
+   a person would write them, and only then fills in the rest of the ladder. */
 "big-o": { kind: "curve", frames: [
-  { show: ["O(1)"], cap: "<b>O(1)</b>, the work does not care how big the input is. A dict lookup, an array index, arithmetic." },
-  { show: ["O(1)", "O(log n)"], cap: "<b>O(log n)</b>, each step throws away half the remaining input. n = 1,000,000 needs only ~20 steps." },
-  { show: ["O(1)", "O(log n)", "O(n)"], cap: "<b>O(n)</b>. You touch every element once. A single loop, a single scan." },
-  { show: ["O(1)", "O(log n)", "O(n)", "O(n log n)"], cap: "<b>O(n log n)</b>, a full scan repeated log n times. Sorting lives here; it is the practical ceiling for large n." },
-  { show: ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)"], cap: "<b>O(n²)</b>, a loop inside a loop. Fine at n = 1,000; dead at n = 1,000,000. Notice how fast it leaves the chart." },
-  { show: ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "O(2ⁿ)"], cap: "<b>O(2ⁿ)</b>, every element doubles the work. n = 40 is already hopeless. This is why we memoise." },
+  { scene: `<span class="kicker">Why this example</span><p>A list of <var>n</var> numbers. Does any number appear twice? There are three natural ways to check, and each one grows differently:</p><table><tr><td>the check</td><td><var>n</var> = 1,000</td><td><var>n</var> = 100,000</td></tr><tr><td>compare every pair</td><td>499,500</td><td><b>5 × 10⁹</b></td></tr><tr><td>sort, check neighbours</td><td>about 10⁴</td><td>about 1.7 × 10⁶</td></tr><tr><td>hash set</td><td>1,000</td><td>100,000</td></tr></table><p>All three are instant at 1,000. Goal: see which of them survive the 1-second limit at 100,000, without running any of them.</p>`,
+    cap: "The chart below draws each solution's <b>work</b> against the input size <var>n</var>, all on one scale. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p><var>n</var> numbers ki list. Kya koi number do baar hai? Check karne ke teen natural tareeke hain, aur teeno alag tarah badhte hain:</p><table><tr><td>check</td><td><var>n</var> = 1,000</td><td><var>n</var> = 1,00,000</td></tr><tr><td>har pair compare</td><td>499,500</td><td><b>5 × 10⁹</b></td></tr><tr><td>sort, padosi check</td><td>lagbhag 10⁴</td><td>lagbhag 1.7 × 10⁶</td></tr><tr><td>hash set</td><td>1,000</td><td>1,00,000</td></tr></table><p>1,000 par teeno turant. Goal: bina chalaaye samajhna ki 1,00,000 par 1 second ki limit mein kaun kaun bachte hain.</p>`,
+          cap: "Neeche ka chart har solution ka <b>kaam</b> input size <var>n</var> ke against dikhata hai, sab ek hi scale par. Next dabao." } },
+
+  { show: ["O(n²)"],
+    cap: "<b>Compare every pair: O(<var>n</var>²).</b> Across is the input size <var>n</var>, up is the work. The curve bends upward because each new number must be checked against all the others already there.",
+    ask: { q: "The input grows 10 times, from 1,000 numbers to 10,000. How much more work does the pair check do?", opts: ["10 times", "100 times", "1,000 times"], a: 1,
+           why: "10 times the numbers, each compared with 10 times as many others: 10 × 10 = 100." },
+    hi: { cap: "<b>Har pair compare: O(<var>n</var>²).</b> Left se right input size <var>n</var>, neeche se upar kaam. Curve upar mudti hai, kyunki har naya number pehle se maujood sab numbers se check hota hai.",
+          ask: { q: "Input 10 guna badha, 1,000 numbers se 10,000. Pair check kitna zyada kaam karega?", opts: ["10 guna", "100 guna", "1,000 guna"],
+                 why: "10 guna numbers, aur har ek 10 guna zyada numbers se compare: 10 × 10 = 100." } } },
+
+  { show: ["O(n log n)", "O(n²)"],
+    cap: "<b>Sort, then check neighbours: O(<var>n</var> log <var>n</var>).</b> After sorting, equal numbers sit side by side, so one pass finds them. The sort costs about log₂ <var>n</var> steps per number, and log₂ 100,000 is about 17.",
+    ask: { q: "At <var>n</var> = 100,000 the pair check does 5 × 10⁹ comparisons. Roughly how much does sort-then-scan do?", opts: ["about 1.7 × 10⁶", "about 5 × 10⁸", "about the same"], a: 0,
+           why: "100,000 × 17 = 1.7 × 10⁶. That is about 3,000 times less work." },
+    hi: { cap: "<b>Sort, phir padosi check: O(<var>n</var> log <var>n</var>).</b> Sort ke baad barabar numbers saath saath baithte hain, to ek pass mein mil jaate hain. Sort har number par lagbhag log₂ <var>n</var> steps leta hai, aur log₂ 1,00,000 lagbhag 17 hai.",
+          ask: { q: "<var>n</var> = 1,00,000 par pair check 5 × 10⁹ comparisons karta hai. Sort-then-scan lagbhag kitna karega?", opts: ["lagbhag 1.7 × 10⁶", "lagbhag 5 × 10⁸", "lagbhag utna hi"],
+                 why: "1,00,000 × 17 = 1.7 × 10⁶. Lagbhag 3,000 guna kam kaam." } } },
+
+  { show: ["O(n)", "O(n log n)", "O(n²)"],
+    cap: "<b>Hash set: O(<var>n</var>).</b> Each number is looked up once and inserted once, a fixed amount of work per number. So the line is straight: 10 times the input, 10 times the work. This is the one to write.",
+    ask: { q: "Sorted list, one number to find. Check the middle, throw away the half it cannot be in, repeat. How many checks for 1,000,000 numbers?", opts: ["about 20", "about 1,000", "about 500,000"], a: 0,
+           why: "2²⁰ is about a million, so 20 halvings leave one number." },
+    hi: { cap: "<b>Hash set: O(<var>n</var>).</b> Har number ek baar dhoondha aur ek baar daala jaata hai, har number par fixed kaam. Isliye line seedhi hai: 10 guna input, 10 guna kaam. Yahi likhna hai.",
+          ask: { q: "Sorted list, ek number dhoondhna hai. Beech wala check karo, jis aadhe mein woh ho hi nahi sakta use phenko, repeat. 10 lakh numbers par kitne checks?", opts: ["lagbhag 20", "lagbhag 1,000", "lagbhag 5,00,000"],
+                 why: "2²⁰ lagbhag 10 lakh hai, to 20 baar aadha karne par ek number bachta hai." } } },
+
+  { show: ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)"],
+    cap: "<b>O(log <var>n</var>)</b>: halve what is left at every step, so 1,000,000 numbers need about 20 checks. At the bottom, <b>O(1)</b>: reading <code>a[0]</code> costs the same at any size. Both curves barely leave the floor.",
+    ask: { q: "One more shape: trying every <b>subset</b> of the numbers. What does one extra number do to the work?", opts: ["adds a fixed amount", "doubles it"], a: 1,
+           why: "Each number is either in a subset or out of it. One more number doubles the count of subsets." },
+    hi: { cap: "<b>O(log <var>n</var>)</b>: har step par bacha hua aadha karo, to 10 lakh numbers ko lagbhag 20 checks. Sabse neeche <b>O(1)</b>: <code>a[0]</code> padhna har size par utna hi. Dono curves zameen se mushkil se uthti hain.",
+          ask: { q: "Ek aur shape: numbers ka har <b>subset</b> try karna. Ek extra number kaam ka kya karta hai?", opts: ["fixed amount jodta hai", "double kar deta hai"],
+                 why: "Har number subset mein hai ya nahi. Ek aur number subsets ki ginti double kar deta hai." } } },
+
+  { show: ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "O(2ⁿ)"],
+    cap: "<b>O(2ⁿ)</b>: every extra item doubles the work, so it leaves the chart before <var>n</var> = 5. At <var>n</var> = 40 it is 10¹² steps. That is why backtracking problems cap <var>n</var> at about 20.",
+    hi: { cap: "<b>O(2ⁿ)</b>: har extra item kaam double karta hai, to yeh <var>n</var> = 5 se pehle hi chart se bahar. <var>n</var> = 40 par 10¹² steps. Isiliye backtracking problems <var>n</var> ko lagbhag 20 tak rakhte hain." } },
+
+  { show: ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "O(2ⁿ)"],
+    cap: "Back to the question: <var>n</var> = 100,000, one second, about 10⁸ steps. Every pair: 5 × 10⁹, <b>fails</b>. Sort-then-scan: 1.7 × 10⁶, passes. Hash set: 10⁵, passes. Nothing was run to find that out.",
+    hi: { cap: "Wapas sawaal par: <var>n</var> = 1,00,000, ek second, lagbhag 10⁸ steps. Har pair: 5 × 10⁹, <b>fail</b>. Sort-then-scan: 1.7 × 10⁶, pass. Hash set: 10⁵, pass. Yeh jaanne ke liye kuch chalaana nahi pada." } },
 ]},
 
 /* ---- dynamic array ---- */
+/* Appending 3, 1, 4, 9 to a list with room for 2, then inserting 7 at the
+   front. The same four values the page uses, so the one growth and the
+   one front-shift happen on screen. */
 "dynamic-array": { kind: "cells", arr: ["3", "·"], frames: [
-  { arr: ["3", "·"], on: [0], dim: [1], out: "size 1 · capacity 2", cap: "A growable array (Python <code>list</code>, Java <code>ArrayList</code>, C++ <code>vector</code>, JS <code>Array</code>) is a block of memory with spare room. <b>append</b> writes into the next free slot, <b>O(1)</b>." },
-  { arr: ["3", "1"], on: [0, 1], out: "size 2 · capacity 2", cap: "<b>append(1)</b> → written. The block is now full." },
-  { arr: ["3", "1"], bad: [0, 1], out: "no free slot", cap: "<b>append(4)</b> has nowhere to go. Memory blocks are fixed. You cannot ask for \"two more bytes on the end\"." },
-  { arr: ["3", "1", "·", "·"], hot: [0, 1], dim: [2, 3], out: "copied 2 elements", cap: "So it allocates a <b>new block of double the size</b> and copies everything across. <b>This single append costs O(n).</b>" },
-  { arr: ["3", "1", "4", "·"], on: [0, 1, 2], dim: [3], out: "size 3 · capacity 4", cap: "Then 4 is written. But doubling means the next resize is twice as far away." },
-  { arr: ["3", "1", "4", "9"], on: [0, 1, 2, 3], out: "cost pattern: 1,1,2,1,4,1,1,1,8…", cap: "Over n appends the copies sum to 1+2+4+…+n &lt; 2n. Spread over n appends that is <b>O(1) amortised</b>, the answer you give in an interview." },
-  { arr: ["3", "1", "4", "9"], bad: [0], hot: [1, 2, 3], out: "insert(0, x) → shift everything", cap: "The flip side: inserting or popping at the <b>front</b> shifts every element right. <b>O(n)</b>. That is why BFS uses a <code>deque</code>, not a list." },
+  { scene: `<span class="kicker">Why this example</span><p>A growable list must do two things at once: take new items at the end, and read <code>a[i]</code> instantly. Here is the smallest case that shows both costs:</p><table><tr><td>start</td><td>empty, room for 2</td></tr><tr><td>append</td><td>3, 1, 4, 9</td></tr><tr><td>then</td><td>insert 7 at the front</td></tr></table><p>Four appends force exactly one growth, and one front insert forces every item to move. Goal: see which operations are cheap and which are not, and why.</p>`,
+    cap: "Each box is one memory slot, numbered from 0. A dot is a spare slot. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Growable list ko ek saath do kaam karne hain: end mein naye items lena, aur <code>a[i]</code> turant padhna. Dono ki cost dikhane wala sabse chhota case yeh hai:</p><table><tr><td>shuru</td><td>khaali, 2 ki jagah</td></tr><tr><td>append</td><td>3, 1, 4, 9</td></tr><tr><td>phir</td><td>aage 7 insert</td></tr></table><p>Chaar appends theek ek growth karwate hain, aur ek front insert har item ko hilata hai. Goal: dekhna kaunse operations saste hain aur kaunse nahi, aur kyun.</p>`,
+          cap: "Har box ek memory slot hai, 0 se numbered. Dot matlab khaali slot. Next dabao." } },
+
+  { arr: ["3", "·"], on: [0], dim: [1], out: "size 1 · capacity 2",
+    cap: "<b>append(3)</b> writes into slot 0. The list asked for room for 2 when it was created, so slot 1 is already there, waiting. That is what a growable array keeps: <b>spare slots</b>.",
+    ask: { q: "<b>append(1)</b>. What does it cost?", opts: ["one write into the spare slot", "copying the list"], a: 0,
+           why: "Slot 1 is free, so 1 is written there and nothing moves." },
+    hi: { out: "size 1 · capacity 2",
+          cap: "<b>append(3)</b> slot 0 mein likhta hai. List ne bante waqt 2 ki jagah maangi thi, to slot 1 pehle se wahan hai, intezaar mein. Growable array yahi rakhta hai: <b>extra slots</b>.",
+          ask: { q: "<b>append(1)</b>. Iski cost kya hai?", opts: ["khaali slot mein ek write", "list copy karna"],
+                 why: "Slot 1 khaali hai, to 1 wahan likha jaata hai aur kuch nahi hilta." } } },
+
+  { arr: ["3", "1"], on: [0, 1], out: "size 2 · capacity 2, full",
+    cap: "<b>append(1)</b>: one write. Now the block is full. The memory right after slot 1 belongs to something else, so the list cannot just take another slot there.",
+    ask: { q: "<b>append(4)</b>, and there is no room. What does the list do?", opts: ["writes past the end anyway", "gets a block twice the size and copies", "refuses"], a: 1,
+           why: "Writing past the end would corrupt someone else's memory. A new, bigger block is the only safe way." },
+    hi: { out: "size 2 · capacity 2, bhara hua",
+          cap: "<b>append(1)</b>: ek write. Ab block bhar gaya. Slot 1 ke theek baad ki memory kisi aur ki hai, to list wahan ek aur slot nahi le sakti.",
+          ask: { q: "<b>append(4)</b>, aur jagah nahi. List kya karti hai?", opts: ["phir bhi end ke paar likhti hai", "dugna bada block leti hai aur copy karti hai", "mana kar deti hai"],
+                 why: "End ke paar likhna kisi aur ki memory bigaad dega. Naya, bada block hi safe raasta hai." } } },
+
+  { arr: ["3", "1", "·", "·"], hot: [0, 1], dim: [2, 3], out: "new block of 4 · copied 2 items",
+    cap: "A new block of <b>4</b> slots, and 3 and 1 are copied across. This one append costs <b>O(<var>n</var>)</b>, one copy per item already there. The old block is handed back.",
+    ask: { q: "After 4 is written, how many more appends fit before the next copy?", opts: ["none", "one", "three"], a: 1,
+           why: "Capacity 4, and 3, 1 and 4 fill three slots. One spare slot is left, and 9 takes it." },
+    hi: { out: "4 ka naya block · 2 items copy",
+          cap: "<b>4</b> slots ka naya block, aur 3 aur 1 wahan copy hote hain. Is ek append ki cost <b>O(<var>n</var>)</b> hai, pehle se maujood har item ki ek copy. Purana block wapas de diya jaata hai.",
+          ask: { q: "4 likhne ke baad agli copy se pehle kitne aur appends fit honge?", opts: ["koi nahi", "ek", "teen"],
+                 why: "Capacity 4, aur 3, 1 aur 4 teen slots bharte hain. Ek khaali slot bachta hai, jo 9 le leta hai." } } },
+
+  { arr: ["3", "1", "4", "·"], on: [0, 1, 2], dim: [3], out: "size 3 · capacity 4",
+    cap: "4 is written into slot 2. Doubling put the next copy twice as far away as the last one. That spacing is the whole trick.",
+    hi: { out: "size 3 · capacity 4",
+          cap: "4 slot 2 mein likha gaya. Doubling ne agli copy ko pichhli se dugni door kar diya. Poori trick yahi doori hai." } },
+
+  { arr: ["3", "1", "4", "9"], on: [0, 1, 2, 3], out: "4 appends: 4 writes, 2 copies",
+    cap: "<b>9</b> takes the last spare slot. Four appends cost 4 writes and 2 copies. In general, copies at sizes 1, 2, 4 and so on add to under <var>n</var>, so each append is <b>O(1) amortised</b>. And <code>a[2]</code> is still one sum: start + 2 × slot size.",
+    ask: { q: "Now <b>insert(0, 7)</b>, at the front. How many items must move?", opts: ["none", "one", "all four"], a: 2,
+           why: "Slot 0 is taken, and the block must stay unbroken, so 3, 1, 4 and 9 each shift one slot right." },
+    hi: { out: "4 appends: 4 writes, 2 copies",
+          cap: "<b>9</b> aakhri khaali slot le leta hai. Chaar appends ki cost 4 writes aur 2 copies. General rule: 1, 2, 4 aise sizes ki copies milkar <var>n</var> se kam hain, to har append <b>O(1) amortised</b> hai. Aur <code>a[2]</code> ab bhi ek jodh hai: start + 2 × slot size.",
+          ask: { q: "Ab <b>insert(0, 7)</b>, aage. Kitne items hilenge?", opts: ["koi nahi", "ek", "chaaron"],
+                 why: "Slot 0 bhara hai, aur block bina toote rehna chahiye, to 3, 1, 4 aur 9 har ek ek slot right khisakta hai." } } },
+
+  { arr: ["7", "3", "1", "4", "9", "·", "·", "·"], on: [0], hot: [1, 2, 3, 4], dim: [5, 6, 7], out: "insert(0, 7): 4 items shifted, and the block grew again",
+    cap: "Every item moved one slot right, and because the block was full it doubled to 8 first. Inserting at the front is <b>O(<var>n</var>)</b>, every time. That is why BFS takes from a <code>deque</code>, never from the front of a list.",
+    hi: { out: "insert(0, 7): 4 items khiske, aur block phir bada hua",
+          cap: "Har item ek slot right khiska, aur block bhara tha isliye pehle 8 ka ho gaya. Aage insert karna har baar <b>O(<var>n</var>)</b> hai. Isiliye BFS <code>deque</code> se leta hai, list ke aage se kabhi nahi." } },
 ]},
 
 /* ---- string immutability ---- */
+/* Building "abcd" one += at a time, then the same result with one join.
+   Four letters are enough to show the 1 + 2 + 3 + 4 staircase. */
 "string-immutable": { kind: "cells", arr: ["a"], frames: [
-  { arr: ["a"], on: [0], out: "chars written: 1", cap: "<code>s = \"a\"</code>. In most languages a string is <b>immutable</b>. This object can never be edited, only replaced." },
-  { arr: ["a", "b"], hot: [0], on: [1], out: "chars written: 1 + 2 = 3", cap: "<code>s += \"b\"</code> does <b>not</b> append. It builds a brand-new object and <b>copies the old 'a' in</b> (orange = copied again)." },
-  { arr: ["a", "b", "c"], hot: [0, 1], on: [2], out: "chars written: 3 + 3 = 6", cap: "<code>s += \"c\"</code> re-copies 2 old characters. Every step re-copies everything that came before it." },
-  { arr: ["a", "b", "c", "d"], hot: [0, 1, 2], on: [3], out: "chars written: 6 + 4 = 10", cap: "1+2+3+4 = n(n+1)/2 → a loop that <i>looks</i> O(n) is really <b>O(n²)</b>. This is the classic hidden TLE." },
-  { arr: ["a", "b", "c", "d"], on: [0, 1, 2, 3], out: "chars written: 4", cap: "Fix: collect pieces in a list and <code>\"\".join(parts)</code> once, one allocation, each char written exactly once → <b>O(n)</b>." },
+  { scene: `<span class="kicker">Why this example</span><p>A loop builds its answer with <code>s += c</code>, one character per step. It passes on 1,000 characters and times out on 100,000.</p><p>Here is the same loop building a 4-letter string, so every copy is visible:</p><table><tr><td>the loop</td><td>for c in "abcd": s += c</td></tr><tr><td>the result</td><td>"abcd", 4 characters</td></tr><tr><td>characters written</td><td><b>?</b></td></tr></table><p>Goal: count how many characters actually get written, and find a way to write each one only once.</p>`,
+    cap: "Each box is one character of the string object that exists after that step. Orange means copied again. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Ek loop apna answer <code>s += c</code> se banata hai, har step par ek character. 1,000 characters par pass, 100,000 par timeout.</p><p>Wahi loop 4 letter ki string banate hue, taaki har copy dikhe:</p><table><tr><td>loop</td><td>for c in "abcd": s += c</td></tr><tr><td>result</td><td>"abcd", 4 characters</td></tr><tr><td>kitne characters likhe</td><td><b>?</b></td></tr></table><p>Goal: ginna ki asal mein kitne characters likhe jaate hain, aur aisa tareeka dhoondhna jisme har ek sirf ek baar likha jaaye.</p>`,
+          cap: "Har box us string object ka ek character hai jo us step ke baad maujood hai. Orange matlab dobara copy hua. Next dabao." } },
+
+  { arr: ["a"], on: [0], out: "written so far: 1",
+    cap: "<code>s = \"a\"</code>: one character written. In Python, Java and JavaScript this object can never be edited, only replaced. That is what <b>immutable</b> means.",
+    ask: { q: "<code>s += \"b\"</code>. How many characters get written?", opts: ["1, just the b", "2: the a, copied, then the b"], a: 1,
+           why: "The old string cannot grow, so a new 2-character string is built, and the a is copied into it." },
+    hi: { out: "ab tak likhe: 1",
+          cap: "<code>s = \"a\"</code>: ek character likha. Python, Java aur JavaScript mein yeh object kabhi edit nahi ho sakta, sirf badla ja sakta hai. <b>Immutable</b> ka matlab yahi hai.",
+          ask: { q: "<code>s += \"b\"</code>. Kitne characters likhe jaayenge?", opts: ["1, sirf b", "2: a copy hua, phir b"],
+                 why: "Purani string badh nahi sakti, to nayi 2-character string banti hai, aur a usme copy hota hai." } } },
+
+  { arr: ["a", "b"], hot: [0], on: [1], out: "written: 1 + 2 = 3",
+    cap: "<code>s += \"b\"</code> built a <b>brand new</b> 2-character string and copied the a into it. The old <code>\"a\"</code> is thrown away.",
+    ask: { q: "<code>s += \"c\"</code>. What is the running total of characters written?", opts: ["4", "6"], a: 1,
+           why: "The new string has 3 characters, all written: 3 + 3 = 6." },
+    hi: { out: "likhe: 1 + 2 = 3",
+          cap: "<code>s += \"b\"</code> ne <b>bilkul nayi</b> 2-character string banayi aur a usme copy kiya. Purani <code>\"a\"</code> phenk di gayi.",
+          ask: { q: "<code>s += \"c\"</code>. Ab tak likhe characters ka total kya hoga?", opts: ["4", "6"],
+                 why: "Nayi string mein 3 characters hain, sab likhe gaye: 3 + 3 = 6." } } },
+
+  { arr: ["a", "b", "c"], hot: [0, 1], on: [2], out: "written: 3 + 3 = 6",
+    cap: "Two old characters copied again, plus the new c. Every step re-copies everything that came before it.",
+    ask: { q: "<code>s += \"d\"</code>. The total now?", opts: ["7", "10"], a: 1,
+           why: "4 more characters written: 6 + 4 = 10." },
+    hi: { out: "likhe: 3 + 3 = 6",
+          cap: "Do purane characters phir copy, plus naya c. Har step pichhla sab dobara copy karta hai.",
+          ask: { q: "<code>s += \"d\"</code>. Ab total?", opts: ["7", "10"],
+                 why: "4 aur characters likhe: 6 + 4 = 10." } } },
+
+  { arr: ["a", "b", "c", "d"], hot: [0, 1, 2], on: [3], out: "written: 6 + 4 = 10",
+    cap: "<b>10 characters written for a 4-character result.</b> For <var>n</var> characters it is <var>n</var>(<var>n</var> + 1) / 2. At <var>n</var> = 100,000 that is 5 × 10⁹. The loop that looks O(<var>n</var>) is <b>O(<var>n</var>²)</b>.",
+    ask: { q: "Instead, append each letter to a <b>list</b> and call <code>\"\".join(parts)</code> once. How many characters does the join write?", opts: ["4", "10"], a: 0,
+           why: "join adds up the lengths first, allocates one 4-character buffer, and copies each letter into it once." },
+    hi: { out: "likhe: 6 + 4 = 10",
+          cap: "<b>4 character ke result ke liye 10 characters likhe.</b> <var>n</var> characters ke liye yeh <var>n</var>(<var>n</var> + 1) / 2 hai. <var>n</var> = 100,000 par 5 × 10⁹. Jo loop O(<var>n</var>) dikhta hai woh <b>O(<var>n</var>²)</b> hai.",
+          ask: { q: "Iski jagah har letter ek <b>list</b> mein append karo aur <code>\"\".join(parts)</code> ek baar chalao. Join kitne characters likhega?", opts: ["4", "10"],
+                 why: "join pehle lengths jodta hai, ek 4-character buffer leta hai, aur har letter usme ek baar copy karta hai." } } },
+
+  { arr: ["a", "b", "c", "d"], on: [0, 1, 2, 3], out: "join: written 4",
+    cap: "<b>Each character written exactly once: O(<var>n</var>).</b> At 100,000 characters that is 200,000 steps, counting the appends, instead of 5 × 10⁹. Same output. In C++, <code>std::string</code> is mutable, so <code>+=</code> there is already cheap.",
+    hi: { out: "join: likhe 4",
+          cap: "<b>Har character theek ek baar likha: O(<var>n</var>).</b> 100,000 characters par yeh appends milakar 200,000 steps hain, 5 × 10⁹ ki jagah. Output wahi. C++ mein <code>std::string</code> mutable hai, to wahan <code>+=</code> pehle se sasta hai." } },
 ]},
 
 /* ---- hash map ---- */
-"hashmap": { kind: "hash", buckets: 6, fn: "index = hash(k) % 6", frames: [
-  { k: "'cat'", b: 4, cap: "<b>hash('cat')</b> turns the key into a huge integer, <code>% 6</code> folds it into a slot. One computation → we know exactly where to write. <b>O(1)</b>." },
-  { k: "'dog'", b: 1, cap: "<b>'dog'</b> lands in slot 1. Nothing was searched, nothing was compared. The key itself computed its own address." },
-  { k: "'bat'", b: 4, cap: "<b>Collision.</b> 'bat' hashes into slot 4 too. Both live there in a small list; a lookup compares within that tiny chain only." },
-  { k: "'owl'", b: 2, cap: "Runtimes keep the table &lt; ~2/3 full, so chains stay ~1 long on average. That average is where \"O(1)\" comes from. It is not a guarantee." },
-  { k: "'bat'?", b: 4, cap: "<b>Lookup</b> repeats the same one computation, jumps to slot 4, compares the short chain. Not a scan of the table. That is the whole trick." },
+/* Two Sum on [3, 10, 4, 6], target 10, in a 7-slot table. It is small enough
+   to follow by hand, 3 and 10 collide in slot 3, and the answer is found by
+   looking in exactly one slot. Lookup frames set look: the key is shown but
+   not stored. */
+"hashmap": { kind: "hash", buckets: 7, fn: "slot = x % 7", frames: [
+  { scene: `<span class="kicker">Why this example</span><p>Two Sum: find two numbers that add up to the target. Walking once, each number <var>x</var> asks one question: <b>have I already seen</b> 10 − <var>x</var>?</p><table><tr><td>numbers</td><td>3, 10, 4, 6</td></tr><tr><td>target</td><td>10</td></tr><tr><td>table</td><td>7 slots, slot = <var>x</var> mod 7</td></tr></table><p>Goal: answer every “seen it?” by looking in <b>one slot</b>, never by scanning.</p>`,
+    cap: "Left: the number being handled. Middle: the rule that picks its slot. Right: the 7 slots. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Two Sum: do numbers dhoondho jinka jodh target ho. Ek baar chalte hue har number <var>x</var> ek sawaal poochta hai: <b>kya 10 − <var>x</var> pehle dekha hai?</b></p><table><tr><td>numbers</td><td>3, 10, 4, 6</td></tr><tr><td>target</td><td>10</td></tr><tr><td>table</td><td>7 slots, slot = <var>x</var> mod 7</td></tr></table><p>Goal: har “dekha hai?” ka jawab <b>ek slot</b> mein dekh kar dena, kabhi scan karke nahi.</p>`,
+          cap: "Left: jis number par kaam ho raha hai. Beech mein: uska slot chunne wala rule. Right: 7 slots. Next dabao." } },
+
+  { k: "3", b: 3,
+    cap: "<b>3</b> needs 7. Slot 7 mod 7 = 0 is empty, so 7 has not been seen. Store 3: 3 mod 7 = <b>slot 3</b>. No other key was looked at.",
+    ask: { q: "Next is 10. It needs 0, which is not there either. Which slot does 10 go into?", opts: ["slot 3", "slot 10", "slot 0"], a: 0,
+           why: "10 mod 7 = 3. There is no slot 10: the table has only 7." },
+    hi: { cap: "<b>3</b> ko 7 chahiye. Slot 7 mod 7 = 0 khaali hai, to 7 nahi dekha. 3 store karo: 3 mod 7 = <b>slot 3</b>. Kisi aur key ko dekha tak nahi.",
+          ask: { q: "Agla 10 hai. Use 0 chahiye, jo bhi nahi hai. 10 kis slot mein jaayega?", opts: ["slot 3", "slot 10", "slot 0"],
+                 why: "10 mod 7 = 3. Slot 10 hai hi nahi: table mein sirf 7 hain." } } },
+
+  { k: "10", b: 3,
+    cap: "<b>Collision.</b> 10 also lands in slot 3, so slot 3 now holds a short list: 3, then 10. With endless possible keys and 7 slots, sharing is certain. A lookup here compares against two keys, not the whole table.",
+    ask: { q: "Next, 4 needs 6. To check whether 6 was seen, how many slots do you look in?", opts: ["all 7", "one: slot 6"], a: 1,
+           why: "6 mod 7 = 6, and 6 could only ever have been stored there." },
+    hi: { cap: "<b>Collision.</b> 10 bhi slot 3 mein girta hai, to slot 3 mein ab chhoti list hai: 3, phir 10. Anant keys aur 7 slots mein sharing pakki hai. Yahan lookup do keys se compare karta hai, poori table se nahi.",
+          ask: { q: "Agla, 4 ko 6 chahiye. 6 dekha hai ya nahi, iske liye kitne slots dekhoge?", opts: ["saare 7", "ek: slot 6"],
+                 why: "6 mod 7 = 6, aur 6 store hota to sirf wahin hota." } } },
+
+  { k: "4", b: 4,
+    cap: "Slot 6 is empty, so 6 has not been seen. Store 4 in 4 mod 7 = <b>slot 4</b>. Every step so far touched one slot.",
+    ask: { q: "Last, <b>6</b> needs 4. Which slot do you check?", opts: ["slot 4", "slot 6"], a: 0,
+           why: "You are looking for 4, and 4 mod 7 = 4. Slot 6 is where 6 itself would go." },
+    hi: { cap: "Slot 6 khaali hai, to 6 nahi dekha. 4 ko 4 mod 7 = <b>slot 4</b> mein store karo. Ab tak har step ne ek hi slot chhua.",
+          ask: { q: "Aakhri, <b>6</b> ko 4 chahiye. Kaunsa slot check karoge?", opts: ["slot 4", "slot 6"],
+                 why: "Aap 4 dhoondh rahe ho, aur 4 mod 7 = 4. Slot 6 woh jagah hai jahan 6 khud jaata." } } },
+
+  { k: "4?", b: 4, look: true,
+    cap: "<b>Found.</b> Slot 4 holds 4, so 4 + 6 = 10. Four numbers, four lookups, one slot each. For 10⁵ numbers that is 10⁵ lookups, not the 5 × 10⁹ pair checks.",
+    hi: { cap: "<b>Mil gaya.</b> Slot 4 mein 4 hai, to 4 + 6 = 10. Chaar numbers, chaar lookups, har ek mein ek slot. 10⁵ numbers ke liye 10⁵ lookups, 5 × 10⁹ pair checks nahi." } },
+
+  { k: "10?", b: 3, look: true,
+    cap: "Why it is O(1) <i>on average</i>: finding 10 means checking slot 3's short list, 2 keys. Real tables grow before they are about three-quarters full, so lists stay about one long. If every key collided, one list would hold everything: <b>O(<var>n</var>)</b>.",
+    hi: { cap: "Yeh <i>average</i> O(1) kyun hai: 10 dhoondhne ke liye slot 3 ki chhoti list check karni hai, 2 keys. Asli tables lagbhag teen-chauthai bharne se pehle badh jaati hain, to lists lagbhag ek ki rehti hain. Har key collide kare to ek list mein sab: <b>O(<var>n</var>)</b>." } },
 ]},
 
 /* ---- stack ---- */
+/* Checking "([{}])": the stack holds the brackets still waiting to close,
+   so the top is always the one the next closer must match. */
 "stack": { kind: "cells", arr: [], frames: [
-  { arr: ["("], on: [0], ptr: { top: 0 }, cap: "<b>push('(')</b> → goes on the end. A stack is <b>LIFO</b>: last in, first out." },
-  { arr: ["(", "["], on: [1], ptr: { top: 1 }, cap: "<b>push('[')</b>. Only the top is ever reachable. That restriction is the feature, not a limitation." },
-  { arr: ["(", "[", "{"], on: [2], ptr: { top: 2 }, cap: "<b>push('{')</b>. The stack now remembers the exact order of everything still unclosed." },
-  { arr: ["(", "["], hot: [1], ptr: { top: 1 }, cap: "Input <code>'}'</code> → <b>pop()</b> gives '{'. It matches, so we discard it. The most recent unclosed bracket is always the one that must close first." },
-  { arr: ["("], hot: [0], ptr: { top: 0 }, cap: "Input <code>']'</code> → pop gives '['. Matches again. This is why bracket matching is a stack and not a counter." },
-  { arr: [], out: "stack empty → valid", cap: "Input <code>')'</code> → pop '(' and the stack empties. Empty at the end = balanced. Push/pop are <b>O(1)</b>; total <b>O(n)</b>." },
+  { scene: `<span class="kicker">Why this example</span><p>Check that the brackets in <code>([{}])</code> close in the right order. Counting is not enough:</p><table><tr><td><code>([{}])</code></td><td>counts balance</td><td>valid</td></tr><tr><td><code>([)]</code></td><td>counts balance</td><td><b>invalid</b></td></tr></table><p>Goal: see why the bracket that must close next is always the one opened <b>most recently</b>, and which container hands you exactly that.</p>`,
+    cap: "The boxes below are the stack. The right-hand end is the top. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Check karo ki <code>([{}])</code> ke brackets sahi order mein band hote hain. Ginti kaafi nahi:</p><table><tr><td><code>([{}])</code></td><td>ginti barabar</td><td>valid</td></tr><tr><td><code>([)]</code></td><td>ginti barabar</td><td><b>invalid</b></td></tr></table><p>Goal: dekhna ki agla band hone wala bracket hamesha <b>sabse recent</b> khula kyun hota hai, aur kaunsa container theek wahi deta hai.</p>`,
+          cap: "Neeche ke boxes stack hain. Right wala sira top hai. Next dabao." } },
+
+  { arr: ["("], on: [0], ptr: { top: 0 }, out: "read ( : push",
+    cap: "<b>(</b> is an opener, so push it. It now waits for its partner. A stack only lets you add or remove at the top: <b>last in, first out</b>.",
+    hi: { out: "( padha: push",
+          cap: "<b>(</b> opener hai, to push karo. Ab yeh apne partner ka intezaar karta hai. Stack sirf top par jodne ya hataane deta hai: <b>last in, first out</b>." } },
+
+  { arr: ["(", "["], on: [1], ptr: { top: 1 }, out: "read [ : push",
+    cap: "<b>[</b> goes on top of <b>(</b>. The stack now holds everything still unclosed, in the order it was opened.",
+    hi: { out: "[ padha: push",
+          cap: "<b>[</b> <b>(</b> ke upar jaata hai. Stack ab har abhi-tak-khula bracket rakhta hai, khulne ke order mein." } },
+
+  { arr: ["(", "[", "{"], on: [2], ptr: { top: 2 }, out: "read { : push",
+    cap: "<b>{</b> goes on top. Three brackets are waiting, and the one opened last sits at the top.",
+    ask: { q: "Next comes <b>}</b>. Which open bracket must it close?", opts: ["{, the one on top", "(, the first one opened"], a: 0,
+           why: "Whatever opened last must close first, or the brackets would cross." },
+    hi: { out: "{ padha: push",
+          cap: "<b>{</b> top par. Teen brackets intezaar mein, aur sabse baad khula top par baitha hai.",
+          ask: { q: "Ab <b>}</b> aata hai. Use kaunsa khula bracket band karna hai?", opts: ["{, jo top par hai", "(, jo pehle khula"],
+                 why: "Jo aakhri mein khula woh pehle band hoga, warna brackets ek doosre ko kaatenge." } } },
+
+  { arr: ["(", "["], hot: [1], ptr: { top: 1 }, out: "read } : top is {, match, pop",
+    cap: "<b>}</b> matches the top, <b>{</b>, so pop it. The top is now <b>[</b>: the next most recent unfinished bracket, exactly the next one due to close. In <code>([)]</code>, this is where it fails: <b>)</b> arrives while <b>[</b> is on top.",
+    ask: { q: "Then <b>]</b> arrives. What is on top when it does?", opts: ["[", "("], a: 0,
+           why: "{ was popped, so [ is on top again, and ] matches it." },
+    hi: { out: "} padha: top {, match, pop",
+          cap: "<b>}</b> top wale <b>{</b> se match karta hai, to pop. Ab top <b>[</b> hai: agla sabse recent adhoora bracket, theek wahi jo agla band hona hai. <code>([)]</code> yahin fail hota hai: <b>)</b> tab aata hai jab top par <b>[</b> hai.",
+          ask: { q: "Phir <b>]</b> aata hai. Tab top par kya hai?", opts: ["[", "("],
+                 why: "{ pop ho gaya, to [ phir top par hai, aur ] usse match karta hai." } } },
+
+  { arr: ["("], hot: [0], ptr: { top: 0 }, out: "read ] : top is [, match, pop",
+    cap: "<b>]</b> matches <b>[</b>. Pop. Only <b>(</b> is left, waiting for the last closer.",
+    ask: { q: "Last, <b>)</b> pops the <b>(</b> and the stack is empty. Is <code>([{}])</code> valid?", opts: ["yes", "only if the counts also match"], a: 0,
+           why: "Every closer matched the top, and nothing is left open. The counts add nothing." },
+    hi: { out: "] padha: top [, match, pop",
+          cap: "<b>]</b> <b>[</b> se match. Pop. Sirf <b>(</b> bacha, aakhri closer ke intezaar mein.",
+          ask: { q: "Aakhri, <b>)</b> <b>(</b> ko pop karta hai aur stack khaali. Kya <code>([{}])</code> valid hai?", opts: ["haan", "sirf agar ginti bhi match kare"],
+                 why: "Har closer ne top se match kiya, aur kuch khula nahi bacha. Ginti kuch nahi jodti." } } },
+
+  { arr: [], out: "read ) : pop (, stack empty -> valid",
+    cap: "Empty at the end means balanced. Each bracket was pushed once and popped once, so the check is <b>O(<var>n</var>)</b>, with each push and pop O(1).",
+    hi: { out: ") padha: ( pop, stack khaali -> valid",
+          cap: "End mein khaali matlab balanced. Har bracket ek baar push aur ek baar pop hua, to check <b>O(<var>n</var>)</b> hai, har push aur pop O(1)." } },
 ]},
 
-/* ---- queue ---- */
+/* The fewest steps from A to D, with a detour: A: B C, B: D, C: E, E: D.
+   The queue finishes everything 1 step away before anything 2 steps away. */
 "queue": { kind: "cells", arr: [], frames: [
-  { arr: ["A"], on: [0], ptr: { front: 0, back: 0 }, cap: "<b>append(A)</b>. A queue is <b>FIFO</b>: first in, first out, the order BFS needs to visit level by level." },
-  { arr: ["A", "B", "C"], on: [1, 2], ptr: { front: 0, back: 2 }, cap: "A's neighbours B and C join the <b>back</b>. They are one level deeper, so they must wait." },
-  { arr: ["B", "C"], hot: [0], ptr: { front: 0, back: 1 }, cap: "<b>popleft()</b> takes A from the <b>front</b>, the oldest, i.e. the shallowest node. B is next." },
-  { arr: ["C", "D"], on: [1], ptr: { front: 0, back: 1 }, cap: "Process B, push its neighbour D. Level 1 drains before level 2 starts. That is exactly why BFS finds the <b>shortest</b> path in an unweighted graph." },
-  { arr: ["D"], hot: [0], ptr: { front: 0, back: 0 }, cap: "Use <code>collections.deque</code>: popleft is <b>O(1)</b>. <code>list.pop(0)</code> shifts every element and is O(n), an O(V+E) BFS silently becomes O(V²)." },
+  { scene: `<span class="kicker">Why this example</span><p>Find the fewest steps from A to D. There is a short route and a detour:</p><table><tr><td>A</td><td>links to B, C</td></tr><tr><td>B</td><td>links to D</td></tr><tr><td>C</td><td>links to E</td></tr><tr><td>E</td><td>links to D</td></tr></table><p>A B D is 2 steps. A C E D is 3. Goal: see why taking places in <b>arrival order</b> always finds the 2.</p>`,
+    cap: "The boxes below are the queue: take from the front, add at the back. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>A se D tak sabse kam steps dhoondho. Ek chhota raasta hai aur ek chakkar:</p><table><tr><td>A</td><td>B, C se juda</td></tr><tr><td>B</td><td>D se juda</td></tr><tr><td>C</td><td>E se juda</td></tr><tr><td>E</td><td>D se juda</td></tr></table><p>A B D 2 steps hai. A C E D 3. Goal: dekhna ki <b>aane ke order</b> mein places lene se hamesha 2 kyun milta hai.</p>`,
+          cap: "Neeche ke boxes queue hain: aage se lo, peeche jodo. Next dabao." } },
+
+  { arr: ["A"], on: [0], ptr: { front: 0, back: 0 }, out: "start: A, 0 steps",
+    cap: "Start with A in the queue. A queue is <b>first in, first out</b>: things leave in the order they arrived.",
+    ask: { q: "Take A from the front. What joins the back?", opts: ["B and C, 1 step away", "D"], a: 0,
+           why: "A links to B and C. D is not next to A." },
+    hi: { out: "shuru: A, 0 steps",
+          cap: "Queue mein A se shuru. Queue <b>first in, first out</b> hai: cheezein usi order mein nikalti hain jismein aayi.",
+          ask: { q: "Aage se A lo. Peeche kya judta hai?", opts: ["B aur C, 1 step door", "D"],
+                 why: "A B aur C se juda hai. D A ke paas nahi." } } },
+
+  { arr: ["B", "C"], on: [0, 1], ptr: { front: 0, back: 1 }, out: "B = 1, C = 1",
+    cap: "B and C join the back, both 1 step from A. Everything in the queue right now is at distance 1.",
+    ask: { q: "Take B from the front. What joins the back?", opts: ["D", "E"], a: 0,
+           why: "B links only to D." },
+    hi: { out: "B = 1, C = 1",
+          cap: "B aur C peeche jude, dono A se 1 step door. Abhi queue mein sab distance 1 par hai.",
+          ask: { q: "Aage se B lo. Peeche kya judta hai?", opts: ["D", "E"],
+                 why: "B sirf D se juda hai." } } },
+
+  { arr: ["C", "D"], hot: [1], ptr: { front: 0, back: 1 }, out: "D = 2, queued behind C",
+    cap: "D joins at distance 2, but it waits behind C, which is only 1 step away. Distance 1 always drains before distance 2 starts.",
+    ask: { q: "C comes out next, not D. Why?", opts: ["C arrived first, and it is closer", "C comes first in the alphabet"], a: 0,
+           why: "Arrival order is distance order here, because each place joins one step after the place that found it." },
+    hi: { out: "D = 2, C ke peeche",
+          cap: "D distance 2 par judta hai, par C ke peeche rukta hai, jo sirf 1 step door hai. Distance 1 hamesha distance 2 shuru hone se pehle khatam hota hai.",
+          ask: { q: "Agla C nikalta hai, D nahi. Kyun?", opts: ["C pehle aaya, aur paas hai", "C alphabet mein pehle hai"],
+                 why: "Yahan aane ka order hi doori ka order hai, kyunki har place use dhoondhne wale se ek step baad judta hai." } } },
+
+  { arr: ["D", "E"], on: [0], hot: [1], ptr: { front: 0, back: 1 }, out: "C adds E = 2",
+    cap: "C adds E, also at distance 2, behind D. The detour is in the queue, but it is behind the answer.",
+    hi: { out: "C ne E = 2 joda",
+          cap: "C ne E joda, woh bhi distance 2 par, D ke peeche. Chakkar queue mein hai, par answer ke peeche." } },
+
+  { arr: ["E"], hot: [0], ptr: { front: 0, back: 0 }, out: "D taken: A to D in 2 steps",
+    cap: "<b>D comes out at distance 2</b>, via B. A stack takes the newest first and would have gone A, C, E, D: 3 steps. Use a real deque here: <code>list.pop(0)</code> shifts every item and turns an O(<var>V</var> + <var>E</var>) search into O(<var>V</var>²).",
+    hi: { out: "D nikla: A se D 2 steps mein",
+          cap: "<b>D distance 2 par nikalta hai</b>, B se hokar. Stack sabse naya pehle leta aur A, C, E, D jaata: 3 steps. Yahan asli deque use karo: <code>list.pop(0)</code> har item khisakata hai aur O(<var>V</var> + <var>E</var>) search ko O(<var>V</var>²) bana deta hai." } },
 ]},
 
 /* ---- heap ---- */
+/* The heap 2, 5, 7, 9, 6, 8 takes a new job of urgency 1 and then hands out
+   the smallest. Node g is index 6, the next free slot, hidden until the push. */
 "heap": {
   kind: "tree", w: 560, h: 300,
   nodes: { a: { x: 280, y: 44, t: "2", sub: "i=0" }, b: { x: 160, y: 130, t: "5", sub: "i=1" }, c: { x: 400, y: 130, t: "7", sub: "i=2" },
-           d: { x: 100, y: 216, t: "9", sub: "i=3" }, e: { x: 222, y: 216, t: "6", sub: "i=4" }, f: { x: 340, y: 216, t: "8", sub: "i=5" } },
-  edges: [["a", "b"], ["a", "c"], ["b", "d"], ["b", "e"], ["c", "f"]],
+           d: { x: 100, y: 216, t: "9", sub: "i=3" }, e: { x: 222, y: 216, t: "6", sub: "i=4" }, f: { x: 340, y: 216, t: "8", sub: "i=5" },
+           g: { x: 460, y: 216, t: "1", sub: "i=6", hidden: true } },
+  edges: [["a", "b"], ["a", "c"], ["b", "d"], ["b", "e"], ["c", "f"], ["c", "g"]],
   frames: [
-    { on: ["a"], out: "min-heap: every parent ≤ its children", cap: "A heap is <b>not</b> a sorted array. It only promises one thing: <b>the root is the minimum</b>. That weaker promise is what makes it cheap." },
-    { on: ["a", "b", "c"], edge: [["a", "b"], ["a", "c"]], cap: "Check the rule locally: 2 ≤ 5 and 2 ≤ 7. Nothing says 5 &lt; 7, <b>siblings are unordered</b>, and that is fine." },
-    { t: { f: "1" }, on: ["f"], out: "push(1) at index 5 = the next free slot", cap: "<b>push(1)</b>. It goes at the end of the array so the tree stays complete (no gaps). But 1 &lt; its parent 7, so the rule is broken." },
-    { t: { c: "1", f: "7" }, on: ["c", "f"], edge: [["c", "f"]], out: "swap with parent", cap: "<b>Sift up</b>: swap with the parent. One comparison, one swap. The rest of the tree is untouched." },
-    { t: { a: "1", c: "2", f: "7" }, on: ["a", "c"], edge: [["a", "c"]], out: "swap again → new min at the root", cap: "1 &lt; 2, so swap again. It stops here. You only ever walk one root-to-leaf path → <b>O(log n)</b>, not O(n)." },
-    { t: { a: "1", c: "2", f: "7" }, on: ["a"], dim: ["b", "c", "d", "e", "f"], out: "heap[0] is the answer · no children pointers needed", cap: "<b>pop</b> is the mirror: take the root, move the last element up, sift <i>down</i>. And it is all one flat array, children of <code>i</code> are <code>2i+1</code> and <code>2i+2</code>." },
+    { scene: `<span class="kicker">Why this example</span><p>A scheduler keeps waiting jobs by urgency: smaller runs sooner. It needs two operations, over and over: <b>add a job</b> and <b>take the smallest</b>.</p><table><tr><td>waiting</td><td>2, 5, 7, 9, 6, 8</td></tr><tr><td>arrives</td><td>a job with urgency 1</td></tr><tr><td>then</td><td>take the smallest</td></tr></table><p>Goal: see how both work by walking <b>one path</b> of the tree, never the whole thing.</p>`,
+      cap: "Each box is a job's urgency; the small label is its position in the underlying array. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Scheduler waiting jobs ko urgency se rakhta hai: chhota pehle chalta hai. Use do operations chahiye, baar baar: <b>job jodo</b> aur <b>sabse chhoti lo</b>.</p><table><tr><td>waiting</td><td>2, 5, 7, 9, 6, 8</td></tr><tr><td>aati hai</td><td>urgency 1 wali job</td></tr><tr><td>phir</td><td>sabse chhoti lo</td></tr></table><p>Goal: dekhna ki dono tree ka <b>ek raasta</b> chal kar kaise hote hain, poora tree kabhi nahi.</p>`,
+            cap: "Har box ek job ki urgency hai; chhota label andar ke array mein uski position hai. Next dabao." } },
+
+    { on: ["a"], out: "min-heap: every parent <= its children",
+      cap: "The root, 2, is the minimum. That is the only thing a heap promises. It is <b>not</b> a sorted array: the array here is 2, 5, 7, 9, 6, 8.",
+      ask: { q: "5 and 7 are siblings, both children of 2. Must 5 be smaller than 7?", opts: ["yes", "no: only parent ≤ child is required"], a: 1,
+             why: "The rule links each parent to its own children. Siblings are never compared." },
+      hi: { out: "min-heap: har parent <= uske children",
+            cap: "Root, 2, minimum hai. Heap bas itna hi vaada karta hai. Yeh sorted array <b>nahi</b> hai: yahan array hai 2, 5, 7, 9, 6, 8.",
+            ask: { q: "5 aur 7 siblings hain, dono 2 ke children. Kya 5 ko 7 se chhota hona zaroori hai?", opts: ["haan", "nahi: sirf parent ≤ child zaroori hai"],
+                   why: "Niyam har parent ko uske apne children se jodta hai. Siblings kabhi compare nahi hote." } } },
+
+    { on: ["a", "b", "c"], edge: [["a", "b"], ["a", "c"]], out: "2 <= 5 and 2 <= 7; 5 vs 7 does not matter",
+      cap: "Check the rule locally: 2 ≤ 5 and 2 ≤ 7. Siblings are unordered, and that weaker promise is what makes repairs cheap.",
+      ask: { q: "A job with urgency 1 arrives. Where is it placed first?", opts: ["at the root, since it is smallest", "at the next free slot: index 6, under 7"], a: 1,
+             why: "Adding at the end keeps the tree full, with no gaps. The rule gets fixed afterwards." },
+      hi: { out: "2 <= 5 aur 2 <= 7; 5 vs 7 se farak nahi",
+            cap: "Niyam local check karo: 2 ≤ 5 aur 2 ≤ 7. Siblings unordered hain, aur yahi kamzor vaada repair ko sasta banata hai.",
+            ask: { q: "Urgency 1 wali job aati hai. Pehle use kahan rakha jaata hai?", opts: ["root par, kyunki sabse chhoti hai", "agli khaali jagah: index 6, 7 ke neeche"],
+                   why: "End mein jodne se tree bhara rehta hai, koi gap nahi. Niyam baad mein theek hota hai." } } },
+
+    { show: ["g"], on: ["g"], edge: [["c", "g"]], out: "push(1) at index 6: 1 < its parent 7",
+      cap: "1 goes to index 6, the next free slot, as a child of 7. The tree is still full, but 1 &lt; 7, so the parent rule is broken on this one edge.",
+      ask: { q: "<b>Sift up</b>: 1 swaps with its parent 7. Its new parent is 2. Swap again?", opts: ["yes, 1 < 2", "no, stop there"], a: 0,
+             why: "1 is still smaller than its parent, so the rule is still broken one level up." },
+      hi: { out: "index 6 par push(1): 1 < parent 7",
+            cap: "1 index 6 par jaata hai, agli khaali jagah, 7 ke child ki tarah. Tree ab bhi bhara hai, par 1 &lt; 7, to is ek edge par parent wala niyam toot gaya.",
+            ask: { q: "<b>Sift up</b>: 1 apne parent 7 se swap hota hai. Naya parent 2 hai. Phir swap?", opts: ["haan, 1 < 2", "nahi, wahin ruko"],
+                   why: "1 ab bhi apne parent se chhota hai, to ek level upar niyam ab bhi toota hai." } } },
+
+    { show: ["g"], t: { c: "1", g: "7" }, on: ["c", "g"], edge: [["c", "g"]], out: "swap 1 and 7",
+      cap: "One comparison, one swap. 7 now sits under 1, which is fine. The rest of the tree was never touched.",
+      hi: { out: "1 aur 7 swap",
+            cap: "Ek comparison, ek swap. 7 ab 1 ke neeche hai, jo theek hai. Baaki tree ko chhua bhi nahi." } },
+
+    { show: ["g"], t: { a: "1", c: "2", g: "7" }, on: ["a", "c"], edge: [["a", "c"]], out: "swap 1 and 2: the new minimum is on top",
+      cap: "1 &lt; 2, so swap again, and 1 reaches the root. <b>Two swaps</b>, one root-to-leaf path. In a heap of <var>n</var> items that path is about log₂ <var>n</var> long.",
+      ask: { q: "Now <b>pop()</b>: take the 1. Which job moves up to the root before fixing things?", opts: ["7, the last item in the array", "2, the smaller child"], a: 0,
+             why: "Moving the last item up keeps the tree full. Then it sifts down." },
+      hi: { out: "1 aur 2 swap: naya minimum top par",
+            cap: "1 &lt; 2, to phir swap, aur 1 root par pahunch gaya. <b>Do swaps</b>, ek root-to-leaf raasta. <var>n</var> items ki heap mein yeh raasta lagbhag log₂ <var>n</var> lamba hai.",
+            ask: { q: "Ab <b>pop()</b>: 1 lo. Theek karne se pehle kaunsi job root par jaati hai?", opts: ["7, array ka aakhri item", "2, chhota child"],
+                   why: "Aakhri item upar le jaane se tree bhara rehta hai. Phir woh neeche sift hota hai." } } },
+
+    { t: { a: "7", c: "2" }, on: ["a"], out: "pop: 1 leaves, 7 moves to the root",
+      cap: "1 is handed out. The last item, 7, moves to the root and index 6 is empty again. Now 7 is bigger than its children, so it must go <b>down</b>.",
+      ask: { q: "7's children are 5 and 2. Which one does it swap with?", opts: ["2, the smaller child", "5, the left child"], a: 0,
+             why: "Swap with the smaller child, and that child becomes the parent of the other: 2 ≤ 5 holds." },
+      hi: { out: "pop: 1 gaya, 7 root par aaya",
+            cap: "1 de diya gaya. Aakhri item, 7, root par aata hai aur index 6 phir khaali. Ab 7 apne children se bada hai, to use <b>neeche</b> jaana hai.",
+            ask: { q: "7 ke children 5 aur 2 hain. Kiske saath swap karega?", opts: ["2, chhota child", "5, left child"],
+                   why: "Chhote child se swap karo, taaki woh doosre ka parent bane: 2 ≤ 5 sach rehta hai." } } },
+
+    { on: ["a", "c"], edge: [["a", "c"]], out: "swap 7 and 2; 7 <= 8, stop",
+      cap: "7 swaps with 2, then compares with its one child, 8. 7 ≤ 8, so it stops. Back to 2, 5, 7, 9, 6, 8. Pop also walked <b>one path</b>: O(log <var>n</var>). And it is all a flat array: the children of <var>i</var> are 2<var>i</var> + 1 and 2<var>i</var> + 2.",
+      hi: { out: "7 aur 2 swap; 7 <= 8, ruko",
+            cap: "7, 2 se swap hota hai, phir apne ek child, 8, se compare. 7 ≤ 8, to ruk jaata hai. Wapas 2, 5, 7, 9, 6, 8. Pop ne bhi <b>ek raasta</b> chala: O(log <var>n</var>). Aur sab ek flat array hai: <var>i</var> ke children 2<var>i</var> + 1 aur 2<var>i</var> + 2." } },
   ]
 },
 
 /* ---- recursion ---- */
+/* ways(4) for a 4-step staircase, climbing 1 or 2 at a time: 5 calls, 3 deep,
+   and ways(2) computed twice, which is the whole case for memoising. */
 "recursion-tree": {
-  kind: "tree", w: 640, h: 320,
-  nodes: { n4: { x: 320, y: 40, t: "f(4)" }, n3: { x: 200, y: 118, t: "f(3)" }, m2: { x: 470, y: 118, t: "f(2)" },
-           n2: { x: 120, y: 196, t: "f(2)" }, n1: { x: 280, y: 196, t: "f(1)" },
-           m1: { x: 410, y: 196, t: "f(1)" }, m0: { x: 530, y: 196, t: "f(0)" },
-           k1: { x: 70, y: 274, t: "f(1)" }, k0: { x: 176, y: 274, t: "f(0)" } },
-  edges: [["n4", "n3"], ["n4", "m2"], ["n3", "n2"], ["n3", "n1"], ["n2", "k1"], ["n2", "k0"], ["m2", "m1"], ["m2", "m0"]],
+  kind: "tree", w: 600, h: 250,
+  nodes: { w4: { x: 300, y: 40, t: "ways(4)", w: 90 }, w3: { x: 180, y: 120, t: "ways(3)", w: 90 }, v2: { x: 440, y: 120, t: "ways(2)", w: 90 },
+           w2: { x: 100, y: 200, t: "ways(2)", w: 90 }, w1: { x: 260, y: 200, t: "ways(1)", w: 90 } },
+  edges: [["w4", "w3"], ["w4", "v2"], ["w3", "w2"], ["w3", "w1"]],
   frames: [
-    { on: ["n4"], dim: ["n3", "m2", "n2", "n1", "m1", "m0", "k1", "k0"], cap: "<code>fib(4)</code>. Recursion is a <b>promise</b>: assume fib(3) and fib(2) already work, and just add them. You never trace the whole thing in your head." },
-    { on: ["n4", "n3"], edge: [["n4", "n3"]], dim: ["m2", "m1", "m0"], cap: "The machine goes depth-first: fib(4) pauses (its frame sits on the call stack) and asks fib(3) first." },
-    { on: ["n3", "n2", "k1", "k0"], edge: [["n3", "n2"], ["n2", "k1"], ["n2", "k0"]], dim: ["m2", "m1", "m0"], cap: "Down to <b>f(1)</b> and <b>f(0)</b>, the <b>base cases</b>. They return without calling anything. No base case = infinite descent = RecursionError." },
-    { t: { k1: "1", k0: "0", n2: "1" }, on: ["n2", "k1", "k0"], dim: ["m2", "m1", "m0"], out: "returns bubble back up", cap: "Values return <b>upward</b>: 1 + 0 = 1. Each frame resumes exactly where it paused, with its own local variables intact." },
-    { t: { k1: "1", k0: "0", n2: "1", n1: "1", n3: "2" }, on: ["n3"], dim: ["m2", "m1", "m0"], cap: "fib(3) = fib(2) + fib(1) = 1 + 1 = <b>2</b>. Only now does fib(4) get to ask for its second branch." },
-    { t: { k1: "1", k0: "0", n2: "1", n1: "1", n3: "2", m1: "1", m0: "0", m2: "1", n4: "3" }, on: ["n4", "n3", "m2"], cap: "fib(4) = 2 + 1 = <b>3</b>. Depth = stack space = O(n). Nodes = work = O(2ⁿ)." },
-    { t: { k1: "1", k0: "0", n2: "1", n1: "1", n3: "2", m1: "1", m0: "0", m2: "1", n4: "3" }, on: ["n2", "m2"], dim: ["k1", "k0", "m1", "m0"], out: "f(2) computed twice, memoise it", cap: "Look: <b>f(2) was computed twice</b>. Cache each answer (<code>@lru_cache</code>) and the tree collapses to a line → O(n). <b>That is literally what DP is.</b>" },
+    { scene: `<span class="kicker">Why this example</span><p>A staircase of 4 steps, climbed 1 or 2 at a time. How many routes reach the top?</p><table><tr><td>the last move was a 1</td><td>so count the routes to step 3</td></tr><tr><td>the last move was a 2</td><td>so count the routes to step 2</td></tr><tr><td>base cases</td><td>ways(1) = 1, ways(2) = 2</td></tr></table><p>So <code>ways(4) = ways(3) + ways(2)</code>. Goal: watch the calls go down, the answers come back up, and spot the work done twice.</p>`,
+      cap: "Each box is one call. Its label becomes its answer once it returns. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>4 steps ki seedhi, ek baar mein 1 ya 2 chadh kar. Top tak kitne raaste hain?</p><table><tr><td>aakhri move 1 tha</td><td>to step 3 tak ke raaste gino</td></tr><tr><td>aakhri move 2 tha</td><td>to step 2 tak ke raaste gino</td></tr><tr><td>base cases</td><td>ways(1) = 1, ways(2) = 2</td></tr></table><p>To <code>ways(4) = ways(3) + ways(2)</code>. Goal: calls ko neeche jaate, answers ko upar aate dekhna, aur do baar hua kaam pakadna.</p>`,
+            cap: "Har box ek call hai. Return hone par uska label uska answer ban jaata hai. Next dabao." } },
+
+    { on: ["w4"], dim: ["w3", "v2", "w2", "w1"], out: "ways(4) = ways(3) + ways(2)",
+      cap: "<b>Trust, do not trace.</b> Assume <code>ways(3)</code> and <code>ways(2)</code> already give the right answers, and just add them. That one line is the whole function, plus the base cases.",
+      ask: { q: "The machine runs the calls one at a time. Which runs first?", opts: ["ways(3), while ways(4) waits", "both at once"], a: 0,
+             why: "ways(4) pauses with its frame on the call stack, and resumes when ways(3) returns." },
+      hi: { out: "ways(4) = ways(3) + ways(2)",
+            cap: "<b>Bharosa karo, trace nahi.</b> Maan lo <code>ways(3)</code> aur <code>ways(2)</code> sahi answers dete hain, aur bas jodo. Yahi ek line poora function hai, base cases ke saath.",
+            ask: { q: "Machine calls ek ek karke chalati hai. Pehle kaunsi?", opts: ["ways(3), jab tak ways(4) rukta hai", "dono ek saath"],
+                   why: "ways(4) apna frame call stack par rakh kar rukta hai, aur ways(3) ke return par phir chalta hai." } } },
+
+    { on: ["w4", "w3", "w2", "w1"], edge: [["w4", "w3"], ["w3", "w2"], ["w3", "w1"]], dim: ["v2"], out: "3 frames deep: ways(4), ways(3), then a base case",
+      cap: "<code>ways(3)</code> asks for <code>ways(2)</code> and <code>ways(1)</code>. Both are <b>base cases</b>: answered directly, with no further call. That is where the descent stops.",
+      ask: { q: "What do the two base cases return?", opts: ["2 and 1", "they call ways(0) and ways(-1)"], a: 0,
+             why: "Two routes reach step 2 (1+1 and 2), one route reaches step 1. No calls needed." },
+      hi: { out: "3 frames gehra: ways(4), ways(3), phir base case",
+            cap: "<code>ways(3)</code> <code>ways(2)</code> aur <code>ways(1)</code> maangta hai. Dono <b>base cases</b> hain: seedha answer, koi aur call nahi. Utarna yahin rukta hai.",
+            ask: { q: "Dono base cases kya return karte hain?", opts: ["2 aur 1", "woh ways(0) aur ways(-1) call karte hain"],
+                   why: "Step 2 tak do raaste (1+1 aur 2), step 1 tak ek. Koi call nahi chahiye." } } },
+
+    { t: { w2: "2", w1: "1", w3: "3" }, on: ["w3", "w2", "w1"], dim: ["v2"], out: "ways(3) = 2 + 1 = 3",
+      cap: "Answers return <b>upward</b>: <code>ways(3)</code> = 2 + 1 = 3. Its frame resumed exactly where it paused. Only now does <code>ways(4)</code> ask for its second part.",
+      ask: { q: "<code>ways(4)</code> now asks for <code>ways(2)</code>. Has that been worked out before?", opts: ["yes, inside ways(3)", "no, it is new"], a: 0,
+             why: "ways(3) already called ways(2). Without a memo, it is computed all over again." },
+      hi: { out: "ways(3) = 2 + 1 = 3",
+            cap: "Answers <b>upar</b> lautte hain: <code>ways(3)</code> = 2 + 1 = 3. Uska frame theek wahin se chala jahan ruka tha. Ab jaake <code>ways(4)</code> apna doosra hissa maangta hai.",
+            ask: { q: "<code>ways(4)</code> ab <code>ways(2)</code> maangta hai. Kya yeh pehle nikal chuka hai?", opts: ["haan, ways(3) ke andar", "nahi, naya hai"],
+                   why: "ways(3) ne pehle hi ways(2) call kiya tha. Memo ke bina yeh phir se compute hota hai." } } },
+
+    { t: { w2: "2", w1: "1", w3: "3", v2: "2", w4: "5" }, on: ["w4", "w3", "v2"], edge: [["w4", "w3"], ["w4", "v2"]], out: "ways(4) = 3 + 2 = 5: 5 calls, 3 deep",
+      cap: "<code>ways(4)</code> = 3 + 2 = <b>5</b>, matching the 5 routes. Memory is the depth: at most 3 frames at once, O(<var>n</var>). Time is the number of boxes: 5 here, about 2.5 × 10¹⁰ for 50 steps.",
+      hi: { out: "ways(4) = 3 + 2 = 5: 5 calls, 3 gehra",
+            cap: "<code>ways(4)</code> = 3 + 2 = <b>5</b>, 5 raaston se match. Memory depth hai: ek saath zyada se zyada 3 frames, O(<var>n</var>). Time boxes ki ginti hai: yahan 5, 50 steps par lagbhag 2.5 × 10¹⁰." } },
+
+    { t: { w2: "2", w1: "1", w3: "3", v2: "2", w4: "5" }, on: ["w2", "v2"], dim: ["w4", "w3", "w1"], out: "ways(2) computed twice: store it",
+      cap: "<b>ways(2) was worked out twice.</b> Store each answer the first time (<code>@lru_cache</code>, or a dict) and every <var>n</var> is computed once: about 50 calls for 50 steps. That is memoisation, and it is exactly what DP is.",
+      hi: { out: "ways(2) do baar nikla: store karo",
+            cap: "<b>ways(2) do baar nikala gaya.</b> Har answer pehli baar store karo (<code>@lru_cache</code>, ya dict) aur har <var>n</var> ek baar compute hota hai: 50 steps ke liye lagbhag 50 calls. Yahi memoisation hai, aur DP theek yahi hai." } },
   ]
 },
 
 /* ---- binary search ---- */
-"binary-search": { kind: "cells", arr: ["1", "3", "5", "7", "9", "11", "13", "15"], frames: [
-  { on: [], out: "target = 11", cap: "The array is <b>sorted</b>. That is the whole precondition. It means one comparison tells you about a <i>whole half</i>, not just one element." },
-  { band: [0, 7], ptr: { lo: 0, mid: 3, hi: 7 }, out: "a[mid] = 7 < 11", cap: "Look at the middle. 7 &lt; 11, and everything left of it is even smaller, so <b>the entire left half is eliminated by one comparison</b>." },
-  { band: [4, 7], dim: [0, 1, 2, 3], ptr: { lo: 4, mid: 5, hi: 7 }, out: "a[mid] = 11 = target", cap: "Search only 4..7. New middle is 11, found, in <b>2 steps</b> instead of 6." },
-  { band: [4, 7], dim: [0, 1, 2, 3], hot: [5], ptr: { mid: 5 }, out: "8 → 4 → 2 → 1", cap: "Each step halves what is left. How many halvings until 1? <b>log₂n</b>. n = 1,000,000 → about 20 comparisons." },
-  { arr: ["1", "3", "5", "7", "9", "11", "13", "15"], bad: [3, 4], ptr: { lo: 3, hi: 4 }, out: "while lo < hi · mid = (lo+hi)//2", cap: "<b>The bug lives here.</b> Use <code>lo &lt; hi</code> with <code>lo = mid+1</code> / <code>hi = mid</code> so the range always shrinks. If a branch can leave lo and hi unchanged, you loop forever." },
+/* Searching for 11 in 1 3 5 7 9 11 13 15, over [lo, hi). The dim slot at
+   position 8 is one past the end, so hi always has somewhere to point. */
+"binary-search": { kind: "cells", arr: ["1", "3", "5", "7", "9", "11", "13", "15", "·"], frames: [
+  { scene: `<span class="kicker">Why this example</span><p>The real list holds 10⁶ sorted IDs and must answer 10⁵ lookups a second. Here it is with eight:</p><table><tr><td>sorted IDs</td><td>1 3 5 7 9 11 13 15</td></tr><tr><td>looking for</td><td>11</td></tr><tr><td>reading one by one</td><td>up to 8 looks</td></tr></table><p>Goal: find 11 in 3 looks by throwing away half the list each time, and see why that is only possible because the list is sorted.</p>`,
+    cap: "The search range is <code>[lo, hi)</code>: <var>lo</var> is in, <var>hi</var> is out. The dim box is position 8, one past the end. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Asli list mein 10⁶ sorted IDs hain aur har second 10⁵ lookups ka jawab dena hai. Yahan aath ke saath:</p><table><tr><td>sorted IDs</td><td>1 3 5 7 9 11 13 15</td></tr><tr><td>dhoondhna</td><td>11</td></tr><tr><td>ek ek padhna</td><td>8 looks tak</td></tr></table><p>Goal: har baar aadhi list phenk kar 11 ko 3 looks mein dhoondhna, aur dekhna ki yeh sirf sorted hone ki wajah se possible hai.</p>`,
+          cap: "Search range <code>[lo, hi)</code> hai: <var>lo</var> andar, <var>hi</var> bahar. Dheema box position 8 hai, end se ek aage. Next dabao." } },
+
+  { band: [0, 7], hot: [4], dim: [8], ptr: { lo: 0, mid: 4, hi: 8 }, out: "[0, 8): mid = 4, a[4] = 9",
+    cap: "Look at the middle: <code>mid = lo + (hi - lo) / 2</code> = 4, which holds 9. One comparison with 11 decides which half survives.",
+    ask: { q: "9 &lt; 11. Which part can be thrown away?", opts: ["9 and everything left of it", "everything right of 9"], a: 0,
+           why: "The list is sorted, so 1, 3, 5 and 7 are even smaller than 9. None of them can be 11." },
+    hi: { out: "[0, 8): mid = 4, a[4] = 9",
+          cap: "Beech dekho: <code>mid = lo + (hi - lo) / 2</code> = 4, jahan 9 hai. 11 se ek comparison tay karta hai kaunsa aadha bachega.",
+          ask: { q: "9 &lt; 11. Kaunsa hissa phenka ja sakta hai?", opts: ["9 aur uske left ka sab", "9 ke right ka sab"],
+                 why: "List sorted hai, to 1, 3, 5 aur 7 9 se bhi chhote hain. Inme se koi 11 nahi ho sakta." } } },
+
+  { band: [5, 7], hot: [6], dim: [0, 1, 2, 3, 4, 8], ptr: { lo: 5, mid: 6, hi: 8 }, out: "lo = 5; [5, 8): mid = 6, a[6] = 13",
+    cap: "<code>lo = mid + 1</code> = 5. Five items gone in one comparison, because the list is sorted. The new middle is position 6, holding 13.",
+    ask: { q: "13 is bigger than 11. Where can 11 still be?", opts: ["left of 13, at position 5", "right of 13"], a: 0,
+           why: "Everything right of 13 is bigger still. Only position 5 is left." },
+    hi: { out: "lo = 5; [5, 8): mid = 6, a[6] = 13",
+          cap: "<code>lo = mid + 1</code> = 5. Ek comparison mein paanch items gaye, kyunki list sorted hai. Naya beech position 6 hai, jahan 13 hai.",
+          ask: { q: "13, 11 se bada hai. 11 ab kahan ho sakta hai?", opts: ["13 ke left, position 5 par", "13 ke right"],
+                 why: "13 ke right ka sab aur bhi bada hai. Sirf position 5 bachi." } } },
+
+  { band: [5, 5], hot: [5], dim: [0, 1, 2, 3, 4, 6, 7, 8], ptr: { lo: 5, mid: 5, hi: 6 }, out: "hi = 6; [5, 6): mid = 5, a[5] = 11",
+    cap: "<code>hi = mid</code> = 6. One position left, and the middle is that position: 5, holding 11. Since 11 ≥ 11, <code>hi = mid</code> again, and the range becomes [5, 5).",
+    ask: { q: "<var>lo</var> = <var>hi</var> = 5, so the loop stops. What is at position 5?", opts: ["11: found", "nothing: 11 is missing"], a: 0,
+           why: "The loop ends at the first position holding a value ≥ 11, and that value is exactly 11." },
+    hi: { out: "hi = 6; [5, 6): mid = 5, a[5] = 11",
+          cap: "<code>hi = mid</code> = 6. Ek position bachi, aur beech wahi hai: 5, jahan 11 hai. 11 ≥ 11, to phir <code>hi = mid</code>, aur range [5, 5) ban jaati hai.",
+          ask: { q: "<var>lo</var> = <var>hi</var> = 5, to loop rukta hai. Position 5 par kya hai?", opts: ["11: mil gaya", "kuch nahi: 11 hai hi nahi"],
+                 why: "Loop pehli aisi position par rukta hai jiski value ≥ 11 ho, aur woh value theek 11 hai." } } },
+
+  { hot: [5], dim: [0, 1, 2, 3, 4, 6, 7, 8], ptr: { found: 5 }, out: "3 looks: 8 -> 3 -> 1 -> 0 left",
+    cap: "<b>Found in 3 looks</b>, not 6. Each look cut the range to half or less: 8, then 3, then 1, then 0 left to search. That count is log₂ <var>n</var>, so 10⁶ IDs need about 20 looks. Searching for 10 takes the same 3 looks and stops at 11: where 10 would go.",
+    hi: { out: "3 looks: 8 -> 3 -> 1 -> 0 bache",
+          cap: "<b>3 looks mein mila</b>, 6 mein nahi. Har look ne range aadhi ya usse kam ki: 8, phir 3, phir 1, phir search ke liye 0. Yeh ginti log₂ <var>n</var> hai, to 10⁶ IDs ko lagbhag 20 looks. 10 ki search bhi wahi 3 looks leti hai aur 11 par rukti hai: jahan 10 jaata." } },
+
+  { band: [5, 5], bad: [5], dim: [0, 1, 2, 3, 4, 6, 7, 8], ptr: { lo: 5, mid: 5, hi: 6 }, out: "[5, 6): lo = mid would never move",
+    cap: "<b>The bug lives here.</b> In a range of one, <var>mid</var> equals <var>lo</var>. A branch that does <code>lo = mid</code> changes nothing, and the loop spins forever. Every branch must move past <var>mid</var> (<code>lo = mid + 1</code>) or pin <var>hi</var> to it (<code>hi = mid</code>).",
+    hi: { out: "[5, 6): lo = mid kabhi nahi hilega",
+          cap: "<b>Bug yahin rehta hai.</b> Ek ki range mein <var>mid</var> <var>lo</var> ke barabar hai. <code>lo = mid</code> karne wali branch kuch nahi badalti, aur loop hamesha ghoomta hai. Har branch ya to <var>mid</var> ke paar jaaye (<code>lo = mid + 1</code>) ya <var>hi</var> ko us par roke (<code>hi = mid</code>)." } },
 ]},
 
 /* ---- sliding window, fixed ---- */
@@ -638,62 +1014,233 @@ Object.assign(VIZ, {
 /* ---- what a variable actually holds, and what `b = a` copies ---- */
 Object.assign(VIZ, {
 
+/* The grid bug, [[0] * 3] * 3, is the example. The walk first shows one
+   address copied once (b = a), so that the grid, the same move three times,
+   needs no new idea. Every node starts hidden and each frame names what shows. */
 "aliasing": {
-  kind: "tree", w: 600, h: 250, arrows: true,
+  kind: "tree", w: 600, h: 290, arrows: true,
   nodes: {
-    a:   { x: 80,  y: 60,  t: "a",  w: 54 },
-    b:   { x: 80,  y: 140, t: "b",  w: 54 },
-    c:   { x: 80,  y: 140, t: "c",  w: 54, hidden: true },
-    obj: { x: 380, y: 60,  t: "[1, 2, 3]", w: 150 },
-    obj2:{ x: 380, y: 160, t: "[1, 2, 3]", w: 150, hidden: true },
+    a:   { x: 90,  y: 60,  t: "a",  w: 54, hidden: true },
+    b:   { x: 90,  y: 170, t: "b",  w: 54, hidden: true },
+    obj: { x: 400, y: 115, t: "[0, 0, 0]", w: 150, hidden: true },
+    g0:  { x: 100, y: 50,  t: "grid[0]", w: 96, hidden: true },
+    g1:  { x: 100, y: 135, t: "grid[1]", w: 96, hidden: true },
+    g2:  { x: 100, y: 220, t: "grid[2]", w: 96, hidden: true },
+    row: { x: 420, y: 135, t: "[0, 0, 0]", w: 150, hidden: true },
+    r0:  { x: 420, y: 50,  t: "[0, 0, 0]", w: 150, hidden: true },
+    r1:  { x: 420, y: 135, t: "[0, 0, 0]", w: 150, hidden: true },
+    r2:  { x: 420, y: 220, t: "[0, 0, 0]", w: 150, hidden: true },
   },
-  edges: [["a", "obj"], ["b", "obj"], ["c", "obj2"]],
+  edges: [],
   frames: [
-    { on: ["a", "obj"], dim: ["b"], show: ["a", "obj"], edge: [["a", "obj"]],
-      out: "the variable is a label, not a box holding the list",
-      cap: "<code>a = [1, 2, 3]</code> does two things: it builds a list <b>somewhere in memory</b>, and it makes <code>a</code> point at it. The name and the object are separate." },
-    { on: ["a", "b", "obj"], show: ["a", "b", "obj"], edge: [["a", "obj"], ["b", "obj"]],
-      out: "one object, two names",
-      cap: "<code>b = a</code> copies the <b>arrow, not the list</b>. Nothing was duplicated. There is still exactly one list, now with two names for it. This is <b>aliasing</b>." },
-    { t: { obj: "[1, 2, 3, 4]" }, hot: ["obj"], on: ["a", "b"], show: ["a", "b", "obj"],
-      edge: [["a", "obj"], ["b", "obj"]],
-      out: "b.append(4)  ->  a changed too",
-      cap: "So mutating through <code>b</code> is visible through <code>a</code>. Not a bug in the language. There was only ever one list. <b>This is the single most common silent bug in interview code.</b>" },
-    { on: ["a", "obj"], show: ["a", "c", "obj", "obj2"], edge: [["a", "obj"], ["c", "obj2"]],
-      out: "c = copy of a  ->  a second object",
-      cap: "To get a real second list you must <b>ask for a copy</b>, <code>a[:]</code>, <code>list(a)</code>, <code>new ArrayList&lt;&gt;(a)</code>. Now there are two objects and two arrows." },
-    { t: { obj2: "[1, 2, 3, 9]" }, hot: ["obj2"], on: ["c"], dim: ["a", "obj"],
-      show: ["a", "c", "obj", "obj2"], edge: [["a", "obj"], ["c", "obj2"]],
-      out: "shallow copy: the OUTER list is new",
-      cap: "Careful though: that copy is <b>shallow</b>. If the list held other lists, the inner ones are still shared, which is exactly why <code>[[0]*3]*3</code> gives you one row, three times." },
+    { scene: `<span class="kicker">Why this example</span><p>You need a 3 × 3 board of zeros. The short way in Python is <code>grid = [[0] * 3] * 3</code>. Then you place one piece with <code>grid[0][0] = 9</code>.</p><table><tr><td></td><td>row 0</td><td>row 1</td><td>row 2</td></tr><tr><td>what you meant</td><td>9 0 0</td><td>0 0 0</td><td>0 0 0</td></tr><tr><td>what prints</td><td>9 0 0</td><td><b>9 0 0</b></td><td><b>9 0 0</b></td></tr></table><p>Every language with objects has some version of this bug. Goal: see why one write changed three rows, using nothing but arrows.</p>`,
+      cap: "The walk starts with a single list, then builds the grid from the same idea. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Zeros ka 3 × 3 board chahiye. Python mein chhota tareeka hai <code>grid = [[0] * 3] * 3</code>. Phir <code>grid[0][0] = 9</code> se ek piece rakho.</p><table><tr><td></td><td>row 0</td><td>row 1</td><td>row 2</td></tr><tr><td>aap chahte the</td><td>9 0 0</td><td>0 0 0</td><td>0 0 0</td></tr><tr><td>print hua</td><td>9 0 0</td><td><b>9 0 0</b></td><td><b>9 0 0</b></td></tr></table><p>Objects wali har language mein is bug ka koi version hai. Goal: sirf arrows se samajhna ki ek write ne teen rows kyun badli.</p>`,
+            cap: "Walk ek akeli list se shuru hoti hai, phir usi idea se grid banti hai. Next dabao." } },
+
+    { show: ["a", "obj"], edges: [["a", "obj"]], on: ["a", "obj"], edge: [["a", "obj"]],
+      out: "a holds an address; the list lives elsewhere",
+      cap: "Start with one list. <code>a = [0, 0, 0]</code> does two things. It builds the list <b>somewhere in memory</b>, and it stores that list's <b>address</b> in <code>a</code>. The arrow is the address.",
+      ask: { q: "Now <code>b = a</code>. How many lists exist?", opts: ["one", "two"], a: 0,
+             why: "Assignment copies what is inside the variable, and that is an address." },
+      hi: { out: "a mein address hai; list kahin aur hai",
+            cap: "Ek list se shuru karo. <code>a = [0, 0, 0]</code> do kaam karta hai. List ko <b>memory mein kahin</b> banata hai, aur us list ka <b>address</b> <code>a</code> mein rakhta hai. Arrow hi address hai.",
+            ask: { q: "Ab <code>b = a</code>. Kitni lists hain?", opts: ["ek", "do"],
+                   why: "Assignment variable ke andar ki cheez copy karta hai, aur woh ek address hai." } } },
+
+    { show: ["a", "b", "obj"], edges: [["a", "obj"], ["b", "obj"]], on: ["a", "b", "obj"], edge: [["a", "obj"], ["b", "obj"]],
+      out: "one list, two names",
+      cap: "<code>b = a</code> copied the <b>address, not the list</b>. Nothing new was built. One list now has two names. This is called <b>aliasing</b>.",
+      ask: { q: "Now <code>b[0] = 9</code>. What does <code>print(a)</code> show?", opts: ["[0, 0, 0]", "[9, 0, 0]"], a: 1,
+             why: "Both arrows lead to the same list." },
+      hi: { out: "ek list, do naam",
+            cap: "<code>b = a</code> ne <b>address copy kiya, list nahi</b>. Kuch naya nahi bana. Ek list ke ab do naam hain. Ise <b>aliasing</b> kehte hain.",
+            ask: { q: "Ab <code>b[0] = 9</code>. <code>print(a)</code> kya dikhayega?", opts: ["[0, 0, 0]", "[9, 0, 0]"],
+                   why: "Dono arrows usi ek list tak jaate hain." } } },
+
+    { show: ["a", "b", "obj"], edges: [["a", "obj"], ["b", "obj"]], t: { obj: "[9, 0, 0]" }, on: ["a", "b", "obj"], edge: [["a", "obj"], ["b", "obj"]],
+      out: "b[0] = 9, and a sees it",
+      cap: "Writing through <code>b</code> changed the one list, so <code>a</code> sees the 9. The language did nothing odd. There was only ever one list.",
+      hi: { out: "b[0] = 9, aur a ko dikhta hai",
+            cap: "<code>b</code> se likhne par wahi ek list badli, to <code>a</code> ko bhi 9 dikhta hai. Language ne kuch ajeeb nahi kiya. List shuru se ek hi thi." } },
+
+    { show: ["g0", "g1", "g2", "row"], edges: [["g0", "row"], ["g1", "row"], ["g2", "row"]],
+      on: ["g0", "g1", "g2", "row"], edge: [["g0", "row"], ["g1", "row"], ["g2", "row"]],
+      out: "[[0] * 3] * 3: three slots, one row",
+      cap: "Now the grid. <code>[0] * 3</code> builds <b>one</b> row. The outer <code>* 3</code> copies what it holds three times, and what it holds is that row's <b>address</b>. So the grid has three slots, all pointing at one row.",
+      ask: { q: "<code>grid[0][0] = 9</code>. How many rows show the 9?", opts: ["one", "all three"], a: 1,
+             why: "grid[0], grid[1] and grid[2] all lead to the same row." },
+      hi: { out: "[[0] * 3] * 3: teen slots, ek row",
+            cap: "Ab grid. <code>[0] * 3</code> <b>ek</b> row banata hai. Bahar wala <code>* 3</code> jo rakha hai use teen baar copy karta hai, aur rakha hai us row ka <b>address</b>. To grid mein teen slots hain, teeno ek hi row ko point karte hue.",
+            ask: { q: "<code>grid[0][0] = 9</code>. Kitni rows mein 9 dikhega?", opts: ["ek", "teeno"],
+                   why: "grid[0], grid[1] aur grid[2] teeno usi ek row tak jaate hain." } } },
+
+    { show: ["g0", "g1", "g2", "row"], edges: [["g0", "row"], ["g1", "row"], ["g2", "row"]], t: { row: "[9, 0, 0]" },
+      on: ["g0", "g1", "g2", "row"], edge: [["g0", "row"], ["g1", "row"], ["g2", "row"]],
+      out: "one write, seen through all three slots",
+      cap: "That is the bug from the start: one row, reached three ways. Copying with <code>grid[:]</code> does not help. It copies the three addresses, and they still lead here.",
+      ask: { q: "The fix builds each row separately: <code>[[0] * 3 for _ in range(3)]</code>. After <code>grid[0][0] = 9</code>, how many rows change?", opts: ["one", "all three"], a: 0,
+             why: "The loop runs <code>[0] * 3</code> three times, so there are three rows." },
+      hi: { out: "ek write, teeno slots se dikhta hai",
+            cap: "Shuru wala bug yahi hai: ek row, teen raaston se. <code>grid[:]</code> se copy karna kaam nahi aata. Woh teen address copy karta hai, aur woh ab bhi yahin aate hain.",
+            ask: { q: "Fix har row alag banata hai: <code>[[0] * 3 for _ in range(3)]</code>. <code>grid[0][0] = 9</code> ke baad kitni rows badlengi?", opts: ["ek", "teeno"],
+                   why: "Loop <code>[0] * 3</code> teen baar chalata hai, to teen rows banti hain." } } },
+
+    { show: ["g0", "g1", "g2", "r0", "r1", "r2"], edges: [["g0", "r0"], ["g1", "r1"], ["g2", "r2"]], t: { r0: "[9, 0, 0]" },
+      on: ["g0", "r0"], edge: [["g0", "r0"]],
+      out: "three rows, three different addresses",
+      cap: "The comprehension builds <b>three</b> rows, so each slot holds a different address. Now one write changes one row. That is the whole fix.",
+      hi: { out: "teen rows, teen alag address",
+            cap: "Comprehension <b>teen</b> rows banata hai, to har slot mein alag address hai. Ab ek write ek hi row badalta hai. Poora fix bas itna hai." } },
+
+    { show: ["g0", "g1", "g2", "r0", "r1", "r2"], edges: [["g0", "r0"], ["g1", "r1"], ["g2", "r2"]], t: { r0: "[9, 0, 0]" },
+      on: ["g0", "g1", "g2", "r0", "r1", "r2"], edge: [["g0", "r0"], ["g1", "r1"], ["g2", "r2"]],
+      out: "copy an address: O(1). copy the cells: one step each",
+      cap: "The rule: <b>if you did not ask for a copy, you are sharing</b>. Copying an address costs one step. Copying what it points at costs a step per cell: 9 here, 10⁶ for a 1,000 × 1,000 board.",
+      hi: { out: "address copy: O(1). cells copy: har cell ek step",
+            cap: "Rule: <b>agar copy nahi maangi, to aap share kar rahe ho</b>. Address copy karna ek step hai. Jo woh point karta hai use copy karna har cell par ek step: yahan 9, aur 1,000 × 1,000 board par 10⁶." } },
   ]
 },
 
 /* ---- two's complement, and why a big number can go negative ---- */
+/* The midpoint bug in miniature: 8 bits instead of 32, so every bit fits
+   on screen. lo = 100, hi = 120 plays the part of the two billions. */
 "int-overflow": { kind: "cells", arr: ["0","1","1","1","1","1","1","1"], idx: false, frames: [
-  { on: [0], out: "8-bit signed: the first bit is the SIGN", cap: "A fixed-width integer is a fixed number of bits. Shown here as 8 for legibility; a real <code>int</code> is 32. The leading bit carries the sign." },
-  { arr: ["0","1","1","1","1","1","1","1"], on: [1,2,3,4,5,6,7], out: "0111 1111 = 127 = the largest value", cap: "With 8 bits the largest positive value is <b>127</b>. With 32 bits it is <b>2,147,483,647</b>, the number you have seen in every overflow bug." },
-  { arr: ["1","0","0","0","0","0","0","0"], bad: [0], hot: [1,2,3,4,5,6,7], out: "+1  ->  1000 0000 = -128", cap: "Add one and the carry rolls into the sign bit. The value does not saturate and does not raise an error. It <b>wraps around to the most negative number</b>. Java and C++ do this silently." },
-  { arr: ["1","0","0","0","0","0","0","0"], bad: [0], out: "(lo + hi) / 2 can overflow", cap: "This is the famous binary-search bug: <code>lo + hi</code> exceeds the range even though the answer would not. Write <code>lo + (hi - lo) / 2</code> instead." },
-  { arr: ["0","0","0","0","0","0","0","0"], on: [0,1,2,3,4,5,6,7], out: "Python: no fixed width, no overflow", cap: "Python integers grow as large as memory allows, so none of this can happen, but the arithmetic stops being O(1) on huge values, and any solution you port to Java or C++ inherits the problem." },
+  { scene: `<span class="kicker">Why this example</span><p>Binary search takes the middle of a range with <code>mid = (lo + hi) / 2</code>. In Java, with <var>lo</var> = 2,000,000,000 and <var>hi</var> = 2,100,000,000, that gives a <b>negative</b> index.</p><p>Here is the same bug shrunk to an 8-bit integer, whose largest value is 127, so every bit fits on screen:</p><table><tr><td>lo</td><td>100</td></tr><tr><td>hi</td><td>120</td></tr><tr><td>the middle you want</td><td><b>110</b></td></tr><tr><td>lo + hi</td><td>220, bigger than 127</td></tr></table><p>Goal: see where the sum goes, and why <code>lo + (hi - lo) / 2</code> never goes there.</p>`,
+    cap: "Each box below is one bit, one on/off switch. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Binary search range ka beech <code>mid = (lo + hi) / 2</code> se leta hai. Java mein <var>lo</var> = 2,000,000,000 aur <var>hi</var> = 2,100,000,000 par yeh <b>negative</b> index deta hai.</p><p>Yahi bug 8-bit integer mein chhota karke dekho, jiski sabse badi value 127 hai, taaki har bit screen par aa jaaye:</p><table><tr><td>lo</td><td>100</td></tr><tr><td>hi</td><td>120</td></tr><tr><td>jo beech chahiye</td><td><b>110</b></td></tr><tr><td>lo + hi</td><td>220, 127 se bada</td></tr></table><p>Goal: dekhna ki jodh kahan jaata hai, aur <code>lo + (hi - lo) / 2</code> wahan kabhi kyun nahi jaata.</p>`,
+          cap: "Neeche har box ek bit hai, ek on/off switch. Next dabao." } },
+
+  { on: [1,2,3,4,5,6,7], hot: [0], out: "0111 1111 = 127, the largest 8-bit value",
+    cap: "Bit values from the right are 1, 2, 4 and so on up to 64. The leftmost bit is the <b>sign</b>: 0 means positive. So the most this can hold is 64 + 32 + … + 1 = <b>127</b>. A 32-bit <code>int</code> is the same idea, and stops at 2,147,483,647.",
+    ask: { q: "Add 1 to 127. What does the 8-bit integer hold?", opts: ["128", "−128", "an error"], a: 1,
+           why: "The carry runs into the sign bit, and a sign bit of 1 means negative." },
+    hi: { out: "0111 1111 = 127, sabse badi 8-bit value",
+          cap: "Right se bits ki value 1, 2, 4, aise hi 64 tak. Sabse left wala bit <b>sign</b> hai: 0 matlab positive. To yeh zyada se zyada 64 + 32 + … + 1 = <b>127</b> rakh sakta hai. 32-bit <code>int</code> bhi aisa hi hai, aur 2,147,483,647 par rukta hai.",
+          ask: { q: "127 mein 1 jodo. 8-bit integer mein kya hoga?", opts: ["128", "−128", "error"],
+                 why: "Carry sign bit mein chala jaata hai, aur sign bit 1 matlab negative." } } },
+
+  { arr: ["1","0","0","0","0","0","0","0"], bad: [0], out: "127 + 1 = 1000 0000 = -128",
+    cap: "No error, no stop at 127. The carry flips the sign bit, and the value <b>wraps</b> to the most negative number. Java does this silently, and in C++ it is not even defined behaviour.",
+    ask: { q: "Now <var>lo</var> = 100, <var>hi</var> = 120. The true sum is 220. What does 8-bit <code>lo + hi</code> hold?", opts: ["220", "127", "−36"], a: 2,
+           why: "220 needs a 9th bit. Dropping it subtracts 256: 220 − 256 = −36." },
+    hi: { out: "127 + 1 = 1000 0000 = -128",
+          cap: "Na error, na 127 par rukna. Carry sign bit palat deta hai, aur value <b>wrap</b> hokar sabse negative number ban jaati hai. Java yeh chupchaap karta hai, aur C++ mein yeh defined behaviour bhi nahi.",
+          ask: { q: "Ab <var>lo</var> = 100, <var>hi</var> = 120. Asli jodh 220 hai. 8-bit <code>lo + hi</code> mein kya hoga?", opts: ["220", "127", "−36"],
+                 why: "220 ko 9th bit chahiye. Use girane se 256 ghat-ta hai: 220 − 256 = −36." } } },
+
+  { arr: ["1","1","0","1","1","1","0","0"], bad: [0], out: "100 + 120 = 1101 1100 = -36",
+    cap: "There it is. 220 in binary is 1101 1100, and with a sign bit that reads as <b>−36</b>. Then <code>mid = -36 / 2 = -18</code>. The search reads <code>a[-18]</code>: a crash in Java, garbage in C++.",
+    ask: { q: "The fix is <code>lo + (hi - lo) / 2</code>. What is the biggest number it ever builds?", opts: ["220", "120", "110"], a: 2,
+           why: "hi − lo = 20, half is 10, and 100 + 10 = 110. Nothing along the way passes 127." },
+    hi: { out: "100 + 120 = 1101 1100 = -36",
+          cap: "Yeh raha. 220 binary mein 1101 1100 hai, aur sign bit ke saath yeh <b>−36</b> padha jaata hai. Phir <code>mid = -36 / 2 = -18</code>. Search <code>a[-18]</code> padhta hai: Java mein crash, C++ mein kachra.",
+          ask: { q: "Fix hai <code>lo + (hi - lo) / 2</code>. Yeh sabse bada kaunsa number banata hai?", opts: ["220", "120", "110"],
+                 why: "hi − lo = 20, aadha 10, aur 100 + 10 = 110. Raste mein kuch bhi 127 ke paar nahi jaata." } } },
+
+  { arr: ["0","1","1","0","1","1","1","0"], on: [1,2,4,5,6], out: "lo + (hi - lo) / 2 = 100 + 10 = 110",
+    cap: "<b>110, the right middle.</b> The gap <code>hi - lo</code> is never bigger than <var>hi</var>, so it always fits. Adding half of it to <var>lo</var> lands between the two bounds, so that fits too. The big sum is simply never built.",
+    hi: { out: "lo + (hi - lo) / 2 = 100 + 10 = 110",
+          cap: "<b>110, sahi beech.</b> Gap <code>hi - lo</code> kabhi <var>hi</var> se bada nahi, to hamesha fit hota hai. Uska aadha <var>lo</var> mein jodo to dono bounds ke beech girta hai, to woh bhi fit hota hai. Bada jodh kabhi banta hi nahi." } },
+
+  { arr: ["0","1","1","0","1","1","1","0"], on: [1,2,4,5,6], out: "32-bit: 2,000,000,000 + 2,100,000,000 -> -194,967,296",
+    cap: "Scale back up to 32 bits and it is the same story. The sum 4,100,000,000 loses 2³², leaving −194,967,296, and half of that is the −97,483,648 from the top. Python never wraps, so the bug only appears when the code is ported.",
+    hi: { out: "32-bit: 2,000,000,000 + 2,100,000,000 -> -194,967,296",
+          cap: "32 bits par wapas jao, kahani wahi. Jodh 4,100,000,000 mein se 2³² girta hai, bachta hai −194,967,296, aur uska aadha upar wala −97,483,648. Python kabhi wrap nahi karta, to bug tabhi dikhta hai jab code port ho." } },
 ]},
 
-/* ---- where a negative number lands when you divide it ---- */
+/* The same midpoint line once the bounds go negative: lo = -7, hi = 0.
+   The number line shows where each language's answer lands. */
 "division-rounding": { kind: "cells", arr: ["-4","-3","-2","-1","0","1","2","3"], idx: false, frames: [
-  { on: [], out: "-7 / 2 = -3.5   ...so which way?", cap: "Integer division has to land on a whole number. <b>Languages disagree about which direction</b>, and the disagreement only shows up on negative numbers." },
-  { hot: [1], ptr: { "truncate": 1 }, out: "C, C++, Java, JavaScript: -3", cap: "Most languages <b>truncate toward zero</b>: they drop the fraction, so -3.5 becomes <b>-3</b>." },
-  { hot: [0], ptr: { "floor": 0 }, out: "Python: -7 // 2 = -4", cap: "Python <b>floors</b>: it rounds toward negative infinity, so -3.5 becomes <b>-4</b>. Same expression, different answer." },
-  { on: [4,5,6,7], dim: [0,1,2,3], out: "-7 % 3  ->  Python 2, Java/C++ -1", cap: "Modulo inherits the same split. Python's result takes the sign of the <b>divisor</b> (always 0..n-1, which is why hashing works cleanly); Java and C++ take the sign of the <b>dividend</b>." },
-  { on: [4,5,6], hot: [4], out: "((x % n) + n) % n  ->  always non-negative", cap: "So when an index must be non-negative (a circular buffer, a hash bucket), write it defensively. <b>This one line is worth memorising.</b>" },
+  { scene: `<span class="kicker">Why this example</span><p>Same line, <code>mid = (lo + hi) / 2</code>, but now the search range is negative: <var>lo</var> = −7, <var>hi</var> = 0. The sum is −7, and −7 / 2 is <b>−3.5</b>, which is not a whole number.</p><p>Every language has to round it, and they do not agree. Goal: see which way each one goes, and what that does to the remainder <code>%</code>.</p>`,
+    cap: "The boxes below are a number line from −4 to 3. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Wahi line, <code>mid = (lo + hi) / 2</code>, par ab search range negative hai: <var>lo</var> = −7, <var>hi</var> = 0. Jodh −7 hai, aur −7 / 2 = <b>−3.5</b>, jo whole number nahi hai.</p><p>Har language ko ise round karna padta hai, aur woh agree nahi karti. Goal: dekhna ki kaun kis taraf jaata hai, aur remainder <code>%</code> ka kya hota hai.</p>`,
+          cap: "Neeche ke boxes −4 se 3 tak number line hain. Next dabao." } },
+
+  { on: [0, 1], out: "-7 / 2 = -3.5, between -4 and -3",
+    cap: "−3.5 sits exactly between −4 and −3. Integer division has to pick one of the two neighbours.",
+    ask: { q: "Java and C++ <b>cut the fraction off</b>, moving towards zero. Which box?", opts: ["−3", "−4"], a: 0,
+           why: "Zero is to the right, and −3 is the neighbour on that side." },
+    hi: { out: "-7 / 2 = -3.5, -4 aur -3 ke beech",
+          cap: "−3.5 theek −4 aur −3 ke beech hai. Integer division ko in do padosiyon mein se ek chunna padta hai.",
+          ask: { q: "Java aur C++ <b>fraction kaat dete hain</b>, zero ki taraf. Kaunsa box?", opts: ["−3", "−4"],
+                 why: "Zero right mein hai, aur us taraf ka padosi −3 hai." } } },
+
+  { hot: [1], ptr: { "truncate": 1 }, out: "C, C++, Java: -7 / 2 = -3",
+    cap: "Truncating gives <b>−3</b>. On positive numbers, cutting towards zero and rounding down are the same thing, so this looks like ordinary division until a value goes negative.",
+    ask: { q: "Python's <code>//</code> always <b>rounds down</b>, towards minus infinity. Which box?", opts: ["−3", "−4"], a: 1,
+           why: "Down means left on this line, and −4 is the neighbour on the left." },
+    hi: { out: "C, C++, Java: -7 / 2 = -3",
+          cap: "Truncate karne se <b>−3</b>. Positive numbers par zero ki taraf kaatna aur neeche round karna ek hi baat hai, to yeh normal division jaisa lagta hai jab tak value negative na ho.",
+          ask: { q: "Python ka <code>//</code> hamesha <b>neeche round</b> karta hai, minus infinity ki taraf. Kaunsa box?", opts: ["−3", "−4"],
+                 why: "Is line par neeche matlab left, aur left wala padosi −4 hai." } } },
+
+  { hot: [0], ptr: { "floor": 0 }, out: "Python: -7 // 2 = -4",
+    cap: "Flooring gives <b>−4</b>. Same expression, same inputs, different <code>mid</code>. A search that ported from Python to Java now probes a different element.",
+    ask: { q: "Quotient and remainder must satisfy <code>q × 2 + r = −7</code>. In Java <var>q</var> = −3. What is the remainder?", opts: ["1", "−1"], a: 1,
+           why: "−3 × 2 = −6, and −6 + (−1) = −7." },
+    hi: { out: "Python: -7 // 2 = -4",
+          cap: "Floor karne se <b>−4</b>. Wahi expression, wahi inputs, alag <code>mid</code>. Python se Java mein port hui search ab alag element check karti hai.",
+          ask: { q: "Quotient aur remainder ko <code>q × 2 + r = −7</code> satisfy karna hai. Java mein <var>q</var> = −3. Remainder kya hai?", opts: ["1", "−1"],
+                 why: "−3 × 2 = −6, aur −6 + (−1) = −7." } } },
+
+  { hot: [3, 5], out: "-7 % 2  ->  Java -1, Python 1",
+    cap: "So the remainder splits too. Java: <b>−1</b>, the sign of −7. Python: <var>q</var> = −4, so −8 + <b>1</b> = −7, the sign of 2. Use −1 as an array index and Java crashes.",
+    hi: { out: "-7 % 2  ->  Java -1, Python 1",
+          cap: "To remainder bhi bant jaata hai. Java: <b>−1</b>, −7 ka sign. Python: <var>q</var> = −4, to −8 + <b>1</b> = −7, 2 ka sign. −1 ko array index banao to Java crash." } },
+
+  { on: [5], hot: [0], out: "both safe forms agree: 1 and -4",
+    cap: "Two safe forms. <code>((x % n) + n) % n</code> turns −1 into (−1 + 2) % 2 = <b>1</b> in every language. And <code>lo + (hi - lo) / 2</code> is −7 + 7 / 2 = <b>−4</b> in every language, because 7 / 2 is positive.",
+    hi: { out: "dono safe forms same: 1 aur -4",
+          cap: "Do safe forms. <code>((x % n) + n) % n</code> −1 ko har language mein (−1 + 2) % 2 = <b>1</b> bana deta hai. Aur <code>lo + (hi - lo) / 2</code> har language mein −7 + 7 / 2 = <b>−4</b> hai, kyunki 7 / 2 positive hai." } },
 ]},
 
 /* ---- the half-open range, and why it removes off-by-one errors ---- */
-"half-open": { kind: "cells", arr: ["a","b","c","d","e","f"], frames: [
-  { band: [0, 5], ptr: { lo: 0, hi: 5 }, out: "[0, 6)  ->  size 6 - 0 = 6", cap: "Write ranges as <b>[lo, hi)</b>: lo is included, hi is not. The size is then simply <b>hi − lo</b>, with no +1 to remember or forget." },
-  { band: [2, 4], dim: [0,1,5], ptr: { lo: 2, hi: 4 }, out: "[2, 5)  ->  size 5 - 2 = 3", cap: "Three elements, and the arithmetic says three. With an inclusive [2, 4] you would have to write hi − lo + 1, and that missing +1 is most off-by-one bugs." },
-  { band: [3, 2], dim: [0,1,2,4,5], ptr: { lo: 3, hi: 3 }, out: "[3, 3)  ->  size 0 = empty", cap: "Empty ranges are expressible without a special case: <code>lo == hi</code> means empty. An inclusive range has no honest way to say 'nothing'." },
-  { band: [0, 2], dim: [3,4,5], ptr: { lo: 0, mid: 2, hi: 5 }, out: "split: [lo, mid) and [mid, hi)", cap: "Splitting needs no adjustment either, the two halves meet exactly at <code>mid</code>, with nothing shared and nothing skipped. This is why binary search and merge sort are written this way." },
-  { band: [0, 5], on: [0,1,2,3,4,5], out: "invariant: the answer is always inside [lo, hi)", cap: "State the <b>invariant</b> before writing the loop, and every branch must keep it true. Once it is written down, the off-by-one questions answer themselves." },
+/* a to f at positions 0 to 5, plus the slot one past the end, drawn dim, so
+   that hi always has somewhere to point. The range [2, 5) = c, d, e is the
+   one the page keeps coming back to. */
+"half-open": { kind: "cells", arr: ["a","b","c","d","e","f","·"], frames: [
+  { scene: `<span class="kicker">Why this example</span><p>Six items shown in pages of 3, and split in half the way binary search and merge sort do. Every range is a chance to show an item twice or skip one.</p><table><tr><td>items</td><td>a b c d e f</td></tr><tr><td>positions</td><td>0 1 2 3 4 5</td></tr><tr><td>pages wanted</td><td>a b c, then d e f</td></tr></table><p>Goal: one rule for writing ranges, <code>[lo, hi)</code>, under which every size, split and empty range needs no +1 or −1.</p>`,
+    cap: "The dim box at the end is position 6: one past the last item. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Chhe items 3-3 ke pages mein, aur binary search aur merge sort ki tarah aadhe mein toote hue. Har range ek item do baar dikhane ya chhodne ka mauka hai.</p><table><tr><td>items</td><td>a b c d e f</td></tr><tr><td>positions</td><td>0 1 2 3 4 5</td></tr><tr><td>chahiye pages</td><td>a b c, phir d e f</td></tr></table><p>Goal: ranges likhne ka ek niyam, <code>[lo, hi)</code>, jismein har size, split aur khaali range ko koi +1 ya −1 nahi chahiye.</p>`,
+          cap: "End wala dheema box position 6 hai: aakhri item se ek aage. Next dabao." } },
+
+  { band: [0, 5], dim: [6], ptr: { lo: 0, hi: 6 }, out: "[0, 6): all six, size 6 - 0 = 6",
+    cap: "<b>[lo, hi)</b>: <var>lo</var> is included, <var>hi</var> is not. So [0, 6) is all six items, and <var>hi</var> points at the empty slot past the end. The size is simply <var>hi</var> − <var>lo</var>.",
+    ask: { q: "Which items are in <b>[2, 5)</b>?", opts: ["c, d, e", "c, d, e, f"], a: 0,
+           why: "Position 2 is in, position 5 is out: that leaves 2, 3 and 4." },
+    hi: { out: "[0, 6): saare chhe, size 6 - 0 = 6",
+          cap: "<b>[lo, hi)</b>: <var>lo</var> andar, <var>hi</var> bahar. To [0, 6) saare chhe items hain, aur <var>hi</var> end ke paar khaali slot ko point karta hai. Size bas <var>hi</var> − <var>lo</var> hai.",
+          ask: { q: "<b>[2, 5)</b> mein kaunse items hain?", opts: ["c, d, e", "c, d, e, f"],
+                 why: "Position 2 andar, position 5 bahar: bachte hain 2, 3 aur 4." } } },
+
+  { band: [2, 4], dim: [0, 1, 5, 6], ptr: { lo: 2, hi: 5 }, out: "[2, 5) = c d e, size 5 - 2 = 3",
+    cap: "Three items, and 5 − 2 says three. Written with both ends included, the same range is [2, 4], and its size needs 4 − 2 + 1. That missing +1 is most off-by-one bugs.",
+    ask: { q: "What is <b>[3, 3)</b>?", opts: ["just d", "empty"], a: 1,
+           why: "3 is in and 3 is out, so nothing is left. Size 3 − 3 = 0." },
+    hi: { out: "[2, 5) = c d e, size 5 - 2 = 3",
+          cap: "Teen items, aur 5 − 2 bhi teen kehta hai. Dono sire andar rakh kar yahi range [2, 4] hai, aur uske size ko 4 − 2 + 1 chahiye. Wahi gum +1 zyadatar off-by-one bugs hai.",
+          ask: { q: "<b>[3, 3)</b> kya hai?", opts: ["sirf d", "khaali"],
+                 why: "3 andar aur 3 bahar, to kuch nahi bachta. Size 3 − 3 = 0." } } },
+
+  { band: [3, 2], dim: [0, 1, 2, 3, 4, 5, 6], ptr: { lo: 3, hi: 3 }, out: "[3, 3): empty, size 0",
+    cap: "An empty range needs no special case: <var>lo</var> == <var>hi</var>. With both ends included, “empty” has to be written as [3, 2], a range that runs backwards.",
+    ask: { q: "Split [0, 6) at <var>mid</var> = 3. Which two ranges do you get?", opts: ["[0, 3) and [3, 6)", "[0, 3) and [4, 6)"], a: 0,
+           why: "The first half stops just before 3, and the second starts at 3. They meet exactly." },
+    hi: { out: "[3, 3): khaali, size 0",
+          cap: "Khaali range ko special case nahi chahiye: <var>lo</var> == <var>hi</var>. Dono sire andar rakh kar “khaali” ko [3, 2] likhna padta hai, ulti chalti range.",
+          ask: { q: "[0, 6) ko <var>mid</var> = 3 par todo. Kaunsi do ranges milti hain?", opts: ["[0, 3) aur [3, 6)", "[0, 3) aur [4, 6)"],
+                 why: "Pehla aadha 3 se theek pehle rukta hai, aur doosra 3 se shuru. Dono theek milte hain." } } },
+
+  { band: [0, 2], hot: [3, 4, 5], dim: [6], ptr: { lo: 0, mid: 3, hi: 6 }, out: "[0, 3) = a b c and [3, 6) = d e f",
+    cap: "The two pages, a b c and d e f. Nothing is shared and nothing is skipped, with no adjustment on either side. Binary search and merge sort split this way for exactly this reason.",
+    hi: { out: "[0, 3) = a b c aur [3, 6) = d e f",
+          cap: "Do pages, a b c aur d e f. Kuch shared nahi, kuch chhoota nahi, kisi taraf koi adjustment nahi. Binary search aur merge sort isi wajah se aise todte hain." } },
+
+  { band: [3, 5], dim: [0, 1, 2, 6], ptr: { lo: 3, hi: 6 }, out: "invariant: [0, lo) shown, [lo, n) not yet",
+    cap: "The paging loop, with its <b>invariant</b>: positions [0, <var>lo</var>) are shown and [<var>lo</var>, <var>n</var>) are not. Each pass shows [<var>lo</var>, <var>lo</var> + 3) and adds 3 to <var>lo</var>, which keeps it true. <var>n</var> − <var>lo</var> shrinks every pass, so the loop must end.",
+    hi: { out: "invariant: [0, lo) dikh chuka, [lo, n) abhi nahi",
+          cap: "Paging loop, apne <b>invariant</b> ke saath: positions [0, <var>lo</var>) dikh chuki hain aur [<var>lo</var>, <var>n</var>) nahi. Har pass [<var>lo</var>, <var>lo</var> + 3) dikhata hai aur <var>lo</var> mein 3 jodta hai, jo ise sach rakhta hai. <var>n</var> − <var>lo</var> har pass ghat-ta hai, to loop ko khatam hona hi hai." } },
 ]},
 
 });
@@ -701,55 +1248,180 @@ Object.assign(VIZ, {
 /* ---- grids, bits, and the ordering contract ---- */
 Object.assign(VIZ, {
 
+/* The 3 x 3 grid of 1 to 9 from the blur filter. The centre cell has all
+   four neighbours and the corner has two, which is exactly where the bugs
+   live. The last frame rotates the same grid. */
 "grid-basics": {
   kind: "grid",
   arr: [["1","2","3"],["4","5","6"],["7","8","9"]],
   frames: [
-    { on: [[1,1]], out: "grid[r][c] : row first, then column",
-      cap: "A 2-D array is rows of rows. <b>grid[1][1]</b> means row 1, column 1. Half of all grid bugs are just this order swapped, and they fail loudly only when the grid is square, which it is in every example you practised on." },
-    { on: [[1,1]], hot: [[0,1],[1,0],[1,2],[2,1]], dirs: [[1,1,-1,0],[1,1,1,0],[1,1,0,-1],[1,1,0,1]],
-      out: "DIRS = [(-1,0),(1,0),(0,-1),(0,1)]",
-      cap: "The four neighbours are just four <b>(dr, dc)</b> pairs. Keep them in one list and loop over it, instead of writing the same bounds check four times and getting the third one wrong." },
-    { on: [[0,0]], bad: [[0,1]], dirs: [[0,0,-1,0],[0,0,0,-1]],
-      out: "r-1 = -1 and c-1 = -1 are OFF the board",
-      cap: "At an edge, two of those neighbours do not exist. Check bounds <b>before</b> you index, not after. In Python a negative index politely wraps to the far side of the grid and gives you a confidently wrong answer." },
-    { arr: [["1","4","7"],["2","5","8"],["3","6","9"]], on: [[0,1],[1,0]],
-      out: "transpose: swap grid[r][c] with grid[c][r]",
-      cap: "<b>Transpose</b> flips across the diagonal. Only swap where <code>c &gt; r</code>. Loop over the whole grid and you will swap every pair twice, arriving neatly back where you started." },
+    { scene: `<span class="kicker">Why this example</span><p>A blur filter replaces each cell with the average of itself and its four neighbours: up, down, left, right. The test image:</p><table><tr><td>1</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr><tr><td>7</td><td>8</td><td>9</td></tr></table><p>The centre cell, 5, has all four neighbours. The corner cell, 1, has only two. Goal: find each cell's neighbours with one loop, and never read a cell that is not there.</p>`,
+      cap: "Row numbers run down the left, column numbers across the top. Press Next.",
+      hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Blur filter har cell ko uske aur uske chaar padosiyon ke average se badalta hai: upar, neeche, left, right. Test image:</p><table><tr><td>1</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr><tr><td>7</td><td>8</td><td>9</td></tr></table><p>Beech wale cell, 5, ke chaaron padosi hain. Corner cell, 1, ke sirf do. Goal: ek loop se har cell ke padosi dhoondhna, aur kabhi aisa cell na padhna jo hai hi nahi.</p>`,
+            cap: "Row numbers left mein neeche ki taraf, column numbers upar. Next dabao." } },
+
+    { on: [[1,1]], out: "grid[1][1] = 5: row 1, then column 1",
+      cap: "<code>grid[r][c]</code> is <b>row first</b>: <code>grid[1]</code> is the whole row 4, 5, 6, and <code>[1]</code> inside it is 5. On a square grid, getting the order backwards gives a wrong cell rather than an error.",
+      ask: { q: "What is <code>grid[1][2]</code>?", opts: ["6", "8"], a: 0,
+             why: "Row 1 is 4, 5, 6, and column 2 of it is 6. The 8 is grid[2][1]." },
+      hi: { out: "grid[1][1] = 5: row 1, phir column 1",
+            cap: "<code>grid[r][c]</code> mein <b>row pehle</b>: <code>grid[1]</code> poori row 4, 5, 6 hai, aur uske andar <code>[1]</code> 5 hai. Square grid par order ulta karo to error nahi, galat cell milta hai.",
+            ask: { q: "<code>grid[1][2]</code> kya hai?", opts: ["6", "8"],
+                   why: "Row 1 hai 4, 5, 6, aur uska column 2 hai 6. 8 grid[2][1] hai." } } },
+
+    { on: [[1,2]], dim: [[2,1]], out: "grid[1][2] = 6; the 8 is grid[2][1]",
+      cap: "Swap the two indexes and you land on 8 instead. Both are real cells, so nothing complains. That is why this bug survives every square test.",
+      ask: { q: "The centre cell 5 is at (1, 1). Which values are its four neighbours?", opts: ["2, 8, 4, 6", "1, 3, 7, 9"], a: 0,
+             why: "Up, down, left and right. 1, 3, 7 and 9 are the diagonals." },
+      hi: { out: "grid[1][2] = 6; 8 hai grid[2][1]",
+            cap: "Dono indexes ulta karo to 8 par pahunchte ho. Dono asli cells hain, to koi shikayat nahi karta. Isiliye yeh bug har square test se bach jaata hai.",
+            ask: { q: "Beech wala cell 5 (1, 1) par hai. Uske chaar padosi kaunsi values hain?", opts: ["2, 8, 4, 6", "1, 3, 7, 9"],
+                   why: "Upar, neeche, left aur right. 1, 3, 7 aur 9 diagonals hain." } } },
+
+    { on: [[1,1]], hot: [[0,1],[2,1],[1,0],[1,2]], dirs: [[1,1,-1,0],[1,1,1,0],[1,1,0,-1],[1,1,0,1]],
+      out: "DIRS = [(-1,0), (1,0), (0,-1), (0,1)]",
+      cap: "The four neighbours are four <b>(row change, column change)</b> pairs. Keep them in one list and loop: (1, 1) plus each pair gives 2, 8, 4 and 6. One loop, one range check, no copy-pasted branches.",
+      ask: { q: "Now the corner cell 1, at (0, 0). How many of its four neighbours exist?", opts: ["4", "2"], a: 1,
+             why: "Up is row −1 and left is column −1. Only down (4) and right (2) are on the board." },
+      hi: { out: "DIRS = [(-1,0), (1,0), (0,-1), (0,1)]",
+            cap: "Chaar padosi chaar <b>(row change, column change)</b> pairs hain. Unhe ek list mein rakho aur loop chalao: (1, 1) mein har pair jodo to 2, 8, 4 aur 6. Ek loop, ek range check, koi copy-paste branch nahi.",
+            ask: { q: "Ab corner cell 1, (0, 0) par. Uske chaar mein se kitne padosi hain?", opts: ["4", "2"],
+                   why: "Upar row −1 hai aur left column −1. Sirf neeche (4) aur right (2) board par hain." } } },
+
+    { on: [[0,0]], hot: [[1,0],[0,1]], dirs: [[0,0,1,0],[0,0,0,1]],
+      out: "0 <= nr < 3 and 0 <= nc < 3 keeps only 4 and 2",
+      cap: "The range check <code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code> throws out up and left <b>before</b> indexing. The blur for cell 1 is (1 + 4 + 2) / 3 ≈ 2.33.",
+      ask: { q: "Forget the check. In Python, what does <code>grid[-1][0]</code>, the missing “up” neighbour, give you?", opts: ["an IndexError", "7, from the bottom row"], a: 1,
+             why: "−1 counts from the end, so row −1 is the last row, and its column 0 holds 7." },
+      hi: { out: "0 <= nr < 3 and 0 <= nc < 3 sirf 4 aur 2 rakhta hai",
+            cap: "Range check <code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code> index karne se <b>pehle</b> upar aur left ko hata deta hai. Cell 1 ka blur (1 + 4 + 2) / 3 ≈ 2.33.",
+            ask: { q: "Check bhool jao. Python mein <code>grid[-1][0]</code>, jo “upar” wala padosi hai hi nahi, kya dega?", opts: ["IndexError", "7, neeche wali row se"],
+                   why: "−1 end se ginta hai, to row −1 aakhri row hai, aur uske column 0 mein 7 hai." } } },
+
+    { on: [[0,0]], hot: [[1,0],[0,1]], bad: [[2,0],[0,2]],
+      out: "no check: blur = (1 + 7 + 4 + 3 + 2) / 5 = 3.4",
+      cap: "Python wraps: up gives 7 and left gives 3, both from the far side. The blur becomes 3.4 instead of 2.33, <b>with no error</b>. Java would crash here, which is kinder.",
+      hi: { out: "check nahi: blur = (1 + 7 + 4 + 3 + 2) / 5 = 3.4",
+            cap: "Python wrap karta hai: upar 7 deta hai aur left 3, dono doosri taraf se. Blur 2.33 ki jagah 3.4 ban jaata hai, <b>bina kisi error ke</b>. Java yahan crash karta, jo zyada meharbaan hai." } },
+
     { arr: [["7","4","1"],["8","5","2"],["9","6","3"]], on: [[0,0],[0,1],[0,2]],
       out: "rotate 90 = transpose, then reverse each row",
-      cap: "Rotating in place looks like it needs cleverness. It needs two boring steps: transpose, then reverse each row. <b>O(1) extra space</b>, and nobody has to reason about a spiral." },
+      cap: "One more classic on the same grid. Rotating 90 degrees clockwise looks like it needs a spiral. It needs two boring steps: <b>transpose</b> (swap <code>grid[r][c]</code> with <code>grid[c][r]</code> where <code>c &gt; r</code>), then <b>reverse each row</b>. O(1) extra space.",
+      hi: { out: "90 rotate = transpose, phir har row reverse",
+            cap: "Isi grid par ek aur classic. 90 degree clockwise ghumaana spiral jaisa lagta hai. Chahiye bas do boring steps: <b>transpose</b> (jahan <code>c &gt; r</code> wahan <code>grid[r][c]</code> ko <code>grid[c][r]</code> se swap), phir <b>har row reverse</b>. O(1) extra space." } },
   ]
 },
 
-"bits": { kind: "cells", arr: ["0","0","0","0","1","0","1","1"], idx: false, frames: [
-  { on: [4,6,7], out: "0000 1011 = 8 + 2 + 1 = 11",
-    cap: "A number is already a row of switches. Bit i is worth 2<sup>i</sup>. Bit operations just stop pretending otherwise." },
-  { on: [4,6,7], hot: [5], out: "x | (1 << 2)  ->  set bit 2",
-    cap: "<b>Shift to build a mask, then combine.</b> <code>1 &lt;&lt; 2</code> is a single 1 in position 2. OR it in to <b>set</b>, AND with its inverse to <b>clear</b>, XOR to <b>flip</b>." },
-  { on: [4,6,7], hot: [6], out: "(x >> 1) & 1  ->  is bit 1 on?",
-    cap: "To <b>test</b> a bit, shift it down to the end and mask off everything else. Every one of these is a single machine instruction, which is why bitmask DP is fast enough to be worth the headache." },
-  { arr: ["0","0","0","0","1","0","1","1"], on: [4,6,7], hot: [7], out: "x & 1  ->  odd or even",
-    cap: "The last bit alone answers odd or even, and <code>x &gt;&gt; 1</code> halves. Every integer already carries its own binary representation. You were just never introduced." },
-  { arr: ["0","0","0","1","0","0","0","0"], on: [3], out: "16 = 0001 0000  ->  exactly one bit set",
-    cap: "A power of two has exactly one bit on. Subtract one and every lower bit flips on instead: <code>16 &amp; 15 == 0</code>. That is the whole trick behind <code>x &amp; (x-1) == 0</code>." },
-  { arr: ["0","0","0","0","1","1","1","1"], hot: [4,5,6,7], out: "x & (x-1) clears the LOWEST set bit",
-    cap: "And repeatedly clearing the lowest set bit counts the ones in <b>O(number of set bits)</b> rather than O(32). Neat, occasionally useful, and asked about far more often than it is needed." },
-  { arr: ["0","1","0","1","0","1","0","1"], on: [1,3,5,7], out: "a ^ a = 0   and   a ^ 0 = a",
-    cap: "<b>XOR is the one worth actually remembering.</b> A value cancels itself and leaves zero. So XOR the whole array together and every number that appears twice vanishes, leaving the one that does not. <b>O(n) time, O(1) space, no hash map.</b>" },
+/* Single Number on [4, 1, 2, 1, 2]. Three bits are enough to hold every
+   value, so the running XOR is drawn as three switches that flip. */
+/* Single Number on [4, 1, 2, 1, 2]. Each value is one bit, so the running
+   XOR is drawn as an 8-bit integer whose last three switches flip. */
+"bits": { kind: "cells", arr: ["0","0","0","0","0","0","0","0"], idx: false, frames: [
+  { scene: `<span class="kicker">Why this example</span><p>Every value in <code>[4, 1, 2, 1, 2]</code> appears twice except one. Find it using <b>one integer</b> of extra memory, however long the array is.</p><p>Each value is a single bit, so the whole walk fits in three switches:</p><table><tr><td>4</td><td>100</td></tr><tr><td>2</td><td>010</td></tr><tr><td>1</td><td>001</td></tr></table><p>Goal: XOR every value into one running number <var>x</var>, and watch the pairs switch themselves off.</p>`,
+    cap: "The boxes below are <var>x</var>, written as 8 bits. Only the last three matter here: they are worth 4, 2 and 1. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p><code>[4, 1, 2, 1, 2]</code> mein har value do baar hai, sirf ek nahi. Use <b>ek integer</b> extra memory se dhoondho, array kitna bhi lamba ho.</p><p>Har value ek hi bit hai, to poori walk teen switches mein aa jaati hai:</p><table><tr><td>4</td><td>100</td></tr><tr><td>2</td><td>010</td></tr><tr><td>1</td><td>001</td></tr></table><p>Goal: har value ko ek running number <var>x</var> mein XOR karo, aur dekho jodiyan khud ko kaise off karti hain.</p>`,
+          cap: "Neeche ke boxes <var>x</var> hain, 8 bits mein. Yahan sirf aakhri teen kaam ke hain: unki value 4, 2 aur 1 hai. Next dabao." } },
+
+  { arr: ["0","0","0","0","0","0","0","0"], dim: [0,1,2,3,4,5,6,7], out: "x = 000 = 0",
+    cap: "Start with <var>x</var> = 0, all switches off. XOR compares two bits: <b>1 if they differ, 0 if they match</b>. So <code>x ^ v</code> flips exactly the switches where <var>v</var> has a 1, and leaves the rest alone.",
+    ask: { q: "<code>x ^= 4</code>, and 4 is <code>100</code>. What is <var>x</var> now?", opts: ["100", "000", "011"], a: 0,
+           why: "4 has a 1 only in the 4s switch, so only that one flips." },
+    hi: { out: "x = 000 = 0",
+          cap: "<var>x</var> = 0 se shuru, saare switches off. XOR do bits compare karta hai: <b>alag hon to 1, same hon to 0</b>. To <code>x ^ v</code> theek wahi switches palat-ta hai jahan <var>v</var> mein 1 hai, baaki ko nahi chhoota.",
+          ask: { q: "<code>x ^= 4</code>, aur 4 hai <code>100</code>. Ab <var>x</var> kya hai?", opts: ["100", "000", "011"],
+                 why: "4 mein 1 sirf 4 wale switch mein hai, to sirf woh palat-ta hai." } } },
+
+  { arr: ["0","0","0","0","0","1","0","0"], dim: [0,1,2,3,4], hot: [5], out: "x ^= 4  ->  x = 100 = 4",
+    cap: "The 4s switch turned on. Nothing else moved, because 4 had nothing else to say.",
+    ask: { q: "<code>x ^= 1</code>, and 1 is <code>001</code>. What is <var>x</var>?", opts: ["101", "001", "100"], a: 0,
+           why: "Only the 1s switch flips. The 4 stays on." },
+    hi: { out: "x ^= 4  ->  x = 100 = 4",
+          cap: "4 wala switch on ho gaya. Aur kuch nahi hila, kyunki 4 ke paas aur kuch kehne ko nahi tha.",
+          ask: { q: "<code>x ^= 1</code>, aur 1 hai <code>001</code>. <var>x</var> kya hai?", opts: ["101", "001", "100"],
+                 why: "Sirf 1 wala switch palat-ta hai. 4 on rehta hai." } } },
+
+  { arr: ["0","0","0","0","0","1","0","1"], dim: [0,1,2,3,4], on: [5], hot: [7], out: "x ^= 1  ->  x = 101 = 5",
+    cap: "Now two switches are on: <var>x</var> = 5. Then <code>x ^= 2</code> flips the 2s switch the same way.",
+    hi: { out: "x ^= 1  ->  x = 101 = 5",
+          cap: "Ab do switches on hain: <var>x</var> = 5. Phir <code>x ^= 2</code> 2 wale switch ko isi tarah palat-ta hai." } },
+
+  { arr: ["0","0","0","0","0","1","1","1"], dim: [0,1,2,3,4], on: [5,7], hot: [6], out: "x ^= 2  ->  x = 111 = 7",
+    cap: "All three are on: <var>x</var> = 7. Every value has now been seen once. The second 1 and the second 2 are still to come.",
+    ask: { q: "<code>x ^= 1</code> a second time. What happens to the 1s switch?", opts: ["it turns off", "it stays on"], a: 0,
+           why: "It flips again, back to where it started before the first 1." },
+    hi: { out: "x ^= 2  ->  x = 111 = 7",
+          cap: "Teeno on: <var>x</var> = 7. Har value ek baar dikh chuki. Doosra 1 aur doosra 2 abhi aane hain.",
+          ask: { q: "<code>x ^= 1</code> doosri baar. 1 wale switch ka kya hoga?", opts: ["off ho jaayega", "on rahega"],
+                 why: "Woh phir palat-ta hai, pehle 1 se pehle jaisa tha waisa." } } },
+
+  { arr: ["0","0","0","0","0","1","1","0"], dim: [0,1,2,3,4], on: [5,6], bad: [7], out: "x ^= 1  ->  x = 110 = 6, the 1s cancelled",
+    cap: "<b>The pair of 1s cancelled.</b> The first one switched the 1s bit on, the second switched it off. That is <code>a ^ a = 0</code>, seen one switch at a time.",
+    ask: { q: "Last, <code>x ^= 2</code>. What is left in <var>x</var>?", opts: ["100 = 4", "110 = 6", "000 = 0"], a: 0,
+           why: "The 2s switch flips off, the same way the 1s did." },
+    hi: { out: "x ^= 1  ->  x = 110 = 6, dono 1 kat gaye",
+          cap: "<b>1 ki jodi kat gayi.</b> Pehle ne 1 wala bit on kiya, doosre ne off. Yahi <code>a ^ a = 0</code> hai, ek switch par dekha hua.",
+          ask: { q: "Aakhri, <code>x ^= 2</code>. <var>x</var> mein kya bachega?", opts: ["100 = 4", "110 = 6", "000 = 0"],
+                 why: "2 wala switch off hota hai, bilkul 1 ki tarah." } } },
+
+  { arr: ["0","0","0","0","0","1","0","0"], dim: [0,1,2,3,4], hot: [5], bad: [6], out: "x ^= 2  ->  x = 100 = 4, the answer",
+    cap: "<b><var>x</var> = 4, the unpaired value.</b> Every paired value flipped its switch twice, which is the same as never flipping it. Only the 4 was flipped once.",
+    hi: { out: "x ^= 2  ->  x = 100 = 4, yahi answer",
+          cap: "<b><var>x</var> = 4, akeli value.</b> Har jodi wali value ne apna switch do baar palta, jo kabhi na palatne jaisa hai. Sirf 4 ek baar palta." } },
+
+  { arr: ["0","0","0","0","0","1","0","0"], dim: [0,1,2,3,4], on: [5], out: "5 XORs, 1 integer: O(n) time, O(1) space",
+    cap: "Order never mattered: 4 ^ (1 ^ 1) ^ (2 ^ 2) is the same walk. For 10⁷ numbers it is 10⁷ XORs and one integer. No map, no sort, and nothing to undo afterwards.",
+    hi: { out: "5 XOR, 1 integer: O(n) time, O(1) space",
+          cap: "Order kabhi maayne nahi rakhta tha: 4 ^ (1 ^ 1) ^ (2 ^ 2) wahi walk hai. 10⁷ numbers ke liye 10⁷ XOR aur ek integer. Na map, na sort, aur baad mein kuch undo nahi karna." } },
 ]},
 
+/* The records B2, A1, B1, A2: a letter and a number each. The tags make
+   the old order visible, so you can see exactly what a stable sort keeps. */
 "ordering": { kind: "cells", arr: ["B2","A1","B1","A2"], idx: false, frames: [
-  { on: [], out: "sort these by LETTER only",
-    cap: "Four items, tagged so you can see where they started. We will sort by the letter and watch what happens to the numbers." },
-  { arr: ["A1","A2","B2","B1"], on: [0,1], hot: [2,3], out: "unstable: B2 before B1",
-    cap: "An <b>unstable</b> sort is free to reorder items it considers equal. Both Bs compare the same, so it shuffled them. Not a bug. It never promised otherwise." },
-  { arr: ["A1","A2","B1","B2"], on: [0,1,2,3], out: "stable: original order kept within each group",
-    cap: "A <b>stable</b> sort leaves equal items in the order it found them. That sounds like a detail until you want to sort by two things." },
-  { arr: ["A1","B1","A2","B2"], on: [0,1,2,3], out: "step 1: sort by the SECONDARY key",
-    cap: "Multi-key sorting, the cheap way. Sort by the less important key first." },
-  { arr: ["A1","A2","B1","B2"], on: [0,1,2,3], out: "step 2: sort by the primary key. Stability carries the rest.",
-    cap: "Then sort by the primary key. Stability preserves the first ordering inside each group, so you get both. Do this with an unstable sort and it works perfectly on your test data and wrongly in production." },
+  { scene: `<span class="kicker">Why this example</span><p>Four records, each a letter and a number. The goal is letter order, and number order within a letter:</p><table><tr><td>input</td><td>B2, A1, B1, A2</td></tr><tr><td>wanted</td><td>A1, A2, B1, B2</td></tr></table><p>The numbers also act as tags: they show where each record started. Goal: see what a <b>stable</b> sort keeps, and why sorting twice only works when it is stable.</p>`,
+    cap: "Each box is one record. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Chaar records, har ek mein ek letter aur ek number. Chahiye letter ka order, aur ek letter ke andar number ka order:</p><table><tr><td>input</td><td>B2, A1, B1, A2</td></tr><tr><td>chahiye</td><td>A1, A2, B1, B2</td></tr></table><p>Numbers tags ka kaam bhi karte hain: dikhate hain ki har record kahan se shuru hua. Goal: dekhna ki <b>stable</b> sort kya bachata hai, aur do baar sort karna sirf stable hone par kyun chalta hai.</p>`,
+          cap: "Har box ek record hai. Next dabao." } },
+
+  { on: [], out: "the input",
+    cap: "First, sort by <b>letter only</b>. To this sort, B2 and B1 are a tie: same letter, and it never looks at the number.",
+    ask: { q: "A <b>stable</b> sort keeps tied items in their input order. After sorting by letter, how do the two Bs come out?", opts: ["B2, B1: as they were", "B1, B2: by number"], a: 0,
+           why: "B2 was before B1 in the input, and a stable sort never swaps a tie." },
+    hi: { out: "input",
+          cap: "Pehle <b>sirf letter</b> se sort. Is sort ke liye B2 aur B1 tie hain: same letter, aur yeh number dekhta hi nahi.",
+          ask: { q: "<b>Stable</b> sort tie wale items ko input order mein rakhta hai. Letter se sort ke baad dono B kaise aayenge?", opts: ["B2, B1: jaise the", "B1, B2: number se"],
+                 why: "Input mein B2 B1 se pehle tha, aur stable sort tie ko kabhi swap nahi karta." } } },
+
+  { arr: ["A1","A2","B2","B1"], on: [0,1], hot: [2,3], out: "stable, by letter",
+    cap: "Letters are right, and each tie kept its input order: A1 before A2, B2 before B1. Not wrong: it was never told about numbers. So how do you get both keys right with sorts like this one?",
+    ask: { q: "You will sort twice, both times stably. Which key goes <b>first</b>?", opts: ["the number, then the letter", "the letter, then the number"], a: 0,
+           why: "The last sort decides the main order. Earlier sorts only survive inside its ties." },
+    hi: { out: "stable, letter se",
+          cap: "Letters sahi, aur har tie ne apna input order rakha: A1 A2 se pehle, B2 B1 se pehle. Galat nahi: use numbers ke baare mein bataya hi nahi. To aise sorts se dono keys sahi kaise karein?",
+          ask: { q: "Do baar sort karoge, dono baar stable. <b>Pehle</b> kaunsi key?", opts: ["number, phir letter", "letter, phir number"],
+                 why: "Aakhri sort main order tay karta hai. Pehle wale sorts sirf uske ties ke andar bachte hain." } } },
+
+  { arr: ["A1","B1","B2","A2"], on: [0,1,2,3], out: "step 1: by number",
+    cap: "Step 1: stable sort by <b>number</b>, the less important key. The 1s come first, A1 then B1 in input order. Then the 2s, B2 then A2.",
+    ask: { q: "Step 2: stable sort by <b>letter</b>. What comes out?", opts: ["A1 A2 B1 B2", "A2 A1 B2 B1"], a: 0,
+           why: "Among the As, A1 was before A2 after step 1, and a stable sort keeps that. Same for B1 and B2." },
+    hi: { out: "step 1: number se",
+          cap: "Step 1: <b>number</b> se stable sort, kam zaroori key. Pehle 1 wale, input order mein A1 phir B1. Phir 2 wale, B2 phir A2.",
+          ask: { q: "Step 2: <b>letter</b> se stable sort. Kya niklega?", opts: ["A1 A2 B1 B2", "A2 A1 B2 B1"],
+                 why: "As mein step 1 ke baad A1 A2 se pehle tha, aur stable sort yeh rakhta hai. B1 aur B2 ke saath bhi yahi." } } },
+
+  { arr: ["A1","A2","B1","B2"], on: [0,1,2,3], out: "step 2: by letter",
+    cap: "<b>Both keys right.</b> The letter sort decided the main order, and stability carried the number order through each tie.",
+    ask: { q: "Same two steps, but step 2 uses C++ <code>std::sort</code>, which is <b>not</b> stable. Is A1 A2 B1 B2 guaranteed?", opts: ["yes", "no"], a: 1,
+           why: "An unstable sort may reorder ties, so step 1's work inside each letter can be lost." },
+    hi: { out: "step 2: letter se",
+          cap: "<b>Dono keys sahi.</b> Letter sort ne main order tay kiya, aur stability ne har tie ke andar number ka order bachaya.",
+          ask: { q: "Wahi do steps, par step 2 C++ ka <code>std::sort</code> use karta hai, jo stable <b>nahi</b> hai. Kya A1 A2 B1 B2 pakka hai?", opts: ["haan", "nahi"],
+                 why: "Unstable sort ties ka order badal sakta hai, to har letter ke andar step 1 ka kaam kho sakta hai." } } },
+
+  { arr: ["A1","A2","B2","B1"], on: [0,1], bad: [2,3], out: "unstable step 2: maybe",
+    cap: "It may work on your test data and fail in production. The dependable fix: <b>one comparator</b> that compares the letter, and only on a tie compares the number. Then stability stops mattering.",
+    hi: { out: "unstable step 2: shayad",
+          cap: "Test data par chal sakta hai aur production mein fail. Pakka fix: <b>ek comparator</b> jo letter compare kare, aur sirf tie par number. Phir stability ka koi matlab nahi rehta." } },
 ]},
 
 });
@@ -1158,22 +1830,51 @@ Object.assign(VIZ, {
 /* ---- primes, range trees, intervals, spanning trees, cyclic sort ---- */
 Object.assign(VIZ, {
 
+/* The primes from 2 to 16: the same fifteen numbers the page uses
+   throughout. Small enough that every crossing is visible, and 16 is a
+   perfect square, so the stop at p x p > n happens on screen. */
 "sieve": { kind: "cells", arr: ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"], idx: false, frames: [
-  { on: [], out: "which of these are prime?",
-    cap: "Testing each number on its own means dividing it by everything up to its square root. Doing that fifteen times repeats an enormous amount of work." },
-  { on: [0], bad: [2,4,6,8,10,12,14], out: "2 is prime, so cross out every multiple of 2",
-    cap: "So work the other way round. Take the first uncrossed number, declare it <b>prime</b>, and cross out everything it divides. Nothing is ever tested, only marked." },
-  { on: [0,1], bad: [2,4,6,7,8,10,12,13,14],
-    out: "3 is next uncrossed, so prime. Cross 9 and 15, starting at 3×3.",
-    cap: "Start crossing at <b>p × p</b>, not at 2p. Every smaller multiple of 3 has a smaller prime factor and was already crossed out by it. That single detail is most of the speed." },
-  { on: [0,1,3], bad: [2,4,6,7,8,10,12,13,14],
-    out: "4 is already crossed, so skip it. 5 is prime.",
-    cap: "Crossed numbers are skipped entirely, so the outer loop only ever stops on primes." },
-  { on: [0,1,3,5,9,11], bad: [2,4,6,7,8,10,12,13,14],
-    out: "next prime is 5, and 5×5 = 25 is past the end, so stop",
-    cap: "Once <b>p × p</b> exceeds the limit there is nothing left to cross, so the loop stops at the square root. Everything still uncrossed is prime: 2, 3, 5, 7, 11, 13." },
-  { on: [0,1,3,5,9,11], out: "O(n log log n), and no, you do not derive that in an interview",
-    cap: "The cost is famously <b>O(n log log n)</b>. Quote it, do not attempt to prove it, and move on. Space is O(n), which is the real constraint when the limit is large." },
+  { scene: `<span class="kicker">Why this example</span><p>The real job is counting primes below 5 × 10⁶. Testing each number by division costs about 6.5 × 10⁸ divisions, even with the square-root stop.</p><p>Here is the same job on the numbers 2 to 16, so every step fits on screen:</p><table><tr><td>testing each number</td><td>divide, divide, divide</td></tr><tr><td>the sieve</td><td>cross out, never divide</td></tr><tr><td>the answer</td><td>2, 3, 5, 7, 11, 13</td></tr></table><p>Goal: find all six primes without a single division, and see why the work stops at 4, the square root of 16.</p>`,
+    cap: "The boxes below are the numbers 2 to 16. Red means crossed out. Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Asli kaam hai 5 × 10⁶ se chhote primes ginna. Har number ko division se test karna lagbhag 6.5 × 10⁸ divisions hai, square-root par rukne ke baad bhi.</p><p>Yahi kaam 2 se 16 tak ke numbers par, taaki har step screen par aa jaaye:</p><table><tr><td>har number test karna</td><td>divide, divide, divide</td></tr><tr><td>sieve</td><td>kaat do, kabhi divide nahi</td></tr><tr><td>answer</td><td>2, 3, 5, 7, 11, 13</td></tr></table><p>Goal: bina ek bhi division ke chhe ke chhe primes dhoondhna, aur dekhna ki kaam 4 par kyun rukta hai, jo 16 ka square root hai.</p>`,
+          cap: "Neeche ke boxes 2 se 16 tak ke numbers hain. Red matlab kat gaya. Next dabao." } },
+
+  { on: [0], bad: [2,4,6,8,10,12,14], out: "2 is prime: cross 4, 6, 8, 10, 12, 14, 16",
+    cap: "Take the first number nobody has crossed: 2. Nothing smaller divides it, so it is <b>prime</b>. Every other multiple of 2 is not, so cross them all out. Seven numbers gone, and nothing was divided.",
+    ask: { q: "The next uncrossed number is 3, so it is prime. Where should crossing its multiples <b>start</b>?", opts: ["at 6", "at 9"], a: 1,
+           why: "6 = 2 × 3 was already crossed by 2. The first multiple of 3 with no smaller factor is 3 × 3 = 9." },
+    hi: { out: "2 prime hai: 4, 6, 8, 10, 12, 14, 16 kaato",
+          cap: "Pehla number lo jise kisi ne nahi kaata: 2. Usse chhota koi use divide nahi karta, to yeh <b>prime</b> hai. 2 ka har doosra multiple prime nahi, to sab kaat do. Saat numbers gaye, aur ek bhi division nahi hua.",
+          ask: { q: "Agla bina kata number 3 hai, to woh prime hai. Uske multiples kaatna <b>kahan se</b> shuru ho?", opts: ["6 se", "9 se"],
+                 why: "6 = 2 × 3 ko 2 pehle hi kaat chuka. 3 ka pehla multiple jisme chhota factor nahi, woh 3 × 3 = 9 hai." } } },
+
+  { on: [0,1], bad: [2,4,6,7,8,10,12,13,14], out: "3 is prime: cross 9, 12, 15, starting at 3 x 3",
+    cap: "Start at <b><var>p</var> × <var>p</var></b>, not at 2<var>p</var>. Every smaller multiple of 3 has a smaller prime factor, which crossed it already. 12 gets crossed a second time, which is harmless.",
+    ask: { q: "4 is already crossed. Do you need to cross out the multiples of 4?", opts: ["yes", "no"], a: 1,
+           why: "Every multiple of 4 is also a multiple of 2, and those are gone." },
+    hi: { out: "3 prime hai: 9, 12, 15 kaato, 3 x 3 se shuru",
+          cap: "<b><var>p</var> × <var>p</var></b> se shuru karo, 2<var>p</var> se nahi. 3 ke har chhote multiple mein ek chhota prime factor hai, jo use pehle kaat chuka. 12 doosri baar kat-ta hai, koi nuksaan nahi.",
+          ask: { q: "4 pehle se kata hai. Kya 4 ke multiples kaatne padenge?", opts: ["haan", "nahi"],
+                 why: "4 ka har multiple 2 ka bhi multiple hai, aur woh ja chuke." } } },
+
+  { on: [0,1,3], bad: [2,4,6,7,8,10,12,13,14], out: "4 is crossed, so skip it. 5 is prime.",
+    cap: "Crossed numbers are skipped entirely, so the outer loop only ever stops on primes. The next one is <b>5</b>.",
+    ask: { q: "5 × 5 = 25, which is past 16. Is anything left for 5 to cross?", opts: ["yes, 10 and 15", "no, stop here"], a: 1,
+           why: "10 and 15 already fell to 2 and 3. Any multiple of 5 below 25 has a smaller factor." },
+    hi: { out: "4 kata hai, to chhod do. 5 prime hai.",
+          cap: "Kate hue numbers poori tarah chhod diye jaate hain, to outer loop sirf primes par rukta hai. Agla hai <b>5</b>.",
+          ask: { q: "5 × 5 = 25, jo 16 ke paar hai. Kya 5 ke kaatne ke liye kuch bacha hai?", opts: ["haan, 10 aur 15", "nahi, yahin ruko"],
+                 why: "10 aur 15 pehle hi 2 aur 3 se gir chuke. 25 se neeche 5 ke har multiple mein chhota factor hai." } } },
+
+  { on: [0,1,3,5,9,11], bad: [2,4,6,7,8,10,12,13,14], out: "5 x 5 = 25 > 16, so stop: 2, 3, 5, 7, 11, 13",
+    cap: "Once <b><var>p</var> × <var>p</var></b> passes the limit, there is nothing left to cross, so the loop stops at the square root. Everything uncrossed is prime: <b>2, 3, 5, 7, 11, 13</b>. Ten crossings, zero divisions.",
+    hi: { out: "5 x 5 = 25 > 16, to ruko: 2, 3, 5, 7, 11, 13",
+          cap: "Jaise hi <b><var>p</var> × <var>p</var></b> limit ke paar gaya, kaatne ko kuch nahi bacha, to loop square root par rukta hai. Jo bhi bina kata hai woh prime hai: <b>2, 3, 5, 7, 11, 13</b>. Das crossings, zero divisions." } },
+
+  { on: [0,1,3,5,9,11], out: "O(n log log n): about 1.1 x 10^7 crossings for n = 5 x 10^6",
+    cap: "At full size the sieve makes about 1.1 × 10⁷ crossings, against 6.5 × 10⁸ divisions for testing each number. The cost is <b>O(<var>n</var> log log <var>n</var>)</b>: quote it, do not derive it. Space is O(<var>n</var>), and that is what runs out first.",
+    hi: { out: "O(n log log n): n = 5 x 10^6 par lagbhag 1.1 x 10^7 crossings",
+          cap: "Poore size par sieve lagbhag 1.1 × 10⁷ crossings karta hai, har number test karne ke 6.5 × 10⁸ divisions ke against. Cost <b>O(<var>n</var> log log <var>n</var>)</b> hai: bol do, derive mat karo. Space O(<var>n</var>) hai, aur wahi pehle khatam hota hai." } },
 ]},
 
 /* One example carries the whole walk: 24 / 2 = 12, which is 5 mod 7. The

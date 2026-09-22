@@ -31,95 +31,109 @@ const CONCEPTS = [
   id: "big-o",
   n: "Big-O, how to judge an algorithm",
   group: "Fundamentals",
+  need: {
+    ask: `<p>You wrote a function that checks whether a list contains the same number twice. It compares every pair: for each number, check it against every number after it. On your test of 1,000 numbers it answers instantly.</p>
+<p>The real input has <b>100,000 numbers</b> and a <b>1-second limit</b>. Will it pass? You want to know before you submit, and before you write two other versions to compare against.</p>`,
+    tries: [
+      ["Time it on your laptop", "It took 5 ms on 1,000 numbers. That says nothing about 100,000 until you know how the work grows. The input grows 100 times, the pairs grow 10,000 times, so 5 ms becomes <b>50 seconds</b>."],
+      ["Count every operation exactly", "The loop does <var>n</var>(<var>n</var> − 1) / 2 comparisons, where <var>n</var> is how many numbers there are. Then add index updates, bounds checks, memory reads. How many machine steps is one comparison? That depends on the language and the compiler. You get a precise number that is wrong on the next machine."],
+      ["Test on the biggest input", "That works, once the code exists. It cannot tell you which of three designs to write first. And random test data can miss the input that makes your code slow."],
+    ],
+    so: `<p>Ignore seconds and ask one question: <b>if the input gets 10 times bigger, how much more work is there?</b> Compare every pair: 10 times the numbers gives 100 times the pairs. Sort first, then check neighbours: a bit over 10 times. Drop each number into a hash set: exactly 10 times.</p>
+<p>That growth rate is <b>Big-O</b>. The pair check is O(<var>n</var>²). At <var>n</var> = 100,000 that is 5 × 10⁹ comparisons, about 50 seconds. The hash set is O(<var>n</var>): 100,000 inserts, well under a second. This one example, three ways to find a duplicate, runs through the whole page.</p>`,
+  },
+
   one: "Big-O is the <b>shape of the growth curve</b>, not the speed. It answers one question: if the input gets 10× bigger, what happens to the work?",
 
-  plain: `<p>Two programs solve the same problem. One takes 5 seconds on your laptop, the other 8 seconds. Which is better? <b>You cannot tell yet.</b> Ask instead: what happens when the input goes from 1,000 items to 1,000,000?</p>
-<p>The 5-second one might become 5 hours. The 8-second one might become 9 seconds. Big-O measures <b>that</b>, how the work grows with the input, and deliberately throws away everything else: the constant factors, the language, the CPU, the coffee break.</p>
-<p><b>Analogy.</b> You are told a road trip takes "about 4 hours". Useless. Is that with traffic, in a truck, at night? But "the time doubles every extra 100 km" tells you something real about the <i>road</i>, no matter what car you drive. Big-O describes the road, not the car.</p>`,
+  plain: `<p>Take the duplicate check from above. You can write it three ways: compare every pair, sort and look at neighbours, or drop each number into a hash set. On 1,000 numbers all three finish instantly. So which is best? <b>Timing them cannot tell you yet.</b></p>
+<p><b>Big-O</b> describes how the <b>work grows</b> as the input grows. The letter <var>n</var> stands for the input size, here the count of numbers. The pair check does about <var>n</var>² / 2 comparisons, so it is written O(<var>n</var>²). The set does about <var>n</var> inserts, so it is O(<var>n</var>). Big-O keeps the growth and throws away the rest: the language, the CPU, the constant in front.</p>
+<p>Why throw that away? At <var>n</var> = 100,000 the pair check needs 5 × 10⁹ comparisons and the set needs 10⁵ inserts. That is a gap of 50,000 times. No faster laptop closes it.</p>
+<p><b>Analogy.</b> “The drive takes 4 hours” depends on the car. “Every extra 100 km adds an hour” describes the road, whatever you drive. Big-O describes the road, not the car.</p>`,
 
   why: [
-    { t: "Compare the algorithm, not the computer",
-      d: "How many seconds your code takes depends on the machine, the language, and what else is running. None of that is about the algorithm. So we stop counting seconds and start counting <b>steps</b>." },
-    { t: "Constants do not matter, growth does",
-      d: "Is <code>3n</code> better than <code>5n</code>? Barely, a faster machine erases that gap. What no machine can erase is the gap between <code>n</code> and <code>n²</code>. So we throw away the constants and keep only the growth." },
+    { t: "Count steps, not seconds",
+      d: "Seconds depend on the machine, the language and whatever else is running. None of that is the algorithm. So count <b>steps</b> instead. The pair check on <var>n</var> numbers does <var>n</var>(<var>n</var> − 1) / 2 comparisons. For 1,000 numbers that is 499,500 on every machine ever built." },
+    { t: "Constants fade, growth does not",
+      d: "Say one set insert costs 50 simple steps and one comparison costs 1. At <var>n</var> = 100 both versions do 5,000 steps. At <var>n</var> = 100,000 the pairs cost 5 × 10⁹ and the set 5 × 10⁶. A faster machine can erase a constant like 50. Nothing erases the gap between <var>n</var> and <var>n</var>²." },
     { t: "Only the biggest term survives",
-      d: "Take <code>n² + 1000n</code>. At n = a million, the n² part is a thousand times bigger than the other. The small term stops mattering, so we write just <b>O(n²)</b>." },
+      d: "The exact pair count is <var>n</var>²/2 − <var>n</var>/2. At <var>n</var> = 100,000 the first part is 5 × 10⁹ and the second is 50,000. The small part is 1/100,000 of the big one. So drop it, drop the ½ as well, and write <b>O(<var>n</var>²)</b>." },
     { t: "Read it off the shape of the code",
-      d: "One loop → <b>O(n)</b>. A loop inside a loop → <b>O(n²)</b>. Halving the problem each step → <b>O(log n)</b>. Sorting → <b>O(n log n)</b>. Two recursive calls per level → <b>O(2ⁿ)</b>. Loops one after another <i>add</i>; nested loops <i>multiply</i>." },
-    { t: "Space is measured the same way, and the stack counts",
-      d: "Half of judging an algorithm is memory, and it is the half people forget to state. Count anything that grows with the input: the hash map you built, the array you copied, and the <b>call stack</b>. A recursive solution with no data structures at all is still O(depth) space, which is why a depth of 10⁵ crashes rather than merely slows. Give both numbers unprompted; being asked for the space complexity is a sign you should have said it already." },
-    { t: "Always say which case you mean",
-      d: "A hash map is O(1) on <i>average</i> and O(n) at <i>worst</i>. Quicksort is O(n log n) average and O(n²) worst. Best, average and worst are three different claims about three different things, and answering with the wrong one is not a rounding error." },
-    { t: "Amortised is a fourth claim, and it is not the average",
-      d: "Average case is about the distribution of <i>inputs</i>: on typical data, this is what happens. <b>Amortised</b> is a claim about a <i>sequence of operations</i>, not about one call. Any n appends cost under 2n in total, so the average is O(1). That is a <b>guarantee</b>, not a hope. An adversary can defeat an average case by choosing nasty input, and cannot defeat an amortised bound at all. Saying \"average\" when you mean \"amortised\" gives away that the distinction has not landed." },
+      d: "One loop over the input is <b>O(<var>n</var>)</b>. A loop inside a loop is <b>O(<var>n</var>²)</b>. Halving what is left at each step is <b>O(log <var>n</var>)</b>. A sort is <b>O(<var>n</var> log <var>n</var>)</b>. Two recursive calls per level is <b>O(2ⁿ)</b>. Loops one after another <i>add</i>, nested loops <i>multiply</i>. So sort-then-scan is <var>n</var> log <var>n</var> + <var>n</var>, which is O(<var>n</var> log <var>n</var>)." },
+    { t: "Space is counted the same way, and the stack counts",
+      d: "Memory is the other half of the answer. The hash set version stores up to <var>n</var> numbers, so it uses O(<var>n</var>) space. The pair check stores nothing extra, so O(1). Recursion counts too: a chain of calls <var>d</var> deep holds <var>d</var> frames. That is why a depth of 10⁵ crashes rather than slows. Give both numbers without being asked." },
+    { t: "Say which case you mean",
+      d: "An insert into a hash set is O(1) on <i>average</i>, over typical inputs. It is O(<var>n</var>) at <i>worst</i>, when every key lands in the same bucket. Now and then the set also doubles its table and copies everything. Yet <var>n</var> inserts still cost under 2<var>n</var> in total. That is <b>amortised</b> O(1): a promise about the whole sequence, for any input." },
+    { t: "What Big-O cannot tell you",
+      d: "It cannot rank two answers in the same class, or tell you anything about small inputs. At <var>n</var> = 20 the pair check does 190 comparisons and nobody cares. Between sort-then-scan and the set at 10⁵, the faster one in seconds depends on memory and language. For that, you measure." },
   ],
 
   variants: [
     { n: "Worst case", cost: "the default, and what O(...) means unqualified",
-      idea: "The most work any input of size n could force. Nothing is assumed about the data.",
-      when: "Always state this one unless you say otherwise. It is what an interviewer means by \"the complexity\".",
-      watch: "It is often driven by an input nobody would ever actually supply, which is exactly why quicksort survives being O(n²) on paper." },
+      idea: "The most work any input of size <var>n</var> could force. Nothing is assumed about the data. The pair check hits it when there is no duplicate, so every pair gets compared.",
+      when: "Always state this one unless you say otherwise. It is what an interviewer means by “the complexity”.",
+      watch: "It is often driven by an input nobody would ever supply. That is why quicksort survives being O(<var>n</var>²) on paper." },
 
-    { n: "Average case", cost: "over a distribution of inputs",
-      idea: "The expected work assuming inputs arrive in some typical spread. Hash maps and quicksort are both sold on this number.",
-      when: "When the worst case is real but pathological, and you can say what typical means.",
-      watch: "It quietly assumes a distribution. An adversary choosing colliding keys or sorted input defeats it, which is why runtimes randomise hashes and pivots." },
+    { n: "Average case", cost: "over a spread of inputs",
+      idea: "The expected work when inputs arrive in some typical spread. Hash sets and quicksort are both sold on this number.",
+      when: "When the worst case is real but rare, and you can say what typical means.",
+      watch: "It quietly assumes a distribution. An attacker choosing colliding keys, or sorted input, defeats it. That is why runtimes randomise hashes and pivots." },
 
     { n: "Amortised", cost: "a guarantee over a sequence, not a hope",
-      idea: "Total cost of n operations divided by n. Dynamic array append is O(1) amortised because the doubling copies sum to under 2n across the whole run.",
+      idea: "Total cost of <var>n</var> operations, divided by <var>n</var>. The hash set doubles its table now and then, but the copies add up to under <var>n</var>. So each insert is O(1) amortised.",
       when: "Anything with occasional expensive rebuilds: growable arrays, hash table resizing, union-find with path compression.",
-      watch: "Not the same as average. This one holds for every sequence, so no input can break it. Say the word out loud." },
+      watch: "Not the same as average. It holds for every sequence, so no input can break it. Say the word out loud." },
 
     { n: "Best case", cost: "almost never the answer to anything",
-      idea: "The least work some input could require. Insertion sort is O(n) on already-sorted data.",
-      when: "Only when the problem genuinely promises the easy shape, such as nearly-sorted input for Timsort.",
-      watch: "Leading with the best case reads as either evasion or misunderstanding. Volunteer it only as a bonus after the worst case." },
+      idea: "The least work some input could need. The pair check can stop at the first pair if those two match. Insertion sort is O(<var>n</var>) on already-sorted data.",
+      when: "Only when the problem promises the easy shape, such as nearly-sorted input for Timsort.",
+      watch: "Leading with the best case reads as evasion or confusion. Offer it only after the worst case." },
 
     { n: "Expected, for randomised algorithms", cost: "over the algorithm's own coin flips",
-      idea: "Randomised quicksort and quickselect are O(n log n) and O(n) expected. The randomness is inside the algorithm rather than in the input.",
-      when: "When you deliberately randomise to remove the adversary, which is the whole point of a random pivot.",
-      watch: "Different from average case: here no input can be unlucky, only the coin flips can, and the odds of sustained bad luck are vanishing." },
+      idea: "Randomised quicksort is O(<var>n</var> log <var>n</var>) expected. The randomness lives inside the algorithm, not in the input.",
+      when: "When you randomise on purpose to take the adversary out, which is the whole point of a random pivot.",
+      watch: "Different from average case. No input can be unlucky here, only the coin flips can, and long bad streaks are vanishingly rare." },
 
     { n: "Space complexity", cost: "counted exactly like time",
-      idea: "Extra memory that grows with the input: structures you allocate, plus the recursion stack.",
-      when: "Every single time. Half the follow-up questions in an interview are can you do it in O(1) space.",
-      watch: "The output usually does not count against it, and the call stack usually does. State which convention you are using and nobody can disagree with you." },
+      idea: "Extra memory that grows with the input: structures you allocate, plus the recursion stack. The set version is O(<var>n</var>) space, the pair check O(1).",
+      when: "Every time. Half the follow-up questions in an interview are “can you do it in O(1) space?”",
+      watch: "The output usually does not count, and the call stack usually does. Say which convention you use, and nobody can argue." },
   ],
 
   hing: `<p><b>Asli sawaal kya hai?</b> Big-O time nahi naapta, <b>growth</b> naapta hai. Do code likhe, ek 5 second leta hai, doosra 8 second. Isse kuch pata nahi chalta. Sahi sawaal: input 10 guna bada karo, to kaam kitna badhega? 10 guna, ya 100 guna?</p>
-<p><b>Constants kyun hataate hain?</b> <code>3n</code> aur <code>5n</code>, inka farak sirf ek constant hai, aur woh tez laptop se khatam ho jaata hai. Par <code>n</code> aur <code>n²</code> ka farak koi laptop nahi mita sakta. Isliye hum constants phenk dete hain aur sirf <b>shape</b> rakhte hain. Yahi Big-O ki poori philosophy hai.</p>
-<p><b>Sabse bada term hi bachta hai.</b> <code>n² + 1000n</code> mein n = 10 lakh daalo: n² wala hissa 10¹², aur 1000n wala 10⁹, hazaar guna chhota. Bade n par chhota term dikhai hi nahi deta. Isliye answer sirf <b>O(n²)</b>.</p>
-<p><b>Code dekh kar kaise batayein?</b> Ek loop = <b>O(n)</b>. Loop ke andar loop = <b>O(n²)</b>. Har step mein problem aadhi ho rahi hai (binary search) = <b>O(log n)</b>. Sort = <b>O(n log n)</b>. Har call se do naye call ban rahe hain (plain recursion) = <b>O(2ⁿ)</b>.</p>
-<p><b>Interview trick.</b> Agar constraint mein <code>n ≤ 10⁵</code> likha hai, to O(n²) = 10¹⁰ operations = TLE pakka. Matlab interviewer ne <b>constraints mein hi answer ka hint de diya hai</b>, O(n) ya O(n log n) chahiye. Yaad rakho: ~10⁸ operations per second, yeh ek mota andaaza hai jo hamesha kaam aata hai.</p>
-<p><b>Aur ek baat</b>, "O(1) average" aur "O(n) worst" alag cheezein hain. Hash map average O(1) hai, worst case O(n). Interview mein hamesha bolo <i>kaunsa case</i>, warna aadha marks katta hai.</p>`,
+<p><b>Constants kyun hataate hain?</b> <code>3n</code> aur <code>5n</code> ka farak sirf ek constant hai, aur woh tez laptop se khatam ho jaata hai. Par <code>n</code> aur <code>n²</code> ka farak koi laptop nahi mita sakta. Isliye constants phenk do aur sirf <b>shape</b> rakho. Yahi Big-O ki poori philosophy hai.</p>
+<p><b>Sabse bada term hi bachta hai.</b> <code>n² + 1000n</code> mein <var>n</var> = 10 lakh daalo: n² wala hissa 10¹², aur 1000n wala 10⁹, hazaar guna chhota. Bade <var>n</var> par chhota term dikhta hi nahi. Isliye answer sirf <b>O(<var>n</var>²)</b>.</p>
+<p><b>Code dekh kar kaise batayein?</b> Ek loop = <b>O(<var>n</var>)</b>. Loop ke andar loop = <b>O(<var>n</var>²)</b>. Har step mein problem aadhi (binary search) = <b>O(log <var>n</var>)</b>. Sort = <b>O(<var>n</var> log <var>n</var>)</b>. Har call se do naye call (plain recursion) = <b>O(2ⁿ)</b>.</p>
+<p><b>Interview trick.</b> Constraint mein <code>n ≤ 10⁵</code> likha hai, to O(<var>n</var>²) = 10¹⁰ operations = TLE pakka. Matlab interviewer ne <b>constraints mein hi answer ka hint de diya</b>: O(<var>n</var>) ya O(<var>n</var> log <var>n</var>) chahiye. Yaad rakho, ~10⁸ operations per second, yeh mota andaaza hamesha kaam aata hai.</p>
+<p><b>Aur ek baat.</b> "O(1) average" aur "O(<var>n</var>) worst" alag cheezein hain. Hash map average O(1) hai, worst case O(<var>n</var>). Interview mein hamesha bolo <i>kaunsa case</i>, warna aadhe marks katte hain.</p>`,
 
   viz: ["big-o"],
   see: [["VA", "https://www.bigocheatsheet.com/", "Big-O cheat sheet, every structure on one chart"]],
 
   math: [
-    { t: "Constants lose to growth, and you can watch the moment they lose", d: "A hundred times faster per step is a constant. It buys you one factor, once. The growth term keeps charging.", w:
-`            f(n) = 100 n      g(n) = n^2 / 10
-n = 10             1,000                   10
-n = 100           10,000                1,000
-n = 1,000        100,000              100,000   <- they cross
-n = 10,000     1,000,000           10,000,000
-n = 100,000   10,000,000        1,000,000,000   <- 100x apart` },
-    { t: "Only the biggest term survives, and here is the share it takes", d: "Nobody drops the smaller terms because they are unimportant. They are dropped because the arithmetic makes them disappear on their own.", w:
-`T(n) = n^2 + 100 n + 5000
+    { t: "The pairs against the set: constants lose to growth", d: "Charge each set insert 50 steps and each comparison 1. The pair check starts cheaper. At <var>n</var> = 100 they are level, and after that the 50 never matters again.", w:
+`n             pairs = n^2 / 2     set = 50 n
+10                         50            500
+100                     5,000          5,000   <- level
+1,000                 500,000         50,000
+10,000             50,000,000        500,000
+100,000         5,000,000,000      5,000,000   <- 1,000x apart` },
+    { t: "Only the biggest term survives, and here is its share", d: "Say the real program is the pair loop, plus 100 steps per number to read the input, plus 5,000 steps of start-up. Nobody drops the small terms by choice. The arithmetic drops them.", w:
+`T(n) = n^2 / 2  +  100 n  +  5,000
+       pair loop   reading    start-up
 
-n            n^2        100 n     5000   share of n^2
-10           100        1,000    5,000          1.6 %
-100       10,000       10,000    5,000           40 %
-1,000  1,000,000      100,000    5,000           90 %
-100,000     1e10      1e7        5,000         99.9 %` },
-    { t: "The 10x test, which is the only question the notation answers", d: "Multiply the input by ten and see what happens to the work. Everything else about Big-O is commentary on this table.", w:
-`growth        n = 10^6     n = 10^7    work grows by
-O(1)                 1            1            1.0x
-O(log n)            20           23            1.2x
-O(n)               1e6          1e7             10x
-O(n log n)     2 x 10^7    2.3 x 10^8          11.5x
-O(n^2)            1e12         1e14            100x` },
-    { t: "Where the one-second budget comes from", d: "About 10^8 simple operations per second is the working figure. Read n off the constraints, divide, and the growth you are allowed to use is settled before you have had an idea.", w:
+n            n^2 / 2      100 n   5,000   share of n^2 / 2
+10                50      1,000   5,000              0.8 %
+100            5,000     10,000   5,000               25 %
+1,000        500,000    100,000   5,000             82.6 %
+100,000     5 x 10^9       10^7   5,000             99.8 %` },
+    { t: "The 10x test, which is the only question the notation answers", d: "Multiply the input by ten and see what happens to the work. Each row is one of the ideas met on this page.", w:
+`growth      on this page     n = 10^6    n = 10^7  grows by
+O(1)        read a[0]               1           1        1x
+O(log n)    binary search          20          23      1.2x
+O(n)        hash set             10^6        10^7       10x
+O(n log n)  sort, scan       2 x 10^7  2.3 x 10^8     11.7x
+O(n^2)      every pair          10^12       10^14      100x` },
+    { t: "Where the one-second budget comes from", d: "About 10^8 simple steps per second is the working figure. Read <var>n</var> off the constraints, and the growth you can afford is settled before you have an idea.", w:
 `budget: roughly 10^8 operations in a second
 
 n            affordable      the arithmetic
@@ -129,40 +143,46 @@ n            affordable      the arithmetic
 10^4         O(n^2)          10^8
 500          O(n^3)          1.25 x 10^8
 20           O(2^n)          1.05 x 10^6
-11           O(n!)           4 x 10^7` },
-    { t: "Amortised, summed rather than asserted", d: "Amortised O(1) is a claim about a whole sequence of operations, and it is proved by adding up the expensive ones and finding the total is still linear.", w:
-`a growable array doubling 1 -> 2 -> 4 -> ... -> n
-copies done on the way:  1 + 2 + 4 + ... + n/2  =  n - 1
-n appends cost   n writes + (n - 1) copies  <  2n
-per append:      2n / n = 2 operations, a constant
+11           O(n!)           4 x 10^7
 
-worst single append is still n. Amortised is the average
-over the sequence, not a promise about any one call.` },
+our case, n = 10^5:
+  every pair    n^2 / 2  = 5 x 10^9      about 50 s, fails
+  sort, scan    n log n  = 1.7 x 10^6    passes
+  hash set      n        = 10^5          passes` },
+    { t: "Amortised, summed rather than asserted", d: "The hash set grows by doubling its table, and every doubling copies everything already inside. Add up all the copies and the total is still linear.", w:
+`the table doubles:  1 -> 2 -> 4 -> ... -> n
+copies on the way:  1 + 2 + 4 + ... + n/2  =  n - 1
+
+n inserts cost   n writes + (n - 1) copies  <  2n
+per insert:      2n / n = 2 steps, a constant
+
+the one insert that triggers a resize still costs n.
+Amortised is a promise about the sequence, not each call.` },
   ],
 
   costs: [
     ["O(1)", "constant", "dict/set lookup, array index, arithmetic, append. Input size is irrelevant."],
-    ["O(log n)", "halving", "binary search, heap push/pop, balanced-tree ops. n = 10⁶ → ~20 steps."],
-    ["O(n)", "one scan", "a single loop, one pass with two pointers, one hash-map pass."],
-    ["O(n log n)", "sort", "any comparison sort. The practical ceiling for n up to ~10⁶."],
-    ["O(n²)", "nested loops", "every pair. Fine to n ≈ 5,000; dead beyond that."],
-    ["O(2ⁿ) / O(n!)", "explosion", "subsets / permutations / naive recursion. Only for n ≲ 20."],
+    ["O(log n)", "halving", "binary search, heap push/pop, balanced-tree ops. n = 10⁶ needs about 20 steps."],
+    ["O(n)", "one scan", "a single loop, one pass with two pointers, one pass building a hash set."],
+    ["O(n log n)", "sort", "any comparison sort. The practical ceiling for n up to about 10⁶."],
+    ["O(n²)", "nested loops", "every pair. Fine up to n ≈ 5,000; dead beyond that."],
+    ["O(2ⁿ) / O(n!)", "explosion", "subsets, permutations, naive recursion. Only for n up to about 20."],
   ],
 
   traps: [
-    "<b>Forgetting space.</b> Recursion depth counts. A recursive DFS on a 10⁵-node path is O(n) stack. It blows Python's ~1000-frame default and overflows a default JVM/C++ stack too.",
-    "<b>Hidden loops in library calls.</b> <code>x in my_list</code> is O(n), not O(1). Wrapping it in a loop gives you a silent O(n²).",
-    "<b>Averaging over the wrong thing.</b> A single <code>append</code> can be O(n) when the list resizes; it is O(1) <i>amortised</i>. Say the word. It is what they are listening for.",
-    "<b>Two separate loops ≠ O(n²).</b> One after the other is O(n) + O(n) = O(n). Only <i>nesting</i> multiplies.",
-    "<b>Giving a loose bound.</b> O is an <i>upper</i> bound, so calling a linear scan O(n²) is technically true and completely useless. Interviewers want the <b>tight</b> bound, which is what Θ means. Nobody will make you write the theta, but they will notice if your answer is not tight.",
-    "<b>Letting the input size hide inside a value.</b> Looping to <code>n</code> where n is the <i>value</i> of an input number, not the length of an array, is exponential in the number of digits. This is why knapsack is called pseudo-polynomial and why it stops being fast when the numbers get big.",
+    "<b>Forgetting space.</b> Recursion depth counts. A recursive DFS down a path of 10⁵ nodes is O(<var>n</var>) stack. That blows Python's default limit of about 1,000 frames, and overflows a default JVM or C++ stack too.",
+    "<b>Hidden loops in library calls.</b> Write the set version with a list by mistake, <code>if x in seen</code>, and every check scans the list. The code looks like one loop and runs as O(<var>n</var>²).",
+    "<b>Averaging over the wrong thing.</b> A single <code>append</code> can cost O(<var>n</var>) when the list resizes. It is O(1) <i>amortised</i>. Say the word, because it is what they are listening for.",
+    "<b>Two separate loops are not O(<var>n</var>²).</b> One after the other is O(<var>n</var>) + O(<var>n</var>) = O(<var>n</var>). Only <i>nesting</i> multiplies.",
+    "<b>Giving a loose bound.</b> O is an <i>upper</i> bound, so calling a linear scan O(<var>n</var>²) is true and useless. Interviewers want the <b>tight</b> bound, which is what Θ means. Nobody makes you write the theta, but they notice a loose answer.",
+    "<b>Letting the input size hide inside a value.</b> A loop up to <var>n</var>, where <var>n</var> is the <i>value</i> of an input number, is exponential in its number of digits. That is why knapsack is called pseudo-polynomial, and why it stops being fast when the numbers get big.",
   ],
 
   impl: [
-    ["Python", "list · dict · set", "int is arbitrary precision, no overflow, but huge ints stop being O(1) arithmetic."],
+    ["Python", "list · dict · set", "int is arbitrary precision, so no overflow, but huge ints stop being O(1) arithmetic."],
     ["Java", "ArrayList · HashMap · HashSet", "Arrays.sort on primitives is quicksort (O(n²) worst); on objects it is TimSort."],
     ["C++", "vector · unordered_map · map", "map/set are O(log n) trees; unordered_* are O(1)-average hash tables. Know which you picked."],
-    ["JavaScript", "Array · Map · Set", "Array.sort() compares as STRINGS by default, always pass a comparator for numbers."],
+    ["JavaScript", "Array · Map · Set", "Array.sort() compares as STRINGS by default. Always pass a comparator for numbers."],
   ],
 
   code: {
@@ -257,46 +277,175 @@ map.get(k) / set.has(k)   // O(1) average`,
   codecap: "Every complexity you need for interviews, read straight off the shape of the code.",
 
   q: [
-    ["Why do we drop constants in Big-O?", "Because a constant factor is exactly what a faster machine or compiler can erase. It says nothing about the algorithm. A different growth class (n vs n²) is something no hardware can fix."],
-    ["Why does n² + 1000n simplify to O(n²)?", "At large n the biggest term dominates: at n = 10⁶ the n² term is a thousand times larger than 1000n. Big-O describes the limit, so only the fastest-growing term survives."],
-    ["Constraint says n ≤ 10⁵. What complexity do you need, and why?", "O(n) or O(n log n). O(n²) would be 10¹⁰ operations ≈ 100 s at ~10⁸ ops/sec → TLE. The constraint is the interviewer telling you the intended complexity."],
-    ["Two loops one after the other, O(n) or O(n²)?", "O(n). Sequential work adds (n + n = 2n → O(n)). Only nested loops multiply."],
-    ["What does 'append is O(1) amortised' actually mean?", "A single append is usually O(1) but occasionally O(n) when the array doubles and copies. Averaged over n appends the total is under 2n, so each one costs O(1) across the sequence."],
-    ["What is the difference between average case and amortised?", "Average case is over a distribution of inputs, so a nasty input can defeat it. Amortised is over a sequence of operations and holds for every input, which makes it a guarantee rather than an expectation."],
-    ["How do you count space complexity, and what do people forget?", "Anything that grows with the input, including the call stack. A recursive solution with no data structures is still O(depth) space, which is why deep recursion crashes rather than merely slows."],
+    ["Why do we drop constants in Big-O?", "Because a constant factor is exactly what a faster machine or compiler can erase. It says nothing about the algorithm. A different growth class (n against n²) is something no hardware can fix."],
+    ["Why does n² + 1000n simplify to O(n²)?", "At large n the biggest term dominates. At n = 10⁶ the n² term is a thousand times larger than 1000n. Big-O describes the growth, so only the fastest-growing term survives."],
+    ["Constraint says n ≤ 10⁵. What complexity do you need, and why?", "O(n) or O(n log n). O(n²) would be 10¹⁰ operations, about 100 s at 10⁸ per second, so a timeout. The constraint is the interviewer telling you the intended complexity."],
+    ["Two loops one after the other: O(n) or O(n²)?", "O(n). Sequential work adds: n + n = 2n, which is O(n). Only nested loops multiply."],
+    ["What does 'append is O(1) amortised' actually mean?", "A single append is usually O(1) but sometimes O(n), when the array doubles and copies. Over n appends the total is under 2n. So each one costs O(1) across the sequence."],
+    ["What is the difference between average case and amortised?", "Average case is over a spread of inputs, so a nasty input can defeat it. Amortised is over a sequence of operations and holds for every input. That makes it a guarantee rather than an expectation."],
+    ["How do you count space complexity, and what do people forget?", "Anything that grows with the input, including the call stack. A recursive solution with no data structures is still O(depth) space. That is why deep recursion crashes rather than merely slows."],
   ],
 
   p: [
     ["GFG", "https://www.geeksforgeeks.org/analysis-algorithms-big-o-analysis/", "GFG, Big-O analysis", "E"],
     [1, "two-sum", "Two Sum, state the brute force AND the O(n) cost", "E"],
-    [217, "contains-duplicate", "Contains Duplicate, the list to set swap", "E"],
+    [217, "contains-duplicate", "Contains Duplicate, the running example: pairs, sort, or set", "E"],
     [121, "best-time-to-buy-and-sell-stock", "Best Time to Buy and Sell, O(n²) to O(n)", "E"],
     [242, "valid-anagram", "Valid Anagram, sorting against counting", "E"],
     [704, "binary-search", "Binary Search, O(n) to O(log n)", "E"],
     [53, "maximum-subarray", "Maximum Subarray, three complexities for one problem", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Aapne ek function likha jo check karta hai ki list mein koi number do baar hai ya nahi. Yeh har pair compare karta hai: har number ko uske baad wale har number se. 1,000 numbers ke test par answer turant aata hai.</p>
+<p>Asli input mein <b>1,00,000 numbers</b> hain aur <b>1 second ki limit</b> hai. Pass hoga? Yeh submit karne se pehle jaanna hai, aur compare karne ke liye do aur versions likhne se bhi pehle.</p>`,
+      tries: [
+        ["Laptop par time naap lo", "1,000 numbers par 5 ms laga. Jab tak pata na ho ki kaam kaise badhta hai, 1,00,000 ke baare mein isse kuch nahi pata chalta. Input 100 guna badha, pairs 10,000 guna, to 5 ms ban jaata hai <b>50 second</b>."],
+        ["Har operation exactly gino", "Loop <var>n</var>(<var>n</var> − 1) / 2 comparisons karta hai, jahan <var>n</var> numbers ki ginti hai. Phir index update, bounds check, memory read bhi jodo. Ek comparison kitne machine steps ka hai? Yeh language aur compiler par depend karta hai. Precise number milega, jo agli machine par galat hoga."],
+        ["Sabse bade input par test karo", "Yeh chalta hai, par tab jab code likh chuke ho. Teen designs mein se pehle kaunsa likhein, yeh nahi batata. Aur random test data woh input miss kar sakta hai jo code ko slow karta hai."],
+      ],
+      so: `<p>Seconds bhool jao aur ek hi sawaal poocho: <b>input 10 guna bada ho, to kaam kitna badhega?</b> Har pair compare karo: 10 guna numbers matlab 100 guna pairs. Pehle sort, phir padosi check: 10 guna se thoda zyada. Har number hash set mein daalo: theek 10 guna.</p>
+<p>Isi growth rate ko <b>Big-O</b> kehte hain. Pair check O(<var>n</var>²) hai. <var>n</var> = 1,00,000 par yeh 5 × 10⁹ comparisons hai, lagbhag 50 second. Hash set O(<var>n</var>) hai: 1,00,000 inserts, ek second se kaafi kam. Yahi ek example, duplicate dhoondhne ke teen tareeke, poore page mein chalega.</p>`,
+    },
+
+    one: "Big-O <b>growth curve ki shape</b> hai, speed nahi. Yeh ek hi sawaal ka jawab deta hai: input 10× bada ho, to kaam ka kya hota hai?",
+
+    plain: `<p>Upar wala duplicate check lo. Ise teen tareeke se likh sakte ho: har pair compare karo, sort karke padosi dekho, ya har number hash set mein daalo. 1,000 numbers par teeno turant khatam. To best kaunsa hai? <b>Time naapne se abhi pata nahi chalega.</b></p>
+<p><b>Big-O</b> batata hai ki input badhne par <b>kaam kaise badhta hai</b>. <var>n</var> input ka size hai, yahan numbers ki ginti. Pair check lagbhag <var>n</var>² / 2 comparisons karta hai, isliye O(<var>n</var>²) likhte hain. Set lagbhag <var>n</var> inserts karta hai, to O(<var>n</var>). Big-O growth rakhta hai aur baaki phenk deta hai: language, CPU, aage wala constant.</p>
+<p>Yeh sab kyun phenkein? <var>n</var> = 1,00,000 par pair check ko 5 × 10⁹ comparisons chahiye, aur set ko 10⁵ inserts. Farak 50,000 guna ka hai. Koi tez laptop yeh farak nahi mita sakta.</p>
+<p><b>Analogy.</b> “Drive 4 ghante ki hai” car par depend karta hai. “Har extra 100 km ek ghanta jodta hai” sadak ke baare mein hai, car koi bhi ho. Big-O sadak batata hai, car nahi.</p>`,
+
+    why: [
+      { t: "Seconds nahi, steps gino",
+        d: "Seconds machine, language aur saath mein chal rahi cheezon par depend karte hain. Inmein se kuch bhi algorithm nahi hai. Isliye <b>steps</b> gino. <var>n</var> numbers par pair check <var>n</var>(<var>n</var> − 1) / 2 comparisons karta hai. 1,000 numbers ke liye yeh 499,500 hai, har machine par." },
+      { t: "Constants fade ho jaate hain, growth nahi",
+        d: "Maan lo ek set insert 50 simple steps ka hai aur ek comparison 1 step ka. <var>n</var> = 100 par dono versions 5,000 steps karte hain. <var>n</var> = 1,00,000 par pairs 5 × 10⁹ aur set 5 × 10⁶. 50 jaisa constant tez machine mita sakti hai. <var>n</var> aur <var>n</var>² ka farak koi nahi mitata." },
+      { t: "Sirf sabse bada term bachta hai",
+        d: "Exact pair count <var>n</var>²/2 − <var>n</var>/2 hai. <var>n</var> = 1,00,000 par pehla hissa 5 × 10⁹ hai, doosra 50,000. Chhota hissa bade ka 1/1,00,000 hai. To use hata do, ½ bhi hata do, aur likho <b>O(<var>n</var>²)</b>." },
+      { t: "Code ki shape se padh lo",
+        d: "Input par ek loop <b>O(<var>n</var>)</b> hai. Loop ke andar loop <b>O(<var>n</var>²)</b>. Har step par bacha hua aadha karna <b>O(log <var>n</var>)</b>. Sort <b>O(<var>n</var> log <var>n</var>)</b>. Har level par do recursive calls <b>O(2ⁿ)</b>. Ek ke baad ek loops <i>add</i> hote hain, nested loops <i>multiply</i>. To sort-then-scan <var>n</var> log <var>n</var> + <var>n</var> hai, yaani O(<var>n</var> log <var>n</var>)." },
+      { t: "Space bhi aise hi ginte hain, aur stack bhi ginta hai",
+        d: "Memory answer ka doosra aadha hai. Hash set version <var>n</var> numbers tak store karta hai, to O(<var>n</var>) space. Pair check kuch extra store nahi karta, to O(1). Recursion bhi ginta hai: <var>d</var> gehri calls ki chain <var>d</var> frames rakhti hai. Isiliye 10⁵ ki depth slow nahi hoti, crash hoti hai. Dono numbers bina pooche batao." },
+      { t: "Batao kaunsa case bol rahe ho",
+        d: "Hash set mein insert typical inputs par <i>average</i> O(1) hai. <i>Worst</i> case mein O(<var>n</var>), jab har key ek hi bucket mein gire. Kabhi kabhi set apni table double karke sab copy bhi karta hai. Phir bhi <var>n</var> inserts ka total 2<var>n</var> se kam rehta hai. Yeh <b>amortised</b> O(1) hai: poore sequence ka promise, har input ke liye." },
+      { t: "Big-O kya nahi bata sakta",
+        d: "Ek hi class ke do answers ko rank nahi kar sakta, aur chhote inputs ke baare mein kuch nahi kehta. <var>n</var> = 20 par pair check 190 comparisons karta hai, kisi ko farak nahi padta. 10⁵ par sort-then-scan aur set mein seconds mein kaun tez hai, yeh memory aur language par depend hai. Uske liye naapo." },
+    ],
+
+    variants: [
+      { n: "Worst case", cost: "default, aur bina kuch kahe O(...) ka yahi matlab",
+        idea: "Size <var>n</var> ka koi bhi input zyada se zyada jitna kaam karwa sake. Data ke baare mein kuch assume nahi. Pair check yahan tab pahunchta hai jab koi duplicate nahi, to har pair compare hota hai.",
+        when: "Hamesha yahi batao, jab tak alag se na bolo. Interviewer “complexity” bole to matlab yahi hai.",
+        watch: "Aksar yeh aise input se aata hai jo koi dega hi nahi. Isiliye quicksort paper par O(<var>n</var>²) hote hue bhi chalta hai." },
+      { n: "Average case", cost: "inputs ke spread par",
+        idea: "Jab inputs kisi typical spread mein aayein, tab expected kaam. Hash sets aur quicksort dono isi number par bikte hain.",
+        when: "Jab worst case asli hai par rare, aur aap bata sakte ho ki typical ka matlab kya hai.",
+        watch: "Yeh chupchaap ek distribution assume karta hai. Colliding keys ya sorted input chunne wala attacker ise tod deta hai. Isiliye runtimes hash aur pivot randomise karte hain." },
+      { n: "Amortised", cost: "sequence par guarantee, ummeed nahi",
+        idea: "<var>n</var> operations ka total cost, <var>n</var> se divide. Hash set kabhi kabhi table double karta hai, par copies milakar <var>n</var> se kam hain. To har insert amortised O(1) hai.",
+        when: "Jahan kabhi kabhi mehenga rebuild ho: growable arrays, hash table resize, path compression wala union-find.",
+        watch: "Average jaisa nahi hai. Yeh har sequence ke liye sach hai, to koi input ise nahi tod sakta. Yeh word zor se bolo." },
+      { n: "Best case", cost: "lagbhag kabhi kisi cheez ka answer nahi",
+        idea: "Kisi input ke liye sabse kam kaam. Pair check pehle hi pair par ruk sakta hai agar woh dono match karein. Insertion sort already-sorted data par O(<var>n</var>) hai.",
+        when: "Sirf tab jab problem easy shape ka promise kare, jaise Timsort ke liye nearly-sorted input.",
+        watch: "Best case se shuru karna bachaav ya confusion lagta hai. Ise worst case ke baad hi batao." },
+      { n: "Expected, for randomised algorithms", cost: "algorithm ke apne coin flips par",
+        idea: "Randomised quicksort expected O(<var>n</var> log <var>n</var>) hai. Randomness algorithm ke andar hai, input mein nahi.",
+        when: "Jab adversary ko hataane ke liye jaan-boojh kar randomise karte ho. Random pivot ka poora point yahi hai.",
+        watch: "Average case se alag. Yahan koi input unlucky nahi ho sakta, sirf coin flips ho sakte hain, aur lambi bad streak lagbhag hoti hi nahi." },
+      { n: "Space complexity", cost: "bilkul time ki tarah ginte hain",
+        idea: "Input ke saath badhne wali extra memory: jo structures banate ho, plus recursion stack. Set version O(<var>n</var>) space hai, pair check O(1).",
+        when: "Har baar. Interview ke aadhe follow-up yahi hote hain: “O(1) space mein kar sakte ho?”",
+        watch: "Output aam taur par nahi ginta, call stack aam taur par ginta hai. Kaunsa convention use kar rahe ho, bata do, phir koi bahas nahi karega." },
+    ],
+
+    math: [
+      { t: "Pairs vs set: constants growth se haarte hain", d: "Har set insert ke 50 steps lagao aur har comparison ka 1. Pair check shuru mein sasta hai. <var>n</var> = 100 par dono barabar, aur uske baad 50 ka koi matlab nahi rehta." },
+      { t: "Sirf sabse bada term bachta hai, aur yeh raha uska hissa", d: "Maan lo asli program pair loop hai, plus input padhne ke liye har number par 100 steps, plus 5,000 steps ka start-up. Chhote terms koi apni marzi se nahi hataata. Hisaab khud unhe hata deta hai." },
+      { t: "10x test, notation bas isi sawaal ka jawab deta hai", d: "Input ko das guna karo aur dekho kaam ka kya hota hai. Har row is page ka ek idea hai." },
+      { t: "Ek second ka budget kahan se aata hai", d: "Lagbhag 10^8 simple steps per second, yahi working figure hai. Constraints se <var>n</var> padho, aur idea aane se pehle hi tay ho jaata hai ki kaunsi growth chalegi." },
+      { t: "Amortised, bola nahi, jod ke dikhaya", d: "Hash set apni table double karke badhta hai, aur har doubling andar ka sab kuch copy karti hai. Saari copies jodo, total phir bhi linear hai." },
+    ],
+
+    costs: [
+      ["O(1)", "constant", "dict/set lookup, array index, arithmetic, append. Input size ka koi matlab nahi."],
+      ["O(log n)", "halving", "binary search, heap push/pop, balanced-tree ops. n = 10⁶ par lagbhag 20 steps."],
+      ["O(n)", "one scan", "ek loop, two pointers ka ek pass, hash set banane ka ek pass."],
+      ["O(n log n)", "sort", "koi bhi comparison sort. n lagbhag 10⁶ tak practical ceiling."],
+      ["O(n²)", "nested loops", "har pair. n ≈ 5,000 tak theek; usse aage khatam."],
+      ["O(2ⁿ) / O(n!)", "explosion", "subsets, permutations, naive recursion. Sirf n lagbhag 20 tak."],
+    ],
+
+    traps: [
+      "<b>Space bhool jaana.</b> Recursion depth ginti hai. 10⁵ nodes ke path par recursive DFS O(<var>n</var>) stack hai. Python ki default limit lagbhag 1,000 frames hai, woh toot jaati hai, aur default JVM ya C++ stack bhi overflow hota hai.",
+      "<b>Library calls mein chhupe loops.</b> Set version galti se list ke saath likho, <code>if x in seen</code>, aur har check poori list scan karta hai. Code ek loop dikhta hai aur O(<var>n</var>²) chalta hai.",
+      "<b>Galat cheez par average lena.</b> Ek <code>append</code> list resize hone par O(<var>n</var>) ho sakta hai. Yeh O(1) <i>amortised</i> hai. Yeh word bolo, interviewer yahi sunna chahta hai.",
+      "<b>Do alag loops O(<var>n</var>²) nahi hain.</b> Ek ke baad ek matlab O(<var>n</var>) + O(<var>n</var>) = O(<var>n</var>). Sirf <i>nesting</i> multiply karti hai.",
+      "<b>Dheela bound dena.</b> O ek <i>upper</i> bound hai, to linear scan ko O(<var>n</var>²) kehna sach hai aur bekaar hai. Interviewer <b>tight</b> bound chahta hai, Θ ka matlab yahi hai. Theta koi nahi likhwata, par dheela answer sab notice karte hain.",
+      "<b>Input size ko value ke andar chhupne dena.</b> <var>n</var> tak loop, jahan <var>n</var> kisi input number ki <i>value</i> hai, uske digits ki ginti mein exponential hai. Isiliye knapsack pseudo-polynomial kehlata hai, aur bade numbers par fast nahi rehta.",
+    ],
+
+    impl: [
+      ["Python", "list · dict · set", "int arbitrary precision hai, to overflow nahi, par bahut bade ints par arithmetic O(1) nahi rehta."],
+      ["Java", "ArrayList · HashMap · HashSet", "Primitives par Arrays.sort quicksort hai (worst O(n²)); objects par TimSort."],
+      ["C++", "vector · unordered_map · map", "map/set O(log n) trees hain; unordered_* O(1)-average hash tables. Pata hona chahiye kaunsa liya."],
+      ["JavaScript", "Array · Map · Set", "Array.sort() default mein STRINGS ki tarah compare karta hai. Numbers ke liye hamesha comparator do."],
+    ],
+
+    codecap: "Interview ke liye har complexity, seedha code ki shape se padhi hui.",
+
+    q: [
+      ["Big-O mein constants kyun hataate hain?", "Kyunki constant factor wahi cheez hai jo tez machine ya compiler mita deta hai. Algorithm ke baare mein woh kuch nahi kehta. Alag growth class (n vs n²) ko koi hardware theek nahi kar sakta."],
+      ["n² + 1000n simplify hokar O(n²) kyun banta hai?", "Bade n par sabse bada term hi chalta hai. n = 10⁶ par n² wala term 1000n se hazaar guna bada hai. Big-O growth batata hai, to sirf sabse tez badhne wala term bachta hai."],
+      ["Constraint kehta hai n ≤ 10⁵. Kaunsi complexity chahiye, aur kyun?", "O(n) ya O(n log n). O(n²) matlab 10¹⁰ operations, 10⁸ per second par lagbhag 100 s, yaani timeout. Constraint interviewer ka tareeka hai intended complexity batane ka."],
+      ["Ek ke baad ek do loops: O(n) ya O(n²)?", "O(n). Sequential kaam add hota hai: n + n = 2n, jo O(n) hai. Sirf nested loops multiply karte hain."],
+      ["'append is O(1) amortised' ka asli matlab kya hai?", "Ek append aam taur par O(1) hai, par kabhi kabhi O(n), jab array double hokar copy karta hai. n appends ka total 2n se kam hai. To poore sequence mein har ek O(1) padta hai."],
+      ["Average case aur amortised mein kya farak hai?", "Average case inputs ke spread par hai, to ek ganda input use tod sakta hai. Amortised operations ke sequence par hai aur har input ke liye sach hai. Isliye woh guarantee hai, expectation nahi."],
+      ["Space complexity kaise ginte ho, aur log kya bhoolte hain?", "Jo bhi input ke saath badhe, call stack bhi. Bina kisi data structure ka recursive solution bhi O(depth) space hai. Isiliye gehri recursion slow nahi hoti, crash hoti hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "memory",
   n: "Memory, pointers and references",
   group: "Fundamentals",
+  need: {
+    ask: `<p>You need a 3 × 3 board of zeros for a game. In Python the short way is <code>grid = [[0] * 3] * 3</code>. Then you place one piece: <code>grid[0][0] = 9</code>.</p>
+<p>You print the board and get <code>[[9, 0, 0], [9, 0, 0], [9, 0, 0]]</code>. <b>One write changed three rows.</b> Nothing crashed and nothing warned. The same thing happens in backtracking, in caches, in any function you hand a list to. Why?</p>`,
+    tries: [
+      ["Copy the grid before writing", "<code>g2 = grid[:]</code> makes a new outer list. But it copies the three things inside it, and they still lead to the one row. <code>g2[0][0] = 9</code> puts a 9 in all three rows again."],
+      ["Build the row once, then use it three times", "<code>row = [0] * 3</code>, then <code>grid = [row, row, row]</code>. That is the same bug written out longhand: three slots, one row."],
+      ["Never change the grid, rebuild it on every write", "Correct, and slow. Every write copies every cell. A 1,000 × 1,000 board with 10⁵ writes is 10¹¹ cell copies, about 17 minutes of work."],
+    ],
+    so: `<p>All three fail for one reason: <b>a variable does not hold a list. It holds the list's address</b>, a number that says where in memory the list lives. <code>* 3</code> copied that number three times, so three slots lead to one row.</p>
+<p>The fix is to build three rows: <code>[[0] * 3 for _ in range(3)]</code>. The rest of this page is that one fact: what a variable holds, when a copy is really a copy, and what each costs. The grid bug is the example throughout.</p>`,
+  },
+
   one: "A variable does not contain your object. It holds the <b>address</b> of one. So <code>b = a</code> copies the address, not the thing, and now two names can change one object.",
 
-  plain: `<p>Memory is one long strip of numbered slots. A variable is a name for one slot. A small fixed-size value like an integer fits in that slot directly. A list, an object or a string has no size known in advance, so it cannot.</p>
-<p>Instead the object is built somewhere else in memory, and the slot holds its <b>address</b>. That address is what a pointer is. A reference is the same idea, with the step of following the address (dereferencing) hidden from you.</p>
-<p>Everything surprising follows from that one fact. <code>b = a</code> copies the slot, which means it copies the address, so both names now describe the same object. Change it through one and the other sees the change, because there was only ever one object.</p>
-<p><b>Analogy.</b> A slip of paper with a house address on it. Photocopy the slip and you have two slips, not two houses. Anyone who follows either slip walks into the same living room and can move the furniture.</p>`,
+  plain: `<p>Memory is one long strip of numbered slots. A variable is a name for one slot. In Java or C++, a small value of fixed size, like an <code>int</code>, fits in its slot directly. A list does not: it might hold 3 items or 3 million. (Python goes further and stores even integers elsewhere.)</p>
+<p>So the list is built somewhere else in memory, and the variable's slot holds its <b>address</b>. An address held like this is called a <b>pointer</b>. A <b>reference</b> is the same thing, except the language follows the address for you.</p>
+<p>Everything on this page follows from that. <code>b = a</code> copies what is in the slot, which is an address. Now two names lead to one list, and a change through either shows through both. In the grid, <code>* 3</code> did the same thing three times: three slots, one row.</p>
+<p><b>Analogy.</b> A slip of paper with a house address on it. Photocopy the slip and you have two slips, not two houses. Anyone who follows either slip walks into the same living room, and can move the furniture.</p>`,
 
   why: [
-    { t: "Only fixed-size things can live in the variable itself", d: "A memory slot has a fixed size decided in advance. An integer fits. A list that might hold three items or three million cannot, so it has to be built somewhere else, and the variable holds the <b>address</b> of where. That address is a pointer, and a reference is a pointer with the arrow-following done for you." },
-    { t: "So assignment copies the address, not the object", d: "<code>b = a</code> does exactly what it says: it copies what is in the variable. What is in the variable is an address. Nothing is duplicated, nothing is allocated, and there is still one object, now with two names pointing at it. That is <b>aliasing</b>, and it is not a language quirk; it is the only thing assignment could sensibly mean." },
-    { t: "Which is why a function can change your list", d: "Arguments are copied too, but again it is the <b>address</b> that gets copied. So the function has its own name for your object and can mutate it. It cannot, however, make your variable point somewhere else, because it only got a copy of the arrow. This is exactly why reassigning a parameter does nothing to the caller while calling <code>.append</code> on it does." },
-    { t: "Copying has depth, and shallow is the default", d: "A copy of a list duplicates the <b>outer</b> container and its addresses. Anything those addresses point to is still shared. That is the whole explanation for <code>[[0]*3]*3</code>: you built one row and stored its address three times, so writing to <code>g[0][0]</code> appears to change every row. A deep copy follows every arrow and duplicates all the way down." },
-    { t: "Immutable objects make all of this disappear", d: "You can only observe aliasing by <i>changing</i> something. If an object cannot change, a string, a number, a tuple, then sharing it is invisible and completely safe. That is a large part of why languages make strings immutable, and why immutable values are safe to use as hash-map keys and to hand between threads." },
-    { t: "Two lifetimes: the frame dies, the object need not", d: "Local names live in a <b>stack frame</b> that is discarded when the function returns. The object they point to lives elsewhere, on the <b>heap</b>, and survives as long as something still points at it. Garbage-collected languages free it when nothing does; C++ makes it your job, and returning the address of a dead local is the classic dangling-pointer bug." },
-    { t: "And null is an address that points at nothing", d: "A pointer has to be able to say \"no object\". Following it is the most common crash in the industry. That is why every tree and linked-list function starts by checking for it, and why languages keep inventing ways to make the check impossible to forget." },
+    { t: "Only fixed-size things fit in the variable itself",
+      d: "A memory slot has a size fixed in advance, usually 8 bytes. A Java or C++ <code>int</code> fits. Python stores even integers as objects, which is why its lists cost so much. A row of the grid might have 3 cells or 3 million, so it cannot. It is built elsewhere, and the variable holds its <b>address</b>. That address is a pointer. A reference is a pointer the language follows for you." },
+    { t: "So assignment copies the address, not the object",
+      d: "<code>b = a</code> copies what is in the variable, and that is an address. Nothing is built and nothing is duplicated. One list now has two names. That is called <b>aliasing</b>. <code>[[0] * 3] * 3</code> is the same move three times: one row, three addresses of it." },
+    { t: "Which is why a function can change your list",
+      d: "Arguments are copied too, and again it is the address that gets copied. So the function reaches your list and can change it. It cannot make your variable point at a different list, because it only has a copy of the address. Reassigning a parameter does nothing outside, while <code>.append</code> on it does." },
+    { t: "Copying has depth, and shallow is the default",
+      d: "<code>grid[:]</code> copies the outer list: 3 new slots, holding the same 3 addresses. The rows are still shared. That is a <b>shallow</b> copy. A <b>deep</b> copy follows every address and duplicates what it finds, all 9 cells. Shallow costs one step per slot, deep one step per cell." },
+    { t: "Not every language shares by default",
+      d: "Python, Java and JavaScript always copy the address. C++ is the opposite: <code>b = a</code> copies the whole object, one cell at a time. So <code>vector&lt;vector&lt;int&gt;&gt; grid(3, row)</code> gives three real rows. In C++ you have to ask for sharing, with <code>&amp;</code> or a pointer." },
+    { t: "Immutable objects make the problem disappear",
+      d: "You only notice sharing when something <i>changes</i>. A string, a number or a tuple cannot change, so sharing it is invisible and safe. That is why languages make strings immutable, and why immutable values can be hash-map keys." },
+    { t: "Two lifetimes, and what an address cannot promise",
+      d: "Local names live in a <b>stack frame</b> that is thrown away when the function returns. The list lives on the <b>heap</b>, and survives while anything still points at it. An address can also point at nothing, called <b>null</b>. Following it is the most common crash there is, so check for it first." },
   ],
 
   hing: `<p><b>Sabse pehle asli baat:</b> variable ke andar tumhara object <b>nahi</b> hota. Uske andar object ka <b>pata (address)</b> hota hai. Bas isi ek baat se aage sab kuch samajh aa jaata hai.</p>
@@ -304,15 +453,15 @@ map.get(k) / set.has(k)   // O(1) average`,
 <p><b>Ab <code>b = a</code> kya karta hai?</b> Jo variable ke andar hai wahi copy karta hai, matlab <b>address copy karta hai, list nahi</b>. Naya kuch bana hi nahi. Ek hi list hai, ab uske do naam hain. Isi ko <b>aliasing</b> kehte hain.</p>
 <p><b>Isliye <code>b.append(4)</code> karne par <code>a</code> bhi badal jaata hai.</b> Yeh language ka bug nahi, list to shuru se ek hi thi. <b>Interview code mein sabse zyada chupa hua bug yahi hai.</b></p>
 <p><b>Function ko list bhejne par bhi yahi hota hai.</b> Address copy hota hai, isliye function tumhari list <b>badal sakta hai</b>. Par woh tumhare variable ko kisi <b>doosri</b> list par point nahi kara sakta, kyunki uske paas sirf arrow ki copy hai. Isiliye parameter ko <code>=</code> se badalna bahar dikhta nahi, par <code>.append()</code> dikhta hai.</p>
-<p><b>Copy ki gehrai (yeh zaroor samajhna):</b> normal copy sirf <b>bahar wala dabba</b> naya banata hai, andar ke addresses wahi purane rehte hain, ise <b>shallow copy</b> kehte hain. Isiliye <code>[[0]*3]*3</code> mein ek hi row banti hai aur uska address teen baar rakha jaata hai; <code>g[0][0]</code> badlo to teeno rows badli dikhti hain. Sahi tarika: <code>[[0]*c for _ in range(r)]</code>. Har arrow ke peeche jaakar copy karna <b>deep copy</b> hai.</p>
+<p><b>Copy ki gehrai (yeh zaroor samajhna):</b> normal copy sirf <b>bahar wala dabba</b> naya banata hai, andar ke addresses wahi purane rehte hain. Ise <b>shallow copy</b> kehte hain. Isiliye <code>[[0]*3]*3</code> mein ek hi row banti hai aur uska address teen baar rakha jaata hai. <code>g[0][0]</code> badlo to teeno rows badli dikhti hain. Sahi tarika: <code>[[0]*c for _ in range(r)]</code>. Har arrow ke peeche jaakar copy karna <b>deep copy</b> hai.</p>
 <p><b>Immutable cheezein is poori jhanjhat se bahar hain.</b> Aliasing sirf tab dikhta hai jab cheez <b>badal</b> sakti ho. String, number, tuple badal hi nahi sakte, isliye unhe share karna bilkul safe hai, aur isiliye woh hash map ki keys ban sakte hain.</p>
-<p><b>Aur backtracking wali galti:</b> <code>res.append(path)</code> mat likhna, woh badalti hui list ka address store karta hai, to saare results ek hi cheez ban jaate hain. <code>res.append(path[:])</code> likho, copy.</p>`,
+<p><b>Aur backtracking wali galti:</b> <code>res.append(path)</code> mat likhna. Woh badalti hui list ka address store karta hai, to saare results ek hi cheez ban jaate hain. <code>res.append(path[:])</code> likho, copy.</p>`,
 
   viz: ["aliasing"],
   see: [["DOC", "https://docs.python.org/3/library/copy.html", "Python docs, shallow vs deep copy"]],
 
   math: [
-    { t: "What the variable actually holds, in bytes", d: "A reference is one machine word. Everything else lives somewhere else, and the gap between those two numbers is where the surprise is.", w:
+    { t: "What the variable actually holds, in bytes", d: "A reference is one machine word, 8 bytes. Everything else lives somewhere else, and the gap between those two numbers is where the surprise is.", w:
 `64-bit machine: one reference = 8 bytes
 
 a Python list of 1,000,000 small ints
@@ -322,16 +471,25 @@ a Python list of 1,000,000 small ints
 
 the same data as a Java int[]  1e6 x 4 = 4 MB
 9x, and none of it shows up in the Big-O` },
-    { t: "Copying has depth, and the two depths cost different amounts", d: "A shallow copy duplicates the pointers. A deep copy duplicates what they point at. For a grid those are n and n x m.", w:
+    { t: "The grid, counted: objects built and addresses stored", d: "Count what each line builds. The bug is visible in the count before anything is printed.", w:
+`[[0] * 3] * 3
+  rows built:          1
+  addresses stored:    3, all the same one
+  grid[0][0] = 9  ->   seen in 3 rows
+
+[[0] * 3 for _ in range(3)]
+  rows built:          3
+  addresses stored:    3, all different
+  grid[0][0] = 9  ->   seen in 1 row` },
+    { t: "Copying has depth, and the two depths cost different amounts", d: "A shallow copy duplicates the addresses. A deep copy duplicates what they point at. Same grid, scaled up to 1,000 × 1,000.", w:
 `grid = 1,000 rows x 1,000 columns
 
-shallow copy:  1,000 pointers copied        O(rows)
+shallow copy:  1,000 addresses copied       O(rows)
 deep copy:     1,000,000 cells copied       O(rows x cols)
 
-[[0] * 3] * 4    -> 1 row object, 4 pointers to it
-                    grid[0][0] = 9 shows up in all four rows
-[[0] * 3 for _ in range(4)] -> 4 row objects, 12 cells` },
-    { t: "Passing an object to a function, priced", d: "This is the one place where the language you are writing in changes the complexity rather than the constant.", w:
+rebuilding on every write, 10^5 writes:
+  10^5 x 10^6 = 10^11 cells  ->  about 17 minutes at 10^8/s` },
+    { t: "Passing an object to a function, priced", d: "This is the one place where the language changes the complexity, not just the constant.", w:
 `hand a 1,000,000-element list to a function
 
 by reference   8 bytes copied         O(1)
@@ -339,7 +497,7 @@ by value       1e6 elements copied    O(n)
 
 Python, Java, JavaScript: always the first
 C++: the second, unless you write & or const&` },
-    { t: "The frame dies, the object need not", d: "Two lifetimes, counted separately. The local name is 8 bytes freed at return; the object survives for as long as anything still points at it.", w:
+    { t: "The frame dies, the object need not", d: "Two lifetimes, counted separately. The local name is 8 bytes freed at return. The object survives for as long as anything still points at it.", w:
 `def f():
     x = [1, 2, 3]     # frame: 8 bytes for x
     return x          # frame freed here
@@ -353,25 +511,25 @@ are two different events, and the second can be much later` },
 
   costs: [
     ["b = a (assignment)", "O(1)", "one address is copied; no object is created"],
-    ["passing an argument", "O(1)", "the address is copied, so the callee can mutate what it points at"],
+    ["passing an argument", "O(1)", "the address is copied, so the callee can change what it points at"],
     ["shallow copy of n items", "O(n)", "duplicates the outer container and its n addresses"],
-    ["deep copy", "O(total nodes)", "follows every arrow and duplicates all the way down"],
+    ["deep copy", "O(total nodes)", "follows every address and duplicates all the way down"],
     ["identity check (is / ==)", "O(1)", "compares two addresses"],
     ["equality check (== / equals)", "O(n)", "compares contents, element by element"],
   ],
 
   traps: [
-    "<b><code>[[0]*3]*3</code></b> stores one row's address three times. Build rows with a comprehension so each is a separate object.",
-    "<b><code>res.append(path)</code> in backtracking.</b> You stored a reference to a list that keeps changing, append <code>path[:]</code>.",
-    "<b>A mutable default argument</b> (<code>def f(acc=[])</code>) is created once and shared by every call. Use <code>None</code> and build inside.",
-    "<b>Assuming a copy is deep.</b> Copying a list of lists shares the inner lists; only an explicit deep copy separates them.",
-    "<b>Confusing identity with equality.</b> Two distinct lists can hold equal contents; <code>is</code> / <code>==</code> on objects asks a different question from <code>equals</code>.",
+    "<b><code>[[0]*3]*3</code></b> stores one row's address three times. Build rows with a comprehension, so each is a separate object.",
+    "<b><code>res.append(path)</code> in backtracking.</b> You stored the address of a list that keeps changing. Append <code>path[:]</code>, a snapshot.",
+    "<b>A mutable default argument</b> (<code>def f(acc=[])</code>) is created once and shared by every call. Use <code>None</code> and build the list inside.",
+    "<b>Assuming a copy is deep.</b> Copying a list of lists shares the inner lists. Only an explicit deep copy separates them.",
+    "<b>Confusing identity with equality.</b> Two separate lists can hold equal contents. <code>is</code> in Python and <code>==</code> on Java objects ask “same address?”, not “same contents?”.",
   ],
 
   impl: [
     ["Python", "everything is a reference · copy / deepcopy", "a[:] and list(a) are shallow. Immutable types (int, str, tuple) make sharing invisible."],
     ["Java", "references, never raw pointers", "No pointer arithmetic. clone() and copy constructors are shallow; == on objects compares addresses, equals() compares contents."],
-    ["C++", "values by DEFAULT, the opposite", "Assignment copies the whole object unless you ask for T& or T*. Cheap sharing must be requested; deep copying is the default."],
+    ["C++", "values by DEFAULT, the opposite", "Assignment copies the whole object unless you ask for T& or T*. Sharing must be requested; copying is the default."],
     ["JavaScript", "objects by reference, primitives by value", "{...o} and slice() are shallow; structuredClone(o) is deep."],
   ],
 
@@ -492,12 +650,12 @@ res.push([...path]);`,
   codecap: "One rule covers most of it: if you did not explicitly ask for a copy, you are sharing the object.",
 
   q: [
-    ["What does a variable actually hold for a list or an object?", "The address of the object, not the object itself, because the object has no fixed size that could fit in the variable's slot. That address is a pointer; a reference is the same thing with the dereferencing hidden."],
+    ["What does a variable actually hold for a list or an object?", "The address of the object, not the object itself. The object has no fixed size, so it cannot fit in the variable's slot. That address is a pointer; a reference is the same thing with the following done for you."],
     ["Why does b = a followed by b.append(4) change a?", "Assignment copies the address, so a and b name the same single object. Nothing was duplicated, so there is only one list to change."],
-    ["A function can mutate the list you passed, but cannot make your variable point elsewhere. Why?", "It receives a copy of the address, so it reaches the same object and can modify it, but reassigning its own parameter only moves its private copy of the arrow."],
+    ["A function can change the list you passed, but cannot make your variable point elsewhere. Why?", "It receives a copy of the address, so it reaches the same object and can change it. But reassigning its own parameter only moves its private copy of the address."],
     ["What exactly goes wrong with [[0]*3]*3?", "It builds one row and stores that row's address three times, so all three entries are the same object. Writing to one appears to write to all three."],
     ["What is the difference between a shallow and a deep copy?", "A shallow copy duplicates the outer container and its addresses, leaving everything they point to shared. A deep copy follows every address and duplicates all the way down."],
-    ["Why is aliasing harmless for strings and tuples?", "Aliasing is only observable when something changes. Immutable objects cannot change, so sharing them is invisible, which is also why they are safe as hash keys and across threads."],
+    ["Why is aliasing harmless for strings and tuples?", "Aliasing only shows when something changes. Immutable objects cannot change, so sharing them is invisible. That is also why they are safe as hash keys and across threads."],
   ],
 
   p: [
@@ -507,37 +665,136 @@ res.push([...path]);`,
     [138, "copy-list-with-random-pointer", "Copy List with Random Pointer, a real deep copy", "M"],
     [133, "clone-graph", "Clone Graph, deep copy with a visited map", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Game ke liye zeros ka 3 × 3 board chahiye. Python mein chhota tareeka hai <code>grid = [[0] * 3] * 3</code>. Phir ek piece rakho: <code>grid[0][0] = 9</code>.</p>
+<p>Board print karo to aata hai <code>[[9, 0, 0], [9, 0, 0], [9, 0, 0]]</code>. <b>Ek write ne teen rows badal di.</b> Na crash, na warning. Yahi cheez backtracking mein, caches mein, aur har us function mein hoti hai jise aap list dete ho. Kyun?</p>`,
+      tries: [
+        ["Likhne se pehle grid copy kar lo", "<code>g2 = grid[:]</code> ek nayi outer list banata hai. Par andar ki teen cheezein copy karta hai, aur woh ab bhi usi ek row tak jaati hain. <code>g2[0][0] = 9</code> phir se teeno rows mein 9 daal deta hai."],
+        ["Row ek baar banao, phir teen baar use karo", "<code>row = [0] * 3</code>, phir <code>grid = [row, row, row]</code>. Yeh wahi bug hai, bas lamba likha hua: teen slots, ek row."],
+        ["Grid kabhi mat badlo, har write par naya banao", "Sahi hai, par slow. Har write har cell copy karta hai. 1,000 × 1,000 board aur 10⁵ writes matlab 10¹¹ cell copies, lagbhag 17 minute ka kaam."],
+      ],
+      so: `<p>Teeno ek hi wajah se fail hote hain: <b>variable list nahi rakhta. Woh list ka address rakhta hai</b>, ek number jo batata hai ki list memory mein kahan hai. <code>* 3</code> ne wahi number teen baar copy kiya, to teen slots ek hi row tak jaate hain.</p>
+<p>Fix hai teen rows banana: <code>[[0] * 3 for _ in range(3)]</code>. Baaki page isi ek fact par hai: variable kya rakhta hai, copy kab sach mein copy hai, aur kiska kitna kharcha. Poore page mein example yahi grid bug hai.</p>`,
+    },
+
+    one: "Variable ke andar aapka object nahi hota. Usme ek object ka <b>address</b> hota hai. To <code>b = a</code> address copy karta hai, cheez nahi, aur ab do naam ek hi object badal sakte hain.",
+
+    plain: `<p>Memory numbered slots ki ek lambi patti hai. Variable ek slot ka naam hai. Java ya C++ mein <code>int</code> jaisi chhoti, fixed size ki value seedhe apne slot mein fit ho jaati hai. List nahi hoti: usme 3 items bhi ho sakte hain aur 30 lakh bhi. (Python to integers ko bhi kahin aur rakhta hai.)</p>
+<p>To list memory mein kahin aur banti hai, aur variable ke slot mein uska <b>address</b> hota hai. Aise rakhe address ko <b>pointer</b> kehte hain. <b>Reference</b> bhi wahi hai, bas address follow karna language khud karti hai.</p>
+<p>Is page ki har baat isi se nikalti hai. <code>b = a</code> slot ke andar ki cheez copy karta hai, jo ek address hai. Ab do naam ek hi list tak jaate hain, aur kisi ek se badlo to dono mein dikhta hai. Grid mein <code>* 3</code> ne yahi teen baar kiya: teen slots, ek row.</p>
+<p><b>Analogy.</b> Ek parchi jis par ghar ka address likha hai. Parchi ki photocopy karo to do parchiyaan hain, do ghar nahi. Koi bhi parchi follow kare, usi drawing room mein pahunchega, aur furniture hila sakta hai.</p>`,
+
+    why: [
+      { t: "Variable mein sirf fixed size cheezein fit hoti hain",
+        d: "Memory slot ka size pehle se fixed hai, aam taur par 8 bytes. Java ya C++ ka <code>int</code> fit ho jaata hai. Python integers ko bhi objects ki tarah rakhta hai. Isiliye uski lists itni mehngi hain. Grid ki ek row mein 3 cells bhi ho sakte hain aur 30 lakh bhi, to woh fit nahi hoti. Woh kahin aur banti hai, aur variable uska <b>address</b> rakhta hai. Wahi address pointer hai. Reference woh pointer hai jise language aapke liye follow karti hai." },
+      { t: "Isliye assignment address copy karta hai, object nahi",
+        d: "<code>b = a</code> variable ke andar ki cheez copy karta hai, aur woh ek address hai. Na kuch banta hai, na kuch duplicate hota hai. Ek list ke ab do naam hain. Ise <b>aliasing</b> kehte hain. <code>[[0] * 3] * 3</code> yahi kaam teen baar karta hai: ek row, uske teen address." },
+      { t: "Isiliye function aapki list badal sakta hai",
+        d: "Arguments bhi copy hote hain, aur phir se address hi copy hota hai. To function aapki list tak pahunch kar use badal sakta hai. Par woh aapke variable ko doosri list par point nahi kara sakta, kyunki uske paas sirf address ki copy hai. Parameter ko reassign karna bahar kuch nahi karta, par <code>.append</code> karta hai." },
+      { t: "Copy ki gehrai hoti hai, aur default shallow hai",
+        d: "<code>grid[:]</code> outer list copy karta hai: 3 naye slots, unmein wahi 3 address. Rows ab bhi shared hain. Yeh <b>shallow</b> copy hai. <b>Deep</b> copy har address follow karke jo mile use duplicate karti hai, saare 9 cells. Shallow ka kharcha har slot par ek step, deep ka har cell par ek." },
+      { t: "Har language default mein share nahi karti",
+        d: "Python, Java aur JavaScript hamesha address copy karte hain. C++ ulta hai: <code>b = a</code> poora object copy karta hai, ek ek cell. To <code>vector&lt;vector&lt;int&gt;&gt; grid(3, row)</code> teen asli rows deta hai. C++ mein sharing maangni padti hai, <code>&amp;</code> ya pointer se." },
+      { t: "Immutable objects problem hi khatam kar dete hain",
+        d: "Sharing tabhi dikhti hai jab kuch <i>badle</i>. String, number ya tuple badal nahi sakte, to unhe share karna invisible aur safe hai. Isiliye languages strings ko immutable banati hain, aur isiliye immutable values hash-map keys ban sakti hain." },
+      { t: "Do lifetimes, aur address kya promise nahi kar sakta",
+        d: "Local names ek <b>stack frame</b> mein rehte hain, jo function return hote hi phenk diya jaata hai. List <b>heap</b> par rehti hai, aur tab tak bachti hai jab tak koi use point kare. Address kisi cheez ko point na kare, yeh bhi ho sakta hai, ise <b>null</b> kehte hain. Use follow karna sabse common crash hai, to pehle check karo." },
+    ],
+
+    math: [
+      { t: "Variable asal mein kya rakhta hai, bytes mein", d: "Reference ek machine word hai, 8 bytes. Baaki sab kahin aur rehta hai, aur in do numbers ka farak hi surprise hai." },
+      { t: "Grid, gin ke: kitne objects bane aur kitne address rakhe", d: "Har line kya banati hai, gino. Print se pehle hi count mein bug dikh jaata hai." },
+      { t: "Copy ki gehrai, aur dono gehraiyon ka alag kharcha", d: "Shallow copy address duplicate karti hai. Deep copy jo woh point karte hain use. Wahi grid, bas 1,000 × 1,000 tak bada." },
+      { t: "Function ko object dena, kitne mein", d: "Yahi ek jagah hai jahan language sirf constant nahi, complexity badal deti hai." },
+      { t: "Frame marta hai, object zaroori nahi", d: "Do lifetimes, alag alag gino. Local naam 8 bytes ka hai, return par free. Object tab tak bachta hai jab tak koi use point kar raha ho." },
+    ],
+
+    costs: [
+      ["b = a (assignment)", "O(1)", "ek address copy hota hai; koi object nahi banta"],
+      ["argument pass karna", "O(1)", "address copy hota hai, to callee jo point ho raha hai use badal sakta hai"],
+      ["n items ki shallow copy", "O(n)", "outer container aur uske n address duplicate karta hai"],
+      ["deep copy", "O(total nodes)", "har address follow karke neeche tak sab duplicate karta hai"],
+      ["identity check (is / ==)", "O(1)", "do address compare karta hai"],
+      ["equality check (== / equals)", "O(n)", "contents compare karta hai, ek ek element"],
+    ],
+
+    traps: [
+      "<b><code>[[0]*3]*3</code></b> ek row ka address teen baar rakhta hai. Rows comprehension se banao, taaki har ek alag object ho.",
+      "<b>Backtracking mein <code>res.append(path)</code>.</b> Aapne ek badalti hui list ka address rakh liya. <code>path[:]</code> append karo, ek snapshot.",
+      "<b>Mutable default argument</b> (<code>def f(acc=[])</code>) ek hi baar banta hai aur har call share karti hai. <code>None</code> use karo aur list andar banao.",
+      "<b>Maan lena ki copy deep hai.</b> List of lists copy karne par andar ki lists shared rehti hain. Sirf explicit deep copy unhe alag karti hai.",
+      "<b>Identity aur equality mein confusion.</b> Do alag lists mein same contents ho sakte hain. Python ka <code>is</code> aur Java objects par <code>==</code> poochte hain “same address?”, “same contents?” nahi.",
+    ],
+
+    impl: [
+      ["Python", "everything is a reference · copy / deepcopy", "a[:] aur list(a) shallow hain. Immutable types (int, str, tuple) sharing ko invisible bana dete hain."],
+      ["Java", "references, never raw pointers", "Pointer arithmetic nahi. clone() aur copy constructors shallow hain; objects par == address compare karta hai, equals() contents."],
+      ["C++", "values by DEFAULT, the opposite", "Assignment poora object copy karta hai, jab tak T& ya T* na maango. Sharing maangni padti hai; copy default hai."],
+      ["JavaScript", "objects by reference, primitives by value", "{...o} aur slice() shallow hain; structuredClone(o) deep hai."],
+    ],
+
+    codecap: "Zyadatar ek hi rule kaafi hai: agar aapne saaf saaf copy nahi maangi, to aap object share kar rahe ho.",
+
+    q: [
+      ["List ya object ke liye variable asal mein kya rakhta hai?", "Object ka address, khud object nahi. Object ka koi fixed size nahi, to woh variable ke slot mein fit nahi hota. Woh address pointer hai; reference wahi cheez hai jise language aapke liye follow karti hai."],
+      ["b = a ke baad b.append(4) se a kyun badal jaata hai?", "Assignment address copy karta hai, to a aur b ek hi object ke naam hain. Kuch duplicate nahi hua, to badalne ke liye list ek hi hai."],
+      ["Function aapki di hui list badal sakta hai, par aapke variable ko kahin aur point nahi kara sakta. Kyun?", "Use address ki copy milti hai, to woh usi object tak pahunch kar use badal sakta hai. Par apne parameter ko reassign karna sirf uski private address copy ko hilata hai."],
+      ["[[0]*3]*3 mein exactly kya galat hota hai?", "Yeh ek row banata hai aur uska address teen baar rakhta hai, to teeno entries ek hi object hain. Ek mein likho to teeno mein likha dikhta hai."],
+      ["Shallow aur deep copy mein kya farak hai?", "Shallow copy outer container aur uske address duplicate karti hai, jinhe woh point karte hain woh shared rehta hai. Deep copy har address follow karke neeche tak sab duplicate karti hai."],
+      ["Strings aur tuples ke liye aliasing harmless kyun hai?", "Aliasing tabhi dikhta hai jab kuch badle. Immutable objects badal nahi sakte, to unhe share karna invisible hai. Isiliye woh hash keys aur threads ke beech bhi safe hain."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "numbers",
   n: "Numbers: division, modulo and overflow",
   group: "Fundamentals",
+  need: {
+    ask: `<p>Binary search needs the middle of a range, and everyone writes it the same way: <code>mid = (lo + hi) / 2</code>. It passes every test you try. Then it runs on a big array in Java with <code>lo = 2,000,000,000</code> and <code>hi = 2,100,000,000</code>.</p>
+<p>The middle should be 2,050,000,000, which fits in an <code>int</code>. Instead <code>mid</code> comes out as <b>−97,483,648</b>, and the program reads from a negative index. Both inputs were legal. The answer was legal. What broke?</p>`,
+    tries: [
+      ["Use a bigger type", "Switch to 64-bit <code>long</code> and this case passes. Now search over answers up to 5 × 10¹⁸, a common bound. The sum is 10¹⁹, past the 64-bit limit of about 9.2 × 10¹⁸, and it breaks again."],
+      ["Do it in floating point: (lo + hi) / 2.0", "A double holds whole numbers exactly only up to 2⁵³. With <var>lo</var> = 2⁵³ and <var>hi</var> = 2⁵³ + 2, the result comes back as <var>lo</var> itself. A loop that sets <code>lo = mid</code> then never moves."],
+      ["Halve first: lo / 2 + hi / 2", "No overflow, but each division throws away a half. With <var>lo</var> = 3 and <var>hi</var> = 5 you get 1 + 2 = 3, not 4."],
+    ],
+    so: `<p>The sum <code>lo + hi</code> was never needed, only the midpoint was. <b>Integers have edges</b>: a 32-bit <code>int</code> holds up to 2,147,483,647, and the sum 4,100,000,000 went past it and <b>wrapped</b> round to a negative number. So never form the big sum: <code>mid = lo + (hi - lo) / 2</code> adds half the gap to <var>lo</var>, and the gap always fits.</p>
+<p>The same line hides a second trap once the bounds go negative. Take <var>lo</var> = −7 and <var>hi</var> = 0. <code>(lo + hi) / 2</code> is −3 in Java, but Python's <code>(lo + hi) // 2</code> is −4. The reason: <b>integer division rounds differently</b>. This page walks both, with these two sets of numbers throughout.</p>`,
+  },
+
   one: "Integer arithmetic is not school arithmetic: a fixed-width integer <b>wraps silently</b> past its limit, and division rounds a different way in Python than in Java or C++.",
 
-  plain: `<p>Three things about numbers cause real bugs, and none of them are obvious until they bite.</p>
-<p><b>Integers have edges.</b> A 32-bit <code>int</code> stops at about 2.1 billion. Go past it and it does not warn you, and it does not stop at the maximum. It <b>wraps around to a large negative number</b> and carries on as if nothing happened.</p>
-<p><b>Integer division has to choose a direction</b>, and languages disagree. <code>-7 / 2</code> is <code>-3</code> in Java, C++ and JavaScript, but <code>-4</code> in Python. Modulo inherits the disagreement, so <code>-7 % 3</code> is <code>-1</code> in one family and <code>2</code> in the other.</p>
-<p><b>Floats are binary fractions.</b> 0.1 cannot be written exactly in binary, any more than 1/3 can be written exactly in decimal. So <code>0.1 + 0.2</code> is not <code>0.3</code>.</p>
-<p><b>Analogy.</b> A car odometer with five digits. At 99999 the next mile does not read 100000 and it does not refuse. It reads 00000, and nothing anywhere records that it happened.</p>`,
+  plain: `<p>Numbers in a program are not the numbers from school. Three differences cause real bugs, and the midpoint line <code>(lo + hi) / 2</code> hits two of them.</p>
+<p><b>Integers have edges.</b> A 32-bit <code>int</code> is 32 on/off switches, so it stops at 2,147,483,647. Go past that and it does not warn you or stop at the top. It <b>wraps</b> to a large negative number and carries on. That is how 2,000,000,000 + 2,100,000,000 became −194,967,296.</p>
+<p><b>Integer division has to pick a direction.</b> −7 / 2 is −3.5, which is not a whole number. Java and C++ cut towards zero and give −3. Python's <code>//</code> rounds down and gives −4. (JavaScript's <code>/</code> just gives −3.5.) The remainder, <code>%</code>, follows the same split, and JavaScript's <code>%</code> cuts towards zero too.</p>
+<p><b>Floats are binary fractions.</b> 0.1 cannot be written exactly in binary, just as ⅓ cannot be written exactly in decimal. So <code>0.1 + 0.2</code> is not quite 0.3.</p>
+<p><b>Analogy.</b> A car odometer with five digits. At 99,999 the next mile does not show 100,000, and it does not refuse. It shows 00,000, and nothing records that it happened.</p>`,
 
   why: [
-    { t: "A fixed-width integer is a fixed number of bits, so it has edges", d: "32 bits hold 2³² distinct patterns. Signed, that is −2,147,483,648 to 2,147,483,647. There is no room for anything larger, so the hardware does the only thing it can: it keeps the low 32 bits and discards the carry. The value <b>wraps</b>, silently and at full speed." },
-    { t: "Which is why the classic binary-search line is a bug", d: "<code>(lo + hi) / 2</code> can overflow even when the answer is perfectly representable, because the intermediate sum is not. Writing <code>lo + (hi - lo) / 2</code> computes the same value without ever forming the large sum. This bug sat in the JDK for nine years." },
-    { t: "Integer division must round, and the two families round oppositely", d: "-3.5 has to become an integer. C, C++, Java, Go and JavaScript <b>truncate toward zero</b> and give −3; Python <b>floors</b> toward negative infinity and gives −4. On non-negative numbers the two agree completely, which is exactly why the difference stays hidden until it matters." },
-    { t: "Modulo follows division, so its sign follows too", d: "The two must satisfy <code>a == (a/b)*b + a%b</code>. So truncating leaves a remainder with the sign of the <b>dividend</b>: −7 % 3 = −1. Flooring leaves the sign of the <b>divisor</b>: −7 % 3 = 2. When you need an index, write <code>((x % n) + n) % n</code>. It is non-negative everywhere." },
-    { t: "Floats trade exactness for range", d: "A double stores a binary fraction, so any value that is not a sum of powers of two, 0.1, 0.2, 0.3. Is stored approximately. The errors are tiny but real, and they accumulate. So never test floats for equality; compare against a small tolerance, or avoid floats entirely by scaling to integers (work in cents, not in rupees)." },
-    { t: "The practical rules that follow", d: "Use 64-bit when a product or a sum might grow, <code>a * b</code> overflows long before <code>a</code> and <code>b</code> do. Check <i>before</i> multiplying rather than after (<code>a &gt; limit / b</code>), because the overflowed result tells you nothing. And know your language: Python integers grow without limit, so none of this applies until you port the solution somewhere else." },
+    { t: "A fixed-width integer is a fixed number of bits, so it has edges",
+      d: "32 bits give 2³² patterns. Half are used for negatives, so the range is −2,147,483,648 to 2,147,483,647. A result that needs a 33rd bit has nowhere to go. The hardware keeps the low 32 bits and drops the rest. The value <b>wraps</b>, silently and at full speed." },
+    { t: "That is exactly what happened to the midpoint",
+      d: "<var>lo</var> + <var>hi</var> = 4,100,000,000, which needs 33 bits. Dropping the extra bit subtracts 2³² = 4,294,967,296, leaving −194,967,296. Halve that and you get −97,483,648. The fix <code>lo + (hi - lo) / 2</code> is 2,000,000,000 + 50,000,000. It never forms a number bigger than <var>hi</var>. This bug sat in Java's own library for nine years." },
+    { t: "Integer division must round, and the two families round opposite ways",
+      d: "Now take <var>lo</var> = −7, <var>hi</var> = 0. The sum is −7, and −7 / 2 = −3.5 must become a whole number. C, C++, Java and Go <b>truncate</b>, cutting towards zero: −3. Python's <code>//</code> <b>floors</b>, rounding down: −4. On positive numbers the two agree, which is why the difference hides until a bound goes negative." },
+    { t: "Modulo follows division, so its sign follows too",
+      d: "Quotient and remainder must fit <code>a == (a / b) × b + a % b</code>. Java's quotient is −3, so its remainder is −7 − (−6) = −1. Python's quotient is −4, so its remainder is −7 − (−8) = 1. When you need a non-negative index, write <code>((x % n) + n) % n</code>. It gives 1 in every language." },
+    { t: "Floats trade exactness for range",
+      d: "A double stores a binary fraction with 53 bits of precision. Every whole number up to 2⁵³ is exact, and past it gaps appear. That is why <code>(2⁵³ + 2⁵³ + 2) / 2.0</code> lands back on 2⁵³. Fractions like 0.1 are never exact. So never test floats with <code>==</code>: compare within a small tolerance, or count in whole units." },
+    { t: "The rules that follow, and what no type can fix",
+      d: "Use 64-bit when a sum or product can grow: <code>a * b</code> overflows long before <var>a</var> or <var>b</var> do. Check <i>before</i> multiplying, with <code>a &gt; limit / b</code>, because a wrapped result tells you nothing. Python integers never overflow, but that does not travel with your solution when you port it." },
   ],
 
   hing: `<p><b>Teen cheezein har baar bug deti hain, aur teeno tab tak dikhti nahi jab tak phas na jao.</b></p>
 <p><b>1. Integer ki hadd hoti hai.</b> 32-bit <code>int</code> lagbhag 2.1 arab par khatam. Aage badho to na error aata hai, na ruk-ta hai, <b>ghoom kar bade negative number par pahunch jaata hai</b>. Chupchaap. Isi ko <b>overflow</b> kehte hain.</p>
 <p><b>Isliye binary search ki woh famous line galat hai:</b> <code>(lo + hi) / 2</code>. Answer to range mein hai, par beech ka <b>jodh</b> range se bahar chala jaata hai. Sahi likho: <code>lo + (hi - lo) / 2</code>. Yeh bug Java ki library mein <b>9 saal</b> chhupa raha tha.</p>
-<p><b>2. Integer division kis taraf ghumaaye?</b> -3.5 ko poora number banana hai. C, C++, Java, JavaScript <b>zero ki taraf</b> kaatte hain → <b>-3</b>. Python <b>neeche (floor)</b> jaata hai → <b>-4</b>. Positive numbers par dono barabar, isiliye yeh farak chhupa rehta hai.</p>
-<p><b>3. Modulo bhi wahi ghumaav follow karta hai.</b> <code>-7 % 3</code> Java/C++ mein <b>-1</b>, Python mein <b>2</b>. Jab index chahiye (circular array, hash bucket), to hamesha likho:<br><code>((x % n) + n) % n</code>, yeh har jagah non-negative dega. <b>Yeh line yaad kar lo.</b></p>
-<p><b>4. Float exact nahi hota.</b> Jaise decimal mein 1/3 poora nahi likha jaata, waise binary mein 0.1 poora nahi likha jaata. Isliye <code>0.1 + 0.2 != 0.3</code>. Float ko kabhi <code>==</code> se mat compare karo, thoda tolerance rakho, ya paisa "rupees" ki jagah "paise" (integer) mein rakho.</p>
-<p><b>Practical niyam:</b> jahan guna ya jodh bada ho sakta hai wahan <b>64-bit (long)</b> use karo, <code>a * b</code> bahut pehle overflow ho jaata hai. Aur check <b>guna karne se pehle</b> karo (<code>a > limit / b</code>), baad mein nahi, overflow hone ke baad result se kuch pata nahi chalta. Python mein integers apne aap bade ho jaate hain, isliye yeh dikkat tab tak nahi jab tak solution Java/C++ mein na le jao.</p>`,
+<p><b>2. Integer division kis taraf ghumaaye?</b> −3.5 ko poora number banana hai. C, C++, Java <b>zero ki taraf</b> kaatte hain, to <b>−3</b>. Python ka <code>//</code> <b>neeche (floor)</b> jaata hai, to <b>−4</b>. JavaScript ka <code>/</code> seedha −3.5 deta hai. Positive numbers par dono barabar, isiliye yeh farak chhupa rehta hai.</p>
+<p><b>3. Modulo bhi wahi ghumaav follow karta hai.</b> <code>-7 % 3</code> Java/C++ mein <b>−1</b>, Python mein <b>2</b>. Jab index chahiye (circular array, hash bucket), to hamesha likho:<br><code>((x % n) + n) % n</code>, yeh har jagah non-negative dega. <b>Yeh line yaad kar lo.</b></p>
+<p><b>4. Float exact nahi hota.</b> Jaise decimal mein 1/3 poora nahi likha jaata, waise binary mein 0.1 poora nahi likha jaata. Isliye <code>0.1 + 0.2 != 0.3</code>. Float ko kabhi <code>==</code> se mat compare karo. Thoda tolerance rakho, ya paisa "rupees" ki jagah "paise" (integer) mein rakho.</p>
+<p><b>Practical niyam:</b> jahan guna ya jodh bada ho sakta hai wahan <b>64-bit (long)</b> use karo, kyunki <code>a * b</code> bahut pehle overflow ho jaata hai. Aur check <b>guna karne se pehle</b> karo (<code>a > limit / b</code>), baad mein nahi. Overflow ke baad result se kuch pata nahi chalta. Python mein integers apne aap bade ho jaate hain, isliye yeh dikkat tab tak nahi jab tak solution Java/C++ mein na le jao.</p>`,
 
   viz: ["int-overflow", "division-rounding"],
   see: [["DOC", "https://en.wikipedia.org/wiki/Two%27s_complement", "Two's complement, how the wrap-around works"]],
@@ -550,7 +807,7 @@ signed 64-bit:  -2^63 .. 2^63 - 1  ~  +- 9.22 x 10^18
 
 2,147,483,647 + 1 = -2,147,483,648
 no exception, no warning, no log line` },
-    { t: "The binary search midpoint bug, with the actual numbers", d: "Both bounds are legal 32-bit values. Their sum is not, and the wrapped result indexes somewhere that does not exist.", w:
+    { t: "The midpoint bug, with the actual numbers", d: "Both bounds are legal 32-bit values. Their sum is not, and the wrapped result points at an index that does not exist.", w:
 `lo = 2,000,000,000    hi = 2,100,000,000   (both fit)
 
 lo + hi     = 4,100,000,000  >  2,147,483,647
@@ -560,24 +817,29 @@ wraps to      4,100,000,000 - 2^32 = -194,967,296
 lo + (hi - lo) / 2
             = 2,000,000,000 + 50,000,000
             = 2,050,000,000   -> correct, never overflows` },
-    { t: "The two rounding families, checked against the identity", d: "Both answers are self-consistent. They just answer a different question, and the difference only shows on negatives.", w:
-`             -7 / 2      -7 % 2
-Python          -4           1     floor, sign follows the divisor
-Java, C++       -3          -1     truncate toward zero
+    { t: "The same line with negative bounds: two rounding families", d: "Take <var>lo</var> = −7 and <var>hi</var> = 0. Both answers below are self-consistent. They answer different questions, and the difference only shows on negatives.", w:
+`(lo + hi) / 2 = -7 / 2 = -3.5, which must become whole
 
-the identity that must hold: q * b + r == a
+                 integer -7 / 2   -7 % 2
+Python (//, %)        -4             1   floor: round down
+Java, C++ (/, %)      -3            -1   truncate: toward zero
+JavaScript            -3.5          -1   / is float division
+
+the identity that must hold: q x b + r == a
 Python:  -4 x 2 +  1 = -7
 Java:    -3 x 2 + -1 = -7
-so normalise with ((x % m) + m) % m when you need [0, m)` },
-    { t: "Where a double stops counting", d: "A double has 53 bits of mantissa. Below that every integer is exact; above it, some of them simply are not there.", w:
+
+lo + (hi - lo) // 2 = -7 + 7 // 2 = -7 + 3 = -4  everywhere,
+since 7 / 2 is positive and every integer division agrees` },
+    { t: "Where a double stops counting", d: "A double has 53 bits of precision. Below 2^53 every whole number is exact. Above it, some of them are simply not there, which is why the floating-point midpoint fails.", w:
 `2^53     = 9,007,199,254,740,992
 2^53 + 1 = 9,007,199,254,740,992    the +1 is lost
 
-0.1 + 0.2 = 0.30000000000000004
-  neither 0.1 nor 0.2 is representable in base 2
+lo = 2^53, hi = 2^53 + 2
+(lo + hi) / 2.0  ->  2^53 = lo      the loop stops moving
 
-so compare with abs(a - b) < 1e-9, never with ==
-and in JavaScript do integer work past 2^53 in BigInt` },
+0.1 + 0.2 = 0.30000000000000004
+so compare with abs(a - b) < 1e-9, never with ==` },
     { t: "Reduce as you go, not at the end", d: "The intermediate is what overflows, so the modulus goes inside the loop. Two values just under 10^9 multiply to just under 10^18, which is why the accumulator must be 64 bits.", w:
 `(10^9) x (10^9) = 10^18        needs 60 bits, so long/int64
                                an int32 accumulator is gone
@@ -599,11 +861,11 @@ so never compute n! and then reduce: reduce every step` },
 
   traps: [
     "<b><code>(lo + hi) / 2</code></b> in a fixed-width language. Use <code>lo + (hi - lo) / 2</code>.",
-    "<b>Negative modulo as an index.</b> <code>-1 % n</code> is negative in Java, C++ and JavaScript, wrap it with <code>((x % n) + n) % n</code>.",
+    "<b>Negative modulo as an index.</b> <code>-1 % n</code> is negative in Java, C++ and JavaScript. Wrap it with <code>((x % n) + n) % n</code>.",
     "<b>Comparing floats with <code>==</code>.</b> Compare <code>abs(a - b) &lt; 1e-9</code>, or work in integers.",
-    "<b>Accumulating a sum in an <code>int</code>.</b> n up to 10⁵ with values up to 10⁵ already exceeds 32 bits, declare the accumulator 64-bit.",
+    "<b>Accumulating a sum in an <code>int</code>.</b> 10⁵ values of up to 10⁵ each can reach 10¹⁰, past 32 bits. Declare the accumulator 64-bit.",
     "<b>JavaScript bitwise operators truncate to 32 bits.</b> <code>x | 0</code> silently mangles anything above 2³¹.",
-    "<b>Signed overflow in C++ is undefined behaviour</b>, not a wrap, the optimiser is allowed to assume it never happens.",
+    "<b>Signed overflow in C++ is undefined behaviour</b>, not a wrap. The optimiser is allowed to assume it never happens.",
   ],
 
   impl: [
@@ -622,8 +884,8 @@ mid <- lo + (hi - lo) / 2       # RIGHT: the same value, no big intermediate
 if a > LIMIT / b: overflow would happen
 
 # 2. DIVISION, the two families round opposite ways on negatives
--7 / 2  ->  -3   (truncate toward zero: C, C++, Java, Go, JavaScript)
--7 / 2  ->  -4   (floor toward -infinity: Python)
+-7 / 2  ->  -3   (truncate toward zero: C, C++, Java, Go; JavaScript needs Math.trunc)
+-7 // 2 ->  -4   (floor toward -infinity: Python's //)
 
 # 3. MODULO, sign follows the division rule
 -7 % 3  ->  -1   (truncating family: sign of the DIVIDEND)
@@ -715,100 +977,209 @@ BigInt(2) ** BigInt(200);            // exact, arbitrarily large`,
 
   q: [
     ["What happens when a 32-bit int passes its maximum?", "It wraps to the most negative value, silently and with no error. The hardware keeps the low 32 bits and discards the carry."],
-    ["Why is (lo + hi) / 2 a bug, and what replaces it?", "The intermediate sum can exceed the range even when the midpoint cannot. lo + (hi - lo) / 2 computes the same value without ever forming that sum."],
-    ["What is -7 / 2 in Java and in Python, and why do they differ?", "-3 in Java, which truncates toward zero; -4 in Python, which floors toward negative infinity. They agree on non-negative numbers, which is why the difference stays hidden."],
+    ["Why is (lo + hi) / 2 a bug, and what replaces it?", "The sum can go past the range even when the midpoint cannot. lo + (hi - lo) / 2 computes the same value without ever forming that sum."],
+    ["What is -7 / 2 in Java and in Python, and why do they differ?", "-3 in Java, which truncates toward zero. -4 in Python, which floors toward negative infinity. They agree on non-negative numbers, which is why the difference stays hidden."],
     ["Why does the sign of a modulo result differ between languages?", "Because a == (a/b)*b + a%b must hold. Truncating division forces a remainder with the dividend's sign; flooring division forces the divisor's sign."],
-    ["Write the expression for a modulo that is non-negative everywhere.", "((x % n) + n) % n, needed for circular indices and hash buckets in any truncating language."],
+    ["Write the expression for a modulo that is non-negative everywhere.", "((x % n) + n) % n. You need it for circular indices and hash buckets in any truncating language."],
     ["Why is 0.1 + 0.2 != 0.3, and what do you do about it?", "0.1 and 0.2 are not exactly representable as binary fractions, so the sum carries a tiny error. Compare with a tolerance, or scale everything to integers."],
   ],
 
   p: [
-    [7, "reverse-integer", "Reverse Integer, overflow is the whole problem", "M"],
+    [278, "first-bad-version", "First Bad Version, the midpoint overflow in the wild", "E"],
     [69, "sqrtx", "Sqrt(x), integer maths, no floats", "E"],
+    [202, "happy-number", "Happy Number, digit arithmetic", "E"],
+    [7, "reverse-integer", "Reverse Integer, overflow is the whole problem", "M"],
     [50, "powx-n", "Pow(x, n), negative exponents and precision", "M"],
     [29, "divide-two-integers", "Divide Two Integers, no division operator", "M"],
     [172, "factorial-trailing-zeroes", "Factorial Trailing Zeroes, count, do not compute", "M"],
-    [202, "happy-number", "Happy Number, digit arithmetic", "E"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Binary search ko range ka beech chahiye, aur sab ise ek hi tarah likhte hain: <code>mid = (lo + hi) / 2</code>. Har test pass. Phir yeh Java mein ek bade array par chalta hai, <code>lo = 2,000,000,000</code> aur <code>hi = 2,100,000,000</code> ke saath.</p>
+<p>Beech 2,050,000,000 hona chahiye, jo <code>int</code> mein fit hota hai. Par <code>mid</code> aata hai <b>−97,483,648</b>, aur program negative index se padhta hai. Dono inputs legal the. Answer bhi legal tha. Toota kya?</p>`,
+      tries: [
+        ["Bada type le lo", "64-bit <code>long</code> karo aur yeh case pass. Ab 5 × 10¹⁸ tak ke answers par search karo, jo common bound hai. Jodh 10¹⁹ hai, 64-bit ki limit lagbhag 9.2 × 10¹⁸ se aage, aur phir toot gaya."],
+        ["Floating point mein karo: (lo + hi) / 2.0", "Double whole numbers ko sirf 2⁵³ tak exact rakhta hai. <var>lo</var> = 2⁵³ aur <var>hi</var> = 2⁵³ + 2 par result wapas <var>lo</var> hi aata hai. Jo loop <code>lo = mid</code> set karta hai, woh aage badhta hi nahi."],
+        ["Pehle aadha karo: lo / 2 + hi / 2", "Overflow nahi, par har division ek aadha phenk deta hai. <var>lo</var> = 3 aur <var>hi</var> = 5 par milta hai 1 + 2 = 3, 4 nahi."],
+      ],
+      so: `<p><code>lo + hi</code> ka jodh kabhi chahiye hi nahi tha, sirf beech chahiye tha. <b>Integers ki hadd hoti hai</b>: 32-bit <code>int</code> 2,147,483,647 tak rakhta hai. 4,100,000,000 ka jodh usse aage gaya aur <b>wrap</b> hokar negative ban gaya. To bada jodh banao hi mat. <code>mid = lo + (hi - lo) / 2</code> <var>lo</var> mein gap ka aadha jodta hai. Gap hamesha fit hota hai.</p>
+<p>Bounds negative hote hi isi line mein doosra jaal hai. <var>lo</var> = −7 aur <var>hi</var> = 0 par <code>(lo + hi) / 2</code> Java mein −3 hai, par Python ka <code>(lo + hi) // 2</code> −4. Wajah: <b>integer division alag tarah round karta hai</b>. Yeh page dono dikhata hai, poore page mein inhi do sets of numbers ke saath.</p>`,
+    },
+
+    one: "Integer arithmetic school wala arithmetic nahi hai: fixed-width integer apni limit ke paar <b>chupchaap wrap</b> hota hai, aur division Python mein Java ya C++ se alag taraf round karta hai.",
+
+    plain: `<p>Program ke numbers school wale numbers nahi hain. Teen farak asli bugs dete hain, aur midpoint line <code>(lo + hi) / 2</code> unmein se do se takraati hai.</p>
+<p><b>Integers ki hadd hoti hai.</b> 32-bit <code>int</code> 32 on/off switches hai, to 2,147,483,647 par ruk jaata hai. Aage jao to na warning, na top par rukna. Yeh <b>wrap</b> hokar bada negative number ban jaata hai aur chalta rehta hai. Aise hi 2,000,000,000 + 2,100,000,000 ban gaya −194,967,296.</p>
+<p><b>Integer division ko ek direction chunni padti hai.</b> −7 / 2 = −3.5, jo whole number nahi hai. Java aur C++ zero ki taraf kaat kar −3 dete hain. Python ka <code>//</code> neeche round karke −4 deta hai. (JavaScript ka <code>/</code> bas −3.5 deta hai.) Remainder, <code>%</code>, bhi isi tarah bant-ta hai, aur JavaScript ka <code>%</code> bhi zero ki taraf kaat-ta hai.</p>
+<p><b>Floats binary fractions hain.</b> 0.1 binary mein exact nahi likha ja sakta, jaise ⅓ decimal mein exact nahi likha jaata. Isliye <code>0.1 + 0.2</code> theek 0.3 nahi hai.</p>
+<p><b>Analogy.</b> Paanch digit wala car odometer. 99,999 ke baad agla mile 100,000 nahi dikhata, aur mana bhi nahi karta. 00,000 dikhata hai, aur kahin record nahi hota ki aisa hua.</p>`,
+
+    why: [
+      { t: "Fixed-width integer mein bits fixed hain, isliye hadd hai",
+        d: "32 bits se 2³² patterns bante hain. Aadhe negatives ke liye, to range −2,147,483,648 se 2,147,483,647. Jis result ko 33rd bit chahiye, uske liye jagah nahi. Hardware neeche ke 32 bits rakhta hai aur baaki phenk deta hai. Value <b>wrap</b> hoti hai, chupchaap aur full speed par." },
+      { t: "Midpoint ke saath bilkul yahi hua",
+        d: "<var>lo</var> + <var>hi</var> = 4,100,000,000, jise 33 bits chahiye. Extra bit girne se 2³² = 4,294,967,296 ghat jaata hai, bachta hai −194,967,296. Aadha karo to −97,483,648. Fix <code>lo + (hi - lo) / 2</code> hai 2,000,000,000 + 50,000,000. Yeh kabhi <var>hi</var> se bada number nahi banata. Yeh bug Java ki apni library mein nau saal raha." },
+      { t: "Integer division ko round karna padta hai, aur do families ulta round karti hain",
+        d: "Ab <var>lo</var> = −7, <var>hi</var> = 0 lo. Jodh −7 hai, aur −7 / 2 = −3.5 ko whole number banana hai. C, C++, Java aur Go <b>truncate</b> karte hain, zero ki taraf kaat-te hain: −3. Python ka <code>//</code> <b>floor</b> karta hai, neeche round: −4. Positive numbers par dono same, isiliye farak tab tak chhupa rehta hai jab tak bound negative na ho." },
+      { t: "Modulo division ke peeche chalta hai, to sign bhi",
+        d: "Quotient aur remainder ko <code>a == (a / b) × b + a % b</code> mein fit hona hai. Java ka quotient −3 hai, to remainder −7 − (−6) = −1. Python ka quotient −4 hai, to remainder −7 − (−8) = 1. Non-negative index chahiye to likho <code>((x % n) + n) % n</code>. Yeh har language mein 1 deta hai." },
+      { t: "Floats range ke badle exactness chhodte hain",
+        d: "Double 53 bits precision ke saath binary fraction rakhta hai. 2⁵³ tak har whole number exact hai, uske baad gaps aa jaate hain. Isiliye <code>(2⁵³ + 2⁵³ + 2) / 2.0</code> wapas 2⁵³ par girta hai. 0.1 jaise fractions kabhi exact nahi. To floats ko <code>==</code> se mat test karo: chhote tolerance ke andar compare karo, ya whole units mein gino." },
+      { t: "Jo rules nikalte hain, aur jo koi type theek nahi karta",
+        d: "Jahan jodh ya guna badh sakta hai, 64-bit lo: <code>a * b</code> <var>a</var> ya <var>b</var> se bahut pehle overflow hota hai. Guna karne se <i>pehle</i> check karo, <code>a &gt; limit / b</code> se, kyunki wrap hua result kuch nahi batata. Python integers kabhi overflow nahi hote, par solution port karne par yeh saath nahi jaata." },
+    ],
+
+    math: [
+      { t: "Hadd, likh kar", d: "Fixed-width integer mein bits fixed hain, to ek pehli value hai aur ek aakhri. Aakhri ke baad yeh shikayat nahi karta, wrap hota hai." },
+      { t: "Midpoint bug, asli numbers ke saath", d: "Dono bounds legal 32-bit values hain. Unka jodh nahi, aur wrap hua result aise index ko point karta hai jo exist hi nahi karta." },
+      { t: "Wahi line negative bounds par: do rounding families", d: "<var>lo</var> = −7 aur <var>hi</var> = 0 lo. Neeche ke dono answers apne aap mein sahi hain. Bas alag sawaal ka jawab dete hain, aur farak sirf negatives par dikhta hai." },
+      { t: "Double kahan ginna band karta hai", d: "Double mein 53 bits precision hai. 2^53 se neeche har whole number exact hai. Upar kuch numbers hote hi nahi, isiliye floating-point midpoint fail hota hai." },
+      { t: "Saath saath reduce karo, end mein nahi", d: "Beech ki value overflow hoti hai, isliye modulus loop ke andar jaata hai. 10^9 se thode chhote do numbers ka guna 10^18 se thoda chhota hai, isiliye accumulator 64 bits ka chahiye." },
+    ],
+
+    costs: [
+      ["32-bit signed int", "−2,147,483,648 … 2,147,483,647", "lagbhag 2.1 arab; chupchaap overflow"],
+      ["64-bit signed long", "about ±9.2 × 10¹⁸", "jab jodh ya guna badh sakta ho, yahi usual fix"],
+      ["JavaScript number", "exact to ±2⁵³", "saare numbers doubles hain; usse aage BigInt"],
+      ["Python int", "unbounded", "memory ke saath badhta hai; bahut bada ho to arithmetic O(1) nahi"],
+      ["float / double", "~7 / ~15 decimal digits", "approximate, kabhi == se compare mat karo"],
+      ["a * b overflow check", "a > limit / b", "guna se pehle test karo; baad mein der ho chuki"],
+    ],
+
+    traps: [
+      "<b><code>(lo + hi) / 2</code></b> fixed-width language mein. <code>lo + (hi - lo) / 2</code> use karo.",
+      "<b>Negative modulo ko index banana.</b> Java, C++ aur JavaScript mein <code>-1 % n</code> negative hai. Ise <code>((x % n) + n) % n</code> se wrap karo.",
+      "<b>Floats ko <code>==</code> se compare karna.</b> <code>abs(a - b) &lt; 1e-9</code> compare karo, ya integers mein kaam karo.",
+      "<b><code>int</code> mein sum jodna.</b> 10⁵ values, har ek 10⁵ tak, 10¹⁰ tak pahunch sakti hain, 32 bits ke paar. Accumulator 64-bit rakho.",
+      "<b>JavaScript ke bitwise operators 32 bits par kaat dete hain.</b> <code>x | 0</code> 2³¹ se upar sab kuch chupchaap bigaad deta hai.",
+      "<b>C++ mein signed overflow undefined behaviour hai</b>, wrap nahi. Optimiser maan sakta hai ki yeh kabhi hota hi nahi.",
+    ],
+
+    impl: [
+      ["Python", "arbitrary precision · // floors · % non-negative", "Kabhi overflow nahi. -7//2 == -4 aur -7%3 == 2, zyadatar languages se alag."],
+      ["Java", "int/long wrap silently · Math.floorMod", "Math.floorMod Python jaisa modulo deta hai. long use karo, ya overflow par throw ke liye Math.addExact."],
+      ["C++", "signed overflow is UNDEFINED behaviour", "Sirf wrap nahi. long long use karo, products ke liye __int128. % truncate karta hai."],
+      ["JavaScript", "all numbers are doubles, exact to 2^53", "Bitwise operators int32 mein badal dete hain. Bade numbers ke liye BigInt."],
+    ],
+
+    codecap: "Do lines yaad rakhne layak hain: lo + (hi - lo) / 2, aur ((x % n) + n) % n.",
+
+    q: [
+      ["32-bit int apne maximum ke paar jaaye to kya hota hai?", "Chupchaap, bina error ke, sabse negative value par wrap ho jaata hai. Hardware neeche ke 32 bits rakhta hai aur carry phenk deta hai."],
+      ["(lo + hi) / 2 bug kyun hai, aur uski jagah kya?", "Jodh range ke paar ja sakta hai jab midpoint nahi jaata. lo + (hi - lo) / 2 wahi value bina woh jodh banaaye nikalta hai."],
+      ["Java aur Python mein -7 / 2 kya hai, aur farak kyun?", "Java mein -3, jo zero ki taraf truncate karta hai. Python mein -4, jo negative infinity ki taraf floor karta hai. Non-negative numbers par dono same, isiliye farak chhupa rehta hai."],
+      ["Modulo result ka sign languages mein alag kyun hai?", "Kyunki a == (a/b)*b + a%b sach hona chahiye. Truncating division remainder ko dividend ka sign deta hai; flooring division divisor ka."],
+      ["Aisa modulo likho jo har jagah non-negative ho.", "((x % n) + n) % n. Kisi bhi truncating language mein circular indices aur hash buckets ke liye chahiye."],
+      ["0.1 + 0.2 != 0.3 kyun, aur iska kya karein?", "0.1 aur 0.2 binary fractions mein exact nahi likhe jaate, to jodh mein chhoti si galti aati hai. Tolerance se compare karo, ya sab kuch integers mein scale karo."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "maths",
   n: "Number theory for interviews",
   group: "Fundamentals",
-  one: "Almost every number question is four moves: <b>stop at the square root</b>, cross out multiples, replace a with a mod b, and halve the exponent.",
+  need: {
+    ask: `<p>Number questions in interviews have short statements and huge inputs. Count the primes below <b>5 × 10⁶</b>. Is <b>10⁹ + 7</b> prime? Find the largest number dividing two values near <b>10¹⁸</b>. Work out <b>2 to the power 10¹⁸</b>, keeping only the remainder mod 10⁹ + 7.</p>
+<p>Each one has an obvious loop that counts up to the input. With inputs this size, counting up is the one thing you cannot afford.</p>`,
+    tries: [
+      ["Test each number by dividing by everything below it", "Counting primes below 5 × 10⁶ this way costs about 8.4 × 10¹¹ divisions, just for the numbers that turn out prime. That is hours."],
+      ["Same, but stop dividing at the square root", "Much better, and still about 6.5 × 10⁸ divisions for the whole range. Division is a slow instruction, so that is seconds in C++ and minutes in Python."],
+      ["Find the gcd by factorising both numbers", "Factorising a number near 10¹⁸ by trial division means trying divisors up to 10⁹. The shortcut on this page needs about 90 steps."],
+      ["Multiply by 2, 10¹⁸ times", "At 10⁸ multiplications a second, that is over 300 years. Squaring gets there in 60 steps."],
+    ],
+    so: `<p>Every routine on this page swaps counting up for a shortcut. <b>Stop at the square root.</b> <b>Cross out multiples</b> instead of testing each number. <b>Replace the pair (<var>a</var>, <var>b</var>) with (<var>b</var>, <var>a</var> mod <var>b</var>)</b> to find a gcd. <b>Halve the exponent</b> instead of counting it down. The sieve counts those 348,513 primes with about 1.1 × 10⁷ crossings.</p>
+<p>To watch each shortcut work, the page uses the numbers <b>2 to 16</b>. They fit on one screen, and they hold everything needed: primes, a perfect square (16), and composites like 12 and 15. Primality uses 15, the sieve uses all fifteen numbers, and gcd uses 12 and 16.</p>`,
+  },
 
-  plain: `<p>Number theory sounds like a university course. The interview version is six short routines, and every one of them exists because the obvious approach does far too much work.</p>
-<p>Is n prime? You do not need to try every divisor, only the ones up to √n. Which numbers below a million are prime? Do not ask each one separately, cross out the multiples instead. What is the largest number dividing both a and b? Do not factorise either of them, just keep replacing the pair with a smaller pair. What is 2 to the power of a billion? Do not multiply a billion times, square your way there in thirty steps.</p>
-<p>The last piece is the <b>modulus</b>, which is just the remainder after dividing. Problems ask for the answer <code>mod 10⁹ + 7</code> so the result fits in a 64-bit integer. That means keeping every value small as you go, instead of building something astronomical and shrinking it at the end. Addition, subtraction and multiplication survive that treatment. Division does not, and the fix for division is most of the remaining difficulty.</p>
-<p><b>Analogy.</b> Checking whether a rectangle of area n can be made from whole-number sides. You only ever measure the short side, because once you pass the square the long side has already been on your list.</p>`,
+  one: "Almost every number question is four moves: <b>stop at the square root</b>, cross out multiples, replace <var>a</var> with <var>a</var> mod <var>b</var>, and halve the exponent.",
+
+  plain: `<p>Number theory sounds like a university course. The interview version is a handful of short routines. Each one exists because the obvious approach counts up to the input, and the input is huge.</p>
+<p><b>Is 15 prime?</b> Test divisors only up to √15 ≈ 3.9, so just 2 and 3. 3 divides 15, done. <b>Which numbers up to 16 are prime?</b> Do not test each one. Cross out the multiples of 2, then of 3, and what survives is prime. <b>What is the largest number dividing 12 and 16?</b> Do not factorise. Replace (16, 12) with (12, 4), then (4, 0), and the answer is 4. <b>What is 2¹⁶?</b> Square four times instead of multiplying sixteen times.</p>
+<p>The last piece is the <b>modulus</b>, the remainder after dividing. Problems ask for answers <code>mod 10⁹ + 7</code> so they fit in 64 bits. So you keep every value small as you go. <code>+</code>, <code>−</code> and <code>×</code> survive that. Division does not, and fixing it is the modular inverse page.</p>
+<p><b>Analogy.</b> Checking whether a rectangle of area 15 has whole-number sides. You only measure the short side, 1 to 3. Past the square, every long side was already on your list as a short one.</p>`,
 
   why: [
-    { t: "A factor above the square root drags a partner below it", d: "If <code>n = a × b</code> and both a and b were larger than √n, their product would already exceed n. So at least one factor is <b>at or below √n</b>. Test 2, 3, 4 up to √n, find nothing, and there is nothing to find. That single sentence is the whole of primality testing at interview level: <b>O(√n)</b>, and you can say why." },
-    { t: "Asking every number separately repeats the same work", d: "To list primes up to n, trial division costs about n√n. But the moment you know 2 is prime you also know 4, 6, 8, 10 are not, without dividing anything. So invert the question: instead of testing each number, take each prime and <b>cross out its multiples</b>. Every composite gets struck by its own prime factors, so whatever survives is prime." },
-    { t: "The inner loop starts at p × p, not 2p", d: "Any multiple of p below p × p is <code>k × p</code> where <code>k &lt; p</code>. So it already has a prime factor smaller than p, and that smaller factor crossed it out on an earlier pass. Starting at p × p skips all of that. It also means the outer loop can stop once <code>p × p &gt; n</code>. The total is <b>O(n log log n)</b>, which is near enough linear that you should treat it as free. The log log comes from summing 1/p over the primes, and it is not something anyone derives at a whiteboard. Quote it, do not prove it." },
-    { t: "For a gcd, subtract the pair down instead of factorising it", d: "Suppose d divides both a and b. Write <code>a = q × b + r</code>. Then <code>r = a - q × b</code>, and d divides both terms on the right, so <b>d divides r too</b>. So (a, b) and (b, a mod b) have exactly the same common divisors. The biggest one is therefore the same as well: <code>gcd(a, b) = gcd(b, a mod b)</code>. Repeat until b hits 0, and the answer is a. The remainder at least halves every two steps, so this is <b>O(log min(a, b))</b>." },
-    { t: "lcm comes free from gcd, if you order the arithmetic properly", d: "Each of a and b contributes its own factors, and the shared part is counted once, so <code>lcm(a, b) = a × b / gcd(a, b)</code>. Write it as <code>a / gcd(a, b) * b</code> instead. The gcd divides a exactly, so nothing is lost, and you never form the product <code>a × b</code>, which is the value that overflows. See the numbers concept for what that overflow actually does to you." },
-    { t: "Powers halve instead of counting down", d: "<code>x¹⁶</code> does not need sixteen multiplications. Square four times. In general <code>x^e</code> is <code>(x^(e/2))²</code> when e is even, and <code>x × x^(e-1)</code> when it is odd, so each step either halves the exponent or makes it even. That is <b>O(log e)</b> multiplications. Take the modulus after every single one and no intermediate ever exceeds m², which is precisely why the answer is asked for mod 10⁹ + 7." },
-    { t: "Mod distributes over three operations, and pointedly not the fourth", d: "<code>(a + b) mod m</code>, <code>(a - b) mod m</code> and <code>(a × b) mod m</code> can all be worked out from the reduced values. Remainders add and multiply the way you hope they will. <b>Division cannot.</b> Dividing by b becomes multiplying by the <b>modular inverse</b> of b, the value with <code>b × inv ≡ 1 (mod m)</code>. When m is prime, Fermat gives it away: <code>b^(m-1) ≡ 1</code>, so <code>inv = b^(m-2) mod m</code>, one fast power. That is how nCr survives a modulus: precompute factorials and their inverses, then <code>nCr = fact[n] × invfact[r] × invfact[n-r]</code>. What this cannot do: a non-prime modulus (Fermat does not apply, you need the extended Euclidean algorithm), and it will not factorise a 200-digit number for you either. None of these routines break big integers apart, they only avoid having to." },
+    { t: "A factor above the square root has a partner below it",
+      d: "Take 15 = 3 × 5. √15 ≈ 3.9, and the partner of 5 is 3, which is below it. That always happens: if both factors were above √<var>n</var>, their product would be more than <var>n</var>. So test 2 up to √<var>n</var>. Finding nothing there means there is nothing to find. That is <b>O(√<var>n</var>)</b>." },
+    { t: "Testing every number separately repeats work",
+      d: "To list the primes up to 16, you could test all fifteen numbers. But once you know 2 is prime, you also know 4, 6, 8 up to 16 are not, without dividing. So turn it round: take each prime and <b>cross out its multiples</b>. Every composite gets crossed by one of its prime factors. Whatever survives is prime." },
+    { t: "The crossing starts at p × p, and stops at the square root",
+      d: "For <var>p</var> = 3, the multiples below 9 are 3 × 2 = 6. 6 has the smaller factor 2, so it was crossed already. In general, any multiple below <var>p</var> × <var>p</var> has a smaller factor. So start at <var>p</var> × <var>p</var>, and stop the outer loop once <var>p</var> × <var>p</var> passes the limit. For 16 that means stopping at 5, since 25 > 16. The cost is <b>O(<var>n</var> log log <var>n</var>)</b>. Quote it, do not derive it." },
+    { t: "For a gcd, shrink the pair instead of factorising it",
+      d: "gcd(16, 12): write 16 = 1 × 12 + 4. Anything dividing 16 and 12 also divides 16 − 12 = 4. So (16, 12) and (12, 4) share exactly the same divisors. The same step turns (12, 4) into (4, 0), and the answer is 4. In general <code>gcd(a, b) = gcd(b, a mod b)</code>. The larger value at least halves every two steps, so it is <b>O(log min(<var>a</var>, <var>b</var>))</b>." },
+    { t: "lcm comes free from the gcd, if you divide first",
+      d: "The lcm counts the shared part once: lcm(12, 16) = 12 × 16 / 4 = 48. Write it as <code>a / gcd(a, b) * b</code>: 12 / 4 × 16 = 48. The gcd divides <var>a</var> exactly, so nothing is lost. And you never build the product <var>a</var> × <var>b</var>, which is the value that overflows on big inputs." },
+    { t: "Powers halve instead of counting down",
+      d: "2¹⁶ is 2 squared, squared, squared, squared: 4 steps, not 16. In general, <var>x</var>^<var>e</var> is (<var>x</var>^(<var>e</var>/2))² when <var>e</var> is even, and <var>x</var> × <var>x</var>^(<var>e</var> − 1) when odd. Each step halves <var>e</var> or makes it even, so it takes <b>O(log <var>e</var>)</b> multiplications. Take the modulus after every one, and nothing grows past <var>m</var>²." },
+    { t: "The modulus works for three operations, and not the fourth",
+      d: "<code>+</code>, <code>−</code> and <code>×</code> can be done on remainders alone. 12 × 16 = 192, which is 3 mod 7, and so is (12 mod 7) × (16 mod 7) = 5 × 2 = 10. <b>Division cannot.</b> It becomes multiplying by the <b>modular inverse</b>, and for a prime modulus that is one fast power. None of these routines factorise big numbers: they avoid having to." },
   ],
 
   hing: `<p><b>Poore number theory ka interview version chhe chhoti routines hai.</b> Har ek isliye exist karti hai kyunki seedha tarika bekaar mein zyada kaam karta hai.</p>
-<p><b>1. √n tak hi kyun?</b> Maan lo <code>n = a × b</code>. Agar a aur b dono √n se bade hote, to unka product n se bada ho jaata, jo ho nahi sakta. Matlab <b>kam se kam ek factor √n ke neeche ya barabar hoga</b>. To 2 se √n tak dekh lo, kuch nahi mila to number prime hai. Bas itni si baat, aur interview mein isse zyada primality test chahiye bhi nahi.</p>
+<p><b>1. √n tak hi kyun?</b> Maan lo <code>n = a × b</code>. Agar <var>a</var> aur <var>b</var> dono √<var>n</var> se bade hote, to unka product <var>n</var> se bada ho jaata, jo ho nahi sakta. Matlab <b>kam se kam ek factor √<var>n</var> ke neeche ya barabar hoga</b>. To 2 se √<var>n</var> tak dekh lo, kuch nahi mila to number prime hai. Interview mein isse zyada primality test chahiye bhi nahi.</p>
 <p><b>2. Sieve, har number se poochho mat, kaat do.</b> Ek-ek number ko test karne ke bajaye, har prime ke <b>multiples cross</b> kar do. Har composite apne hi prime factor se mar jaayega, jo bacha woh prime.</p>
-<p><b>Sabse poochha jaane wala sawaal: inner loop <code>p * p</code> se kyun shuru hota hai, <code>2p</code> se kyun nahi?</b> Socho: <code>p * p</code> se chhota har multiple <code>k × p</code> hota hai, jisme <code>k</code> khud <code>p</code> se chhota hai. Us number ka ek chhota prime factor pehle se hai, aur woh <b>pehle hi round mein kat chuka hai</b>. Dobara kaatne ka koi fayda nahi. Cost <b>O(n log log n)</b> hai. Yeh log log kahan se aaya, yeh interview mein derive karne ki cheez nahi hai, bas bol do aur aage badho.</p>
+<p><b>Sabse poochha jaane wala sawaal: inner loop <code>p * p</code> se kyun shuru hota hai, <code>2p</code> se kyun nahi?</b> Socho: <code>p * p</code> se chhota har multiple <code>k × p</code> hota hai, jisme <code>k</code> khud <code>p</code> se chhota hai. Us number ka ek chhota prime factor pehle se hai, aur woh <b>pehle hi round mein kat chuka hai</b>. Dobara kaatne ka koi fayda nahi. Cost <b>O(<var>n</var> log log <var>n</var>)</b> hai. Yeh log log kahan se aaya, yeh interview mein derive karne ki cheez nahi, bas bol do aur aage badho.</p>
 <p><b>3. GCD kyun chalta hai? Numbers par karke dekho, formula baad mein.</b> <code>gcd(1071, 462)</code> nikalna hai. Pehla step: <code>1071 = 2 × 462 + 147</code>.</p>
 <p>Ab socho koi number dono ko divide karta hai, jaise <b>21</b>. To <code>2 × 462</code> bhi 21 se katega, aur 1071 bhi. Matlab jo bacha, yaani <b>147</b>, woh bhi 21 se hi katega. Ulta bhi utna hi sach hai: jo 462 aur 147 dono ko kaatta hai, woh 1071 ko bhi kaatega. To <b>(1071, 462) aur (462, 147) ke common divisors bilkul same hain</b>, bas numbers chhote ho gaye. Sabse bada bhi isliye same rahega.</p>
-<p>Yahi <code>gcd(a, b) = gcd(b, a mod b)</code> hai. Repeat karte jao jab tak b zero na ho: <code>1071, 462</code> se <code>462, 147</code>, phir <code>147, 21</code>, phir <code>21, 0</code>. Jawab <b>21</b>. Har do step mein bada number kam se kam aadha ho jaata hai, isliye <b>O(log min(a, b))</b>.</p>
-<p><b>4. lcm mein order galat mat karna.</b> <code>lcm = a / gcd(a, b) * b</code> likho, <code>a * b / gcd</code> nahi. gcd, a ko poora divide karta hai to kuch khota nahi, par <code>a * b</code> banaya to woh <b>overflow</b> kar sakta hai. Overflow kya karta hai, woh numbers wale concept mein detail se hai.</p>
-<p><b>5. Fast power.</b> <code>x^16</code> ke liye 16 baar guna mat karo, chaar baar square kar lo. Exponent ko aadha karte jao, <b>O(log e)</b> steps. Aur har step ke baad <code>% m</code> lagao, tabhi number chhota rehta hai. Isiliye problems answer <code>mod 10⁹ + 7</code> maangte hain.</p>
-<p><b>6. Mod ke saath division kaam nahi karta.</b> Plus, minus, multiply, teeno mod ke andar theek chalte hain. <b>Divide nahi.</b> b se divide karne ke liye uska <b>modular inverse</b> chahiye, matlab woh number jiska <code>b × inv</code> mod m mein 1 ho. Jab m prime hai (aur 10⁹ + 7 prime hai), Fermat se: <code>inv = power(b, m - 2, m)</code>. Isi se nCr nikalta hai: factorials aur unke inverses pehle bana lo, phir har query O(1).</p>
-<p><b>Ek warning:</b> Fermat sirf <b>prime modulus</b> par chalta hai, aur tabhi jab b, m ka multiple na ho. Modulus prime nahi hai to extended Euclid chahiye, aur woh alag kahani hai.</p>`,
+<p>Yahi <code>gcd(a, b) = gcd(b, a mod b)</code> hai. Repeat karte jao jab tak <var>b</var> zero na ho: <code>1071, 462</code> se <code>462, 147</code>, phir <code>147, 21</code>, phir <code>21, 0</code>. Jawab <b>21</b>. Har do step mein bada number kam se kam aadha ho jaata hai, isliye <b>O(log min(<var>a</var>, <var>b</var>))</b>.</p>
+<p><b>4. lcm mein order galat mat karna.</b> <code>lcm = a / gcd(a, b) * b</code> likho, <code>a * b / gcd</code> nahi. gcd, <var>a</var> ko poora divide karta hai to kuch khota nahi. Par <code>a * b</code> banaya to woh <b>overflow</b> kar sakta hai. Overflow kya karta hai, woh numbers wale concept mein detail se hai.</p>
+<p><b>5. Fast power.</b> <code>x^16</code> ke liye 16 baar guna mat karo, chaar baar square kar lo. Exponent ko aadha karte jao, <b>O(log <var>e</var>)</b> steps. Aur har step ke baad <code>% m</code> lagao, tabhi number chhota rehta hai. Isiliye problems answer <code>mod 10⁹ + 7</code> maangte hain.</p>
+<p><b>6. Mod ke saath division kaam nahi karta.</b> Plus, minus, multiply, teeno mod ke andar theek chalte hain. <b>Divide nahi.</b> <var>b</var> se divide karne ke liye uska <b>modular inverse</b> chahiye, matlab woh number jiska <code>b × inv</code> mod <var>m</var> mein 1 ho. Jab <var>m</var> prime hai (aur 10⁹ + 7 prime hai), Fermat se: <code>inv = power(b, m - 2, m)</code>. Isi se nCr nikalta hai: factorials aur unke inverses pehle bana lo, phir har query O(1).</p>
+<p><b>Ek warning:</b> Fermat sirf <b>prime modulus</b> par chalta hai, aur tabhi jab <var>b</var>, <var>m</var> ka multiple na ho. Modulus prime nahi hai to extended Euclid chahiye, aur woh alag kahani hai.</p>`,
 
   viz: ["sieve"],
 
   math: [
-    { t: "Why the square root is the stopping line, counted", d: "The bound is not a heuristic. Every factor above the root is paired with one below it, so the loop above the root can only find what the loop below it already found.", w:
-`n = 10,007 (prime), sqrt(n) = 100.03
+    { t: "Why the square root is the stopping line, counted", d: "Every factor above the root is paired with one below it. So the loop above the root can only find what the loop below it already found.", w:
+`n = 15, sqrt(15) = 3.87:  test 2, 3.   15 = 3 x 5, composite
+n = 13, sqrt(13) = 3.61:  test 2, 3.   nothing divides, prime
 
-tests done up to the root:   2 .. 100    =    99
-tests done without a bound:  2 .. 10,006 = 10,005
-same answer, 100x the work
+n = 10^9 + 7:
+  tests up to the root:      about 31,600
+  tests without the bound:   about 10^9
+same answer, 30,000x the work
 
 if n = a x b and a > sqrt(n), then b = n / a < sqrt(n)` },
-    { t: "The sieve, as a sum", d: "Each prime crosses out n/p numbers. Add those up over the primes and the total is a little under three marks per number, which is why the whole thing behaves like a linear pass.", w:
-`crossings = n/2 + n/3 + n/5 + n/7 + ... over primes <= n
-          = n x (1/2 + 1/3 + 1/5 + 1/7 + ...)
-that inner sum grows like log log n
+    { t: "The sieve, counted on 2 to 16 and then at scale", d: "Each prime crosses out its multiples from p x p upward. Added over the primes, that is only a few marks per number, which is why the sieve behaves like one linear pass.", w:
+`p = 2:  4 6 8 10 12 14 16      7 marks
+p = 3:  9 12 15                 3 marks   (12 twice, harmless)
+p = 5:  25 > 16, stop           0 marks
+survivors: 2 3 5 7 11 13        10 marks, no divisions
 
-n = 10^6: roughly 2.9 x 10^6 crossings, about 3 per number
-trial division on the same range: about 10^8 divisions` },
-    { t: "Euclid, run once and then bounded", d: "Each step replaces the pair with a strictly smaller one, and two steps at least halve the larger value, which is where the log comes from.", w:
-`gcd(1071, 462):
+n = 5 x 10^6:
+  sieve crossings         1.1 x 10^7
+  trial division to root  6.5 x 10^8 divisions` },
+    { t: "Euclid, on the small pair and a bigger one", d: "Each step replaces the pair with a smaller one, and two steps at least halve the larger value. That halving is where the log comes from.", w:
+`gcd(16, 12):
+    16 = 1 x 12 + 4
+    12 = 3 x  4 + 0         gcd = 4
+
+gcd(1071, 462):
   1071 = 2 x 462 + 147
    462 = 3 x 147 +  21
    147 = 7 x  21 +   0      gcd = 21
 
 why two steps halve a:
   if b <= a/2 then a mod b < b <= a/2
-  if b >  a/2 then a mod b = a - b < a/2
-so O(log min(a, b)) steps, about 45 for values near 10^9` },
-    { t: "The lcm overflow, with values that trigger it", d: "Both orderings are algebraically identical. Only one of them ever forms the product that does not fit.", w:
-`a = 3 x 10^9   b = 4 x 10^9   gcd = 10^9
+  if b >  a/2 then a mod b = a - b < a/2` },
+    { t: "The lcm, and the order that avoids overflow", d: "Both orderings give the same answer. Only one of them ever builds the product that does not fit.", w:
+`lcm(12, 16):  12 / 4 x 16 = 3 x 16 = 48
+
+a = 3 x 10^9   b = 4 x 10^9   gcd = 10^9
 int64 tops out at 9.22 x 10^18
 
 a x b / gcd:  3e9 x 4e9 = 1.2 x 10^19   overflowed already
-a / gcd x b:  3 x 4e9   = 1.2 x 10^10   fine
+a / gcd x b:  3 x 4e9   = 1.2 x 10^10   fine` },
+    { t: "Fast power, counted in multiplications", d: "The exponent in binary is the recipe: one squaring per bit, and one extra multiply per bit that is 1.", w:
+`2^16:   2 -> 4 -> 16 -> 256 -> 65,536      4 squarings
 
-the gcd divides a exactly, so dividing first loses nothing` },
-    { t: "Fast power, counted in multiplications", d: "The exponent in binary is the recipe: one squaring per bit, one extra multiply per set bit.", w:
-`2^100, and 100 in binary is 1100100  (7 bits, 3 ones)
-
-squarings:      6
-multiplies:     3   (one per set bit)
-total:          9   operations
-naive:         99   multiplications
+2^100, and 100 in binary is 1100100  (7 bits, 3 ones)
+  squarings:      6
+  multiplies:     3   (one per set bit)
+  total:          9   operations, against 99 the slow way
 
 e = 10^18: 60 bits, so at most 120 operations` },
   ],
@@ -818,19 +1189,19 @@ e = 10^18: 60 bits, so at most 120 operations` },
     ["sieve up to n", "O(n log log n) time, O(n) space", "each composite is struck by its own prime factors"],
     ["gcd by Euclid", "O(log min(a, b))", "the remainder at least halves every two steps"],
     ["lcm from gcd", "O(log min(a, b))", "one gcd plus one divide and one multiply, in that order"],
-    ["power by squaring", "O(log e) multiplications", "each step halves the exponent instead of decrementing it"],
+    ["power by squaring", "O(log e) multiplications", "each step halves the exponent instead of subtracting one"],
     ["modular inverse, prime m", "O(log m)", "it is one fast power, b^(m-2), nothing more"],
     ["nCr mod prime", "O(n) precompute, O(1) per query", "factorials once, then two inverse lookups"],
     ["Pascal's triangle table", "O(n²) time and space", "additions only, so it works for any modulus, or none"],
   ],
 
   traps: [
-    "<b>Writing <code>i &lt;= sqrt(n)</code>.</b> The float result is wrong at the boundary for large perfect squares, and you recompute it every iteration. Write <code>i * i &lt;= n</code>, in a 64-bit type so the square itself does not overflow, or use an exact integer square root.",
-    "<b>Starting the sieve's inner loop at <code>2 * p</code>.</b> It still gives the right answer, it just re-crosses numbers that died on an earlier pass. Start at <code>p * p</code> and stop the outer loop once <code>p * p &gt; n</code>.",
-    "<b><code>a * b / gcd(a, b)</code> for the lcm.</b> The product overflows for inputs that the lcm itself would survive. Divide first: <code>a / gcd(a, b) * b</code>.",
-    "<b>Taking the modulus only at the end</b> of a power or a factorial. The intermediate is what overflows, so reduce after every multiplication, and hold the accumulator in 64 bits because the product of two values just under 10⁹ needs 60 bits.",
-    "<b>Using Fermat's inverse on a composite modulus</b>, or on a b that is a multiple of m. Both are silent: you get a number, it is simply not an inverse. Fermat needs m prime and b not divisible by m, and the modular inverse concept has the rest of the story, including what to do when neither holds.",
-    "<b>Feeding negative values to gcd or to a mod chain.</b> In the truncating languages <code>-7 % 3</code> is negative, so normalise with <code>((x % m) + m) % m</code>, especially after a subtraction under a modulus. The numbers concept has the full story on modulo signs.",
+    "<b>Writing <code>i &lt;= sqrt(n)</code>.</b> The float result can be wrong at the boundary for large perfect squares, and you recompute it every time round. Write <code>i * i &lt;= n</code>, in a 64-bit type so the square does not overflow.",
+    "<b>Starting the sieve's inner loop at <code>2 * p</code>.</b> The answer is still right. It just re-crosses numbers that died on an earlier pass. Start at <code>p * p</code>, and stop the outer loop once <code>p * p &gt; n</code>.",
+    "<b><code>a * b / gcd(a, b)</code> for the lcm.</b> The product overflows for inputs whose lcm would fit. Divide first: <code>a / gcd(a, b) * b</code>.",
+    "<b>Taking the modulus only at the end</b> of a power or a factorial. The intermediate is what overflows, so reduce after every multiplication. Hold the result in 64 bits, because two values just under 10⁹ multiply to 60 bits.",
+    "<b>Using Fermat's inverse on a composite modulus</b>, or on a <var>b</var> that is a multiple of <var>m</var>. Both are silent: you get a number, and it is not an inverse. The modular inverse page covers what to do instead.",
+    "<b>Feeding negative values to gcd or a mod chain.</b> In Java, C++ and JavaScript, <code>-7 % 3</code> is negative. Normalise with <code>((x % m) + m) % m</code>, especially after a subtraction under a modulus.",
   ],
 
   impl: [
@@ -1029,35 +1400,172 @@ Number(power(2n, 100n, M));               // convert back only at the very end`,
   codecap: "Six routines, and five of them are under ten lines. The only judgement calls are where the modulus goes and which order you divide in.",
 
   q: [
-    ["Why is it enough to test divisors up to √n?", "If n = a × b and both factors were above √n, the product would exceed n. So one factor is at or below √n, and if nothing there divides n, nothing above does either. That makes primality O(√n)."],
-    ["Why does the sieve beat testing each number, and why does the inner loop start at p × p?", "Crossing out multiples uses addition and strikes each composite through its own prime factors, instead of dividing every candidate. Anything below p × p is k × p with k < p, so it already has a smaller prime factor and was crossed out on an earlier pass. Total cost O(n log log n)."],
+    ["Why is it enough to test divisors up to √n?", "If n = a × b and both factors were above √n, the product would be more than n. So one factor is at or below √n. If nothing there divides n, nothing above does either. That makes primality O(√n)."],
+    ["Why does the sieve beat testing each number, and why does the inner loop start at p × p?", "Crossing out multiples strikes each composite through its own prime factors, with no division at all. Anything below p × p is k × p with k < p, so it has a smaller prime factor and was crossed out earlier. Total cost O(n log log n)."],
     ["Prove that gcd(a, b) = gcd(b, a mod b).", "Write a = q × b + r. Any d dividing a and b also divides r = a - q × b, and any d dividing b and r also divides a. The two pairs have identical common divisors, so their greatest one is identical."],
-    ["Why write lcm as a / gcd(a, b) * b rather than a * b / gcd(a, b)?", "The gcd divides a exactly, so the answer is the same, but the second form builds the product a × b first and that is the value which overflows a fixed-width integer."],
-    ["How do you compute a power in O(log e), and why apply the modulus at every step?", "Square repeatedly, halving the exponent, multiplying the running result in whenever the current bit is odd. Reducing after each multiplication keeps every intermediate below m², so nothing overflows and no huge number is ever formed."],
-    ["Which operations distribute over a modulus, and what do you do about the one that does not?", "Addition, subtraction and multiplication do. Division does not: multiply by the modular inverse of the divisor instead. When m is prime, Fermat gives inverse(b) = b^(m-2) mod m, one fast power, which is exactly how nCr is computed mod 10⁹ + 7."],
+    ["Why write lcm as a / gcd(a, b) * b rather than a * b / gcd(a, b)?", "The gcd divides a exactly, so the answer is the same. But the second form builds the product a × b first, and that is the value which overflows a fixed-width integer."],
+    ["How do you compute a power in O(log e), and why apply the modulus at every step?", "Square repeatedly, halving the exponent, and multiply the running result in whenever the current bit is 1. Reducing after each multiplication keeps every intermediate below m², so nothing overflows."],
+    ["Which operations work under a modulus, and what do you do about the one that does not?", "Addition, subtraction and multiplication do. Division does not: multiply by the modular inverse of the divisor instead. When m is prime, Fermat gives inverse(b) = b^(m-2) mod m, one fast power."],
   ],
 
   variants: [
-    { n: "Trial division", cost: "O(√n) for one number", idea: "Try every divisor from 2 up to √n and stop, because a larger factor would need a smaller partner you have already tested.", when: "You need to answer 'is this one number prime' or 'list the factors of n'. Also the whole of prime factorisation: divide n by each i you find, and whatever remains above 1 at the end is a prime factor itself.", watch: "Write i * i <= n rather than i <= sqrt(n), and hold the square in a 64-bit type. Also handle n < 2 explicitly, since 1 is not prime and neither is 0." },
-    { n: "Sieve of Eratosthenes", cost: "O(n log log n) time, O(n) space", idea: "Mark everything as prime, then for each surviving p cross out p × p, p × p + p, and so on. Composites are eliminated by their own prime factors.", when: "You need every prime up to n, or you need to answer many primality questions with n up to roughly 10⁷.", watch: "It is memory that fails first, not time. A boolean array for n = 10⁹ is not happening, and you want a segmented sieve or trial division for a single large n instead." },
-    { n: "Euclidean algorithm", cost: "O(log min(a, b))", idea: "Replace (a, b) with (b, a mod b) until b is 0. The common divisors are unchanged at every step, so the last non-zero a is the gcd.", when: "Any question about shared factors, reducing a fraction, aligning two periods, or the classic gcd of an entire array (fold it pairwise, and it usually collapses to 1 fast).", watch: "gcd(0, 0) is 0 and that is the only sane answer, but check whether your problem wants it. Negative inputs need normalising first, since remainders can be negative outside Python." },
-    { n: "lcm via gcd", cost: "one gcd", idea: "a / gcd(a, b) * b. The shared factors are counted once, and dividing before multiplying keeps the intermediate small.", when: "Cycle problems, meeting points, anything asking when two repeating events line up again.", watch: "The lcm of a whole array grows explosively even when each element is tiny, so it overflows long before the gcd would. Reduce as you fold, and consider whether the problem really needs the value or only a comparison." },
-    { n: "Exponentiation by squaring", cost: "O(log e) multiplications", idea: "x^e is (x^(e/2))² for even e, and x times x^(e-1) for odd e. Each step at least halves the exponent.", when: "Any power with a large exponent, any answer requested mod 10⁹ + 7, and matrix powers for linear recurrences such as Fibonacci in O(log n).", watch: "Negative exponents need the inverse, not the same loop. And take the modulus inside the loop, never once at the end, since the end is far too late." },
-    { n: "Modular inverse by Fermat", cost: "O(log m)", idea: "b^(m-1) ≡ 1 mod m when m is prime, so b^(m-2) is the inverse of b. Dividing by b becomes multiplying by that.", when: "Any counting problem mod a prime that involves a division: probabilities, averages, and every binomial coefficient.", watch: "Prime modulus only. For a composite m use the extended Euclidean algorithm, which works whenever gcd(b, m) = 1, and gives you nothing at all when it is not." },
-    { n: "nCr, factorials or Pascal", cost: "O(n) precompute then O(1), or O(n²) for the table", idea: "Either fact[n] × invfact[r] × invfact[n-r] under a prime modulus, or build the triangle with C[n][r] = C[n-1][r-1] + C[n-1][r].", when: "Factorials for many queries under a modulus. Pascal for small n, for an exact answer with no modulus, or when the modulus is not prime and inverses are unavailable.", watch: "Never compute n! / (r! (n-r)!) directly in fixed-width arithmetic, 21! already passes 64 bits. Pascal is safe because it only ever adds, which is also why it is O(n²)." },
+    { n: "Trial division", cost: "O(√n) for one number",
+      idea: "Try every divisor from 2 up to √<var>n</var> and stop. A larger factor would need a smaller partner you have already tested.",
+      when: "You need to know whether one number is prime, or to list its factors. For prime factorisation, divide <var>n</var> by each factor you find. Whatever is left above 1 at the end is itself prime.",
+      watch: "Write <code>i * i &lt;= n</code> rather than <code>i &lt;= sqrt(n)</code>, and hold the square in 64 bits. Handle <var>n</var> &lt; 2 separately, since 0 and 1 are not prime." },
+    { n: "Sieve of Eratosthenes", cost: "O(n log log n) time, O(n) space",
+      idea: "Mark everything as prime. Then for each surviving <var>p</var>, cross out <var>p</var> × <var>p</var>, <var>p</var> × <var>p</var> + <var>p</var>, and so on. Composites fall to their own prime factors.",
+      when: "You need every prime up to <var>n</var>, or many primality answers with <var>n</var> up to about 10⁷.",
+      watch: "Memory runs out before time does. A boolean array for <var>n</var> = 10⁹ is not happening: use a segmented sieve, or trial division for a single large <var>n</var>." },
+    { n: "Euclidean algorithm", cost: "O(log min(a, b))",
+      idea: "Replace (<var>a</var>, <var>b</var>) with (<var>b</var>, <var>a</var> mod <var>b</var>) until <var>b</var> is 0. The common divisors never change, so the last non-zero <var>a</var> is the gcd.",
+      when: "Shared factors, reducing a fraction, lining up two periods, or the gcd of a whole array. Fold that pairwise, and it usually drops to 1 quickly.",
+      watch: "gcd(0, 0) is 0, which is the only sane answer, but check what your problem wants. Normalise negative inputs first, since remainders can be negative outside Python." },
+    { n: "lcm via gcd", cost: "one gcd",
+      idea: "<code>a / gcd(a, b) * b</code>. The shared factors are counted once, and dividing before multiplying keeps the intermediate small.",
+      when: "Cycle problems, meeting points, anything asking when two repeating events line up again.",
+      watch: "The lcm of a whole array grows explosively even when each element is tiny. It overflows long before the gcd would, so check whether the problem needs the value or only a comparison." },
+    { n: "Exponentiation by squaring", cost: "O(log e) multiplications",
+      idea: "<var>x</var>^<var>e</var> is (<var>x</var>^(<var>e</var>/2))² for even <var>e</var>, and <var>x</var> × <var>x</var>^(<var>e</var> − 1) for odd <var>e</var>. Each step at least halves the exponent.",
+      when: "Any power with a large exponent, any answer mod 10⁹ + 7, and matrix powers for recurrences like Fibonacci in O(log <var>n</var>).",
+      watch: "Negative exponents need the inverse, not the same loop. And take the modulus inside the loop, never once at the end." },
+    { n: "Modular inverse by Fermat", cost: "O(log m)",
+      idea: "When <var>m</var> is prime, <var>b</var>^(<var>m</var> − 1) leaves remainder 1. So <var>b</var>^(<var>m</var> − 2) is the inverse of <var>b</var>, and dividing by <var>b</var> becomes multiplying by it.",
+      when: "Any counting problem mod a prime that needs a division: probabilities, averages, every binomial coefficient.",
+      watch: "Prime modulus only. For a composite <var>m</var> use extended Euclid, which works whenever gcd(<var>b</var>, <var>m</var>) = 1 and gives nothing when it is not." },
+    { n: "nCr, factorials or Pascal", cost: "O(n) precompute then O(1), or O(n²) for the table",
+      idea: "Either <code>fact[n] × invfact[r] × invfact[n-r]</code> under a prime modulus, or build the triangle with <code>C[n][r] = C[n-1][r-1] + C[n-1][r]</code>.",
+      when: "Factorials for many queries under a prime modulus. Pascal for small <var>n</var>, for an exact answer with no modulus, or when the modulus is not prime.",
+      watch: "Never compute <var>n</var>! / (<var>r</var>! (<var>n</var> − <var>r</var>)!) directly in fixed-width arithmetic: 21! already passes 64 bits. Pascal is safe because it only adds, which is also why it is O(<var>n</var>²)." },
   ],
 
   p: [
     [1979, "find-greatest-common-divisor-of-array", "Greatest Common Divisor of Array, Euclid in four lines", "E"],
     [118, "pascals-triangle", "Pascal's Triangle, the identity as code", "E"],
-    [204, "count-primes", "Count Primes, the sieve or a timeout", "M"],
     [1071, "greatest-common-divisor-of-strings", "GCD of Strings, Euclid on something that is not a number", "E"],
+    [204, "count-primes", "Count Primes, the sieve or a timeout", "M"],
     [372, "super-pow", "Super Pow, fast power with the exponent given as digits", "M"],
     [1922, "count-good-numbers", "Count Good Numbers, counting then one power mod 10⁹ + 7", "M"],
     [62, "unique-paths", "Unique Paths, it is nCr wearing a grid", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Interview ke number questions chhote hote hain, par inputs bahut bade. <b>5 × 10⁶</b> se chhote primes gino. Kya <b>10⁹ + 7</b> prime hai? <b>10¹⁸</b> ke paas ke do numbers ko divide karne wala sabse bada number nikalo. <b>2 ki power 10¹⁸</b> nikalo, sirf mod 10⁹ + 7 wala remainder rakh kar.</p>
+<p>Har ek ka ek obvious loop hai jo input tak ginta hai. Itne bade inputs par ginti karna hi woh cheez hai jo aap afford nahi kar sakte.</p>`,
+      tries: [
+        ["Har number ko usse chhote har number se divide karke test karo", "5 × 10⁶ se chhote primes aise ginoge to lagbhag 8.4 × 10¹¹ divisions lagenge, sirf un numbers ke liye jo prime nikle. Yeh ghanton ka kaam hai."],
+        ["Wahi, par square root par ruk jao", "Kaafi behtar, phir bhi poori range ke liye lagbhag 6.5 × 10⁸ divisions. Division slow instruction hai, to C++ mein seconds aur Python mein minutes."],
+        ["Dono numbers factorise karke gcd nikalo", "10¹⁸ ke paas ke number ko trial division se factorise karna matlab 10⁹ tak ke divisors try karna. Is page ka shortcut lagbhag 90 steps leta hai."],
+        ["2 se 10¹⁸ baar multiply karo", "10⁸ multiplications per second par yeh 300 saal se zyada hai. Squaring 60 steps mein pahunch jaati hai."],
+      ],
+      so: `<p>Is page ki har routine ginti ki jagah ek shortcut leti hai. <b>Square root par ruko.</b> Har number test karne ki jagah <b>multiples kaat do</b>. gcd ke liye <b>(<var>a</var>, <var>b</var>) ko (<var>b</var>, <var>a</var> mod <var>b</var>) se badlo</b>. Exponent ko ek ek ghataane ki jagah <b>aadha karo</b>. Sieve woh 348,513 primes lagbhag 1.1 × 10⁷ crossings mein gin leti hai.</p>
+<p>Har shortcut ko kaam karte dekhne ke liye page <b>2 se 16</b> tak ke numbers use karta hai. Yeh ek screen par aa jaate hain, aur inmein sab kuch hai: primes, ek perfect square (16), aur 12 aur 15 jaise composites. Primality 15 use karti hai, sieve saare pandrah numbers, aur gcd 12 aur 16.</p>`,
+    },
+
+    one: "Lagbhag har number question chaar moves hai: <b>square root par ruko</b>, multiples kaato, <var>a</var> ko <var>a</var> mod <var>b</var> se badlo, aur exponent aadha karo.",
+
+    plain: `<p>Number theory university course jaisa lagta hai. Interview version bas kuch chhoti routines hai. Har ek isliye hai kyunki obvious tareeka input tak ginta hai, aur input bahut bada hai.</p>
+<p><b>Kya 15 prime hai?</b> Sirf √15 ≈ 3.9 tak ke divisors test karo, yaani sirf 2 aur 3. 3 se 15 kat jaata hai, ho gaya. <b>16 tak kaunse numbers prime hain?</b> Har ek test mat karo. 2 ke multiples kaato, phir 3 ke, jo bache woh prime. <b>12 aur 16 ko divide karne wala sabse bada number?</b> Factorise mat karo. (16, 12) ko (12, 4) se badlo, phir (4, 0), aur answer 4. <b>2¹⁶ kya hai?</b> Solah baar guna ki jagah chaar baar square karo.</p>
+<p>Aakhri hissa <b>modulus</b> hai, divide karne ke baad bacha remainder. Problems answer <code>mod 10⁹ + 7</code> maangte hain taaki woh 64 bits mein fit ho. To har value ko chalte chalte chhota rakho. <code>+</code>, <code>−</code> aur <code>×</code> isse bach jaate hain. Division nahi bachta, aur use theek karna modular inverse wala page hai.</p>
+<p><b>Analogy.</b> Check karna ki area 15 wale rectangle ki sides whole numbers ho sakti hain ya nahi. Aap sirf chhoti side naapte ho, 1 se 3. Square ke paar har lambi side pehle hi chhoti side ke roop mein list mein aa chuki thi.</p>`,
+
+    why: [
+      { t: "Square root se upar ke factor ka partner neeche hota hai",
+        d: "15 = 3 × 5 lo. √15 ≈ 3.9, aur 5 ka partner 3 hai, jo neeche hai. Aisa hamesha hota hai: dono factors √<var>n</var> se upar hote to product <var>n</var> se zyada hota. To 2 se √<var>n</var> tak test karo. Wahan kuch nahi mila matlab kuch hai hi nahi. Yeh <b>O(√<var>n</var>)</b> hai." },
+      { t: "Har number alag test karna kaam dohrata hai",
+        d: "16 tak ke primes ke liye pandrah numbers test kar sakte ho. Par jaise hi pata chala 2 prime hai, yeh bhi pata chal gaya ki 4, 6, 8 se 16 tak prime nahi, bina divide kiye. To ulta socho: har prime lo aur uske <b>multiples kaat do</b>. Har composite apne kisi prime factor se kat-ta hai. Jo bache woh prime." },
+      { t: "Kaatna p × p se shuru, aur square root par khatam",
+        d: "<var>p</var> = 3 ke liye 9 se neeche ka multiple 3 × 2 = 6 hai. 6 mein chhota factor 2 hai, to woh pehle hi kat chuka. General rule: <var>p</var> × <var>p</var> se neeche ke har multiple mein chhota factor hota hai. To <var>p</var> × <var>p</var> se shuru karo, aur jab <var>p</var> × <var>p</var> limit ke paar jaaye to outer loop rok do. 16 ke liye 5 par ruko, kyunki 25 > 16. Cost <b>O(<var>n</var> log log <var>n</var>)</b>. Bol do, derive mat karo." },
+      { t: "gcd ke liye factorise mat karo, pair chhota karo",
+        d: "gcd(16, 12): 16 = 1 × 12 + 4 likho. Jo 16 aur 12 dono ko kaate, woh 16 − 12 = 4 ko bhi kaatega. To (16, 12) aur (12, 4) ke divisors bilkul same hain. Yahi step (12, 4) ko (4, 0) banata hai, aur answer 4. General: <code>gcd(a, b) = gcd(b, a mod b)</code>. Bada number har do step mein kam se kam aadha hota hai, to <b>O(log min(<var>a</var>, <var>b</var>))</b>." },
+      { t: "lcm gcd se muft milta hai, agar pehle divide karo",
+        d: "lcm shared hissa ek baar ginta hai: lcm(12, 16) = 12 × 16 / 4 = 48. Ise <code>a / gcd(a, b) * b</code> likho: 12 / 4 × 16 = 48. gcd <var>a</var> ko poora divide karta hai, to kuch nahi khota. Aur <var>a</var> × <var>b</var> wala product kabhi banta hi nahi, jo bade inputs par overflow hota hai." },
+      { t: "Power ek ek ghataane ki jagah aadhi hoti hai",
+        d: "2¹⁶ matlab 2 ka square, uska square, phir square, phir square: 4 steps, 16 nahi. General: <var>e</var> even ho to <var>x</var>^<var>e</var> = (<var>x</var>^(<var>e</var>/2))², odd ho to <var>x</var> × <var>x</var>^(<var>e</var> − 1). Har step <var>e</var> ko aadha ya even karta hai, to <b>O(log <var>e</var>)</b> multiplications. Har ek ke baad modulus lo, to kuch bhi <var>m</var>² se bada nahi hota." },
+      { t: "Modulus teen operations par chalta hai, chauthe par nahi",
+        d: "<code>+</code>, <code>−</code> aur <code>×</code> sirf remainders se ho jaate hain. 12 × 16 = 192, jo mod 7 mein 3 hai, aur (12 mod 7) × (16 mod 7) = 5 × 2 = 10 bhi 3 hai. <b>Division nahi hota.</b> Woh <b>modular inverse</b> se multiply ban jaata hai, aur prime modulus ke liye yeh ek fast power hai. Inmein se koi routine bade numbers factorise nahi karti: bas us kaam se bachti hai." },
+    ],
+
+    variants: [
+      { n: "Trial division", cost: "ek number ke liye O(√n)",
+        idea: "2 se √<var>n</var> tak har divisor try karo aur ruk jao. Bade factor ko ek chhota partner chahiye jo aap test kar chuke ho.",
+        when: "Jab jaanna ho ki ek number prime hai ya nahi, ya uske factors list karne ho. Prime factorisation ke liye <var>n</var> ko har mile factor se divide karo. End mein 1 se upar jo bache, woh khud prime hai.",
+        watch: "<code>i &lt;= sqrt(n)</code> ki jagah <code>i * i &lt;= n</code> likho, aur square 64 bits mein rakho. <var>n</var> &lt; 2 alag handle karo, kyunki 0 aur 1 prime nahi." },
+      { n: "Sieve of Eratosthenes", cost: "O(n log log n) time, O(n) space",
+        idea: "Sab ko prime mark karo. Phir har bache <var>p</var> ke liye <var>p</var> × <var>p</var>, <var>p</var> × <var>p</var> + <var>p</var>, aise aage kaat-te jao. Composites apne prime factors se girte hain.",
+        when: "Jab <var>n</var> tak ke saare primes chahiye, ya lagbhag 10⁷ tak ke <var>n</var> par bahut saare primality answers.",
+        watch: "Time se pehle memory khatam hoti hai. <var>n</var> = 10⁹ ka boolean array nahi banega: segmented sieve lo, ya ek bade <var>n</var> ke liye trial division." },
+      { n: "Euclidean algorithm", cost: "O(log min(a, b))",
+        idea: "(<var>a</var>, <var>b</var>) ko (<var>b</var>, <var>a</var> mod <var>b</var>) se badlo jab tak <var>b</var> 0 na ho. Common divisors kabhi nahi badalte, to aakhri non-zero <var>a</var> hi gcd hai.",
+        when: "Shared factors, fraction chhota karna, do periods milana, ya poore array ka gcd. Use pair by pair fold karo, aam taur par jaldi 1 par aa jaata hai.",
+        watch: "gcd(0, 0) = 0, yahi ek samajhdaar answer hai, par dekho problem kya chahti hai. Negative inputs pehle normalise karo, kyunki Python ke bahar remainder negative ho sakta hai." },
+      { n: "lcm via gcd", cost: "ek gcd",
+        idea: "<code>a / gcd(a, b) * b</code>. Shared factors ek baar gine jaate hain, aur guna se pehle divide karne se beech ki value chhoti rehti hai.",
+        when: "Cycle problems, milne ke points, jahan poocha jaaye ki do repeat hone wale events phir kab milenge.",
+        watch: "Poore array ka lcm bahut tez badhta hai, chahe har element chhota ho. Yeh gcd se bahut pehle overflow hota hai, to dekho problem ko value chahiye ya sirf comparison." },
+      { n: "Exponentiation by squaring", cost: "O(log e) multiplications",
+        idea: "Even <var>e</var> ke liye <var>x</var>^<var>e</var> = (<var>x</var>^(<var>e</var>/2))², odd <var>e</var> ke liye <var>x</var> × <var>x</var>^(<var>e</var> − 1). Har step exponent ko kam se kam aadha karta hai.",
+        when: "Bade exponent wali koi bhi power, mod 10⁹ + 7 wala koi bhi answer, aur Fibonacci jaise recurrences ke liye matrix power, O(log <var>n</var>) mein.",
+        watch: "Negative exponent ko inverse chahiye, wahi loop nahi. Aur modulus loop ke andar lo, end mein ek baar kabhi nahi." },
+      { n: "Modular inverse by Fermat", cost: "O(log m)",
+        idea: "<var>m</var> prime ho to <var>b</var>^(<var>m</var> − 1) ka remainder 1 hai. To <var>b</var>^(<var>m</var> − 2) hi <var>b</var> ka inverse hai, aur <var>b</var> se divide uske saath multiply ban jaata hai.",
+        when: "Prime mod par koi bhi counting problem jisme division chahiye: probabilities, averages, har binomial coefficient.",
+        watch: "Sirf prime modulus. Composite <var>m</var> ke liye extended Euclid lo, jo gcd(<var>b</var>, <var>m</var>) = 1 hone par chalta hai aur na ho to kuch nahi deta." },
+      { n: "nCr, factorials or Pascal", cost: "O(n) precompute phir O(1), ya table ke liye O(n²)",
+        idea: "Ya to prime modulus mein <code>fact[n] × invfact[r] × invfact[n-r]</code>, ya triangle banao <code>C[n][r] = C[n-1][r-1] + C[n-1][r]</code> se.",
+        when: "Prime modulus mein bahut saari queries ke liye factorials. Chhote <var>n</var> ke liye, bina modulus exact answer ke liye, ya modulus prime na ho to Pascal.",
+        watch: "Fixed-width arithmetic mein <var>n</var>! / (<var>r</var>! (<var>n</var> − <var>r</var>)!) seedha kabhi mat nikalo: 21! hi 64 bits ke paar hai. Pascal safe hai kyunki sirf add karta hai, isiliye woh O(<var>n</var>²) bhi hai." },
+    ],
+
+    math: [
+      { t: "Square root hi rukne ki line kyun hai, gin ke", d: "Root se upar ke har factor ka ek partner neeche hai. To root ke upar wala loop sirf wahi dhoondh sakta hai jo neeche wala pehle hi dhoondh chuka." },
+      { t: "Sieve, 2 se 16 par gin ke, phir bade scale par", d: "Har prime apne multiples p x p se upar kaat-ta hai. Saare primes par jodo to har number par bas kuch marks aate hain. Isiliye sieve ek linear pass jaisa chalta hai." },
+      { t: "Euclid, chhote pair par aur ek bade par", d: "Har step pair ko chhote pair se badalta hai, aur do steps bade number ko kam se kam aadha karte hain. Log isi aadhe hone se aata hai." },
+      { t: "lcm, aur woh order jo overflow se bachata hai", d: "Dono order same answer dete hain. Sirf ek hi woh product banata hai jo fit nahi hota." },
+      { t: "Fast power, multiplications mein gin ke", d: "Binary mein exponent hi recipe hai: har bit par ek squaring, aur har 1 wale bit par ek extra multiply." },
+    ],
+
+    costs: [
+      ["trial division se primality", "O(√n)", "√n se upar ka factor neeche ek partner maangta hai"],
+      ["n tak sieve", "O(n log log n) time, O(n) space", "har composite apne prime factors se kat-ta hai"],
+      ["Euclid se gcd", "O(log min(a, b))", "remainder har do steps mein kam se kam aadha hota hai"],
+      ["gcd se lcm", "O(log min(a, b))", "ek gcd, phir ek divide aur ek multiply, isi order mein"],
+      ["squaring se power", "O(log e) multiplications", "har step exponent ko aadha karta hai, ek ghataata nahi"],
+      ["modular inverse, prime m", "O(log m)", "bas ek fast power, b^(m-2), aur kuch nahi"],
+      ["prime mod mein nCr", "O(n) precompute, O(1) per query", "factorials ek baar, phir do inverse lookups"],
+      ["Pascal's triangle table", "O(n²) time and space", "sirf additions, to kisi bhi modulus ke saath chalta hai, ya bina modulus"],
+    ],
+
+    traps: [
+      "<b><code>i &lt;= sqrt(n)</code> likhna.</b> Bade perfect squares par float result boundary par galat ho sakta hai, aur har baar dobara compute hota hai. <code>i * i &lt;= n</code> likho, 64-bit type mein taaki square overflow na ho.",
+      "<b>Sieve ka inner loop <code>2 * p</code> se shuru karna.</b> Answer phir bhi sahi hai. Bas woh numbers dobara kat-te hain jo pehle hi mar chuke. <code>p * p</code> se shuru karo, aur <code>p * p &gt; n</code> hote hi outer loop roko.",
+      "<b>lcm ke liye <code>a * b / gcd(a, b)</code>.</b> Product un inputs par bhi overflow hota hai jinka lcm fit ho jaata. Pehle divide karo: <code>a / gcd(a, b) * b</code>.",
+      "<b>Power ya factorial mein modulus sirf end mein lena.</b> Beech ki value overflow hoti hai, to har multiplication ke baad reduce karo. Result 64 bits mein rakho, kyunki 10⁹ se thode chhote do numbers ka guna 60 bits ka hai.",
+      "<b>Composite modulus par Fermat ka inverse</b>, ya aise <var>b</var> par jo <var>m</var> ka multiple hai. Dono chupchaap hain: number milta hai, par woh inverse nahi. Kya karna hai, woh modular inverse page par hai.",
+      "<b>gcd ya mod chain mein negative values daalna.</b> Java, C++ aur JavaScript mein <code>-7 % 3</code> negative hai. <code>((x % m) + m) % m</code> se normalise karo, khaaskar modulus ke andar subtraction ke baad.",
+    ],
+
+    impl: [
+      ["Python", "math.gcd · math.lcm · math.isqrt · math.comb · pow(b, e, m)", "Teen argument wala pow fast modular wala hai. isqrt exact hai, sqrt float hai. Overflow nahi, to order tabhi maayne rakhta hai jab code port karo."],
+      ["Java", "BigInteger.gcd · BigInteger.modPow · Math.multiplyHigh", "Primitive gcd nahi hai. Chaar line ka Euclid likho, sab long mein rakho, aur har multiply ke baad reduce karo."],
+      ["C++", "std::gcd and std::lcm, header numeric (C++17)", "std::lcm andar se hi overflow se bachata hai. Modular products ke liye long long, ya modulus bada ho to __int128."],
+      ["JavaScript", "no built-in gcd, and numbers are doubles", "Integer maths sirf 2⁵³ tak exact hai, aur do 10⁹ values ka modular product nahi hai. Modular arithmetic BigInt mein karo aur end mein wapas convert karo."],
+    ],
+
+    codecap: "Chhe routines, aur paanch das line se chhoti. Faisla sirf itna hai ki modulus kahan lage aur divide kis order mein ho.",
+
+    q: [
+      ["√n tak divisors test karna kaafi kyun hai?", "Agar n = a × b aur dono factors √n se upar hote, to product n se zyada hota. To ek factor √n ya usse neeche hai. Wahan kuch n ko divide nahi karta, to upar bhi kuch nahi karega. Isliye primality O(√n) hai."],
+      ["Sieve har number test karne se behtar kyun hai, aur inner loop p × p se kyun shuru hota hai?", "Multiples kaatna har composite ko uske apne prime factors se maarta hai, bina kisi division ke. p × p se neeche sab k × p hai jisme k < p, to usme chhota prime factor hai aur woh pehle kat chuka. Total cost O(n log log n)."],
+      ["Prove karo ki gcd(a, b) = gcd(b, a mod b).", "a = q × b + r likho. Jo d, a aur b ko divide kare, woh r = a - q × b ko bhi karega. Aur jo d, b aur r ko kare, woh a ko bhi karega. Dono pairs ke common divisors same hain, to sabse bada bhi same."],
+      ["lcm ko a * b / gcd(a, b) ki jagah a / gcd(a, b) * b kyun likhein?", "gcd a ko poora divide karta hai, to answer same hai. Par doosra form pehle a × b banata hai, aur wahi value fixed-width integer mein overflow hoti hai."],
+      ["Power O(log e) mein kaise nikaalte ho, aur har step par modulus kyun?", "Baar baar square karo, exponent aadha karte hue, aur jab current bit 1 ho to running result mein multiply karo. Har multiplication ke baad reduce karne se har beech ki value m² se neeche rehti hai, to kuch overflow nahi hota."],
+      ["Modulus ke andar kaunse operations chalte hain, aur jo nahi chalta uska kya?", "Addition, subtraction aur multiplication chalte hain. Division nahi: divisor ke modular inverse se multiply karo. m prime ho to Fermat se inverse(b) = b^(m-2) mod m, ek fast power."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "mod-inverse",
@@ -1166,7 +1674,7 @@ invfact[i-1] = invfact[i] x i,  since 1/(i-1)! = (1/i!) x i` },
     "<b>Using Fermat on a composite modulus.</b> <code>b^(m-2)</code> is a perfectly good number for <var>m</var> = 12, it is simply not an inverse. Nothing throws, nothing warns, and the answer is wrong by a value you cannot reverse engineer. Fermat needs <var>m</var> prime, full stop.",
     "<b>Inverting 0, or any <var>b</var> that is a multiple of <var>m</var>.</b> <code>pow(0, m-2, m)</code> returns 0, which multiplies back to 0, not 1. This happens for real when a factorial or a product legitimately reduces to 0 mod <var>m</var>, so guard the divisor rather than trusting the formula.",
     "<b>Forgetting that extended Euclid can return a negative <var>x</var>.</b> Outside Python the coefficient often comes back below zero and indexes or multiplies as garbage. Normalise once with <code>((x % m) + m) % m</code>.",
-    "<b>Computing an inverse inside the loop.</b> Every nCr costing its own <code>O(log m)</code> power turns an O(<var>n</var>) solution into O(<var>n</var> log <var>m</var>), which at <var>n</var> = 10⁶ is the difference between passing and a timeout. Precompute the inverse factorial table once.",
+    "<b>Computing an inverse inside the loop.</b> Every nCr costing its own <code>O(log m)</code> power turns an O(<var>n</var>) solution into O(<var>n</var> log <var>m</var>). At <var>n</var> = 10⁶ that is the difference between passing and a timeout. Precompute the inverse factorial table once.",
     "<b>Writing <code>fact[n] / fact[r] % M</code> in code.</b> Both values are already reduced, so this is integer division on two residues: it silently produces a number that has nothing to do with the answer. If a <code>/</code> appears anywhere inside a modular expression, it is a bug.",
     "<b>Treating the result as a magnitude.</b> Modular values have no order, so comparing them, taking a maximum, or rounding one is meaningless even though the code compiles and runs.",
   ],
@@ -1335,9 +1843,9 @@ Number(inverse(5n));                          // back to Number only at the end`
 
   q: [
     ["Why can you not simply divide under a modulus?", "Because the quotient need not be an integer, so there is no residue for it to be: 3 / 2 mod 7 is 1.5, which is no remainder at all. And where the quotient is an integer, you no longer hold the value to divide, only its remainder. Division is rebuilt as multiplication by the inverse instead."],
-    ["When does an inverse exist, and why?", "Exactly when gcd(b, m) = 1. Jump b hours at a time around a clock of m hours, starting at 0: you return to 0 after m / gcd(b, m) jumps, having stood on that many hours. If the gcd is 1 you stand on all m of them, so you land on 1, exactly once, and the number of jumps that took is the inverse. If the gcd is d > 1 you only ever land on multiples of d, since b and m are both multiples of d, and 1 is not one of them, so you never reach it at all."],
+    ["When does an inverse exist, and why?", "Exactly when gcd(b, m) = 1. Jump b hours at a time around a clock of m hours, starting at 0. You return to 0 after m / gcd(b, m) jumps, having stood on that many hours. If the gcd is 1 you stand on all m of them, so you land on 1 exactly once. The number of jumps that took is the inverse. If the gcd is d > 1 you only ever land on multiples of d, since b and m are both multiples of d. 1 is not one of them, so you never reach it."],
     ["Derive Fermat's inverse rather than quoting it.", "For prime m and b not a multiple of m, b^(m-1) ≡ 1. Split off one b: b × b^(m-2) ≡ 1. The second factor is by definition the inverse, so inv(b) = b^(m-2) mod m, one fast power in O(log m)."],
-    ["The modulus is 2³², and the divisor is even. What do you do?", "Nothing, on that route: gcd is at least 2, so no inverse exists. The division has to be avoided instead. Build the value by addition (Pascal's triangle for binomials, since it only ever adds), or factor the powers of two out of the numerator and denominator first and invert what remains."],
+    ["The modulus is 2³², and the divisor is even. What do you do?", "Nothing, on that route: gcd is at least 2, so no inverse exists. The division has to be avoided instead. Build the value by addition (Pascal's triangle for binomials, since it only ever adds). Or factor the powers of two out of the numerator and denominator first, and invert what remains."],
     ["You need every inverse factorial up to 2 × 10⁵. How many fast powers is that?", "One. Invert fact[N] with a single power, then walk down using invfact[i-1] = invfact[i] × i, because 1/(i-1)! = (1/i!) × i. Doing a power per entry is O(n log m) and is a common source of timeouts."],
     ["Extended Euclid returns x = -3 for m = 7. What is the inverse, and what does a gcd of 2 mean?", "The inverse is ((-3 % 7) + 7) % 7 = 4, since the coefficient is only defined up to multiples of m. A gcd of 2 means the algorithm has proved there is no inverse, which is a complete answer and not a failure."],
   ],
@@ -1436,20 +1944,38 @@ Number(inverse(5n));                          // back to Number only at the end`
   id: "bits",
   n: "Bit manipulation",
   group: "Fundamentals",
+  need: {
+    ask: `<p>An array holds numbers in pairs, except for one value that appears only once. Find that one. For example, in <code>[4, 1, 2, 1, 2]</code> the answer is <b>4</b>.</p>
+<p>The catch: the array has 10⁷ numbers, and you may use only <b>a fixed amount of extra memory</b>, the same whether the array holds ten numbers or ten million.</p>`,
+    tries: [
+      ["Count with a hash map", "Correct, and it stores up to 5 × 10⁶ distinct values. At tens of bytes per entry that is hundreds of megabytes. The memory rule is broken the moment the map grows."],
+      ["Sort, then walk the pairs", "After sorting, <code>[1, 1, 2, 2, 4]</code> shows the odd one out. But sorting 10⁷ numbers is about 2.3 × 10⁸ comparisons, and it either changes the input or needs a full copy."],
+      ["Compare each number against all the others", "No extra memory, but about <var>n</var>² / 2 = 5 × 10¹³ comparisons for 10⁷ numbers. That is days."],
+    ],
+    so: `<p>Every integer is already stored as a row of on/off switches, called <b>bits</b>. <b>XOR</b>, written <code>^</code>, compares two numbers bit by bit: 1 where they differ, 0 where they match. So <code>a ^ a = 0</code>, and <code>a ^ 0 = a</code>.</p>
+<p>XOR the whole array into one integer. Each pair cancels itself, whatever the order, and only the unpaired value survives. For <code>[4, 1, 2, 1, 2]</code>: 4 ^ 1 ^ 2 ^ 1 ^ 2 = <b>4</b>. One pass, one integer. The rest of this page is what else you can do once you treat numbers as switches, using these same three values: 4, 1 and 2.</p>`,
+  },
+
   one: "An integer is already a row of switches. Bit operations stop pretending otherwise, and <code>a ^ a = 0</code> is the one identity that earns its keep.",
 
-  plain: `<p>Every integer you have ever used is stored as a row of bits, each worth twice the one to its right. Bit manipulation is not a separate branch of mathematics. It is just addressing those switches directly instead of politely going through arithmetic.</p>
-<p>There are four things you can do to a bit: set it, clear it, flip it, or ask whether it is on. All four are the same two steps. Build a mask with a shift, then combine it with AND, OR or XOR.</p>
-<p>Most of the time this buys you nothing that a boolean array would not, and costs you readability. It earns its place in exactly two situations. First, when a set of up to about 32 items has to fit in one integer: bitmask DP, subsets, visited states. Second, when XOR's cancelling turns an O(n) space problem into an O(1) space one.</p>
-<p><b>Analogy.</b> A row of light switches on a wall. You can flip one, or you can hold a stencil over the wall and flip everything showing through the holes. The stencil is the mask. That is genuinely the entire concept.</p>`,
+  plain: `<p>Every integer is stored as a row of <b>bits</b>, switches that are 0 or 1. Each bit is worth twice the one to its right: 1, 2, 4, 8 and so on. So 4 is <code>100</code>, 1 is <code>001</code> and 2 is <code>010</code>. Bit manipulation means working on those switches directly.</p>
+<p>You can do four things to a bit: set it, clear it, flip it, or ask whether it is on. All four take the same two steps. First build a <b>mask</b>, a number with 1s only where you want to act. Then combine it with <b>AND</b> (<code>&amp;</code>), <b>OR</b> (<code>|</code>) or <b>XOR</b> (<code>^</code>).</p>
+<p>Most of the time a plain boolean array does the same job, more readably. Bits earn their place in two cases. When XOR's cancelling saves memory, as in <code>[4, 1, 2, 1, 2]</code>. And when a set of up to about 20 items must fit in one integer, for subsets and bitmask DP.</p>
+<p><b>Analogy.</b> A row of light switches on a wall. You can flip one, or hold a stencil over the wall and flip everything showing through the holes. The stencil is the mask.</p>`,
 
   why: [
-    { t: "Position is value, so shifting is multiplying", d: "Bit i is worth 2<sup>i</sup>. Shifting left by one moves every bit up a position, which doubles the number; shifting right halves it and throws away the remainder. So <code>1 &lt;&lt; k</code> is \"a single 1, sitting in position k\", which is how every mask gets built." },
-    { t: "The three operators do the three jobs, and no others", d: "<b>OR</b> turns bits on and never turns any off, so it sets. <b>AND</b> keeps only what both sides agree on, so with an inverted mask it clears, and with a single-bit mask it tests. <b>XOR</b> differs, so it flips. Once you see which operator has which personality you stop memorising the four idioms." },
-    { t: "XOR is the one with a real superpower", d: "<code>a ^ a = 0</code> and <code>a ^ 0 = a</code>. Together those mean XOR-ing a whole array cancels out every value that appears an even number of times and leaves the odd one standing. Finding the single unpaired number takes <b>O(n) time and O(1) space</b>, with no hash map and no sorting. It is also symmetric and order-independent, so you can do it in any order you like." },
-    { t: "A number is a set, if you squint", d: "Bit i on means \"item i is in the set\". Now union is OR, intersection is AND, and membership is a single AND. The whole set is one integer, which you can use as a dictionary key or a DP state. That is the actual reason bitmask DP exists: 2<sup>n</sup> subsets become 2<sup>n</sup> integers, which a machine handles comfortably up to about n = 20." },
-    { t: "The identities worth knowing, and the ones that are just showing off", d: "<code>x &amp; (x - 1)</code> clears the lowest set bit, because subtracting one flips that bit off and everything below it on. That gives you both the power-of-two test (<code>x &amp; (x-1) == 0</code>) and a population count that runs once per set bit instead of 32 times. Everything beyond those is a party trick, and your language has a built-in for it anyway." },
-    { t: "The sharp edges are all about width and sign", d: "Shifting by more than the width is undefined in C++ and quietly wraps in Java. Right-shifting a negative number copies the sign bit, which is why Java has a separate <code>&gt;&gt;&gt;</code>. JavaScript coerces to 32 bits for any bitwise operation, so a perfectly good large number becomes garbage. And Python has no width at all, so <code>~5</code> is <code>-6</code> forever rather than wrapping. Four languages, four different opinions." },
+    { t: "Position is value, so shifting is multiplying",
+      d: "Bit <var>i</var> is worth 2<sup><var>i</var></sup>. 4 is <code>100</code>: one bit, in position 2. Shifting left by one moves every bit up a place, which doubles: <code>4 &lt;&lt; 1</code> = 8. Shifting right halves and drops the remainder: <code>4 &gt;&gt; 1</code> = 2. So <code>1 &lt;&lt; k</code> is a single 1 in position <var>k</var>, which is how every mask gets built." },
+    { t: "Each operator has one job",
+      d: "<b>OR</b> turns bits on and never off, so it <b>sets</b>: 4 | 1 = <code>101</code> = 5. <b>AND</b> keeps only bits on in both, so it <b>tests</b>, and with an inverted mask it <b>clears</b>: 5 &amp; 4 = 4, so bit 2 is on. <b>XOR</b> is 1 where the bits differ, so it <b>flips</b>: 5 ^ 1 = 4." },
+    { t: "XOR cancels pairs, in any order",
+      d: "<code>a ^ a = 0</code>, because every bit matches itself. <code>a ^ 0 = a</code>, because XOR with 0 changes nothing. XOR also ignores order, so in 4 ^ 1 ^ 2 ^ 1 ^ 2 the two 1s meet and vanish, and so do the 2s. What is left is 4. That is <b>O(<var>n</var>) time and O(1) space</b>, with no map and no sort." },
+    { t: "A number is a set",
+      d: "Bit <var>i</var> on can mean “item <var>i</var> is in the set”. 4, 2 and 1 are each a single bit, so 7 = <code>111</code> is the set of all three, and 5 = <code>101</code> is just 4 and 1. Union is OR, intersection is AND. The whole set is one integer, usable as a map key or a DP state. That works up to about 20 items: 2²⁰ is a million sets." },
+    { t: "Two identities worth knowing",
+      d: "<code>x &amp; (x - 1)</code> clears the lowest 1. Subtracting one flips that bit off and every 0 below it on. So 6 = <code>110</code> becomes 6 &amp; 5 = <code>100</code> = 4. That gives the power-of-two test, <code>x &amp; (x - 1) == 0</code>, and a bit count that loops once per 1. Most other tricks already have a built-in." },
+    { t: "The sharp edges are width and sign",
+      d: "Shifting by more than the width is undefined in C++ and wraps in Java. Shifting a negative number right copies the sign bit, which is why Java also has <code>&gt;&gt;&gt;</code>. JavaScript turns every number into 32 bits before a bit operation. Python has no width at all, so <code>~5</code> is always −6." },
   ],
 
   hing: `<p><b>Pehle ek baat seedhi kar lein:</b> integer pehle se hi bits ki ek line hai. Bit manipulation koi alag mathematics nahi hai, bas un switches ko <b>seedha</b> chhoona hai, arithmetic ke through ghoom kar nahi.</p>
@@ -1458,46 +1984,52 @@ Number(inverse(5n));                          // back to Number only at the end`
 <b>OR</b> sirf on karta hai, kabhi off nahi. Isliye "set".<br>
 <b>AND</b> sirf wahi rakhta hai jahan dono taraf 1 ho. Isliye "clear" (ulte mask ke saath) aur "test".<br>
 <b>XOR</b> alag hone par 1 deta hai. Isliye "flip".</p>
-<p><b>Ab asli cheez, XOR:</b> <code>a ^ a = 0</code> aur <code>a ^ 0 = a</code>. Matlab poore array ko XOR kar do, to jo bhi number <b>do baar</b> aaya hai woh khud ko kaat kar gayab ho jaayega, aur akela wala bach jaayega. <b>O(n) time, O(1) space</b>, na hash map na sorting. Yeh trick interview mein baar-baar aati hai.</p>
-<p><b>Number ko set ki tarah socho:</b> bit i on hai matlab item i set mein hai. Ab union = OR, intersection = AND, membership = ek AND. Poora subset ek hi integer ban gaya, jise tum DP ki state ya dictionary ki key bana sakte ho. Bitmask DP yahin se aata hai, aur n ≤ 20 tak aaram se chalta hai.</p>
+<p><b>Ab asli cheez, XOR:</b> <code>a ^ a = 0</code> aur <code>a ^ 0 = a</code>. Matlab poore array ko XOR kar do, to jo bhi number <b>do baar</b> aaya hai woh khud ko kaat kar gayab ho jaayega, aur akela wala bach jaayega. <b>O(<var>n</var>) time, O(1) space</b>, na hash map na sorting. Yeh trick interview mein baar-baar aati hai.</p>
+<p><b>Number ko set ki tarah socho:</b> bit <var>i</var> on hai matlab item <var>i</var> set mein hai. Ab union = OR, intersection = AND, membership = ek AND. Poora subset ek hi integer ban gaya, jise tum DP ki state ya dictionary ki key bana sakte ho. Bitmask DP yahin se aata hai, aur <var>n</var> ≤ 20 tak aaram se chalta hai.</p>
 <p><b>Do identities yaad rakhne layak hain:</b> <code>x &amp; (x-1)</code> sabse neeche wala on-bit hata deta hai. Isse do cheezein milti hain: power of two ka test (<code>x &amp; (x-1) == 0</code>), aur set bits ginna sirf utni baar jitne bits on hain. Baaki jitne "cool bit tricks" internet par hain, unke liye tumhari language mein pehle se function hai.</p>
-<p><b>Aur ab langdi jagah, har language ki apni:</b> Java mein negative number right-shift karne par sign copy hota hai, isliye alag se <code>&gt;&gt;&gt;</code> hai. JavaScript har bitwise operation se pehle number ko <b>32-bit</b> bana deta hai, to bada number chupchaap kachra ban jaata hai. C++ mein width se zyada shift karna undefined behaviour hai. Python ki koi width hi nahi, isliye <code>~5</code> hamesha <code>-6</code> rahega. Chaar languages, chaar alag raaye.</p>`,
+<p><b>Aur ab langdi jagah, har language ki apni:</b> Java mein negative number right-shift karne par sign copy hota hai, isliye alag se <code>&gt;&gt;&gt;</code> hai. JavaScript har bitwise operation se pehle number ko <b>32-bit</b> bana deta hai, to bada number chupchaap kachra ban jaata hai. C++ mein width se zyada shift karna undefined behaviour hai. Python ki koi width hi nahi, isliye <code>~5</code> hamesha <code>-6</code> rahega.</p>`,
 
   viz: ["bits"],
   see: [["DOC", "https://graphics.stanford.edu/~seander/bithacks.html", "Bit Twiddling Hacks (read once, use twice)"]],
 
   math: [
     { t: "Position is value, so a shift is a multiply", d: "Nothing clever here, it is base two written out. But it is the line every other identity leans on.", w:
-`1011 = 1x2^3 + 0x2^2 + 1x2^1 + 1x2^0 = 8 + 0 + 2 + 1 = 11
+`4 = 100 = 1x4 + 0x2 + 0x1
+1 = 001 = 0x4 + 0x2 + 1x1
+2 = 010 = 0x4 + 1x2 + 0x1
 
-11 << 3  =  11 x 8   = 88
-11 >> 1  =  11 / 2   = 5      rounds DOWN, always
+4 << 1   =  4 x 2   = 8
+4 >> 1   =  4 / 2   = 2
 -11 >> 1 =  -6                floor, not truncation` },
-    { t: "n & (n-1) clears the lowest set bit", d: "Subtracting one borrows through the trailing zeros, flipping the lowest 1 to 0 and everything under it to 1. The AND then keeps only what is above.", w:
-`n      = 12 = 1100
-n - 1  = 11 = 1011      <- lowest 1 flipped, zeros below became 1
-n & (n-1)   = 1000 = 8
-
-12 -> 8 -> 0 : two steps, so popcount(12) = 2
-
-cost is the number of set bits, not the width.
-one iteration per 1, up to 32 or 64, usually far fewer.` },
-    { t: "XOR cancels, in any order", d: "a ^ a = 0 and a ^ 0 = a, and XOR is commutative and associative, so pairs annihilate wherever they happen to sit in the array.", w:
+    { t: "XOR cancels, in any order", d: "a ^ a = 0 and a ^ 0 = a. XOR also ignores order and grouping, so pairs cancel wherever they sit in the array.", w:
 `[4, 1, 2, 1, 2]
 
-4 ^ 1 ^ 2 ^ 1 ^ 2
-= 4 ^ (1 ^ 1) ^ (2 ^ 2)      reorder freely
-= 4 ^ 0 ^ 0
-= 4
+  100      4
+^ 001      1
+^ 010      2
+^ 001      1
+^ 010      2
+-----
+  100    = 4      each column has an odd count of 1s only for 4
 
-O(n) time, O(1) space, and no second pass to confirm` },
-    { t: "Subsets, counted, including the one that catches people out", d: "A set of k items has 2^k subsets, and the integers 0 to 2^k - 1 are exactly those subsets written in binary.", w:
-`k = 20:  2^20 = 1,048,576          fine
-k = 25:  2^25 = 33,554,432         borderline
+4 ^ (1 ^ 1) ^ (2 ^ 2) = 4 ^ 0 ^ 0 = 4` },
+    { t: "x & (x - 1) clears the lowest 1", d: "Take 6, the running XOR after 4, 1, 2 and 1. Subtracting one borrows through the trailing zeros. That flips the lowest 1 off and everything under it on, and the AND keeps only what is above.", w:
+`x      = 6 = 110
+x - 1  = 5 = 101      <- lowest 1 flipped, the 0 below became 1
+x & (x-1)  = 100 = 4
+
+6 -> 4 -> 0 : two steps, so 6 has two 1 bits
+
+cost is the number of 1 bits, not the width` },
+    { t: "Subsets, counted, starting from {4, 2, 1}", d: "Each of 4, 2 and 1 is one bit, so every integer from 0 to 7 is one subset of them. A set of k items has 2^k subsets in the same way.", w:
+`000 = {}      011 = {2,1}     110 = {4,2}
+001 = {1}     100 = {4}       111 = {4,2,1}
+010 = {2}     101 = {4,1}     3 items -> 2^3 = 8 subsets
+
+k = 20:  2^20 = 1,048,576          fine
 k = 30:  2^30 = 1.07 x 10^9        too many
 
-iterating every submask of every mask is 3^n, not 4^n:
-each element is in neither, in the mask only, or in both
+every submask of every mask is 3^k, not 4^k:
 3^20 = 3.5 x 10^9   4^20 = 1.1 x 10^12` },
     { t: "The width traps, in numbers", d: "Every one of these compiles, runs, and gives a value. The value is just not the one you meant.", w:
 `1 << 31    in a 32-bit int = -2,147,483,648   (the sign bit)
@@ -1516,15 +2048,15 @@ a shift by (count mod 32) in Java. Neither is what you want.` },
     ["popcount by clearing", "O(set bits)", "not O(32); your language has a built-in too"],
     ["XOR the whole array", "O(n) time, O(1) space", "pairs cancel, the odd one out survives"],
     ["iterate all subsets of n items", "O(2ⁿ)", "each subset is one integer; practical to about n = 20"],
-    ["a set as a bitmask", "O(1) union and intersection", "versus O(n) for two hash sets"],
+    ["a set as a bitmask", "O(1) union and intersection", "against O(n) for two hash sets"],
   ],
 
   traps: [
-    "<b>Precedence.</b> <code>&amp;</code> and <code>|</code> bind <i>looser</i> than <code>==</code> in C, C++ and Java, so <code>x &amp; 1 == 0</code> quietly means <code>x &amp; (1 == 0)</code>. Use brackets and stop thinking about it.",
-    "<b>Right-shifting a negative number</b> copies the sign bit. Java gives you <code>&gt;&gt;&gt;</code> for the other behaviour; C++ leaves it implementation-defined and wishes you luck.",
-    "<b>JavaScript truncates to 32 bits</b> for every bitwise operation, so <code>2**31 | 0</code> comes back negative. Numbers are doubles right up until you use a bit operator.",
+    "<b>Precedence.</b> <code>&amp;</code> and <code>|</code> bind <i>looser</i> than <code>==</code> in C, C++ and Java. In C and C++, <code>x &amp; 1 == 0</code> quietly means <code>x &amp; (1 == 0)</code>. Java at least refuses to compile it. Use brackets and stop thinking about it.",
+    "<b>Right-shifting a negative number</b> copies the sign bit. Java gives you <code>&gt;&gt;&gt;</code> for the other behaviour. C++ left it to the compiler until C++20, and older codebases still wish you luck.",
+    "<b>JavaScript cuts to 32 bits</b> for every bitwise operation, so <code>2**31 | 0</code> comes back negative. Numbers are doubles right up until you use a bit operator.",
     "<b>Shifting by 32 or more</b> is undefined in C++ and wraps modulo the width in Java. Neither will tell you.",
-    "<b>Reaching for bitmasks when a boolean array would do.</b> Unless n is around 20 and you need the set as a key, you have traded readability for nothing.",
+    "<b>Reaching for bitmasks when a boolean array would do.</b> Unless <var>n</var> is around 20 and you need the set as a key, you have traded readability for nothing.",
   ],
 
   impl: [
@@ -1671,14 +2203,14 @@ function singleNumber(nums) {
   q: [
     ["How do you build a mask for bit k, and what do the three operators do with it?", "1 << k puts a single 1 in position k. OR sets the bit, AND with the inverted mask clears it, AND with the plain mask tests it, and XOR flips it."],
     ["Why does XOR-ing an entire array find the one unpaired value?", "Because a ^ a = 0 and a ^ 0 = a. Every value appearing twice cancels itself out regardless of order, so only the unpaired one is left. O(n) time and O(1) space."],
-    ["What does x & (x - 1) do and what two things does it give you?", "It clears the lowest set bit, because subtracting one flips that bit off and turns on everything below it. That yields the power-of-two test x & (x-1) == 0, and a popcount that loops once per set bit."],
-    ["Why is 'a number is a set' useful rather than cute?", "Bit i means item i is present, so union is OR and intersection is AND, and the whole set is a single integer usable as a DP state or a map key. That is what makes bitmask DP possible for n up to about 20."],
-    ["What goes wrong with x & 1 == 0 in C, C++ or Java?", "& binds looser than ==, so it parses as x & (1 == 0). It compiles and gives the wrong answer. Bracket the bit test."],
-    ["What does JavaScript do to a number before a bitwise operation?", "Coerces it to a 32-bit signed integer, so anything at or above 2^31 comes back negative or truncated. Use >>> 0 to read the result as unsigned, or BigInt to avoid the ceiling."],
+    ["What does x & (x - 1) do, and what two things does it give you?", "It clears the lowest set bit, because subtracting one flips that bit off and turns on everything below it. That gives the power-of-two test x & (x-1) == 0, and a popcount that loops once per set bit."],
+    ["Why is 'a number is a set' useful rather than cute?", "Bit i means item i is present, so union is OR and intersection is AND. The whole set is a single integer, usable as a DP state or a map key. That is what makes bitmask DP possible for n up to about 20."],
+    ["What goes wrong with x & 1 == 0 in C, C++ or Java?", "& binds looser than ==, so it parses as x & (1 == 0). In C and C++ it compiles and gives the wrong answer. Java rejects it, since int & boolean is a type error. Bracket the bit test."],
+    ["What does JavaScript do to a number before a bitwise operation?", "It turns it into a 32-bit signed integer, so anything at or above 2^31 comes back negative or cut short. Use >>> 0 to read the result as unsigned, or BigInt to avoid the ceiling."],
   ],
 
   p: [
-    [136, "single-number", "Single Number, the XOR classic", "E"],
+    [136, "single-number", "Single Number, the running example", "E"],
     [191, "number-of-1-bits", "Number of 1 Bits", "E"],
     [231, "power-of-two", "Power of Two, one line if you know the trick", "E"],
     [338, "counting-bits", "Counting Bits, DP over bit patterns", "E"],
@@ -1686,100 +2218,187 @@ function singleNumber(nums) {
     [78, "subsets", "Subsets, one integer per subset", "M"],
     [371, "sum-of-two-integers", "Sum of Two Integers, addition without +", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek array mein numbers jodon mein hain, sirf ek value ek hi baar aati hai. Woh dhoondho. Jaise <code>[4, 1, 2, 1, 2]</code> mein answer <b>4</b> hai.</p>
+<p>Shart: array mein 10⁷ numbers hain, aur aap sirf <b>fixed extra memory</b> use kar sakte ho, chahe array mein das numbers hon ya ek crore.</p>`,
+      tries: [
+        ["Hash map se gino", "Sahi hai, par 5 × 10⁶ tak alag values store karta hai. Har entry das-bees bytes ki ho to yeh sainkdon megabytes hai. Map badhte hi memory wala rule toot jaata hai."],
+        ["Sort karo, phir jodon par chalo", "Sort ke baad <code>[1, 1, 2, 2, 4]</code> mein akela wala dikh jaata hai. Par 10⁷ numbers sort karna lagbhag 2.3 × 10⁸ comparisons hai, aur ya to input badalta hai ya poori copy chahiye."],
+        ["Har number ko baaki sab se compare karo", "Extra memory nahi, par 10⁷ numbers ke liye lagbhag <var>n</var>² / 2 = 5 × 10¹³ comparisons. Yeh dinon ka kaam hai."],
+      ],
+      so: `<p>Har integer pehle se on/off switches ki line ke roop mein store hota hai, jinhe <b>bits</b> kehte hain. <b>XOR</b>, likhte hain <code>^</code>, do numbers ko bit by bit compare karta hai: alag hon to 1, same hon to 0. To <code>a ^ a = 0</code>, aur <code>a ^ 0 = a</code>.</p>
+<p>Poore array ko ek integer mein XOR karo. Har jodi khud ko kaat deti hai, order chahe jo ho, aur sirf akeli value bachti hai. <code>[4, 1, 2, 1, 2]</code> ke liye: 4 ^ 1 ^ 2 ^ 1 ^ 2 = <b>4</b>. Ek pass, ek integer. Baaki page yeh hai ki numbers ko switches maano to aur kya kar sakte ho, inhi teen values ke saath: 4, 1 aur 2.</p>`,
+    },
+
+    one: "Integer pehle se hi switches ki ek line hai. Bit operations bas yeh maan lete hain, aur <code>a ^ a = 0</code> woh ek identity hai jo sach mein kaam aati hai.",
+
+    plain: `<p>Har integer <b>bits</b> ki line ke roop mein store hota hai, switches jo 0 ya 1 hain. Har bit apne right wale se dugna hai: 1, 2, 4, 8 aise. To 4 hai <code>100</code>, 1 hai <code>001</code> aur 2 hai <code>010</code>. Bit manipulation matlab un switches par seedha kaam karna.</p>
+<p>Ek bit par chaar kaam ho sakte hain: set, clear, flip, ya poochho ki on hai kya. Charon ke do hi steps hain. Pehle ek <b>mask</b> banao, aisa number jisme 1 sirf wahan ho jahan kaam karna hai. Phir use <b>AND</b> (<code>&amp;</code>), <b>OR</b> (<code>|</code>) ya <b>XOR</b> (<code>^</code>) se jodo.</p>
+<p>Zyadatar ek simple boolean array yahi kaam zyada readable tareeke se karta hai. Bits do jagah kaam aate hain. Jab XOR ka katna memory bachaye, jaise <code>[4, 1, 2, 1, 2]</code> mein. Aur jab lagbhag 20 items tak ka set ek integer mein fit karna ho, subsets aur bitmask DP ke liye.</p>
+<p><b>Analogy.</b> Deewar par light switches ki line. Ek flip kar sakte ho, ya deewar par stencil rakh kar jo bhi chhed se dikhe sab flip kar do. Stencil hi mask hai.</p>`,
+
+    why: [
+      { t: "Position hi value hai, isliye shift matlab multiply",
+        d: "Bit <var>i</var> ki value 2<sup><var>i</var></sup> hai. 4 hai <code>100</code>: ek bit, position 2 par. Left shift har bit ko ek jagah upar le jaata hai, jo dugna karta hai: <code>4 &lt;&lt; 1</code> = 8. Right shift aadha karke remainder phenk deta hai: <code>4 &gt;&gt; 1</code> = 2. To <code>1 &lt;&lt; k</code> position <var>k</var> par akela 1 hai, aur har mask aise hi banta hai." },
+      { t: "Har operator ka ek kaam",
+        d: "<b>OR</b> bits on karta hai, kabhi off nahi, to <b>set</b>: 4 | 1 = <code>101</code> = 5. <b>AND</b> sirf woh bits rakhta hai jo dono mein on hain, to <b>test</b>, aur ulte mask ke saath <b>clear</b>: 5 &amp; 4 = 4, to bit 2 on hai. <b>XOR</b> alag bits par 1 deta hai, to <b>flip</b>: 5 ^ 1 = 4." },
+      { t: "XOR jodon ko kaat deta hai, kisi bhi order mein",
+        d: "<code>a ^ a = 0</code>, kyunki har bit khud se match karti hai. <code>a ^ 0 = a</code>, kyunki 0 se XOR kuch nahi badalta. XOR order bhi nahi dekhta, to 4 ^ 1 ^ 2 ^ 1 ^ 2 mein dono 1 milkar gayab, aur dono 2 bhi. Bacha 4. Yeh <b>O(<var>n</var>) time aur O(1) space</b> hai, na map na sort." },
+      { t: "Number ek set hai",
+        d: "Bit <var>i</var> on ka matlab ho sakta hai “item <var>i</var> set mein hai”. 4, 2 aur 1 har ek ek bit hai, to 7 = <code>111</code> teeno ka set hai, aur 5 = <code>101</code> sirf 4 aur 1. Union OR hai, intersection AND. Poora set ek integer hai, map key ya DP state ban sakta hai. Lagbhag 20 items tak chalta hai: 2²⁰ das lakh sets hain." },
+      { t: "Do identities jo jaanni chahiye",
+        d: "<code>x &amp; (x - 1)</code> sabse neeche wala 1 hata deta hai. Ek ghataane se woh bit off aur uske neeche ke saare 0 on ho jaate hain. To 6 = <code>110</code> ban jaata hai 6 &amp; 5 = <code>100</code> = 4. Isse power-of-two test milta hai, <code>x &amp; (x - 1) == 0</code>, aur bit count jo har 1 par ek baar chalta hai. Baaki zyadatar tricks ka built-in pehle se hai." },
+      { t: "Nukeele kinaare width aur sign hain",
+        d: "Width se zyada shift C++ mein undefined hai aur Java mein wrap hota hai. Negative number ko right shift karne par sign bit copy hoti hai, isiliye Java mein <code>&gt;&gt;&gt;</code> bhi hai. JavaScript bit operation se pehle har number ko 32 bits bana deta hai. Python ki koi width hi nahi, to <code>~5</code> hamesha −6 hai." },
+    ],
+
+    math: [
+      { t: "Position hi value hai, to shift ek multiply hai", d: "Kuch clever nahi, bas base two likha hua. Par baaki har identity isi line par tiki hai." },
+      { t: "XOR kaat-ta hai, kisi bhi order mein", d: "a ^ a = 0 aur a ^ 0 = a. XOR order aur grouping bhi nahi dekhta, to jodiyan array mein kahin bhi hon, kat jaati hain." },
+      { t: "x & (x - 1) sabse neeche wala 1 hata deta hai", d: "6 lo, jo 4, 1, 2 aur 1 ke baad running XOR hai. Ek ghataane par trailing zeros se borrow hota hai. Sabse neeche wala 1 off, uske neeche sab on, aur AND sirf upar wala hissa rakhta hai." },
+      { t: "Subsets, gin ke, {4, 2, 1} se shuru", d: "4, 2 aur 1 har ek ek bit hai, to 0 se 7 tak ka har integer inka ek subset hai. k items ke set ke isi tarah 2^k subsets hote hain." },
+      { t: "Width ke jaal, numbers mein", d: "Yeh sab compile hote hain, chalte hain, aur value dete hain. Bas woh value nahi jo aap chahte the." },
+    ],
+
+    costs: [
+      ["ek bit set / clear / flip / test", "O(1)", "har ek bas ek machine instruction"],
+      ["x & (x-1)", "O(1)", "sabse neeche wala set bit hata deta hai"],
+      ["clear karke popcount", "O(set bits)", "O(32) nahi; language mein built-in bhi hai"],
+      ["poore array ka XOR", "O(n) time, O(1) space", "jodiyan kat jaati hain, akela bach jaata hai"],
+      ["n items ke saare subsets", "O(2ⁿ)", "har subset ek integer; lagbhag n = 20 tak practical"],
+      ["set as a bitmask", "O(1) union and intersection", "do hash sets ke O(n) ke against"],
+    ],
+
+    traps: [
+      "<b>Precedence.</b> C, C++ aur Java mein <code>&amp;</code> aur <code>|</code> <code>==</code> se <i>dheele</i> bandhte hain. C aur C++ mein <code>x &amp; 1 == 0</code> ka matlab chupchaap <code>x &amp; (1 == 0)</code> hai. Java kam se kam ise compile nahi karta. Brackets lagao aur sochna band karo.",
+      "<b>Negative number ko right shift karna</b> sign bit copy karta hai. Doosre behaviour ke liye Java <code>&gt;&gt;&gt;</code> deta hai. C++20 tak C++ ise compiler par chhodta tha, aur purane codebases aaj bhi good luck bolte hain.",
+      "<b>JavaScript har bitwise operation par 32 bits par kaat deta hai</b>, to <code>2**31 | 0</code> negative aata hai. Numbers doubles hain, jab tak bit operator na lagao.",
+      "<b>32 ya zyada se shift</b> C++ mein undefined hai aur Java mein width ke modulo wrap hota hai. Dono mein se koi nahi batayega.",
+      "<b>Boolean array chal jaata, phir bhi bitmask lena.</b> Jab tak <var>n</var> lagbhag 20 na ho aur set ko key na banana ho, aapne readability kuch nahi ke badle de di.",
+    ],
+
+    impl: [
+      ["Python", "unlimited width, bin(), int.bit_count()", "Wraparound nahi, to ~5 hamesha -6 hai. Negative shifts galat chalne ki jagah error dete hain."],
+      ["Java", "int is 32-bit, >>> for unsigned shift", "Integer.bitCount, highestOneBit, toBinaryString. Shifts width ke modulo liye jaate hain."],
+      ["C++", "std::popcount and std::bit_width in C++20", "Width se zyada shift undefined behaviour hai. Purane compilers par __builtin_popcount."],
+      ["JavaScript", "bitwise coerces to int32", "Result ko unsigned padhne ke liye >>> 0. BigInt bina 32-bit limit ke bit operations deta hai."],
+    ],
+
+    codecap: "Shift se mask banao, ek operator se jodo. Sirf ek cheez yaad rakhni ho to yeh: XOR kaat deta hai.",
+
+    q: [
+      ["Bit k ka mask kaise banate ho, aur teeno operators usse kya karte hain?", "1 << k position k par akela 1 rakhta hai. OR bit set karta hai, ulte mask ke saath AND clear karta hai, seedhe mask ke saath AND test karta hai, aur XOR flip karta hai."],
+      ["Poore array ka XOR akeli value kyun deta hai?", "Kyunki a ^ a = 0 aur a ^ 0 = a. Do baar aane wali har value order ki parwah kiye bina khud ko kaat deti hai, to sirf akeli bachti hai. O(n) time aur O(1) space."],
+      ["x & (x - 1) kya karta hai, aur isse kaunsi do cheezein milti hain?", "Sabse neeche wala set bit hata deta hai, kyunki ek ghataane se woh bit off aur uske neeche sab on hota hai. Isse power-of-two test x & (x-1) == 0 milta hai, aur popcount jo har set bit par ek baar chalta hai."],
+      ["'Number ek set hai' useful kyun hai, sirf cute kyun nahi?", "Bit i matlab item i maujood hai, to union OR hai aur intersection AND. Poora set ek integer hai, DP state ya map key ban sakta hai. Isi se lagbhag n = 20 tak bitmask DP possible hai."],
+      ["C, C++ ya Java mein x & 1 == 0 mein kya galat hota hai?", "& == se dheela bandhta hai, to yeh x & (1 == 0) padha jaata hai. C aur C++ mein compile hokar galat answer deta hai. Java ise reject karta hai, kyunki int & boolean type error hai. Bit test ko bracket karo."],
+      ["Bitwise operation se pehle JavaScript number ke saath kya karta hai?", "Use 32-bit signed integer bana deta hai, to 2^31 ya usse upar sab negative ya kata hua aata hai. Unsigned padhne ke liye >>> 0 use karo, ya limit se bachne ke liye BigInt."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "arrays",
   n: "Arrays & dynamic lists",
   group: "Fundamentals",
-  one: "An array is <b>one contiguous block of memory</b>, so <code>a[i]</code> is instant arithmetic. Everything else about lists, O(1) append, O(n) insert at front, follows from that one fact.",
+  need: {
+    ask: `<p>You read numbers from a file, one at a time, and you do not know how many there are until the end. Later you need to jump straight to any one of them: “give me number 500,000”. Say there turn out to be <b>10⁶</b>.</p>
+<p>So you need a container that <b>grows</b> as items arrive, and still reads <code>a[i]</code> instantly. Those two wishes pull against each other.</p>`,
+    tries: [
+      ["Reserve a huge block up front", "You do not know the count. Guess 10⁹ slots to be safe and that is 4 GB of memory for a file that held a million numbers. Guess small and you are stuck again."],
+      ["Grow by one slot each time", "Each growth copies everything so far: 1 + 2 + … + (<var>n</var> − 1) copies. For 10⁶ numbers that is about 5 × 10¹¹ copies, well over an hour of work."],
+      ["Use a linked list, where every item points to the next", "Appending is cheap. But reading item 500,000 means following 500,000 pointers, one after another. Every lookup is a walk."],
+    ],
+    so: `<p>Keep the items in <b>one unbroken block</b>, all slots the same size. Then item <var>i</var> lives at <code>start + i × slotSize</code>: one multiply and one add, whatever <var>i</var> is. When the block fills, get one <b>twice as big</b> and copy across. Copies happen at sizes 1, 2, 4, 8 and so on, and all of them together add up to less than <var>n</var>.</p>
+<p>That is a growable array: Python's <code>list</code>, Java's <code>ArrayList</code>, C++'s <code>vector</code>. This page follows one small list through it: appending <b>3, 1, 4, 9</b> to an empty list, then inserting 7 at the front.</p>`,
+  },
 
-  plain: `<p>An array is not a list of boxes scattered in memory. It is <b>one unbroken strip</b>, every slot the same size, laid end to end. That is the whole design.</p>
-<p>Because of it, <code>a[7]</code> needs no searching at all: the computer computes <code>start + 7 × slot_size</code> and reads that address directly. One multiplication and one addition. That is why indexing is O(1), and why it stays O(1) whether the array holds 10 items or 10 million.</p>
-<p><b>Analogy.</b> A row of numbered lockers bolted to a wall. Locker 412 takes the same time to reach as locker 3. You just walk straight to it. But adding a locker <i>between</i> 3 and 4 means unbolting and shifting every locker after it. That shift is the O(n) insert. It is not a quirk of any one language. It is the price of keeping everything in one unbroken run, which is what <b>contiguous</b> means.</p>`,
+  one: "An array is <b>one contiguous block of memory</b>, so <code>a[i]</code> is instant arithmetic. Everything else about lists, O(1) append, O(<var>n</var>) insert at front, follows from that one fact.",
+
+  plain: `<p>An array is <b>one unbroken strip of memory</b>. Every slot is the same size, and the slots sit end to end. That word for it is <b>contiguous</b>: no gaps, nothing in between.</p>
+<p>Because of that, <code>a[2]</code> needs no searching. The computer works out <code>start + 2 × slotSize</code> and reads that address directly. That is why reading by index is O(1), for 4 items or 4 million.</p>
+<p>A growable list adds one trick. It keeps <b>spare slots</b>. Appending 3, 1, 4 and 9 mostly just fills a spare slot. When none are left, it moves everything to a block twice the size. That copy is slow, but rare. Inserting 7 at the <i>front</i> is different: 3, 1, 4 and 9 must each shift one slot right to make room.</p>
+<p><b>Analogy.</b> A row of numbered lockers bolted to a wall. Locker 412 is as quick to reach as locker 3: you walk straight to it. But adding a locker <i>before</i> locker 1 means unbolting and moving every locker after it.</p>`,
 
   why: [
     { t: "Memory only understands addresses",
-      d: "RAM has no idea what \"the third item\" means. It only knows byte addresses. So the fastest possible collection is one where the address can be <b>calculated</b> instead of searched for." },
-    { t: "Line the items up and the address becomes arithmetic",
-      d: "Same-sized slots, side by side, no gaps. Then <code>address = start + i × slotSize</code>. One multiply, one add, the same work whether i is 3 or 3 million. This one equation is the whole reason arrays exist, and why index 0 means \"zero steps from the start\"." },
-    { t: "The price is that the block cannot grow",
-      d: "The memory sitting right after your array belongs to something else. You cannot just take two more bytes. So a raw array's size is fixed the moment it is created." },
+      d: "RAM has no idea what “the third item” means. It only knows numbered bytes. So the fastest collection is one where an item's address can be <b>calculated</b>, not searched for." },
+    { t: "Line the items up and the address is arithmetic",
+      d: "Same-sized slots, side by side. With 4-byte slots starting at address 1000, the list 3, 1, 4, 9 puts <code>a[2]</code> at 1000 + 2 × 4 = 1008, and there is the 4. One multiply, one add, the same work for any index. That is also why indexes start at 0: <code>a[0]</code> is zero steps from the start." },
+    { t: "The price is that the block cannot grow in place",
+      d: "The memory just after the block usually belongs to something else. You cannot claim two more slots there. So a raw array's size is fixed when it is created." },
     { t: "Growable arrays fake it by doubling",
-      d: "They quietly keep spare room. <b>append</b> writes into the spare room, fast. When it runs out, they allocate a block twice as big and copy everything, slow, but rare. Over n appends the copies add up to less than 2n, so append averages out to <b>O(1) amortised</b>." },
-    { t: "The front is expensive, and that has consequences",
-      d: "Inserting or removing at the start shifts every other element to keep the block unbroken, <b>O(n)</b>. If you need both ends to be fast, you need a different layout: a deque. This is why BFS uses one." },
-    { t: "Contiguity also buys speed that Big-O refuses to show you",
-      d: "A CPU never fetches one value, it fetches a <b>cache line</b> of roughly 64 bytes. Neighbouring array elements arrive in the same fetch, so walking an array is close to free per element after the first. Walk a linked list of the same length and every hop can be a separate trip to memory. Both are O(n), and the array can be several times faster in wall-clock time. Big-O deliberately discards constant factors, and this is the constant factor that most often decides which solution actually passes." },
-    { t: "If order does not matter, deletion stops being O(n)",
-      d: "Removing from the middle is expensive only because the gap has to close. When you do not care about order, do not close it: <b>swap the doomed element with the last one and pop the end</b>. That is O(1), and it is how you delete from a collection you are treating as a bag of things rather than a sequence. Most people never learn this and shift a million elements to avoid a swap." },
+      d: "Appending 3 to a list with room for 2 just writes it. So does 1. Then 4 finds no room. The list takes a block of 4 slots, copies 3 and 1 across, and writes 4. Copies happen at sizes 1, 2, 4 and so on, and together add to under <var>n</var>. So <var>n</var> appends cost under 2<var>n</var>: <b>O(1) amortised</b>, meaning O(1) on average over the whole run." },
+    { t: "The front is expensive",
+      d: "Inserting 7 at the front of 3, 1, 4, 9 shifts all four right to keep the block unbroken. That is <b>O(<var>n</var>)</b>, and removing from the front is the same. If you need both ends fast, use a <b>deque</b>, a structure built for that. It is why BFS uses one." },
+    { t: "Neighbours arrive together, which Big-O does not show",
+      d: "A CPU never fetches one value. It fetches a <b>cache line</b> of about 64 bytes, which is 16 four-byte numbers. So after reading <code>a[0]</code>, the next fifteen are already on hand. A linked list of the same length can cost one memory trip per item. Both scans are O(<var>n</var>), and the array is often several times faster." },
+    { t: "If order does not matter, deletion is O(1)",
+      d: "Deleting from the middle is slow only because the gap must close. If order does not matter, do not close it. To delete the 1 from 3, 1, 4, 9, copy the last item, 9, over it and shrink by one: 3, 9, 4. That is O(1). It scrambles the order, so never use it where position means something." },
   ],
 
   variants: [
     { n: "In-place rewrite, the writer index", cost: "O(n) time, O(1) space",
-      idea: "One pointer reads, a slower one writes. Everything before the writer is already the answer.",
-      when: "Removing duplicates, moving zeroes, filtering in place, and anything that says modify the array in place.",
-      watch: "The writer is also the new length when you finish, so no separate counter is needed. See the loop invariants page." },
-
+      idea: "One index reads every item, a slower one writes only the keepers. Everything before the writer is already the answer.",
+      when: "Removing duplicates, moving zeroes, filtering in place, and anything that says “modify the array in place”.",
+      watch: "When you finish, the writer is also the new length, so no separate counter is needed. See the loop invariants page." },
     { n: "Prefix sums", cost: "O(n) once, then O(1) per range query",
-      idea: "Store every running total, so any range sum becomes a subtraction.",
-      when: "Repeated range questions on data that does not change.",
+      idea: "Store every running total, so any range sum becomes one subtraction.",
+      when: "Many range questions on data that does not change.",
       watch: "It has its own page. If the array also changes between queries, you want a Fenwick tree instead." },
-
     { n: "Rotate by reversal", cost: "O(n) time, O(1) space",
-      idea: "To rotate right by k, reverse the whole array, then reverse the first k, then reverse the rest.",
-      when: "Rotation without an extra buffer, which is the usual follow-up after the obvious O(n) space answer.",
-      watch: "Take k modulo n first, or a rotation larger than the array does nothing useful." },
-
+      idea: "To rotate right by <var>k</var>, reverse the whole array, then the first <var>k</var>, then the rest. Rotating 3, 1, 4, 9 right by 1: 9, 4, 1, 3, then 9, then 3, 1, 4, giving 9, 3, 1, 4.",
+      when: "Rotation without an extra buffer, the usual follow-up after the obvious O(<var>n</var>)-space answer.",
+      watch: "Take <var>k</var> modulo <var>n</var> first, or a rotation bigger than the array breaks the reversals." },
     { n: "Swap with last", cost: "O(1) delete",
-      idea: "Overwrite the element you want gone with the final element, then shrink by one.",
-      when: "Order is irrelevant: a pool of objects, an unordered bag, a visited list.",
-      watch: "It scrambles the order, so never use it where position carries meaning. If you are iterating forward, do not advance after the swap." },
-
+      idea: "Overwrite the item you want gone with the last item, then shrink by one.",
+      when: "Order does not matter: a pool of objects, an unordered bag, a visited list.",
+      watch: "It scrambles order, so never use it where position means something. When iterating forward, do not advance after the swap: a new item just arrived there." },
     { n: "Three-way partition, Dutch national flag", cost: "O(n) time, O(1) space, one pass",
-      idea: "Three pointers split the array into less-than, equal-to and greater-than a pivot, in a single sweep.",
+      idea: "Three indexes split the array into less than, equal to and greater than a pivot, in a single sweep.",
       when: "Sorting an array with only three distinct values, or partitioning around duplicates in quicksort.",
-      watch: "When you swap with the high pointer, do not advance the cursor: the value you just received has not been examined yet." },
-
+      watch: "After swapping with the high index, do not advance the cursor. The value you just received has not been checked yet." },
     { n: "Difference array", cost: "O(1) per range update, O(n) to read out",
-      idea: "The mirror of prefix sums. Record +v at the start and -v just past the end, then one prefix pass materialises every value.",
+      idea: "The mirror of prefix sums. Record +<var>v</var> at the start of a range and −<var>v</var> just past its end. One running-total pass then produces every value.",
       when: "Many range updates and one read at the end, such as counting overlapping bookings.",
-      watch: "Only works when all the updates come before all the reads. Interleave them and you need a real range structure." },
+      watch: "It only works when every update comes before every read. Mix them and you need a real range structure." },
   ],
 
-  hing: `<p><b>Array asli mein hai kya?</b> Memory ka ek <b>lamba, judaa hua block</b>, sab slots barabar size ke, ek ke baad ek. Bas itna hi.</p>
+  hing: `<p><b>Array asli mein hai kya?</b> Memory ka ek <b>lamba, juda hua block</b>, sab slots barabar size ke, ek ke baad ek. Bas itna hi.</p>
 <p><b>a[i] itna fast kyun?</b> Kyunki computer dhoondta nahi, <b>calculate</b> karta hai: <code>address = start + i × size</code>. Ek multiply, ek add, bas. Isiliye <code>a[0]</code> aur <code>a[999999]</code> dono ek hi speed. Aur isiliye index <b>0 se</b> shuru hota hai, 0 ka matlab "shuruaat se 0 kadam aage".</p>
 <p><b>Iski keemat?</b> Block fixed hai, uske aage ki memory kisi aur ki hai, tum wahan ghus nahi sakte. Matlab array badh nahi sakta.</p>
-<p><b>Phir list / ArrayList / vector kaise badhti hai?</b> Chalaaki se. Woh zaroorat se <b>zyada jagah</b> pehle hi le leti hai. <code>append</code> khaali slot mein likh deta hai, O(1). Jab jagah khatam, to <b>double</b> size ka naya block banao aur sab copy karo, us ek append ki cost O(n).</p>
-<p><b>To append O(1) hai ya O(n)?</b> Dono, aur yahi asli jawaab hai. Copy 1, 2, 4, 8… par hoti hai; sab jodo to 2n se kam. n appends par baant do → har append <b>O(1) amortised</b>. Interview mein "amortised" shabd bolna zaroori hai.</p>
-<p><b>Aage se insert mehnga kyun?</b> <code>insert(0, x)</code> ya <code>pop(0)</code> mein baaki saare elements ko ek jagah khisakna padta hai, n writes, <b>O(n)</b>. Isliye BFS queue ke liye <code>list.pop(0)</code> mat use karo, <code>deque.popleft()</code> use karo, warna O(V+E) chupke se O(V²) ban jaata hai. Yeh galti bahut common hai.</p>`,
+<p><b>Phir list / ArrayList / vector kaise badhti hai?</b> Chalaaki se. Woh zaroorat se <b>zyada jagah</b> pehle hi le leti hai. <code>append</code> khaali slot mein likh deta hai, O(1). Jab jagah khatam, to <b>double</b> size ka naya block banao aur sab copy karo, us ek append ki cost O(<var>n</var>).</p>
+<p><b>To append O(1) hai ya O(<var>n</var>)?</b> Dono, aur yahi asli jawaab hai. Copy 1, 2, 4, 8… par hoti hai; sab jodo to 2<var>n</var> se kam. <var>n</var> appends par baant do, to har append <b>O(1) amortised</b>. Interview mein "amortised" shabd bolna zaroori hai.</p>
+<p><b>Aage se insert mehnga kyun?</b> <code>insert(0, x)</code> ya <code>pop(0)</code> mein baaki saare elements ko ek jagah khisakna padta hai, <var>n</var> writes, <b>O(<var>n</var>)</b>. Isliye BFS queue ke liye <code>list.pop(0)</code> mat use karo, <code>deque.popleft()</code> use karo. Warna O(V+E) chupke se O(V²) ban jaata hai. Yeh galti bahut common hai.</p>`,
 
   viz: ["dynamic-array"],
   see: [["VA", "https://visualgo.net/en/list", "VisuAlgo, array vs linked list, animated"]],
 
   math: [
-    { t: "The index is arithmetic, which is what O(1) actually means", d: "There is no search. The machine computes an address and reads it, and the computation does not depend on i.", w:
-`base = 0x1000, 4 bytes per int
+    { t: "The index is arithmetic, which is what O(1) actually means", d: "There is no search. The machine computes an address and reads it, and the computation does not depend on <var>i</var>.", w:
+`the list 3, 1, 4, 9: base = 1000, 4 bytes per int
 
-a[0]  ->  0x1000
-a[1]  ->  0x1004
+a[0]  ->  1000 + 4 x 0 = 1000     holds 3
+a[2]  ->  1000 + 4 x 2 = 1008     holds 4
 a[i]  ->  base + 4 x i
 
 a[999999] costs exactly what a[0] costs: one multiply,
 one add, one read. A linked list would cost 999,999 hops.` },
-    { t: "Doubling: add up every copy ever made", d: "Each growth copies the whole array, which looks alarming until you add the copies up. The sum is geometric, so it never passes n.", w:
-`growing 1 -> 2 -> 4 -> ... -> n, copying on each step:
+    { t: "Doubling: add up every copy ever made", d: "Each growth copies the whole array, which looks alarming until you add the copies up. The sum never passes <var>n</var>.", w:
+`appending 3, 1, 4, 9 to an empty list with room for 2:
+  3 -> fits      1 -> fits      4 -> copy 2, room for 4
+  9 -> fits      copies: 2, for 4 appends
 
-1 + 2 + 4 + ... + n/2  =  n - 1
+in general, growing 1 -> 2 -> 4 -> ... -> n:
+  1 + 2 + 4 + ... + n/2  =  n - 1 copies
+  n appends  <  2n operations, amortised O(1)
 
-n appends  =  n writes + (n - 1) copies  <  2n
-per append <  2 operations, amortised O(1)
-
-now grow by ONE slot instead:
-1 + 2 + 3 + ... + (n-1) = n(n-1)/2
-n = 100,000:  under 100,000 copies  vs  5 x 10^9 copies` },
-    { t: "Amortised O(1) and worst-case O(1) are different promises", d: "The average over the sequence is a small constant. One unlucky call still copies the entire array, which matters if anything is timing individual calls.", w:
+grow by ONE slot instead:  n(n-1)/2 copies
+  n = 10^6:  under 10^6 copies  vs  5 x 10^11 copies` },
+    { t: "Amortised O(1) and worst-case O(1) are different promises", d: "The average over the sequence is a small constant. One unlucky call still copies the entire array, which matters if anything times single calls.", w:
 `capacity 1,000,000, size 1,000,000
 
 the next append: allocate 2,000,000, copy 1,000,000 items
@@ -1789,38 +2408,39 @@ average over the whole sequence: under 2
 worst case for one call: n
 
 a latency budget cares about the second number` },
-    { t: "The front is expensive, and here is the bill", d: "Contiguity is what made indexing free, and the same contiguity is what makes an insert at the front move everything.", w:
-`insert at index 0 of n items: n elements shift right
+    { t: "The front is expensive, and here is the bill", d: "Contiguity made indexing free. The same contiguity makes an insert at the front move everything.", w:
+`insert(0, 7) into 3, 1, 4, 9:
+  9, 4, 1, 3 each shift one slot right: 4 moves
+  then 7 is written:  7, 3, 1, 4, 9
 
-building a list by prepending n times:
+building a list by inserting at the front n times:
   1 + 2 + ... + (n-1)  =  n(n-1)/2  shifts
   n = 100,000  ->  5 x 10^9 shifts
 
-append n times, then reverse once:
-  n + n = 200,000 operations` },
+append n times, then reverse once:  about 2n = 200,000` },
   ],
 
   costs: [
     ["a[i] read / write", "O(1)", "computed address, no search"],
-    ["append at end", "O(1) amortised", "spare capacity; doubles and copies occasionally"],
+    ["append at end", "O(1) amortised", "spare capacity; doubles and copies now and then"],
     ["pop() from end", "O(1)", "nothing shifts"],
     ["insert(0, x) / pop(0)", "O(n)", "every later element shifts one slot"],
-    ["x in a (search)", "O(n)", "must compare each element, use a set instead"],
+    ["x in a (search)", "O(n)", "must compare each element; use a set instead"],
     ["a.sort()", "O(n log n)", "Timsort; O(n) on already-sorted data"],
-    ["slicing a[i:j]", "O(j−i)", "builds a copy, a slice in a loop is a hidden O(n²)"],
+    ["slicing a[i:j]", "O(j−i)", "builds a copy; a slice in a loop is a hidden O(n²)"],
   ],
 
   traps: [
     "<b><code>[[0]*3]*3</code> makes three references to the SAME row.</b> Writing <code>g[0][0]</code> changes all three. Use <code>[[0]*3 for _ in range(3)]</code>.",
-    "<b>Mutating a list while iterating it</b> skips elements. Iterate over a copy (<code>for x in a[:]</code>) or build a new list.",
-    "<b><code>x in a</code> inside a loop</b> is the most common accidental O(n²) in interviews. Convert to a <code>set</code> first.",
-    "<b>Slicing copies.</b> <code>a[1:]</code> inside a recursion turns O(n) into O(n²), pass indices instead.",
-    "<b>Sorting when you only wanted the extremes.</b> Sorting to find the minimum, the maximum or the k largest is O(n log n) for something a single pass does in O(n) and a size-k heap does in O(n log k).",
+    "<b>Changing a list while looping over it</b> skips elements. Loop over a copy (<code>for x in a[:]</code>) or build a new list.",
+    "<b><code>x in a</code> inside a loop</b> is the most common accidental O(<var>n</var>²) in interviews. Convert to a <code>set</code> first.",
+    "<b>Slicing copies.</b> <code>a[1:]</code> inside a recursion turns O(<var>n</var>) into O(<var>n</var>²). Pass indexes instead.",
+    "<b>Sorting when you only wanted the extremes.</b> Sorting to find the minimum or the <var>k</var> largest is O(<var>n</var> log <var>n</var>). One pass does the minimum in O(<var>n</var>), and a size-<var>k</var> heap does the rest in O(<var>n</var> log <var>k</var>).",
   ],
 
   impl: [
-    ["Python", "list", "Over-allocates by ~1/8; insert(0,x)/pop(0) are O(n). Slicing copies."],
-    ["Java", "int[] (fixed) · ArrayList (growable)", "ArrayList doubles (×1.5 actually); System.arraycopy for fast copies. No slicing."],
+    ["Python", "list", "Over-allocates by about 1/8; insert(0,x)/pop(0) are O(n). Slicing copies."],
+    ["Java", "int[] (fixed) · ArrayList (growable)", "ArrayList grows by 1.5x rather than 2x; System.arraycopy for fast copies. No slicing."],
     ["C++", "vector", "reserve(n) up front avoids all reallocation. vector<bool> is a bitset, not a normal vector."],
     ["JavaScript", "Array", "Sparse arrays and holes are slow; unshift()/shift() are O(n). Use push/pop."],
   ],
@@ -1939,127 +2559,257 @@ while (i < j) { [a[i], a[j]] = [a[j], a[i]]; i++; j--; }`,
   codecap: "Prefix sums and in-place two pointers are the two array tricks that turn O(n²) into O(n).",
 
   q: [
-    ["Why is a[i] O(1)?", "Elements sit contiguously at equal width, so the address is computed as base + i × width, one multiply and one add, independent of i or of n."],
-    ["Why is append O(1) amortised but sometimes O(n)?", "The list keeps spare capacity; append usually just writes into it. When full it allocates a double-size block and copies (O(n)). Because it doubles, total copy work over n appends is < 2n → O(1) each on average."],
-    ["Why is insert(0, x) O(n)?", "The block must stay contiguous, so every existing element shifts one slot right, n writes."],
-    ["What does [[0]*3]*3 actually build?", "One row object referenced three times. Writing to g[0][0] appears to change every row. Use a comprehension to build independent rows."],
-    ["Array and linked list both scan in O(n). Why is the array much faster in practice?", "Cache locality. The CPU fetches ~64 bytes at a time, so neighbouring array elements come for free, while linked-list nodes scattered in memory cost a fetch each. Big-O discards exactly this constant factor."],
-    ["When is deleting from an array O(1)?", "When order does not matter. Swap the element you want gone with the last one and pop the end, so no gap has to close. It scrambles the order, so never do it where position carries meaning."],
+    ["Why is a[i] O(1)?", "Elements sit side by side at equal width, so the address is base + i × width. That is one multiply and one add, whatever i or n is."],
+    ["Why is append O(1) amortised but sometimes O(n)?", "The list keeps spare capacity, and append usually just writes into it. When full, it allocates a block twice the size and copies, which is O(n). Because it doubles, all the copies over n appends add to under n, so each append is O(1) on average."],
+    ["Why is insert(0, x) O(n)?", "The block must stay unbroken, so every existing element shifts one slot right. That is n writes."],
+    ["What does [[0]*3]*3 actually build?", "One row object, referenced three times. Writing to g[0][0] appears to change every row. Use a comprehension to build separate rows."],
+    ["Array and linked list both scan in O(n). Why is the array much faster in practice?", "Cache locality. The CPU fetches about 64 bytes at a time, so neighbouring array elements come for free. Linked-list nodes scattered in memory cost a fetch each. Big-O throws away exactly this constant factor."],
+    ["When is deleting from an array O(1)?", "When order does not matter. Copy the last element over the one you want gone and shrink by one, so no gap has to close. It scrambles the order, so never do it where position means something."],
   ],
 
   p: [
     [485, "max-consecutive-ones", "Max Consecutive Ones", "E"],
     [26, "remove-duplicates-from-sorted-array", "Remove Duplicates (in place)", "E"],
+    [283, "move-zeroes", "Move Zeroes, the writer index in its purest form", "E"],
     [189, "rotate-array", "Rotate Array, the reverse trick", "M"],
     [238, "product-of-array-except-self", "Product Except Self, prefix/suffix", "M"],
     [560, "subarray-sum-equals-k", "Subarray Sum = K, prefix sums + hash", "M"],
-    [283, "move-zeroes", "Move Zeroes, the writer index in its purest form", "E"],
     [75, "sort-colors", "Sort Colors, three-way partition in one pass", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Aap file se numbers ek ek karke padh rahe ho, aur end tak pata nahi ki kitne hain. Baad mein kisi bhi number par seedha jaana hai: “number 500,000 do”. Maan lo <b>10⁶</b> nikle.</p>
+<p>To aisa container chahiye jo items aate hi <b>badhe</b>, aur phir bhi <code>a[i]</code> turant padhe. Yeh do khwahishein ek doosre ke khilaaf kheenchti hain.</p>`,
+      tries: [
+        ["Pehle hi bahut bada block le lo", "Ginti pata nahi. Safe rehne ke liye 10⁹ slots socho to das lakh numbers wali file ke liye 4 GB memory. Chhota socho to phir wahi phase."],
+        ["Har baar ek slot badhao", "Har baar ab tak ka sab copy hota hai: 1 + 2 + … + (<var>n</var> − 1) copies. 10⁶ numbers ke liye lagbhag 5 × 10¹¹ copies, ek ghante se zyada ka kaam."],
+        ["Linked list lo, jisme har item agle ko point kare", "Append sasta hai. Par item 500,000 padhne ke liye 500,000 pointers ek ke baad ek follow karne padte hain. Har lookup ek walk hai."],
+      ],
+      so: `<p>Items ko <b>ek juda hua block</b> mein rakho, sab slots same size. Tab item <var>i</var> <code>start + i × slotSize</code> par hai: ek multiply aur ek add, <var>i</var> chahe jo ho. Block bhar jaaye to <b>dugna bada</b> block lo aur sab copy karo. Copies 1, 2, 4, 8 aise sizes par hoti hain, aur sab milkar <var>n</var> se kam hain.</p>
+<p>Yahi growable array hai: Python ki <code>list</code>, Java ki <code>ArrayList</code>, C++ ka <code>vector</code>. Yeh page ek chhoti list ke saath chalta hai: khaali list mein <b>3, 1, 4, 9</b> append karna, phir aage 7 insert karna.</p>`,
+    },
+
+    one: "Array <b>memory ka ek juda hua block</b> hai, isliye <code>a[i]</code> turant hone wala hisaab hai. Lists ki baaki har baat, O(1) append, aage O(<var>n</var>) insert, isi ek fact se nikalti hai.",
+
+    plain: `<p>Array <b>memory ki ek bina tooti patti</b> hai. Har slot same size ka, aur slots ek ke baad ek. Iske liye word hai <b>contiguous</b>: koi gap nahi, beech mein kuch nahi.</p>
+<p>Isi wajah se <code>a[2]</code> ko dhoondhna nahi padta. Computer <code>start + 2 × slotSize</code> nikaalta hai aur seedha us address se padhta hai. Isiliye index se padhna O(1) hai, 4 items ho ya 40 lakh.</p>
+<p>Growable list ek trick jodti hai. Woh <b>extra slots</b> rakhti hai. 3, 1, 4 aur 9 append karna zyadatar bas ek khaali slot bharna hai. Jab koi nahi bacha, sab kuch dugne size ke block mein chala jaata hai. Woh copy slow hai, par kabhi kabhi. Aage 7 insert karna alag hai: jagah banane ke liye 3, 1, 4 aur 9 sabko ek slot right khisakna padta hai.</p>
+<p><b>Analogy.</b> Deewar par bolt kiye numbered lockers ki line. Locker 412 tak utni hi jaldi pahunchte ho jitni locker 3 tak: seedha chal kar. Par locker 1 se <i>pehle</i> naya locker lagana matlab uske baad ke har locker ko khol kar khisakana.</p>`,
+
+    why: [
+      { t: "Memory sirf addresses samajhti hai",
+        d: "RAM ko nahi pata “teesra item” kya hai. Use sirf numbered bytes pata hain. To sabse tez collection woh hai jisme item ka address <b>calculate</b> ho, dhoondha na jaaye." },
+      { t: "Items line mein rakho to address hisaab ban jaata hai",
+        d: "Same size ke slots, saath saath. 4-byte slots address 1000 se shuru hon, to list 3, 1, 4, 9 mein <code>a[2]</code> 1000 + 2 × 4 = 1008 par hai, aur wahan 4 hai. Ek multiply, ek add, har index par same kaam. Isiliye index 0 se shuru hota hai: <code>a[0]</code> shuruaat se zero kadam door hai." },
+      { t: "Keemat yeh hai ki block apni jagah par nahi badh sakta",
+        d: "Block ke theek baad ki memory aam taur par kisi aur ki hoti hai. Wahan do aur slots nahi le sakte. To raw array ka size banate waqt hi fixed ho jaata hai." },
+      { t: "Growable arrays doubling se kaam chalate hain",
+        d: "2 ki jagah wali list mein 3 append karna bas likhna hai. 1 bhi. Phir 4 ko jagah nahi milti. List 4 slots ka block leti hai, 3 aur 1 copy karti hai, aur 4 likhti hai. Copies 1, 2, 4 aise sizes par hoti hain, aur milkar <var>n</var> se kam. To <var>n</var> appends 2<var>n</var> se kam ke hain: <b>O(1) amortised</b>, matlab poore run par average O(1)." },
+      { t: "Aage wala hissa mehnga hai",
+        d: "3, 1, 4, 9 ke aage 7 insert karo to block ko bina toote rakhne ke liye chaaron right khisakte hain. Yeh <b>O(<var>n</var>)</b> hai, aur aage se hataana bhi. Dono sire tez chahiye to <b>deque</b> lo, jo isi ke liye bana hai. Isiliye BFS use karta hai." },
+      { t: "Padosi saath aate hain, jo Big-O nahi dikhata",
+        d: "CPU kabhi ek value nahi laata. Woh lagbhag 64 bytes ki <b>cache line</b> laata hai, yaani 16 four-byte numbers. To <code>a[0]</code> padhne ke baad agle pandrah pehle se haath mein hain. Utni hi lambi linked list mein har item par ek memory trip lag sakti hai. Dono scans O(<var>n</var>) hain, aur array aksar kai guna tez hai." },
+      { t: "Order maayne na rakhe to delete O(1) hai",
+        d: "Beech se delete slow sirf isliye hai kyunki gap bharna padta hai. Order maayne nahi rakhta to gap mat bharo. 3, 1, 4, 9 se 1 hataana hai to aakhri item 9 uske upar copy karo aur ek chhota karo: 3, 9, 4. Yeh O(1) hai. Order bigad jaata hai, to jahan position ka matlab ho wahan kabhi mat karo." },
+    ],
+
+    variants: [
+      { n: "In-place rewrite, the writer index", cost: "O(n) time, O(1) space",
+        idea: "Ek index har item padhta hai, doosra dheema index sirf rakhne wale likhta hai. Writer se pehle ka sab already answer hai.",
+        when: "Duplicates hataana, zeroes khisakana, in place filter karna, aur jo bhi “array ko in place modify karo” kahe.",
+        watch: "End mein writer hi nayi length hai, to alag counter nahi chahiye. Loop invariants page dekho." },
+      { n: "Prefix sums", cost: "O(n) ek baar, phir har range query O(1)",
+        idea: "Har running total store karo, to koi bhi range sum ek subtraction ban jaata hai.",
+        when: "Na badalne wale data par bahut saare range sawaal.",
+        watch: "Iska apna page hai. Queries ke beech array bhi badle to Fenwick tree chahiye." },
+      { n: "Rotate by reversal", cost: "O(n) time, O(1) space",
+        idea: "Right mein <var>k</var> rotate karne ke liye poora array reverse karo, phir pehle <var>k</var>, phir baaki. 3, 1, 4, 9 ko right mein 1 rotate: 9, 4, 1, 3, phir 9, phir 3, 1, 4, to 9, 3, 1, 4.",
+        when: "Bina extra buffer ke rotation, jo obvious O(<var>n</var>)-space answer ke baad usual follow-up hai.",
+        watch: "Pehle <var>k</var> modulo <var>n</var> lo, warna array se bada rotation reversals tod deta hai." },
+      { n: "Swap with last", cost: "O(1) delete",
+        idea: "Jo item hataana hai uske upar aakhri item likh do, phir ek chhota karo.",
+        when: "Order maayne nahi rakhta: objects ka pool, unordered bag, visited list.",
+        watch: "Order bigadta hai, to jahan position ka matlab ho wahan kabhi nahi. Aage loop karte hue swap ke baad aage mat badho: wahan abhi naya item aaya hai." },
+      { n: "Three-way partition, Dutch national flag", cost: "O(n) time, O(1) space, ek pass",
+        idea: "Teen indexes array ko pivot se chhote, barabar aur bade mein baant dete hain, ek hi sweep mein.",
+        when: "Sirf teen alag values wala array sort karna, ya quicksort mein duplicates ke aaspaas partition.",
+        watch: "High index ke saath swap ke baad cursor aage mat badhao. Jo value abhi aayi hai woh check nahi hui." },
+      { n: "Difference array", cost: "har range update O(1), padhna O(n)",
+        idea: "Prefix sums ka ulta. Range ke shuru mein +<var>v</var> aur end ke theek baad −<var>v</var> likho. Ek running-total pass phir har value bana deta hai.",
+        when: "Bahut saare range updates aur end mein ek read, jaise overlapping bookings ginna.",
+        watch: "Tabhi chalta hai jab har update har read se pehle ho. Mila diye to asli range structure chahiye." },
+    ],
+
+    math: [
+      { t: "Index ek hisaab hai, O(1) ka asli matlab yahi", d: "Koi search nahi. Machine address nikaalti hai aur padhti hai, aur yeh hisaab <var>i</var> par depend nahi karta." },
+      { t: "Doubling: har copy jodo", d: "Har growth poora array copy karti hai, jo tab tak daraavna lagta hai jab tak copies jodo nahi. Jodh kabhi <var>n</var> se aage nahi jaata." },
+      { t: "Amortised O(1) aur worst-case O(1) alag promises hain", d: "Sequence par average ek chhota constant hai. Ek badkismat call phir bhi poora array copy karti hai, jo tab maayne rakhta hai jab koi single calls ka time naape." },
+      { t: "Aage wala hissa mehnga hai, yeh raha bill", d: "Contiguity ne indexing ko free banaya. Wahi contiguity aage insert karne par sab kuch khisakati hai." },
+    ],
+
+    costs: [
+      ["a[i] read / write", "O(1)", "calculated address, koi search nahi"],
+      ["append at end", "O(1) amortised", "extra capacity; kabhi kabhi double aur copy"],
+      ["pop() from end", "O(1)", "kuch nahi khisakta"],
+      ["insert(0, x) / pop(0)", "O(n)", "baad ka har element ek slot khisakta hai"],
+      ["x in a (search)", "O(n)", "har element compare karna padta hai; set use karo"],
+      ["a.sort()", "O(n log n)", "Timsort; already-sorted data par O(n)"],
+      ["slicing a[i:j]", "O(j−i)", "copy banata hai; loop mein slice chhupa hua O(n²) hai"],
+    ],
+
+    traps: [
+      "<b><code>[[0]*3]*3</code> usi EK row ke teen references banata hai.</b> <code>g[0][0]</code> likhne par teeno badalti hain. <code>[[0]*3 for _ in range(3)]</code> use karo.",
+      "<b>List par loop karte hue use badalna</b> elements chhod deta hai. Copy par loop karo (<code>for x in a[:]</code>) ya nayi list banao.",
+      "<b>Loop ke andar <code>x in a</code></b> interviews ka sabse common galti se bana O(<var>n</var>²) hai. Pehle <code>set</code> bana lo.",
+      "<b>Slicing copy karti hai.</b> Recursion ke andar <code>a[1:]</code> O(<var>n</var>) ko O(<var>n</var>²) bana deta hai. Indexes pass karo.",
+      "<b>Sirf extremes chahiye the aur sort kar diya.</b> Minimum ya <var>k</var> sabse bade ke liye sort O(<var>n</var> log <var>n</var>) hai. Ek pass minimum O(<var>n</var>) mein deta hai, aur size-<var>k</var> heap baaki O(<var>n</var> log <var>k</var>) mein.",
+    ],
+
+    impl: [
+      ["Python", "list", "Lagbhag 1/8 extra allocate karti hai; insert(0,x)/pop(0) O(n) hain. Slicing copy karti hai."],
+      ["Java", "int[] (fixed) · ArrayList (growable)", "ArrayList 2x ki jagah 1.5x badhti hai; fast copy ke liye System.arraycopy. Slicing nahi."],
+      ["C++", "vector", "Pehle hi reserve(n) karo to koi reallocation nahi. vector<bool> bitset hai, normal vector nahi."],
+      ["JavaScript", "Array", "Sparse arrays aur holes slow hain; unshift()/shift() O(n) hain. push/pop use karo."],
+    ],
+
+    codecap: "Prefix sums aur in-place two pointers, yahi do array tricks O(n²) ko O(n) banati hain.",
+
+    q: [
+      ["a[i] O(1) kyun hai?", "Elements barabar width par saath saath baithe hain, to address base + i × width hai. Yeh ek multiply aur ek add hai, i ya n chahe jo ho."],
+      ["Append O(1) amortised kyun hai par kabhi kabhi O(n)?", "List extra capacity rakhti hai, aur append aam taur par bas usme likhta hai. Bhar jaaye to dugne size ka block leti hai aur copy karti hai, jo O(n) hai. Doubling ki wajah se n appends ki saari copies n se kam hain, to har append average O(1)."],
+      ["insert(0, x) O(n) kyun hai?", "Block bina toote rehna chahiye, to har maujood element ek slot right khisakta hai. Yeh n writes hain."],
+      ["[[0]*3]*3 asal mein kya banata hai?", "Ek row object, teen baar reference kiya hua. g[0][0] likhne par har row badli dikhti hai. Alag rows ke liye comprehension use karo."],
+      ["Array aur linked list dono O(n) mein scan hote hain. Practice mein array itna tez kyun?", "Cache locality. CPU ek baar mein lagbhag 64 bytes laata hai, to padosi array elements muft aate hain. Memory mein bikhre linked-list nodes har ek par fetch lete hain. Big-O theek isi constant factor ko phenk deta hai."],
+      ["Array se delete O(1) kab hai?", "Jab order maayne na rakhe. Aakhri element hataane wale par copy karo aur ek chhota karo, to koi gap nahi bharna. Order bigadta hai, to jahan position ka matlab ho wahan kabhi mat karo."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "grids",
   n: "2-D arrays and grids",
   group: "Fundamentals",
+  need: {
+    ask: `<p>You are writing a blur filter for a tiny image stored as a grid of numbers. Each cell becomes the average of itself and its four neighbours: up, down, left and right. The test image is 3 × 3, holding 1 to 9.</p>
+<p>The centre cell, 5, is easy: it has all four neighbours. The corner cell, 1, has only two, 2 to its right and 4 below. Its blurred value should be (1 + 2 + 4) / 3 ≈ <b>2.33</b>. The hard part is getting every edge and corner right on every board.</p>`,
+    tries: [
+      ["Write each neighbour out by hand", "Four near-identical blocks, each with its own range check. Write <code>c + 1 &lt; rows</code> where you meant <code>cols</code>, and every square test passes. The first 3 × 5 board fails."],
+      ["Skip the range check", "In Java that crashes, which is at least honest. In Python, the “up” neighbour of cell 1 is <code>grid[-1][0]</code>, and −1 means the last row. You get 7, and 3 from the far side for “left”. The blur comes out 3.4, with no error."],
+      ["Just catch the out-of-range error", "The bottom and right edges do raise one. The top and left never do in Python, because −1 is a legal index. Half the border stays silently wrong."],
+    ],
+    so: `<p>Write the four directions once, as data: <code>[(-1,0), (1,0), (0,-1), (0,1)]</code>, each a (row change, column change) pair. Loop over them, and <b>check the range before you index</b>: <code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code>. One check, written once, right everywhere.</p>
+<p>This page uses that same 3 × 3 grid of 1 to 9 throughout: indexing, neighbours, the corner case, and rotating it 90 degrees.</p>`,
+  },
+
   one: "A grid is an array of arrays, so <code>grid[r][c]</code> is <b>row first</b>. Keep the four directions in one list and check bounds before you index, and most grid bugs never happen.",
 
-  plain: `<p>A 2-D array is not a new data structure. It is an array whose elements happen to be arrays, which is why <code>grid[r][c]</code> means "row r, then column c inside it".</p>
-<p>That ordering causes an embarrassing share of grid bugs, and they hide well. On a square grid, swapping row and column gives a wrong answer rather than a crash. So the code runs, returns something plausible, and fails the one test case that uses a rectangle.</p>
-<p>The other half of grid work is neighbours. Nearly every grid problem asks about the cells next to a cell. So write the four directions once, as a list of <code>(dr, dc)</code> pairs, and loop over it. The alternative is four copy-pasted blocks with the third one subtly wrong.</p>
-<p>Everything else is bounds checking, and bounds checking is only interesting because Python will not do it for you. A negative index does not fail there. It cheerfully wraps to the far end of the grid and hands you a confidently incorrect result.</p>
-<p><b>Analogy.</b> A spreadsheet. Nobody says "column C, row 4", they say "C4" and then get it backwards in code anyway.</p>`,
+  plain: `<p>A 2-D array is an array whose items are arrays. Each inner array is one <b>row</b>. So <code>grid[r][c]</code> means “row <var>r</var>, then column <var>c</var> inside it”. In the 3 × 3 grid of 1 to 9, <code>grid[1][2]</code> is 6: row 1 is 4, 5, 6, and column 2 of it is 6.</p>
+<p>That order causes a surprising share of bugs. On a square grid, swapping row and column gives a wrong answer, not a crash. The code runs, returns something plausible, and fails the one test with a rectangle.</p>
+<p>The other half of grid work is <b>neighbours</b>, the cells next to a cell. Write the four directions once, as a list of (row change, column change) pairs, and loop over it. Then check the range before indexing. Python will not do it for you: a negative index quietly wraps to the far side.</p>
+<p><b>Analogy.</b> A spreadsheet. Everyone says “C4”, column first, and then writes it row first in code.</p>`,
 
   why: [
-    { t: "Rows of rows, so the row index comes first", d: "<code>grid</code> holds row objects; <code>grid[r]</code> is one row; <code>grid[r][c]</code> is a cell in it. So the number of rows is <code>len(grid)</code> and the number of columns is <code>len(grid[0])</code>, which quietly assumes there is a row 0. An empty grid is a real input and it will find you." },
-    { t: "Each row is a separate object, and that matters more than it sounds", d: "Because the rows are independent objects, building a grid by repeating one row hands you the same row several times over. Writing to one apparently writes to all of them. This is not a grid problem, it is the aliasing rule from the memory page arriving in a costume." },
-    { t: "Neighbours are data, not control flow", d: "Write the four offsets as <code>[(-1,0),(1,0),(0,-1),(0,1)]</code> and loop. Four hand-written branches means four bounds checks, which means one of them is wrong, which means a bug that only appears on the top edge. Diagonals are four more pairs in the same list and nothing else changes." },
-    { t: "Check bounds before indexing, not after", d: "<code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code>, evaluated first. Java and C++ throw or corrupt memory, which is at least honest. Python treats <code>grid[-1]</code> as the last row and returns an answer from the opposite corner of the board, which is considerably worse than a crash." },
-    { t: "The classic transforms are two boring steps, not one clever one", d: "Rotating a matrix 90 degrees in place looks like it needs a spiral and four-way swaps. It does not: <b>transpose, then reverse each row</b>. Transposing means swapping <code>grid[r][c]</code> with <code>grid[c][r]</code>, but only where <code>c &gt; r</code>. Do it for every cell and each pair is swapped twice, which returns you politely to where you started." },
-    { t: "A grid is a graph that never needed building", d: "Every cell is a node and every legal move is an edge. So flood fill is DFS and shortest path on an open grid is BFS. You never build an adjacency list, because the coordinates already are one. This is why grid questions are really graph questions wearing a rectangle, and why this page exists before the graph pages." },
+    { t: "Rows of rows, so the row index comes first",
+      d: "<code>grid</code> holds rows. <code>grid[1]</code> is the row 4, 5, 6. <code>grid[1][2]</code> is the 6 in it. So the number of rows is <code>len(grid)</code>, and the number of columns is <code>len(grid[0])</code>. That quietly assumes a row 0 exists, and an empty grid is a real input." },
+    { t: "Each row is a separate object, and that matters",
+      d: "Build the grid by repeating one row, <code>[[0] * 3] * 3</code>, and you get one row three times. Writing to one writes to all. That is the aliasing rule from the memory page, in grid form." },
+    { t: "Neighbours are data, not branches",
+      d: "Cell 5 is at (1, 1). Add each pair from <code>[(-1,0), (1,0), (0,-1), (0,1)]</code> and you reach (0, 1), (2, 1), (1, 0) and (1, 2): the values 2, 8, 4 and 6. Four hand-written branches mean four range checks, and one of them will be wrong. Diagonals are four more pairs in the same list." },
+    { t: "Check the range before indexing, not after",
+      d: "Cell 1 is at (0, 0). “Up” is (−1, 0), which is off the board. Test <code>0 &lt;= nr &lt; rows</code> first and skip it. Java and C++ crash or corrupt memory if you forget. Python reads <code>grid[-1][0]</code> as the last row and hands you 7, from the opposite corner. That is worse than a crash." },
+    { t: "Rotation is two boring steps, not one clever one",
+      d: "Turn the grid 90 degrees clockwise and the top row becomes 7 4 1, the middle 8 5 2, and the bottom 9 6 3. Do it as <b>transpose, then reverse each row</b>. Transposing swaps <code>grid[r][c]</code> with <code>grid[c][r]</code>, but only where <code>c &gt; r</code>. Swap every cell and each pair swaps twice, which puts everything back." },
+    { t: "A grid is a graph you never had to build",
+      d: "Every cell is a node, and every legal move is an edge. So flood fill is DFS, and shortest path on an open grid is BFS. There is no adjacency list to build, because the coordinates already are one. That is why this page comes before the graph pages." },
   ],
 
-  hing: `<p><b>2-D array koi nayi cheez nahi hai.</b> Yeh bas ek array hai jiske andar arrays hain. Isiliye <code>grid[r][c]</code> ka matlab hai: pehle <b>row</b> r, phir uske andar column c.</p>
+  hing: `<p><b>2-D array koi nayi cheez nahi hai.</b> Yeh bas ek array hai jiske andar arrays hain. Isiliye <code>grid[r][c]</code> ka matlab hai: pehle <b>row</b> <var>r</var>, phir uske andar column <var>c</var>.</p>
 <p><b>Aur yahi sabse zyada galtiyon ki jagah hai.</b> Square grid par row aur column ulta kar do, to program crash nahi karega. Woh chalega, jawaab dega, aur woh jawaab galat hoga. Pakda tab jaayega jab koi rectangle wala test case aayega.</p>
 <p><b>Rows alag-alag objects hote hain.</b> Ek hi row ko repeat karke grid banaya, to wahi ek row baar-baar mil jaayegi. Phir ek cell badlo, aur saari rows badli hui dikhengi. Yeh grid ki problem nahi hai, yeh <b>memory wale page ka aliasing</b> hai jo naye kapdon mein aa gaya.</p>
 <p><b>Padosi (neighbours) ko data banao, code nahi.</b> Chaar directions ek list mein likho: <code>[(-1,0),(1,0),(0,-1),(0,1)]</code>, aur loop chala do. Chaar alag if likhoge to chaar bounds check likhne padenge, aur unme se ek galat hoga. Woh bug sirf kinare wali row par dikhega, aur tab tak tum kuch aur dhoondh rahe hoge.</p>
 <p><b>Bounds pehle check karo, index baad mein.</b> Java aur C++ to crash kar denge ya memory kharab kar denge, jo kam se kam <b>imaandaar</b> hai. Python <code>grid[-1]</code> ko aakhri row maan leta hai aur board ke doosre kone se jawaab utha kar de deta hai. Crash se yeh zyada khatarnak hai.</p>
 <p><b>90 degree rotate karna:</b> log isme spiral aur chaar-chaar swap sochne lagte hain. Zaroorat nahi. Do boring steps: <b>transpose karo, phir har row ko ulta kar do</b>. Transpose mein swap sirf wahan karo jahan <code>c &gt; r</code> hai, warna har pair do baar swap hoga aur grid waise ka waisa reh jaayega.</p>
-<p><b>Aur sabse important baat aage ke liye:</b> grid asal mein ek <b>graph</b> hai jise banane ki zaroorat hi nahi padi. Har cell ek node, har legal move ek edge. Isliye flood fill = DFS, aur shortest path = BFS. Adjacency list banane ki zaroorat nahi kyunki coordinates khud hi adjacency hain. Isi wajah se yeh page graph wale pages se pehle hai.</p>`,
+<p><b>Aur sabse important baat aage ke liye:</b> grid asal mein ek <b>graph</b> hai jise banane ki zaroorat hi nahi padi. Har cell ek node, har legal move ek edge. Isliye flood fill = DFS, aur shortest path = BFS. Adjacency list banane ki zaroorat nahi kyunki coordinates khud hi adjacency hain.</p>`,
 
   viz: ["grid-basics"],
   see: [["VA", "https://visualgo.net/en/dfsbfs", "VisuAlgo, traversal on a grid or graph"]],
 
   math: [
-    { t: "Two indices, one address", d: "A grid is stored as one flat run of memory, so the pair (r, c) is folded into a single offset. Knowing the fold both ways is what lets you use an integer as a cell id.", w:
+    { t: "Two indices, one address", d: "A grid is often stored as one flat run of memory, so the pair (<var>r</var>, <var>c</var>) folds into a single offset. Knowing the fold both ways lets you use one integer as a cell id.", w:
 `R rows, C columns, stored row by row:
 
   grid[r][c]  ->  flat[r * C + c]
 
-R = 3, C = 4, cell (2, 1)  ->  2 x 4 + 1 = 9
+the 3 x 3 grid, flat:  1 2 3 4 5 6 7 8 9
+cell (1, 2)  ->  1 x 3 + 2 = 5  ->  flat[5] = 6
 
 and back again:
   r = i / C     c = i mod C
-  i = 9  ->  r = 9 / 4 = 2,  c = 9 mod 4 = 1` },
-    { t: "Which loop goes outside, and what it costs to get it wrong", d: "Both orders visit every cell once and both are O(R x C). Only one of them reads memory in the order the machine actually fetches it.", w:
+  i = 5  ->  r = 5 / 3 = 1,  c = 5 mod 3 = 2` },
+    { t: "The neighbours of 5 and of 1, worked through", d: "The same four pairs, added to two different cells. The range check is what separates the two answers.", w:
+`DIRS = (-1,0) (1,0) (0,-1) (0,1)      up down left right
+
+cell 5 at (1,1):  (0,1)=2  (2,1)=8  (1,0)=4  (1,2)=6
+                  all four in range, blur = 25 / 5 = 5
+
+cell 1 at (0,0):  (-1,0) out   (1,0)=4   (0,-1) out   (0,1)=2
+                  blur = (1 + 4 + 2) / 3 = 2.33
+
+no range check, Python:  grid[-1][0] = 7,  grid[0][-1] = 3
+                  blur = (1 + 7 + 4 + 3 + 2) / 5 = 3.4, no error` },
+    { t: "Why the range check is not optional, and why testing misses it", d: "Only border cells can walk off the grid, and on any real board the border is a tiny share.", w:
+`corner cell:    2 of 4 neighbours exist
+edge cell:      3 of 4
+interior cell:  4 of 4
+
+3 x 3 grid:  8 border cells, 1 interior    (89 % border)
+1000 x 1000 grid:
+  interior  998 x 998 = 996,004 cells   99.6 %
+  border              =   3,996 cells    0.4 %
+
+so an unguarded index is right 99.6 % of the time` },
+    { t: "Which loop goes outside, and what it costs to get it wrong", d: "Both orders visit every cell once, and both are O(R x C). Only one reads memory in the order the machine fetches it.", w:
 `1000 x 1000 ints, 4 bytes each, 64-byte cache line = 16 ints
 
 rows outside (row-major):  1 miss per 16 reads =  62,500 misses
 cols outside:              1 miss per read     = 1,000,000 misses
 
 identical Big-O, identical output, several times the clock` },
-    { t: "Neighbours, counted", d: "Keeping the directions in a list turns four near-identical if statements into one loop, and the arithmetic below is the whole cost of doing it.", w:
-`DIRS = [(-1,0), (1,0), (0,-1), (0,1)]
+    { t: "Rotation is two boring passes", d: "One clockwise turn sends (r, c) to (c, R-1-r). Transpose does the first half, and reversing each row does the second.", w:
+`1 2 3      transpose      1 4 7      reverse rows     7 4 1
+4 5 6     ----------->    2 5 8     ------------>    8 5 2
+7 8 9      swap c > r     3 6 9                      9 6 3
 
-per cell:       4 checks    (8 with diagonals)
-full traversal: 4 x R x C   = O(R x C)
-1000 x 1000:    4 x 10^6 checks, which is free` },
-    { t: "Why the bounds check is not optional, and why testing misses it", d: "Only the border cells can walk off the grid, and on any grid worth using the border is a rounding error of the total.", w:
-`corner cell:    2 of 4 neighbours exist
-edge cell:      3 of 4
-interior cell:  4 of 4
-
-1000 x 1000 grid:
-  interior  998 x 998 = 996,004 cells   99.6 %
-  border               =   3,996 cells    0.4 %
-
-so an unguarded index is right 99.6 % of the time` },
-    { t: "Rotation is two boring passes", d: "One 90-degree clockwise turn sends (r, c) to (c, R-1-r). Transpose does the first half, reversing each row does the second.", w:
-`transpose:        (r, c) -> (c, r)
+transpose:        (r, c) -> (c, r)
 reverse each row: (c, r) -> (c, R-1-r)
-composed:         (r, c) -> (c, R-1-r)   = 90 degrees clockwise
-
-in place, n x n:
-  transpose  n(n-1)/2 swaps
-  reversal   n x n/2  swaps
-  total      about n^2 swaps, O(1) extra space
-four turns return the grid to itself` },
+n x n in place:   n(n-1)/2 + n x n/2 swaps, O(1) extra space` },
   ],
 
   costs: [
     ["grid[r][c]", "O(1)", "two index operations, nothing is searched"],
     ["visit every cell", "O(rows × cols)", "the honest cost of any full scan"],
-    ["check the four neighbours", "O(1)", "four offsets, four bounds checks"],
-    ["flood fill / DFS / BFS on a grid", "O(rows × cols)", "each cell is enqueued once if you mark on push"],
+    ["check the four neighbours", "O(1)", "four offsets, four range checks"],
+    ["flood fill / DFS / BFS on a grid", "O(rows × cols)", "each cell is queued once if you mark it when you push"],
     ["transpose in place", "O(rows × cols), O(1) space", "swap only where c > r"],
     ["rotate 90 in place", "O(rows × cols), O(1) space", "transpose, then reverse each row"],
-    ["visited set", "O(rows × cols) space", "or mutate the grid itself, if you are allowed to"],
+    ["visited set", "O(rows × cols) space", "or change the grid itself, if you are allowed to"],
   ],
 
   traps: [
-    "<b>Swapping row and column.</b> On a square grid this returns a wrong answer instead of an error, which is how it survives all the way to submission.",
-    "<b>Building a grid by repeating a row.</b> <code>[[0]*c]*r</code> stores one row r times. Use a comprehension, and reread the memory page.",
-    "<b>Negative indices in Python.</b> <code>grid[-1][0]</code> is a valid cell, so a missing bounds check produces a plausible answer rather than an exception.",
-    "<b>Marking visited on pop instead of on push</b> in a BFS. The same cell gets queued from several neighbours and the complexity quietly stops being linear.",
+    "<b>Swapping row and column.</b> On a square grid this gives a wrong answer instead of an error. That is how it survives all the way to submission.",
+    "<b>Building a grid by repeating a row.</b> <code>[[0]*c]*r</code> stores one row <var>r</var> times. Use a comprehension, and reread the memory page.",
+    "<b>Negative indices in Python.</b> <code>grid[-1][0]</code> is a valid cell, so a missing range check gives a plausible answer, not an exception.",
+    "<b>Marking visited when you pop instead of when you push</b>, in a BFS. The same cell gets queued from several neighbours, and the cost quietly stops being linear.",
     "<b>Assuming <code>grid[0]</code> exists.</b> An empty grid is a legal input, and <code>len(grid[0])</code> is how you find out it was not handled.",
   ],
 
   impl: [
-    ["Python", "[[0]*c for _ in range(r)]", "Never [[0]*c]*r. Negative indices are legal, so bounds checks are on you."],
-    ["Java", "int[][] g = new int[r][c]", "Rows are separate objects already. Ragged arrays are allowed, so g[0].length is per-row."],
-    ["C++", "vector<vector<int>> g(r, vector<int>(c))", "For speed, a flat vector of size r*c indexed as r*cols+c is friendlier to the cache."],
-    ["JavaScript", "Array.from({length: r}, () => new Array(c).fill(0))", "Array(r).fill([]) shares one row, the same trap in different syntax."],
+    ["Python", "[[0]*c for _ in range(r)]", "Never [[0]*c]*r. Negative indices are legal, so range checks are on you."],
+    ["Java", "int[][] g = new int[r][c]", "Rows are separate objects already. Ragged arrays are allowed, so g[0].length is per row."],
+    ["C++", "vector<vector<int>> g(r, vector<int>(c))", "For speed, a flat vector of size r*c indexed as r*cols+c is kinder to the cache."],
+    ["JavaScript", "Array.from({length: r}, () => new Array(c).fill(0))", "Array(r).fill([]) shares one row: the same trap in different syntax."],
   ],
 
   code: {
@@ -2250,16 +3000,17 @@ function rotate90(g) {
   codecap: "One direction list, one bounds check, and the knowledge that a grid was a graph the whole time.",
 
   q: [
-    ["What does grid[r][c] mean, and why is getting it backwards so hard to catch?", "It is row r, then column c inside that row. On a square grid the swapped version still runs and still returns a value, just the wrong one, so it survives every test until a rectangular input appears."],
-    ["Why is [[0]*cols]*rows wrong?", "It stores one row object rows times, so all rows are the same object and writing to one writes to all. It is the aliasing rule from the memory page, in grid form."],
-    ["Why keep the four directions in a list instead of writing four branches?", "Four branches means four bounds checks written by hand, and one of them will be wrong. One list plus one loop means one bounds check that is either right or wrong everywhere, which is far easier to see."],
-    ["Why is a missing bounds check worse in Python than in Java?", "Java throws. Python treats a negative index as counting from the end, so it returns a real cell from the opposite side of the grid and your algorithm continues with a plausible wrong value."],
-    ["How do you rotate a square matrix 90 degrees in place?", "Transpose it, swapping grid[r][c] with grid[c][r] only where c > r, then reverse each row. O(1) extra space and no spiral reasoning required."],
-    ["In what sense is a grid already a graph?", "Each cell is a node and each legal move is an edge, and the coordinates supply the adjacency, so flood fill is DFS and shortest path on an unweighted grid is BFS, with no adjacency list to build."],
+    ["What does grid[r][c] mean, and why is getting it backwards so hard to catch?", "It is row r, then column c inside that row. On a square grid the swapped version still runs and returns a value, just the wrong one. So it survives every test until a rectangular input appears."],
+    ["Why is [[0]*cols]*rows wrong?", "It stores one row object rows times, so all rows are the same object, and writing to one writes to all. It is the aliasing rule from the memory page, in grid form."],
+    ["Why keep the four directions in a list instead of writing four branches?", "Four branches means four range checks written by hand, and one of them will be wrong. One list and one loop means one check, right or wrong everywhere, which is far easier to see."],
+    ["Why is a missing bounds check worse in Python than in Java?", "Java throws. Python treats a negative index as counting from the end. So it returns a real cell from the opposite side, and your code carries on with a plausible wrong value."],
+    ["How do you rotate a square matrix 90 degrees in place?", "Transpose it, swapping grid[r][c] with grid[c][r] only where c > r, then reverse each row. O(1) extra space, and no spiral to reason about."],
+    ["In what sense is a grid already a graph?", "Each cell is a node and each legal move is an edge, and the coordinates supply the adjacency. So flood fill is DFS and shortest path on an unweighted grid is BFS, with no adjacency list to build."],
   ],
 
   p: [
     [733, "flood-fill", "Flood Fill, DFS with no graph in sight", "E"],
+    [661, "image-smoother", "Image Smoother, the same blur with diagonals added", "E"],
     [200, "number-of-islands", "Number of Islands, the canonical grid DFS", "M"],
     [48, "rotate-image", "Rotate Image, transpose then reverse", "M"],
     [54, "spiral-matrix", "Spiral Matrix, four boundaries at once", "M"],
@@ -2267,68 +3018,156 @@ function rotate90(g) {
     [994, "rotting-oranges", "Rotting Oranges, multi-source BFS", "M"],
     [79, "word-search", "Word Search, DFS with backtracking on a grid", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Aap ek chhoti image ke liye blur filter likh rahe ho, jo numbers ki grid mein store hai. Har cell apna aur apne chaar padosiyon ka average ban jaata hai: upar, neeche, left aur right. Test image 3 × 3 hai, 1 se 9 tak.</p>
+<p>Beech wala cell, 5, aasaan hai: uske chaaron padosi hain. Corner cell, 1, ke sirf do hain, right mein 2 aur neeche 4. Uski blurred value honi chahiye (1 + 2 + 4) / 3 ≈ <b>2.33</b>. Mushkil hissa hai har board par har edge aur corner sahi karna.</p>`,
+      tries: [
+        ["Har padosi haath se likho", "Chaar lagbhag same blocks, har ek ka apna range check. <code>cols</code> ki jagah <code>c + 1 &lt; rows</code> likh diya, aur har square test pass. Pehla 3 × 5 board fail."],
+        ["Range check chhod do", "Java mein crash, jo kam se kam imaandaar hai. Python mein cell 1 ka “upar” wala padosi <code>grid[-1][0]</code> hai, aur −1 matlab aakhri row. 7 milta hai, aur “left” ke liye doosri taraf se 3. Blur 3.4 aata hai, bina error ke."],
+        ["Bas out-of-range error catch kar lo", "Neeche aur right ke edges error dete hain. Upar aur left Python mein kabhi nahi dete, kyunki −1 legal index hai. Aadha border chupchaap galat rehta hai."],
+      ],
+      so: `<p>Chaar directions ek baar likho, data ki tarah: <code>[(-1,0), (1,0), (0,-1), (0,1)]</code>, har ek (row change, column change) ka pair. Unpar loop chalao, aur <b>index karne se pehle range check karo</b>: <code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code>. Ek check, ek baar likha, har jagah sahi.</p>
+<p>Yeh page poore mein wahi 1 se 9 wali 3 × 3 grid use karta hai: indexing, padosi, corner case, aur use 90 degree ghumaana.</p>`,
+    },
+
+    one: "Grid arrays ka array hai, isliye <code>grid[r][c]</code> mein <b>row pehle</b>. Chaar directions ek list mein rakho aur index se pehle bounds check karo, to zyadatar grid bugs hote hi nahi.",
+
+    plain: `<p>2-D array aisa array hai jiske items khud arrays hain. Har andar wala array ek <b>row</b> hai. To <code>grid[r][c]</code> ka matlab “row <var>r</var>, phir uske andar column <var>c</var>”. 1 se 9 wali 3 × 3 grid mein <code>grid[1][2]</code> 6 hai: row 1 hai 4, 5, 6, aur uska column 2 hai 6.</p>
+<p>Yahi order hairaan karne wale kitne hi bugs deta hai. Square grid par row aur column ulta karo to galat answer aata hai, crash nahi. Code chalta hai, kuch sahi-sa lagne wala deta hai, aur rectangle wale ek test par fail hota hai.</p>
+<p>Grid ka doosra aadha kaam hai <b>padosi</b>, kisi cell ke bagal wale cells. Chaar directions ek baar likho, (row change, column change) pairs ki list ki tarah, aur us par loop chalao. Phir index se pehle range check karo. Python yeh aapke liye nahi karega: negative index chupchaap doosri taraf wrap ho jaata hai.</p>
+<p><b>Analogy.</b> Spreadsheet. Sab “C4” bolte hain, column pehle, aur phir code mein row pehle likhte hain.</p>`,
+
+    why: [
+      { t: "Rows ki rows, isliye row index pehle",
+        d: "<code>grid</code> rows rakhta hai. <code>grid[1]</code> row 4, 5, 6 hai. <code>grid[1][2]</code> usme ka 6 hai. To rows ki ginti <code>len(grid)</code> hai, aur columns ki <code>len(grid[0])</code>. Yeh chupchaap maan leta hai ki row 0 hai, aur khaali grid bhi asli input hai." },
+      { t: "Har row alag object hai, aur yeh maayne rakhta hai",
+        d: "Ek row repeat karke grid banao, <code>[[0] * 3] * 3</code>, to ek hi row teen baar milti hai. Ek mein likho to sab mein likha jaata hai. Yeh memory page ka aliasing rule hai, grid ke roop mein." },
+      { t: "Padosi data hain, branches nahi",
+        d: "Cell 5 (1, 1) par hai. <code>[(-1,0), (1,0), (0,-1), (0,1)]</code> ka har pair jodo to (0, 1), (2, 1), (1, 0) aur (1, 2) milte hain: values 2, 8, 4 aur 6. Haath se likhi chaar branches matlab chaar range checks, aur ek galat hoga. Diagonals isi list mein chaar aur pairs hain." },
+      { t: "Range pehle check karo, index baad mein",
+        d: "Cell 1 (0, 0) par hai. “Upar” (−1, 0) hai, jo board ke bahar hai. Pehle <code>0 &lt;= nr &lt; rows</code> test karo aur chhod do. Bhoolne par Java aur C++ crash karte hain ya memory bigaadte hain. Python <code>grid[-1][0]</code> ko aakhri row padhta hai aur ulte kone se 7 de deta hai. Yeh crash se bura hai." },
+      { t: "Rotation do boring steps hai, ek clever step nahi",
+        d: "Grid ko 90 degree clockwise ghumaao to upar ki row 7 4 1 banti hai, beech ki 8 5 2, aur neeche ki 9 6 3. Ise aise karo: <b>transpose, phir har row reverse</b>. Transpose <code>grid[r][c]</code> ko <code>grid[c][r]</code> se swap karta hai, par sirf jahan <code>c &gt; r</code>. Har cell swap karo to har pair do baar swap hota hai, aur sab wapas." },
+      { t: "Grid ek graph hai jo banana hi nahi pada",
+        d: "Har cell ek node, har legal move ek edge. To flood fill DFS hai, aur khuli grid par shortest path BFS. Adjacency list banana nahi padta, kyunki coordinates khud wahi hain. Isiliye yeh page graph pages se pehle hai." },
+    ],
+
+    math: [
+      { t: "Do indexes, ek address", d: "Grid aksar memory ki ek seedhi patti mein store hoti hai, to pair (<var>r</var>, <var>c</var>) ek offset mein badal jaata hai. Dono taraf ka fold pata ho to ek integer ko cell id bana sakte ho." },
+      { t: "5 aur 1 ke padosi, poora karke", d: "Wahi chaar pairs, do alag cells mein jode. Range check hi dono answers ko alag karta hai." },
+      { t: "Range check optional kyun nahi, aur testing use kyun miss karti hai", d: "Sirf border cells grid ke bahar ja sakte hain, aur kisi bhi asli board par border bahut chhota hissa hai." },
+      { t: "Kaunsa loop bahar, aur galat karne ki keemat", d: "Dono order har cell ek baar dekhte hain, aur dono O(R x C) hain. Sirf ek memory ko us order mein padhta hai jismein machine laati hai." },
+      { t: "Rotation do boring passes hai", d: "Ek clockwise ghumaav (r, c) ko (c, R-1-r) bhejta hai. Transpose pehla aadha karta hai, aur har row reverse karna doosra." },
+    ],
+
+    costs: [
+      ["grid[r][c]", "O(1)", "do index operations, kuch search nahi hota"],
+      ["har cell visit", "O(rows × cols)", "kisi bhi full scan ki imaandaar keemat"],
+      ["chaar padosi check", "O(1)", "chaar offsets, chaar range checks"],
+      ["grid par flood fill / DFS / BFS", "O(rows × cols)", "push karte waqt mark karo to har cell ek baar queue hota hai"],
+      ["in place transpose", "O(rows × cols), O(1) space", "sirf jahan c > r wahan swap"],
+      ["in place 90 rotate", "O(rows × cols), O(1) space", "transpose, phir har row reverse"],
+      ["visited set", "O(rows × cols) space", "ya grid khud badlo, agar allowed ho"],
+    ],
+
+    traps: [
+      "<b>Row aur column ulta karna.</b> Square grid par yeh error ki jagah galat answer deta hai. Isi tarah yeh submission tak bach jaata hai.",
+      "<b>Row repeat karke grid banana.</b> <code>[[0]*c]*r</code> ek row <var>r</var> baar rakhta hai. Comprehension use karo, aur memory page dobara padho.",
+      "<b>Python mein negative indexes.</b> <code>grid[-1][0]</code> valid cell hai, to missing range check exception ki jagah sahi-sa lagne wala answer deta hai.",
+      "<b>BFS mein push ki jagah pop par visited mark karna.</b> Ek hi cell kai padosiyon se queue hota hai, aur cost chupchaap linear nahi rehti.",
+      "<b>Maan lena ki <code>grid[0]</code> hai.</b> Khaali grid legal input hai, aur <code>len(grid[0])</code> se pata chalta hai ki use handle nahi kiya.",
+    ],
+
+    impl: [
+      ["Python", "[[0]*c for _ in range(r)]", "Kabhi [[0]*c]*r nahi. Negative indexes legal hain, to range checks aapki zimmedari."],
+      ["Java", "int[][] g = new int[r][c]", "Rows pehle se alag objects hain. Ragged arrays allowed hain, to g[0].length har row ka alag."],
+      ["C++", "vector<vector<int>> g(r, vector<int>(c))", "Speed ke liye r*c size ka flat vector, r*cols+c se indexed, cache ke liye behtar hai."],
+      ["JavaScript", "Array.from({length: r}, () => new Array(c).fill(0))", "Array(r).fill([]) ek hi row share karta hai: wahi jaal, alag syntax."],
+    ],
+
+    codecap: "Ek direction list, ek bounds check, aur yeh samajh ki grid shuru se graph hi thi.",
+
+    q: [
+      ["grid[r][c] ka matlab kya hai, aur ulta likhna pakadna itna mushkil kyun?", "Row r, phir us row ke andar column c. Square grid par ulta version bhi chalta hai aur value deta hai, bas galat. To rectangular input aane tak har test se bach jaata hai."],
+      ["[[0]*cols]*rows galat kyun hai?", "Yeh ek row object rows baar rakhta hai, to saari rows ek hi object hain, aur ek mein likhna sab mein likhna hai. Yeh memory page ka aliasing rule hai, grid ke roop mein."],
+      ["Chaar directions ek list mein kyun, chaar branches kyun nahi?", "Chaar branches matlab haath se likhe chaar range checks, aur ek galat hoga. Ek list aur ek loop matlab ek check, har jagah sahi ya har jagah galat, jo dekhna kahin aasaan hai."],
+      ["Missing bounds check Python mein Java se bura kyun hai?", "Java throw karta hai. Python negative index ko end se ginta hai. To ulti taraf ka asli cell deta hai, aur code ek sahi-sa lagne wali galat value ke saath chalta rehta hai."],
+      ["Square matrix ko in place 90 degree kaise ghumaate ho?", "Transpose karo, grid[r][c] ko grid[c][r] se sirf jahan c > r wahan swap karke, phir har row reverse karo. O(1) extra space, aur koi spiral sochna nahi."],
+      ["Grid kis matlab mein pehle se graph hai?", "Har cell node hai aur har legal move edge, aur coordinates adjacency dete hain. To flood fill DFS hai aur unweighted grid par shortest path BFS, bina adjacency list banaaye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "strings",
   n: "Strings & immutability",
   group: "Fundamentals",
-  one: "Where strings are <b>immutable</b> (Python, Java, JS, C#, Go), every <code>+=</code> silently builds a whole new copy, so a loop of concatenations is secretly <b>O(n²)</b>. Collect the pieces, join once.",
+  need: {
+    ask: `<p>You build an answer one character at a time: for each of <var>n</var> input characters, work out an output character and do <code>s += c</code>. On a test with 1,000 characters it is instant. On the real input, <var>n</var> = 100,000, it times out.</p>
+<p>The loop runs once per character, and <code>+=</code> looks like one step. So where did the time go?</p>`,
+    tries: [
+      ["Trust the loop: it is one pass, so O(n)", "Each <code>+=</code> copies the whole string built so far. Step <var>i</var> copies <var>i</var> characters, so the total is 1 + 2 + … + <var>n</var>. At 100,000 that is 5 × 10⁹ character copies."],
+      ["Change the character in place: s[i] = c", "In Python, Java and JavaScript that is an error, not a slow operation. Their strings cannot be changed once made."],
+      ["Pre-fill with spaces, then replace one at a time", "<code>s = s[:i] + c + s[i+1:]</code> builds a whole new string for every replacement. That is <var>n</var> copies of length <var>n</var>: 10¹⁰ characters, worse than before."],
+    ],
+    so: `<p>In most languages a string is <b>immutable</b>: once made, it can never change. So <code>s += "d"</code> does not add a letter. It builds a new string, copies the old one in, then adds the letter. Building <code>"abcd"</code> that way copies 1 + 2 + 3 + 4 = 10 characters for a 4-letter result.</p>
+<p>The fix: collect the pieces in a list, which <i>can</i> grow cheaply, and <b>join once</b> at the end. That writes each character exactly once: 4 for <code>"abcd"</code>, 100,000 for the real input. This page builds <code>"abcd"</code> both ways.</p>`,
+  },
 
-  plain: `<p>A string looks like an array of characters, and for reading it behaves like one: <code>s[3]</code> is O(1) and you can loop over it. In most languages the difference is that you cannot <b>change</b> it: <code>s[0] = 'x'</code> is an error, not a slow operation. (C++ <code>std::string</code> and Java's <code>StringBuilder</code> are the deliberate exceptions. They are mutable buffers, which is exactly why they exist.)</p>
-<p>So in an immutable-string language, what does <code>s += "b"</code> do? It creates an entirely new string, copies the old contents in, appends 'b', and points <code>s</code> at the new object. The old one is thrown away. Do that in a loop and step <i>i</i> copies <i>i</i> characters, the total is 1+2+3+…+n, which is n²/2.</p>
-<p><b>Analogy.</b> A printed page. To "add a word" you do not scribble on it. You reprint the whole page with the extra word. Reprinting once is fine. Reprinting after every single word is how a 10-second solution becomes a timeout.</p>`,
+  one: "Where strings are <b>immutable</b> (Python, Java, JS, C#, Go), every <code>+=</code> silently builds a whole new copy, so a loop of concatenations is secretly <b>O(<var>n</var>²)</b>. Collect the pieces, join once.",
+
+  plain: `<p>A string looks like an array of characters, and for reading it behaves like one: <code>s[3]</code> is O(1), and you can loop over it. The difference, in most languages, is that you cannot <b>change</b> it. <code>s[0] = 'x'</code> is an error. A value that can never change after it is made is called <b>immutable</b>.</p>
+<p>So what does <code>s += "b"</code> do? It builds a brand new string, copies the old contents in, adds <code>b</code>, and points <code>s</code> at the new one. The old one is thrown away. Building <code>"abcd"</code> one letter at a time copies 1, then 2, then 3, then 4 characters: 10 in all.</p>
+<p>C++ <code>std::string</code> and Java's <code>StringBuilder</code> are the exceptions. They are <b>mutable</b> buffers, which is exactly why they exist.</p>
+<p><b>Analogy.</b> A printed page. To add a word you do not scribble on it: you reprint the whole page with the extra word. Reprinting once is fine. Reprinting after every word is how a 10-second solution becomes a timeout.</p>`,
 
   why: [
     { t: "Immutable means replaced, never edited",
-      d: "In most languages a string cannot be changed after it is made. <code>s += \"b\"</code> does not add a character. It builds a <b>brand new string</b>, copies the old one into it, and points your variable at the new one." },
+      d: "In most languages a string cannot change after it is made. <code>s += \"b\"</code> does not add a character. It builds a <b>brand new string</b>, copies the old one into it, and points your variable at the new one." },
     { t: "Languages do this on purpose",
-      d: "If the contents can never change, the hash can be computed once and remembered, which is what lets a string be a <b>map key</b>. It is also safe to share between variables and threads with no copying and no locking." },
+      d: "If the contents never change, the hash can be computed once and remembered. That is what lets a string be a <b>map key</b>. It is also safe to share between variables and threads, with no copying and no locking." },
     { t: "So building in a loop is quietly O(n²)",
-      d: "Step 1 copies 1 character, step 2 copies 2, step 3 copies 3. The total is 1+2+3+…+n = about <b>n²/2</b>. A loop that looks perfectly linear is not. This is the most common hidden timeout in string problems." },
+      d: "Building <code>\"abcd\"</code>: step 1 writes 1 character, step 2 writes 2, then 3, then 4. Total 10. For <var>n</var> letters it is 1 + 2 + … + <var>n</var>, about <b><var>n</var>²/2</b>. At <var>n</var> = 100,000 that is 5 × 10⁹. A loop that looks linear is not." },
     { t: "The fix is to join once at the end",
-      d: "Collect the pieces in a list, then join them in one go. Joining measures the total length, allocates <b>one</b> buffer, and copies each character <b>once</b> → <b>O(n)</b>." },
-    { t: "Most string questions reduce to a canonical form",
-      d: "Two words are anagrams exactly when their letter counts match. So turn each word into one canonical key, its sorted letters, or its letter counts, and group by that key in a map. That is the whole \"group anagrams\" family, derived rather than memorised." },
+      d: "Put the pieces in a list: each append is cheap, since a list grows by doubling. Then join. Joining measures the total length, allocates <b>one</b> buffer, and copies each character <b>once</b>. For <code>\"abcd\"</code> that is 4 writes, and <b>O(<var>n</var>)</b> in general." },
+    { t: "Many string questions reduce to a canonical form",
+      d: "“listen” and “silent” are anagrams because their letter counts match. So turn each word into one standard key: its sorted letters, “eilnst”, or its letter counts. Then group by that key in a map. That is the whole group-anagrams family." },
   ],
 
   variants: [
-    { n: "Naive scan", cost: "O(n \u00b7 m) worst \u00b7 O(1) space",
-      idea: "Try to match the pattern at every position. Restart from scratch after every mismatch.",
+    { n: "Naive scan", cost: "O(n · m) worst · O(1) space",
+      idea: "Try to match the pattern at every position of the text. Restart from scratch after every mismatch.",
       when: "Short patterns, or a one-off. It is what your language's built-in find often does, and it is usually fine.",
-      watch: "The worst case is real: a haystack of <code>aaaa...</code> with a needle of <code>aaab</code> re-reads almost everything, every time." },
-
-    { n: "KMP", cost: "O(n + m) \u00b7 O(m) space",
-      idea: "Precompute, for every prefix of the pattern, the longest proper prefix that is also a suffix. On a mismatch that table says how far you may jump without missing a match, so the haystack pointer never moves backwards.",
-      when: "Guaranteed linear substring search, and any problem about the periodicity of a string.",
-      watch: "The prefix table is the whole difficulty and is easy to be off by one in. Test it against the pattern <code>aabaaab</code> before trusting it. It is derived, drawn and written out on the string search page." },
-
-    { n: "Rabin-Karp", cost: "O(n + m) average \u00b7 O(n \u00b7 m) worst",
-      idea: "Hash the pattern, then roll a hash along the text so each window costs O(1) to update. Compare hashes, and only compare characters when they collide.",
-      when: "Searching for many patterns at once, or detecting duplicate substrings, where hashing many windows is the point.",
-      watch: "Hash collisions mean you must verify a real match, or accept being wrong. An adversarial input can force a collision every time, which is where the worst case comes from." },
-
-    { n: "Z-algorithm", cost: "O(n + m) \u00b7 O(n) space",
-      idea: "For each position, compute the length of the longest substring starting there that is also a prefix of the whole string. Concatenate pattern, a separator, then text, and matches fall out of the table.",
+      watch: "The worst case is real: a text of <code>aaaa...</code> and a pattern of <code>aaab</code> re-reads almost everything, every time." },
+    { n: "KMP", cost: "O(n + m) · O(m) space",
+      idea: "For every prefix of the pattern, precompute the longest proper prefix that is also a suffix. On a mismatch, that table says how far you may jump. The text position never moves backwards.",
+      when: "Guaranteed linear substring search, and any problem about how a string repeats.",
+      watch: "The prefix table is the whole difficulty, and easy to get off by one. Test it on the pattern <code>aabaaab</code> first. The string search page derives it." },
+    { n: "Rabin-Karp", cost: "O(n + m) average · O(n · m) worst",
+      idea: "Hash the pattern, then roll a hash along the text, so each window costs O(1) to update. Compare characters only when the hashes match.",
+      when: "Searching for many patterns at once, or finding duplicate substrings, where hashing many windows is the point.",
+      watch: "Two different strings can share a hash, so check a real match before trusting it. A hostile input can force that every time, which is the worst case." },
+    { n: "Z-algorithm", cost: "O(n + m) · O(n) space",
+      idea: "For each position, find the longest substring starting there that is also a prefix of the whole string. Join pattern, a separator and text, and matches fall out of the table.",
       when: "You want KMP's guarantee with a table that is easier to reason about, or the problem is about prefixes directly.",
-      watch: "The separator must be a character that appears in neither string, or the answer bleeds across the join." },
-
-    { n: "Expand around centre", cost: "O(n\u00b2) time \u00b7 O(1) space",
-      idea: "For palindromes: every palindrome has a centre, so try all 2n-1 centres (each character, and each gap between characters) and expand outwards while the ends match.",
-      when: "Longest palindromic substring, counting palindromic substrings. It is the answer expected in interviews.",
-      watch: "There are two kinds of centre, odd and even. Forgetting the gaps loses every even-length palindrome, and the bug looks like an off-by-one." },
-
-    { n: "Manacher", cost: "O(n) \u00b7 O(n) space",
-      idea: "Expand around centre, but reuse the work already done inside a previously found palindrome instead of starting each expansion cold.",
-      when: "Rarely, honestly. Know it exists so you can name it as the linear alternative when asked.",
+      watch: "The separator must appear in neither string, or matches bleed across the join." },
+    { n: "Expand around centre", cost: "O(n²) time · O(1) space",
+      idea: "For palindromes: every palindrome has a centre. Try all 2<var>n</var> − 1 centres, each character and each gap, and expand outwards while the ends match.",
+      when: "Longest palindromic substring, or counting palindromic substrings. It is the answer interviews expect.",
+      watch: "There are two kinds of centre, odd and even. Forget the gaps and you lose every even-length palindrome, and the bug looks like an off-by-one." },
+    { n: "Manacher", cost: "O(n) · O(n) space",
+      idea: "Expand around centre, but reuse the work already done inside a palindrome found earlier, instead of starting each expansion cold.",
+      when: "Rarely, honestly. Know it exists, so you can name it as the linear alternative when asked.",
       watch: "Nobody expects you to write it under time pressure. Say what it does and offer expand-around-centre." },
   ],
 
   hing: `<p><b>String immutable hai, matlab kya?</b> Zyaadatar languages mein (Python, Java, JS, C#) ek baar bani string badal nahi sakti. (C++ ki <code>std::string</code> aur Java ka <code>StringBuilder</code> jaan-boojh kar mutable hain, isiliye to woh bane hain.) <code>s[0] = 'x'</code> error deta hai. Padhna sab allowed hai, likhna kuch bhi nahi.</p>
 <p><b>Phir <code>s += "b"</code> kya karta hai?</b> Woh purani string ko badalta nahi. Ek <b>naya object</b> banata hai, poori purani string usme copy karta hai, aur phir 'b' lagata hai. Purani cheez kachre mein.</p>
-<p><b>Ab loop mein socho.</b> Pehla step 1 char copy, doosra 2, teesra 3… n-va n. Total = n(n+1)/2 = <b>O(n²)</b>. Code dekhne mein ek simple loop lagta hai, par andar se n² hai. n = 1 lakh par yeh 5 arab character copies. TLE pakka. <b>Yeh interview ka sabse chupa hua bug hai.</b></p>
-<p><b>Sahi tarika:</b> tukde ek <b>list</b> mein daalo (list mutable hai, append O(1)), aur last mein <code>"".join(parts)</code>. join pehle total length nikaalta hai, <b>ek hi baar</b> memory leta hai, har char <b>ek hi baar</b> copy hota hai → <b>O(n)</b>.</p>
+<p><b>Ab loop mein socho.</b> Pehla step 1 char copy, doosra 2, teesra 3… <var>n</var>-va <var>n</var>. Total = <var>n</var>(<var>n</var>+1)/2 = <b>O(<var>n</var>²)</b>. Code dekhne mein ek simple loop lagta hai, par andar se <var>n</var>² hai. <var>n</var> = 1 lakh par yeh 5 arab character copies. TLE pakka. <b>Yeh interview ka sabse chupa hua bug hai.</b></p>
+<p><b>Sahi tarika:</b> tukde ek <b>list</b> mein daalo (list mutable hai, append O(1)), aur last mein <code>"".join(parts)</code>. join pehle total length nikaalta hai, <b>ek hi baar</b> memory leta hai, har char <b>ek hi baar</b> copy hota hai, to <b>O(<var>n</var>)</b>.</p>
 <p><b>Immutable rakha hi kyun?</b> Kyunki tabhi string <b>dict ki key</b> ban sakti hai. Hash ek baar calculate karke cache ho jaata hai. Agar string badal sakti, to key ka hash badal jaata aur dictionary ka data kho jaata. Yeh feature hai, bug nahi.</p>
 <p><b>Anagram problems ka asli funda:</b> do strings anagram hain agar dono ke character counts same hon. To har string ka ek <b>canonical form</b> banao, <code>sorted(s)</code> ya 26-size count tuple, aur usi ko hash map ki key bana do. Group Anagrams ka poora solution bas yahi hai.</p>`,
 
@@ -2336,64 +3175,68 @@ function rotate90(g) {
   see: [["DOC", "https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str", "Python docs, str methods"]],
 
   math: [
-    { t: "The quadratic hiding inside a one-line loop", d: "Each += builds a whole new string, so the cost of step i is the length so far. Add those up and the loop is not linear at all.", w:
+    { t: "The quadratic hiding inside a one-line loop", d: "Each += builds a whole new string, so step <var>i</var> costs the length so far. Add those up and the loop is not linear at all.", w:
 `s = ""
-for i in 1..n:  s += "x"      # each += copies everything
+for c in "abcd":  s += c        # each += copies everything
 
-characters copied = 1 + 2 + 3 + ... + n = n(n+1)/2
+"a"      1 written
+"ab"     2 written    (a copied again)
+"abc"    3 written
+"abcd"   4 written    total 1 + 2 + 3 + 4 = 10
 
+for n letters:  1 + 2 + ... + n = n(n+1)/2
 n = 1,000        500,500
 n = 100,000      5 x 10^9      seconds
 n = 1,000,000    5 x 10^11     do not` },
-    { t: "Join once and the sum collapses", d: "Collect the pieces in a list, which appends in amortised constant time, then walk the list once and allocate the result a single time.", w:
+    { t: "Join once and the sum collapses", d: "Collect the pieces in a list, which appends in amortised constant time. Then walk the list once and build the result a single time.", w:
 `parts = []
-for i in 1..n: parts.append("x")    # n appends, amortised O(1)
-"".join(parts)                      # one pass, n characters
+for c in "abcd": parts.append(c)    # 4 cheap appends
+"".join(parts)                      # 4 characters written
 
-total: n + n = 2n
+for n letters:  n appends + n writes = 2n
 
 n = 100,000:  200,000 operations instead of 5 x 10^9
 the same output, about 25,000x apart` },
-    { t: "Substrings, counted, which is why brute force dies early", d: "The count is quadratic and the total length is cubic, so enumerating substrings is affordable only on very small n.", w:
-`a string of length n has n(n+1)/2 non-empty substrings
+    { t: "Substrings, counted, which is why brute force dies early", d: "The count is quadratic and the total length is cubic, so listing every substring is affordable only for small <var>n</var>.", w:
+`"abcd" has 4 + 3 + 2 + 1 = 10 non-empty substrings
+a string of length n has n(n+1)/2
 
 n = 1,000      500,500        fine
 n = 10,000     5 x 10^7       borderline
 n = 100,000    5 x 10^9       no
 
-and materialising them all copies
-  1x1 + 2x2 + ... = n(n+1)(n+2)/6  ~  n^3/6 characters` },
-    { t: "Anagram and palindrome checks, priced against each other", d: "The sorting answer is the one everyone reaches for first. Counting is strictly better whenever the alphabet is small, which in interviews it always is.", w:
-`n = string length, k = alphabet size (26 for lowercase)
+and building them all copies about n^3/6 characters` },
+    { t: "Anagram checks, priced against each other", d: "Sorting is the answer everyone reaches for first. Counting is better whenever the alphabet is small, which in interviews it nearly always is.", w:
+`"listen" vs "silent"
 
-sort both, compare    O(n log n) time, O(n) space
-count both, compare   O(n) time,       O(k) space
-one count array, +/-  O(n) time,       O(k) space, one pass
+sort both:   "eilnst" == "eilnst"     O(n log n), O(n) space
+count both:  e1 i1 l1 n1 s1 t1         O(n) time,  O(A) space
+             (A = alphabet size, 26 for lowercase)
 
 n = 10^5:  1.7 x 10^6 comparisons  vs  2 x 10^5 increments` },
   ],
 
   costs: [
-    ["s[i]", "O(1)", "contiguous, like an array"],
-    ["s += t inside a loop", "O(n²) total", "each step copies everything before it, the classic trap"],
-    ["\"\".join(list)", "O(n)", "one allocation, each char copied once"],
-    ["s1 == s2", "O(n) worst", "length check first, so unequal lengths are O(1)"],
-    ["sorted(s)", "O(k log k)", "anagram canonical key"],
-    ["character count map", "O(k)", "frequency key, cheaper than sorting"],
+    ["s[i]", "O(1)", "stored side by side, like an array"],
+    ["s += t inside a loop", "O(n²) total", "each step copies everything before it: the classic trap"],
+    ["\"\".join(list)", "O(n)", "one allocation, each character copied once"],
+    ["s1 == s2", "O(n) worst", "length checked first, so unequal lengths are O(1)"],
+    ["sorted(s)", "O(k log k)", "the anagram key by sorting, for a word of k letters"],
+    ["character count map", "O(k)", "the anagram key by counting, cheaper than sorting"],
     ["s in big_string", "O(n·m) worst", "substring search; O(n+m) with KMP"],
   ],
 
   traps: [
-    "<b>Building output with += in a loop.</b> The single most common hidden O(n²) in string problems. Always accumulate into a list.",
-    "<b>Slicing in a recursion.</b> <code>helper(s[1:])</code> copies the string at every level → O(n²). Pass an index instead.",
-    "<b>Assuming 26 lowercase letters.</b> Ask about Unicode, digits, spaces, and case before hard-coding <code>[0]*26</code>.",
-    "<b>Reversing with a loop.</b> <code>s[::-1]</code> is O(n) and one line; a manual char-by-char build is O(n²).",
+    "<b>Building output with += in a loop.</b> The most common hidden O(<var>n</var>²) in string problems. Always collect into a list.",
+    "<b>Slicing in a recursion.</b> <code>helper(s[1:])</code> copies the string at every level, which makes it O(<var>n</var>²). Pass an index instead.",
+    "<b>Assuming 26 lowercase letters.</b> Ask about Unicode, digits, spaces and case before hard-coding <code>[0]*26</code>.",
+    "<b>Reversing with a loop.</b> <code>s[::-1]</code> is O(<var>n</var>) and one line. Building it character by character with += is O(<var>n</var>²).",
   ],
 
   impl: [
     ["Python", "str (immutable) · list + \"\".join()", "+= in a loop is O(n²). Build a list, join once."],
-    ["Java", "String (immutable) · StringBuilder", "StringBuilder IS the mutable buffer, sb.append() then sb.toString()."],
-    ["C++", "std::string (MUTABLE)", "s += c really is amortised O(1) here. The trap does not apply. reserve() to avoid regrowth."],
+    ["Java", "String (immutable) · StringBuilder", "StringBuilder is the mutable buffer: sb.append(), then sb.toString()."],
+    ["C++", "std::string (MUTABLE)", "s += c really is amortised O(1) here, so the trap does not apply. reserve() avoids regrowth."],
     ["JavaScript", "String (immutable)", "Engines optimise += with ropes, but the safe habit is parts.push(...) then parts.join(\"\")."],
   ],
 
@@ -2528,14 +3371,14 @@ function isPal(s) {
   return true;
 }`,
   },
-  codecap: "join for building, Counter for comparing, two pointers for palindromes, three moves cover most string questions.",
+  codecap: "join for building, Counter for comparing, two pointers for palindromes: three moves cover most string questions.",
 
   q: [
-    ["Why is a loop of s += c O(n²)?", "Strings are immutable, so each += allocates a new string and copies everything so far. Copies are 1+2+…+n = n(n+1)/2 = O(n²)."],
-    ["What exactly makes \"\".join(parts) O(n)?", "It scans once to compute the total length, allocates a single buffer, then copies each character exactly once, no repeated re-copying."],
-    ["Why does immutability let a string be a dict key?", "Its hash can be computed once and cached because it can never change. A mutable key would change its hash after insertion and become unfindable."],
-    ["Two ways to build an anagram key, and their costs?", "sorted(s) → O(k log k); a 26-length count tuple (or Counter) → O(k). Both give equal keys for anagrams; the count version is faster."],
-    ["Why avoid s[1:] in recursion?", "Slicing copies, so an O(n)-deep recursion each copying O(n) becomes O(n²). Pass a start index and slice nothing."],
+    ["Why is a loop of s += c O(n²)?", "Strings are immutable, so each += allocates a new string and copies everything so far. The copies are 1 + 2 + … + n = n(n+1)/2, which is O(n²)."],
+    ["What exactly makes \"\".join(parts) O(n)?", "It scans once to find the total length, allocates a single buffer, then copies each character exactly once. Nothing is copied twice."],
+    ["Why does immutability let a string be a dict key?", "Its hash can be computed once and cached, because the string can never change. A mutable key could change its hash after insertion and become impossible to find."],
+    ["Two ways to build an anagram key, and their costs?", "For a word of k letters, sorted(s) is O(k log k). A 26-length count tuple, or a Counter, is O(k). Both give equal keys for anagrams, and the count is faster."],
+    ["Why avoid s[1:] in recursion?", "Slicing copies. An O(n)-deep recursion that copies O(n) at each level becomes O(n²). Pass a start index and slice nothing."],
   ],
 
   p: [
@@ -2545,89 +3388,208 @@ function isPal(s) {
     [5, "longest-palindromic-substring", "Longest Palindromic Substring, expand from centre", "M"],
     [3, "longest-substring-without-repeating-characters", "Longest Substring Without Repeats", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Aap answer ek ek character karke bana rahe ho: har <var>n</var> input character ke liye ek output character nikaalo aur <code>s += c</code> karo. 1,000 characters ke test par turant. Asli input, <var>n</var> = 100,000, par timeout.</p>
+<p>Loop har character par ek baar chalta hai, aur <code>+=</code> ek step jaisa dikhta hai. To time gaya kahan?</p>`,
+      tries: [
+        ["Loop par bharosa karo: ek pass hai, to O(n)", "Har <code>+=</code> ab tak bani poori string copy karta hai. Step <var>i</var> <var>i</var> characters copy karta hai, to total 1 + 2 + … + <var>n</var>. 100,000 par yeh 5 × 10⁹ character copies hain."],
+        ["Character wahin badal do: s[i] = c", "Python, Java aur JavaScript mein yeh error hai, slow operation nahi. Unki strings ek baar banne ke baad badal nahi sakti."],
+        ["Pehle spaces bhar do, phir ek ek replace karo", "<code>s = s[:i] + c + s[i+1:]</code> har replacement par poori nayi string banata hai. Yeh <var>n</var> length ki <var>n</var> copies hain: 10¹⁰ characters, pehle se bhi bura."],
+      ],
+      so: `<p>Zyadatar languages mein string <b>immutable</b> hai: ek baar bani to kabhi nahi badalti. To <code>s += "d"</code> letter nahi jodta. Woh nayi string banata hai, purani usme copy karta hai, phir letter jodta hai. Aise <code>"abcd"</code> banane mein 4 letter ke result ke liye 1 + 2 + 3 + 4 = 10 characters copy hote hain.</p>
+<p>Fix: tukde ek list mein jama karo, jo sasti se badh <i>sakti</i> hai, aur end mein <b>ek baar join</b> karo. Isse har character theek ek baar likha jaata hai: <code>"abcd"</code> ke liye 4, asli input ke liye 100,000. Yeh page <code>"abcd"</code> dono tareekon se banata hai.</p>`,
+    },
+
+    one: "Jahan strings <b>immutable</b> hain (Python, Java, JS, C#, Go), har <code>+=</code> chupchaap poori nayi copy banata hai, to concatenation ka loop chupke se <b>O(<var>n</var>²)</b> hai. Tukde jama karo, ek baar join karo.",
+
+    plain: `<p>String characters ke array jaisi dikhti hai, aur padhne mein waisi hi hai: <code>s[3]</code> O(1) hai, aur us par loop chala sakte ho. Farak yeh hai ki zyadatar languages mein use <b>badal</b> nahi sakte. <code>s[0] = 'x'</code> error hai. Jo value banne ke baad kabhi na badle, use <b>immutable</b> kehte hain.</p>
+<p>To <code>s += "b"</code> kya karta hai? Ek bilkul nayi string banata hai, purana content copy karta hai, <code>b</code> jodta hai, aur <code>s</code> ko nayi par point karta hai. Purani phenk di jaati hai. <code>"abcd"</code> ek ek letter se banao to pehle 1, phir 2, phir 3, phir 4 characters copy hote hain: kul 10.</p>
+<p>C++ ki <code>std::string</code> aur Java ka <code>StringBuilder</code> exceptions hain. Yeh <b>mutable</b> buffers hain, aur isiliye bane hain.</p>
+<p><b>Analogy.</b> Chhapa hua page. Ek word jodne ke liye us par kuch likhte nahi: extra word ke saath poora page dobara chhaapte ho. Ek baar chhaapna theek hai. Har word ke baad chhaapna hi 10 second ke solution ko timeout banata hai.</p>`,
+
+    why: [
+      { t: "Immutable matlab badla jaata hai, edit nahi hota",
+        d: "Zyadatar languages mein string banne ke baad nahi badalti. <code>s += \"b\"</code> character nahi jodta. Woh <b>bilkul nayi string</b> banata hai, purani usme copy karta hai, aur aapke variable ko nayi par point karta hai." },
+      { t: "Languages yeh jaan-boojh kar karti hain",
+        d: "Content kabhi nahi badalta, to hash ek baar nikaal kar yaad rakh sakte ho. Isi se string <b>map key</b> ban paati hai. Use variables aur threads ke beech share karna bhi safe hai, bina copy aur bina lock ke." },
+      { t: "To loop mein banana chupke se O(n²) hai",
+        d: "<code>\"abcd\"</code> banana: step 1 mein 1 character likha, step 2 mein 2, phir 3, phir 4. Kul 10. <var>n</var> letters ke liye 1 + 2 + … + <var>n</var>, lagbhag <b><var>n</var>²/2</b>. <var>n</var> = 100,000 par yeh 5 × 10⁹ hai. Jo loop linear dikhta hai, woh hai nahi." },
+      { t: "Fix: end mein ek baar join",
+        d: "Tukde list mein rakho: har append sasta hai, kyunki list doubling se badhti hai. Phir join karo. Join total length naapta hai, <b>ek</b> buffer leta hai, aur har character <b>ek baar</b> copy karta hai. <code>\"abcd\"</code> ke liye 4 writes, aur general mein <b>O(<var>n</var>)</b>." },
+      { t: "Bahut se string sawaal ek canonical form par aate hain",
+        d: "“listen” aur “silent” anagrams hain kyunki unke letter counts same hain. To har word ko ek standard key banao: uske sorted letters, “eilnst”, ya letter counts. Phir us key se map mein group karo. Group-anagrams ki poori family yahi hai." },
+    ],
+
+    variants: [
+      { n: "Naive scan", cost: "O(n · m) worst · O(1) space",
+        idea: "Text ki har position par pattern match karke dekho. Har mismatch ke baad shuru se.",
+        when: "Chhote patterns, ya ek baar ka kaam. Aapki language ka built-in find aksar yahi karta hai, aur aam taur par theek hai.",
+        watch: "Worst case asli hai: <code>aaaa...</code> text aur <code>aaab</code> pattern har baar lagbhag sab dobara padhte hain." },
+      { n: "KMP", cost: "O(n + m) · O(m) space",
+        idea: "Pattern ke har prefix ke liye sabse lamba proper prefix nikaal lo jo suffix bhi ho. Mismatch par yeh table batata hai kitna jump kar sakte ho. Text ki position kabhi peeche nahi jaati.",
+        when: "Guaranteed linear substring search, aur koi bhi problem ki string kaise repeat hoti hai.",
+        watch: "Poori mushkil prefix table hai, aur off by one hona aasaan hai. Pehle pattern <code>aabaaab</code> par test karo. String search page ise derive karta hai." },
+      { n: "Rabin-Karp", cost: "O(n + m) average · O(n · m) worst",
+        idea: "Pattern ka hash nikaalo, phir text par hash roll karo, taaki har window update O(1) ho. Characters tabhi compare karo jab hashes match karein.",
+        when: "Ek saath bahut saare patterns dhoondhna, ya duplicate substrings, jahan bahut windows hash karna hi point hai.",
+        watch: "Do alag strings ka hash same ho sakta hai, to bharosa karne se pehle asli match check karo. Dushman input yeh har baar karwa sakta hai, wahi worst case hai." },
+      { n: "Z-algorithm", cost: "O(n + m) · O(n) space",
+        idea: "Har position ke liye wahan se shuru hone wala sabse lamba substring nikaalo jo poori string ka prefix bhi ho. Pattern, separator aur text jodo, aur matches table se nikal aate hain.",
+        when: "KMP wali guarantee chahiye par aisi table jo samajhna aasaan ho, ya problem seedhe prefixes ke baare mein ho.",
+        watch: "Separator dono strings mein nahi hona chahiye, warna matches jod ke paar beh jaate hain." },
+      { n: "Expand around centre", cost: "O(n²) time · O(1) space",
+        idea: "Palindromes ke liye: har palindrome ka ek centre hota hai. Saare 2<var>n</var> − 1 centres try karo, har character aur har gap, aur jab tak kinaare match karein bahar failao.",
+        when: "Longest palindromic substring, ya palindromic substrings ginna. Interviews yahi answer chahte hain.",
+        watch: "Do tarah ke centre hain, odd aur even. Gaps bhoole to har even-length palindrome gaya, aur bug off-by-one jaisa dikhta hai." },
+      { n: "Manacher", cost: "O(n) · O(n) space",
+        idea: "Expand around centre, par pehle mile palindrome ke andar kiya kaam dobara use karo, har expansion zero se shuru karne ki jagah.",
+        when: "Sach kahein to kabhi kabhi. Bas pata ho ki hai, taaki poochhe jaane par linear alternative ka naam le sako.",
+        watch: "Time pressure mein koi ise likhne ki ummeed nahi karta. Batao kya karta hai aur expand-around-centre offer karo." },
+    ],
+
+    math: [
+      { t: "Ek line ke loop mein chhupa quadratic", d: "Har += poori nayi string banata hai, to step <var>i</var> ki cost ab tak ki length hai. Jodo to loop bilkul linear nahi." },
+      { t: "Ek baar join karo aur jodh simat jaata hai", d: "Tukde list mein jama karo, jo amortised constant time mein append karti hai. Phir list par ek baar chalo aur result ek hi baar banao." },
+      { t: "Substrings, gin ke, isiliye brute force jaldi marta hai", d: "Ginti quadratic hai aur kul length cubic, to har substring list karna sirf chhote <var>n</var> par afford hota hai." },
+      { t: "Anagram checks, ek doosre ke against", d: "Sort sabse pehle sabko sujhta hai. Jab alphabet chhota ho, jo interviews mein lagbhag hamesha hota hai, counting behtar hai." },
+    ],
+
+    costs: [
+      ["s[i]", "O(1)", "array ki tarah saath saath store"],
+      ["loop mein s += t", "O(n²) total", "har step pehle ka sab copy karta hai: classic jaal"],
+      ["\"\".join(list)", "O(n)", "ek allocation, har character ek baar copy"],
+      ["s1 == s2", "O(n) worst", "pehle length check, to alag lengths O(1)"],
+      ["sorted(s)", "O(k log k)", "sort se anagram key, k letters ke word ke liye"],
+      ["character count map", "O(k)", "count se anagram key, sort se sasta"],
+      ["s in big_string", "O(n·m) worst", "substring search; KMP se O(n+m)"],
+    ],
+
+    traps: [
+      "<b>Loop mein += se output banana.</b> String problems ka sabse common chhupa O(<var>n</var>²). Hamesha list mein jama karo.",
+      "<b>Recursion mein slicing.</b> <code>helper(s[1:])</code> har level par string copy karta hai, jo O(<var>n</var>²) banata hai. Index pass karo.",
+      "<b>26 lowercase letters maan lena.</b> <code>[0]*26</code> hard-code karne se pehle Unicode, digits, spaces aur case ke baare mein poochho.",
+      "<b>Loop se reverse karna.</b> <code>s[::-1]</code> O(<var>n</var>) aur ek line hai. += se character by character banana O(<var>n</var>²) hai.",
+    ],
+
+    impl: [
+      ["Python", "str (immutable) · list + \"\".join()", "Loop mein += O(n²) hai. List banao, ek baar join."],
+      ["Java", "String (immutable) · StringBuilder", "StringBuilder hi mutable buffer hai: sb.append(), phir sb.toString()."],
+      ["C++", "std::string (MUTABLE)", "Yahan s += c sach mein amortised O(1) hai, to jaal lagu nahi hota. reserve() regrowth se bachata hai."],
+      ["JavaScript", "String (immutable)", "Engines += ko ropes se optimise karte hain, par safe aadat hai parts.push(...) phir parts.join(\"\")."],
+    ],
+
+    codecap: "Banane ke liye join, compare ke liye Counter, palindromes ke liye two pointers: teen moves zyadatar string sawaal cover karte hain.",
+
+    q: [
+      ["s += c ka loop O(n²) kyun hai?", "Strings immutable hain, to har += nayi string allocate karke ab tak ka sab copy karta hai. Copies 1 + 2 + … + n = n(n+1)/2 hain, jo O(n²) hai."],
+      ["\"\".join(parts) exactly O(n) kyun hai?", "Yeh ek baar scan karke total length nikaalta hai, ek buffer leta hai, phir har character theek ek baar copy karta hai. Kuch do baar copy nahi hota."],
+      ["Immutability se string dict key kaise ban paati hai?", "Uska hash ek baar nikaal kar cache ho sakta hai, kyunki string kabhi nahi badalti. Mutable key insert ke baad apna hash badal sakti thi aur phir mil hi nahi paati."],
+      ["Anagram key banane ke do tareeke, aur unki cost?", "k letters ke word ke liye sorted(s) O(k log k) hai. 26-length count tuple, ya Counter, O(k) hai. Dono anagrams ke liye same key dete hain, aur count tez hai."],
+      ["Recursion mein s[1:] se kyun bachein?", "Slicing copy karti hai. O(n) gehri recursion jo har level par O(n) copy kare, O(n²) ban jaati hai. Start index pass karo aur kuch slice mat karo."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "hashing",
   n: "Hashing, dict & set",
   group: "Fundamentals",
-  one: "A hash map <b>computes the address from the key</b> instead of searching for it. That is the entire idea, and it is why \"have I seen this before?\" costs O(1) instead of O(n).",
+  need: {
+    ask: `<p>Two Sum: given an array of numbers and a target, find two numbers that add up to the target. The real input has <b>10⁵ numbers</b>, each anywhere from −10⁹ to 10⁹, and a one-second limit.</p>
+<p>Walking through once, each number <var>x</var> needs a partner, <var>target</var> − <var>x</var>. So the whole problem is one question asked 10⁵ times: <b>have I already seen this number?</b></p>`,
+    tries: [
+      ["Check every pair", "About <var>n</var>² / 2 = 5 × 10⁹ pair checks at <var>n</var> = 10⁵. That is roughly 50 seconds."],
+      ["Keep the numbers seen so far in a list", "Now each “have I seen it?” scans the list. That is still up to 10⁵ comparisons per number, so the same 5 × 10⁹ in total."],
+      ["Use an array indexed by the number: seen[x] = true", "Instant, if the values were small. They go up to 10⁹, so the array needs 2 × 10⁹ slots, about 2 GB even as bytes. And −5 is not an index at all."],
+    ],
+    so: `<p>The array idea was right: jump straight to where <var>x</var> would be. It just needs the key squeezed into a small table first. A <b>hash function</b> turns any key into a number, and the remainder after dividing by the table size gives a <b>slot</b>. With a 7-slot table, 10 goes to slot 10 mod 7 = 3.</p>
+<p>That is a <b>hash map</b>, or a <b>hash set</b> when you store keys alone. Each “seen it?” is one computation and a look in one slot: O(1) on average. The page follows one small run: <code>[3, 10, 4, 6]</code> with target 10, in a table of 7 slots.</p>`,
+  },
 
-  plain: `<p>Suppose you must answer "is 47 in this collection?" thousands of times. With a list you scan, O(n) each time. With a sorted array you binary search, O(log n). A hash map does something different in kind: it <b>calculates where 47 would live</b> and looks only there.</p>
-<p>The recipe is three steps. Run the key through a hash function to get a big integer. Take that number modulo the table size, meaning the remainder after dividing by it, to get a slot. Use the slot directly. No comparisons with other keys, no scanning. Insert, lookup and delete are all one computation → O(1) average.</p>
-<p><b>Analogy.</b> A library where a book's shelf is <i>derived from its title</i> by a fixed rule, instead of being recorded in a catalogue. You never search the catalogue. You apply the rule and walk straight to the shelf. Occasionally two books land on the same shelf (a <b>collision</b>), so you glance through the two or three books there. Keep the library big enough and that glance is always tiny.</p>`,
+  one: "A hash map <b>computes the address from the key</b> instead of searching for it. That is the entire idea, and it is why “have I seen this before?” costs O(1) instead of O(<var>n</var>).",
+
+  plain: `<p>You have to answer “is 6 in this collection?” thousands of times. With a list you scan: O(<var>n</var>) each time. With a sorted array you binary search: O(log <var>n</var>). A hash map does something different in kind. It <b>calculates where 6 would live</b>, and looks only there.</p>
+<p>The recipe has three steps. Run the key through a <b>hash function</b> to get a number. Take the remainder after dividing by the table size: that is the <b>slot</b>. Go straight to that slot. With 7 slots, 4 lives in slot 4 and 10 in slot 3. No comparisons with other keys, no scanning.</p>
+<p>Two keys can land in the same slot: 3 and 10 both go to slot 3. That is a <b>collision</b>, and the slot simply keeps a short list. Keep the table roomy and those lists stay one or two long.</p>
+<p><b>Analogy.</b> A library where a book's shelf is worked out from its title by a fixed rule. You never search a catalogue: you apply the rule and walk to the shelf. Now and then two books share a shelf, so you glance at the two or three there.</p>`,
 
   why: [
-    { t: "Arrays are already O(1), but only for integer indices",
-      d: "<code>a[5]</code> is instant, because 5 <i>is</i> the address. Names, words and tuples get no such luck and fall back to scanning. So the question is: can we turn any key into an integer?" },
+    { t: "Arrays are already O(1), but only for small integer indices",
+      d: "<code>a[5]</code> is instant, because 5 <i>is</i> the position. But 10⁹ is too big to be a position, and words or tuples are not numbers at all. So the question is: can any key be turned into a small integer?" },
     { t: "A hash function is that translator",
-      d: "<code>hash(key)</code> turns any key into a big number, always the same number for the same key. Take it modulo the table size and you have a slot number. The key now <b>computes its own address</b>. Nothing is searched." },
+      d: "<code>hash(key)</code> turns a key into a number, always the same one for the same key. Take it modulo the table size and you have a slot. In our 7-slot table, 4 → slot 4, 10 → slot 3. The key <b>computes its own address</b>. Nothing is searched." },
     { t: "Collisions are guaranteed, so plan for them",
-      d: "There are unlimited possible keys and a limited number of slots, so two keys must eventually land on the same one. A hash table is therefore never just a hash function. It is a hash function <b>plus</b> a plan for collisions: keep a small list in each slot." },
+      d: "There are endless possible keys and only 7 slots, so two keys must share one eventually. Here 3 and 10 both land in slot 3. So a hash table is always a hash function <b>plus</b> a plan for collisions: each slot keeps a short list." },
     { t: "Keep the table roomy and those lists stay tiny",
-      d: "Once the table is about two-thirds full it allocates a bigger one and re-files everything. That resize is O(n), but it happens rarely, so inserts stay <b>O(1) amortised</b>, the same doubling trick as a growable array." },
+      d: "When the table gets about three-quarters full, it builds one twice the size and re-files every key. That resize is O(<var>n</var>), but rare, so inserts stay <b>O(1) amortised</b>. It is the same doubling trick a growable array uses." },
     { t: "Which is why it is O(1) average, not O(1) always",
-      d: "If every key collided, one slot would hold everything and a lookup would be a scan: <b>O(n)</b>. That never happens by accident, but say the distinction out loud. It is a standard follow-up." },
-    { t: "Keys must be immutable, and now you know why",
-      d: "The slot comes from the contents. Change the contents after inserting and the entry is sitting in the wrong slot, unreachable. That is the whole reason a list cannot be a key and a tuple can." },
+      d: "If every key collided, one slot would hold everything, and a lookup would be a scan: <b>O(<var>n</var>)</b>. That does not happen by accident, but an attacker who knows the hash function can force it. Say the difference out loud; it is a standard follow-up." },
+    { t: "Keys must be immutable, and now you can see why",
+      d: "The slot comes from the key's contents. Change the contents after inserting, and the entry sits in the wrong slot, unreachable. That is why a list cannot be a key and a tuple can." },
   ],
 
   variants: [
     { n: "Seen set", cost: "O(1) average per check",
-      idea: "The simplest use and the most common: has this been encountered before.",
-      when: "Duplicate detection, cycle detection, visited marking in a traversal.",
-      watch: "Using a list instead of a set here is the single most common accidental O(n squared) in interviews." },
-
+      idea: "The simplest use and the most common: has this been met before?",
+      when: "Duplicate detection, cycle detection, marking visited nodes in a traversal.",
+      watch: "Using a list instead of a set here is the most common accidental O(<var>n</var>²) in interviews." },
     { n: "Complement lookup", cost: "O(n) for the whole pass",
-      idea: "While scanning, ask whether the thing that would complete the answer has already gone past. Two Sum is the archetype.",
-      when: "Pair or subarray questions where a target relates two values.",
-      watch: "Store the value AFTER checking for its complement, or an element pairs with itself." },
-
+      idea: "While scanning, ask whether the thing that would complete the answer has already gone past. Two Sum on <code>[3, 10, 4, 6]</code> is the example: at 6, look for 4.",
+      when: "Pair or subarray questions where a target links two values.",
+      watch: "Check for the complement <i>before</i> storing the current value. Otherwise, with target 8, a single 4 pairs with itself." },
     { n: "Canonical key grouping", cost: "O(n · k) for k-length keys",
-      idea: "Map each item to a normalised form and bucket by that. Sorted letters for anagrams, a count tuple, a shape signature.",
-      when: "Grouping things that are equivalent under some transformation.",
-      watch: "The key must be immutable and must compare by value, so tuples and strings, not lists." },
-
+      idea: "Map each item to a standard form and group by it: sorted letters for anagrams, a count tuple, a shape signature.",
+      when: "Grouping things that count as equal after some transformation.",
+      watch: "The key must be immutable and compare by value, so tuples and strings, not lists." },
     { n: "Prefix or rolling hash", cost: "O(1) per substring after O(n) setup",
-      idea: "Hash every prefix so any substring's hash is a difference, or roll a window hash forward in constant time.",
-      when: "Comparing many substrings, detecting repeated blocks, Rabin-Karp search.",
-      watch: "Collisions are possible, so verify a real match unless you accept being probably right. See the string search subtopics." },
-
+      idea: "Hash every prefix, so any substring's hash comes from two of them. Or roll a window's hash forward in constant time.",
+      when: "Comparing many substrings, finding repeated blocks, Rabin-Karp search.",
+      watch: "Two different strings can share a hash, so confirm a real match unless “probably right” is acceptable." },
     { n: "LRU cache, hash map plus doubly linked list", cost: "O(1) get and put",
-      idea: "The map finds a node instantly; the list keeps usage order so the least recent is always at the tail. Every access unlinks its node and relinks it at the head.",
-      when: "The classic design question, and the actual structure behind most caches.",
-      watch: "A singly linked list will not do, because unlinking a node in O(1) needs its predecessor. That requirement is the entire reason the list is doubly linked, and it is what the question is really testing. See the LRU cache page for the whole structure." },
+      idea: "The map finds a node instantly. The list keeps the order of use, so the least recently used is always at the tail. Every access moves its node to the head.",
+      when: "The classic design question, and the structure behind most real caches.",
+      watch: "A singly linked list will not do: removing a node in O(1) needs its predecessor. That is why the list is doubly linked, and it is what the question really tests." },
   ],
 
   hing: `<p><b>Hash map ka core idea ek line mein:</b> key ko <b>dhoondte nahi</b>, key se address <b>nikaalte</b> hain.</p>
 <p><b>Kaise?</b> <code>hash(key)</code> se ek bada number banao, phir <code>% table_size</code> se usse chhota index banao. Bas, us index par seedha jao. Na koi comparison, na koi scan. Isliye insert / lookup / delete sab <b>O(1) average</b>.</p>
-<p><b>Collision kya hai, aur hota hi kyun hai?</b> Keys infinite, slots limited. To do keys ka same slot par aana <b>mathematically pakka</b> hai (pigeonhole principle). Isliye hash table = hash function + <b>collision ka plan</b>. Plan: us slot par ek chhoti list rakho (chaining), aur table ko hamesha thoda khaali rakho (load factor ~2/3 se kam) taaki har list ~1 lambi rahe.</p>
-<p><b>To O(1) jhooth hai?</b> Nahi, par adhoora hai. Sach yeh hai: <b>average O(1), worst case O(n)</b>. Agar saari keys ek hi slot par aa jaayein to woh list ban jaati hai aur scan karna padta hai. Interview mein yeh khud se bolo, interviewer isi follow-up ka intezaar kar raha hota hai.</p>
+<p><b>Collision kya hai, aur hota hi kyun hai?</b> Keys infinite, slots limited. To do keys ka same slot par aana <b>mathematically pakka</b> hai (pigeonhole principle). Isliye hash table = hash function + <b>collision ka plan</b>. Plan: us slot par ek chhoti list rakho (chaining), aur table ko hamesha thoda khaali rakho taaki har list lagbhag 1 lambi rahe.</p>
+<p><b>To O(1) jhooth hai?</b> Nahi, par adhoora hai. Sach yeh hai: <b>average O(1), worst case O(<var>n</var>)</b>. Agar saari keys ek hi slot par aa jaayein to woh list ban jaati hai aur scan karna padta hai. Interview mein yeh khud se bolo, interviewer isi follow-up ka intezaar kar raha hota hai.</p>
 <p><b>List key kyun nahi ban sakti?</b> Kyunki address contents se banta hai. List badal gayi to hash badal gaya, aur entry galat slot mein reh gayi, hamesha ke liye gum. Isliye sirf <b>immutable</b> cheezein keys ban sakti hain: string, number, tuple.</p>
-<p><b>Problem mein kab pakadna hai?</b> Jab bhi sawaal mein aaye, "pehle dekha hai kya?", "kitni baar aaya?", "pair banao", "group karo", <b>turant dict/set socho</b>. Tum O(n) extra memory de rahe ho aur badle mein time se poora ek factor of n hata rahe ho. Two Sum ka O(n²) → O(n) bilkul yahi trade hai.</p>`,
+<p><b>Problem mein kab pakadna hai?</b> Jab bhi sawaal mein aaye, "pehle dekha hai kya?", "kitni baar aaya?", "pair banao", "group karo", <b>turant dict/set socho</b>. Tum O(<var>n</var>) extra memory de rahe ho aur badle mein time se poora ek factor of <var>n</var> hata rahe ho. Two Sum ka O(<var>n</var>²) se O(<var>n</var>) bilkul yahi trade hai.</p>`,
 
   viz: ["hashmap"],
   see: [["VA", "https://visualgo.net/en/hashtable", "VisuAlgo, hash table with collisions, animated"]],
 
   math: [
-    { t: "The average case, and the number it depends on", d: "The chain length is the load factor, nothing else. So O(1) is not a property of hashing, it is a property of keeping the table roomy.", w:
+    { t: "Two Sum on [3, 10, 4, 6], target 10, slot = x mod 7", d: "One pass. For each number, look for its partner in one slot, then store the number itself.", w:
+`x    need    look in slot     found?    store x in slot
+3    7       7 mod 7 = 0      no        3 mod 7  = 3
+10   0       0 mod 7 = 0      no        10 mod 7 = 3   (collides)
+4    6       6 mod 7 = 6      no        4 mod 7  = 4
+6    4       4 mod 7 = 4      yes       done: 4 + 6 = 10
+
+4 numbers, 4 lookups, 1 slot checked per lookup` },
+    { t: "The average case, and the number it depends on", d: "The chain length is the load factor, keys divided by slots, and nothing else. So O(1) is not a property of hashing. It is a property of keeping the table roomy.", w:
 `n keys, b buckets, load factor a = n / b
 expected chain length = a
-one lookup = hash + a comparisons on average
 
+our table:  n = 3 stored, b = 7    a = 0.43
 n = 1,000, b = 1,333   a = 0.75  ->  0.75 comparisons
 n = 1,000, b = 16      a = 62.5  ->  62.5 comparisons
 
 same keys, same hash function, same code` },
-    { t: "Resizing is the doubling sum, again", d: "Every resize rehashes the entire table. Adding those up over the life of the map gives the same geometric series a growable array gives.", w:
+    { t: "Resizing is the doubling sum, again", d: "Every resize rehashes the whole table. Added up over the life of the map, that is the same series a growable array gives.", w:
 `double b whenever n passes 0.75 b
 rehash cost at each doubling: the whole table
 
 1 + 2 + 4 + ... + n  <  2n rehashes over n inserts
 per insert: amortised O(1)
 one unlucky insert: O(n), because it rehashed everything` },
-    { t: "Open addressing: the probe count explodes near the end", d: "With no chains, a full-ish table has to walk to find a free slot, and the walk length is not linear in how full it is.", w:
+    { t: "Open addressing: the probe count explodes near the end", d: "Without chains, a nearly full table must walk to find a free slot. The walk grows much faster than the table fills.", w:
 `expected probes, linear probing, successful lookup:
     (1 + 1/(1 - a)) / 2
 
@@ -2637,47 +3599,39 @@ a = 0.90   ->   5.5
 a = 0.99   ->  50.5
 
 which is why every implementation resizes well before full` },
-    { t: "The worst case is a real attack, not a footnote", d: "If every key lands in one bucket the map has quietly become a linked list, and an adversary who knows your hash function can arrange exactly that.", w:
+    { t: "The worst case is a real attack, not a footnote", d: "If every key lands in one bucket, the map has quietly become a list. An attacker who knows your hash function can arrange exactly that.", w:
 `n keys, all colliding:
   lookup    O(n)
   n inserts 1 + 2 + ... + n = n^2 / 2
 
 n = 100,000  ->  5 x 10^9 comparisons
 
-so Python and Java randomise the seed per process, and
-Java converts a bucket to a tree past 8 entries: O(log n)` },
-    { t: "Collisions arrive far earlier than the table size suggests", d: "The birthday bound says you should expect the first collision at around the square root of the space, not at the space itself.", w:
-`first collision likely at about sqrt(b) keys
-
-b = 365          ->  23 people
-b = 2^32         ->  77,000 keys
-b = 2^64         ->  5 x 10^9 keys
-
-so collision handling is never an optimisation to skip` },
+so Python randomises string hashing per process, and
+Java turns a bucket into a tree past 8 entries: O(log n)` },
   ],
 
   costs: [
     ["d[k] lookup / insert / delete", "O(1) average", "one hash computation plus a tiny bucket"],
-    ["worst case, all keys collide", "O(n)", "the bucket degenerates into a list"],
-    ["k in my_set", "O(1) average", "vs O(n) for k in my_list, the swap that fixes most O(n²)"],
+    ["worst case, all keys collide", "O(n)", "the bucket turns into a list"],
+    ["k in my_set", "O(1) average", "against O(n) for k in my_list: the swap that fixes most O(n²)"],
     ["building a dict of n items", "O(n) average", "includes the amortised rehash on growth"],
     ["iterating a hash map", "O(n)", "insertion-ordered in Python/JS; UNORDERED in Java HashMap and C++ unordered_map"],
-    ["memory", "O(n)", "roughly 2–3× the raw data, the price of the speed"],
+    ["memory", "O(n)", "roughly 2 to 3 times the raw data: the price of the speed"],
   ],
 
   traps: [
-    "<b>Using a list where a set belongs.</b> <code>if x in seen_list</code> inside a loop is O(n²). One word of change, a set, makes it O(n).",
-    "<b>Mutating a key after insertion.</b> Tuples containing lists are unhashable for exactly this reason; do not fight it.",
-    "<b>Assuming dict order is sorted.</b> It is <i>insertion</i> order. Need sorted output? That costs O(n log n).",
-    "<b>Claiming O(1) worst case.</b> It is O(1) average, O(n) worst, interviewers probe this deliberately.",
-    "<b>Forgetting the memory cost.</b> If the interviewer says 'O(1) space', a hash map is off the table, reach for two pointers or sorting.",
+    "<b>Using a list where a set belongs.</b> <code>if x in seen_list</code> inside a loop is O(<var>n</var>²). One word of change, a set, makes it O(<var>n</var>).",
+    "<b>Changing a key after inserting it.</b> Tuples containing lists are unhashable for exactly this reason. Do not fight it.",
+    "<b>Assuming dict order is sorted.</b> It is <i>insertion</i> order. Sorted output costs O(<var>n</var> log <var>n</var>).",
+    "<b>Claiming O(1) worst case.</b> It is O(1) average and O(<var>n</var>) worst. Interviewers probe this on purpose.",
+    "<b>Forgetting the memory cost.</b> If the interviewer says “O(1) space”, a hash map is off the table. Reach for two pointers or sorting.",
   ],
 
   impl: [
-    ["Python", "dict · set · Counter · defaultdict", "Insertion-ordered. Only immutable keys, tuples yes, lists no."],
+    ["Python", "dict · set · Counter · defaultdict", "Insertion-ordered. Only immutable keys: tuples yes, lists no."],
     ["Java", "HashMap · HashSet · getOrDefault / computeIfAbsent", "UNORDERED. Custom keys must override BOTH equals() and hashCode()."],
-    ["C++", "unordered_map · unordered_set", "UNORDERED and O(1) average. map/set are ordered TREES at O(log n), pick deliberately."],
-    ["JavaScript", "Map · Set", "Prefer Map over a plain object: object keys are coerced to strings and inherit prototype keys."],
+    ["C++", "unordered_map · unordered_set", "UNORDERED and O(1) average. map/set are ordered TREES at O(log n): pick deliberately."],
+    ["JavaScript", "Map · Set", "Prefer Map over a plain object: object keys become strings and inherit prototype keys."],
   ],
 
   code: {
@@ -2786,46 +3740,166 @@ groups.get(key).push(w);
 // Objects/arrays as Map keys compare by REFERENCE, not by contents.
 // Serialise the key first:  map.set(JSON.stringify([r, c]), v)`,
   },
-  codecap: "seen / freq / graph / index, nearly every hash-map solution is one of these four shapes.",
+  codecap: "seen / freq / graph / index: nearly every hash-map solution is one of these four shapes.",
 
   q: [
-    ["In one sentence, why is a hash map O(1)?", "It computes the slot from the key instead of searching for it, one hash plus a modulo lands directly on the address."],
-    ["Why are collisions unavoidable?", "Keys are unbounded, slots are finite, so by the pigeonhole principle two keys must eventually share a slot. A hash table must therefore include a collision strategy."],
-    ["What is the load factor and why does it matter?", "items ÷ slots. Kept under ~2/3 so buckets stay about one item long. Exceeding it triggers an O(n) resize and rehash, amortised to O(1) per insert."],
-    ["What is the true worst case, and what causes it?", "O(n) per operation, when all keys land in one bucket. Runtimes defend against it, Python randomises string hashing per process, Java turns a long bucket into a balanced tree."],
-    ["Why can't a list be a dict key?", "The slot is derived from the contents; if they change, the hash changes and the entry becomes unreachable. Only immutable objects are hashable."],
+    ["In one sentence, why is a hash map O(1)?", "It computes the slot from the key instead of searching for it: one hash plus a modulo lands directly on the address."],
+    ["Why are collisions unavoidable?", "Keys are unlimited and slots are finite, so two keys must eventually share a slot. A hash table therefore needs a plan for collisions."],
+    ["What is the load factor and why does it matter?", "Items divided by slots. It is kept under about three-quarters so buckets stay about one item long. Going past it triggers an O(n) resize, which is O(1) per insert when spread out."],
+    ["What is the true worst case, and what causes it?", "O(n) per operation, when all keys land in one bucket. Runtimes defend against it: Python randomises string hashing per process, and Java turns a long bucket into a balanced tree."],
+    ["Why can't a list be a dict key?", "The slot comes from the contents. If they change, the hash changes and the entry becomes unreachable. Only immutable objects are hashable."],
     ["What does a hash map cost you?", "O(n) extra memory. If the problem demands O(1) space, use two pointers or sorting instead."],
   ],
 
   p: [
-    [1, "two-sum", "Two Sum, the canonical hash trade", "E"],
+    [1, "two-sum", "Two Sum, the running example", "E"],
     [217, "contains-duplicate", "Contains Duplicate", "E"],
     [242, "valid-anagram", "Valid Anagram", "E"],
     [49, "group-anagrams", "Group Anagrams", "M"],
     [128, "longest-consecutive-sequence", "Longest Consecutive Sequence, O(n) with a set", "M"],
     [560, "subarray-sum-equals-k", "Subarray Sum = K, prefix sum + hash", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Two Sum: numbers ka array aur ek target diya hai, do aise numbers dhoondho jinka jodh target ho. Asli input mein <b>10⁵ numbers</b> hain, har ek −10⁹ se 10⁹ tak kuch bhi, aur ek second ki limit.</p>
+<p>Ek baar chalte hue har number <var>x</var> ko ek partner chahiye, <var>target</var> − <var>x</var>. To poori problem ek hi sawaal hai jo 10⁵ baar poochha jaata hai: <b>kya yeh number pehle dekha hai?</b></p>`,
+      tries: [
+        ["Har pair check karo", "<var>n</var> = 10⁵ par lagbhag <var>n</var>² / 2 = 5 × 10⁹ pair checks. Yeh lagbhag 50 second hai."],
+        ["Ab tak dekhe numbers ek list mein rakho", "Ab har “dekha hai?” list scan karta hai. Har number par ab bhi 10⁵ tak comparisons, to total wahi 5 × 10⁹."],
+        ["Number se indexed array lo: seen[x] = true", "Turant, agar values chhoti hoti. Woh 10⁹ tak jaati hain, to array ko 2 × 10⁹ slots chahiye, bytes mein bhi lagbhag 2 GB. Aur −5 to index hi nahi hai."],
+      ],
+      so: `<p>Array wala idea sahi tha: seedha wahan jao jahan <var>x</var> hoga. Bas pehle key ko ek chhoti table mein dabana padta hai. <b>Hash function</b> kisi bhi key ko number bana deta hai, aur table size se divide karke bacha remainder <b>slot</b> deta hai. 7-slot table mein 10 jaata hai slot 10 mod 7 = 3 mein.</p>
+<p>Yahi <b>hash map</b> hai, ya <b>hash set</b> jab sirf keys rakho. Har “dekha hai?” ek calculation aur ek slot mein nazar hai: average O(1). Page ek chhota run follow karta hai: <code>[3, 10, 4, 6]</code>, target 10, 7 slots ki table mein.</p>`,
+    },
+
+    one: "Hash map key ko dhoondhta nahi, <b>key se address calculate karta hai</b>. Poora idea yahi hai, aur isiliye “yeh pehle dekha hai?” O(<var>n</var>) ki jagah O(1) ka hai.",
+
+    plain: `<p>Aapko hazaaron baar batana hai “kya 6 is collection mein hai?”. List mein scan karoge: har baar O(<var>n</var>). Sorted array mein binary search: O(log <var>n</var>). Hash map bilkul alag tarah ka kaam karta hai. Woh <b>calculate karta hai ki 6 kahan rehta</b>, aur sirf wahin dekhta hai.</p>
+<p>Recipe ke teen steps hain. Key ko <b>hash function</b> se guzaar kar ek number lo. Table size se divide karke remainder lo: yahi <b>slot</b> hai. Seedha us slot par jao. 7 slots mein 4 slot 4 mein rehta hai aur 10 slot 3 mein. Doosri keys se koi comparison nahi, koi scan nahi.</p>
+<p>Do keys ek hi slot mein aa sakti hain: 3 aur 10 dono slot 3 mein. Ise <b>collision</b> kehte hain, aur slot bas ek chhoti list rakh leta hai. Table khuli rakho to woh lists ek do ki hi rehti hain.</p>
+<p><b>Analogy.</b> Aisi library jahan kitaab ka shelf uske title se ek fixed rule se nikalta hai. Catalogue kabhi nahi dhoondhte: rule lagao aur shelf tak chalo. Kabhi kabhi do kitaabein ek shelf share karti hain, to wahan ki do teen par nazar daal lo.</p>`,
+
+    why: [
+      { t: "Arrays pehle se O(1) hain, par sirf chhote integer indexes ke liye",
+        d: "<code>a[5]</code> turant hai, kyunki 5 <i>hi</i> position hai. Par 10⁹ position banne ke liye bahut bada hai, aur words ya tuples to number hi nahi. To sawaal: kya kisi bhi key ko chhote integer mein badla ja sakta hai?" },
+      { t: "Hash function wahi translator hai",
+        d: "<code>hash(key)</code> key ko number banata hai, same key ke liye hamesha same. Use table size ke modulo lo to slot mil gaya. Hamari 7-slot table mein 4 → slot 4, 10 → slot 3. Key <b>apna address khud nikaalti hai</b>. Kuch dhoondha nahi jaata." },
+      { t: "Collisions pakke hain, to plan rakho",
+        d: "Possible keys anant hain aur slots sirf 7, to do keys ko kabhi na kabhi ek slot share karna hi hai. Yahan 3 aur 10 dono slot 3 mein. To hash table hamesha hash function <b>plus</b> collisions ka plan hai: har slot ek chhoti list rakhta hai." },
+      { t: "Table khuli rakho to lists chhoti rehti hain",
+        d: "Table lagbhag teen-chauthai bharte hi dugni badi table banti hai aur har key dobara file hoti hai. Woh resize O(<var>n</var>) hai, par kabhi kabhi, to inserts <b>O(1) amortised</b> rehte hain. Growable array wali doubling trick hi hai." },
+      { t: "Isiliye O(1) average hai, hamesha nahi",
+        d: "Har key collide kare to ek slot mein sab kuch hoga, aur lookup scan ban jaayega: <b>O(<var>n</var>)</b>. Yeh galti se nahi hota, par hash function jaanne wala attacker ise karwa sakta hai. Yeh farak khud bolo; standard follow-up hai." },
+      { t: "Keys immutable honi chahiye, aur ab dikhta hai kyun",
+        d: "Slot key ke contents se aata hai. Insert ke baad contents badlo, to entry galat slot mein baithi hai, pahunch ke bahar. Isiliye list key nahi ban sakti aur tuple ban sakta hai." },
+    ],
+
+    variants: [
+      { n: "Seen set", cost: "har check O(1) average",
+        idea: "Sabse simple aur sabse common use: kya yeh pehle mila hai?",
+        when: "Duplicate dhoondhna, cycle dhoondhna, traversal mein visited mark karna.",
+        watch: "Yahan set ki jagah list lena interviews ka sabse common galti se bana O(<var>n</var>²) hai." },
+      { n: "Complement lookup", cost: "poore pass ke liye O(n)",
+        idea: "Scan karte hue poocho: answer poora karne wali cheez pehle guzar chuki hai kya? <code>[3, 10, 4, 6]</code> par Two Sum example hai: 6 par 4 dhoondho.",
+        when: "Pair ya subarray sawaal jahan target do values ko jodta hai.",
+        watch: "Current value store karne se <i>pehle</i> complement check karo. Warna target 8 par akela 4 khud se pair ban jaata hai." },
+      { n: "Canonical key grouping", cost: "k-length keys ke liye O(n · k)",
+        idea: "Har item ko ek standard form mein badlo aur usse group karo: anagrams ke liye sorted letters, count tuple, shape signature.",
+        when: "Aisi cheezein group karna jo kisi transformation ke baad barabar maani jaayein.",
+        watch: "Key immutable ho aur value se compare ho, to tuples aur strings, lists nahi." },
+      { n: "Prefix or rolling hash", cost: "O(n) setup ke baad har substring O(1)",
+        idea: "Har prefix hash karo, to kisi bhi substring ka hash do prefixes se nikalta hai. Ya window ka hash constant time mein aage roll karo.",
+        when: "Bahut saare substrings compare karna, repeat hote blocks dhoondhna, Rabin-Karp search.",
+        watch: "Do alag strings ka hash same ho sakta hai, to asli match confirm karo, jab tak “shayad sahi” chal na jaaye." },
+      { n: "LRU cache, hash map plus doubly linked list", cost: "O(1) get aur put",
+        idea: "Map node turant dhoondhta hai. List use ka order rakhti hai, to sabse kam recently used hamesha tail par. Har access apne node ko head par le jaata hai.",
+        when: "Classic design sawaal, aur zyadatar asli caches ke peeche yahi structure.",
+        watch: "Singly linked list nahi chalegi: O(1) mein node hataane ke liye uska pichhla node chahiye. Isiliye list doubly linked hai, aur sawaal asal mein yahi test karta hai." },
+    ],
+
+    math: [
+      { t: "[3, 10, 4, 6] par Two Sum, target 10, slot = x mod 7", d: "Ek pass. Har number ke liye uska partner ek slot mein dhoondho, phir number khud store karo." },
+      { t: "Average case, aur woh number jis par yeh tika hai", d: "Chain ki length load factor hai, keys divided by slots, aur kuch nahi. To O(1) hashing ki property nahi. Table khuli rakhne ki property hai." },
+      { t: "Resizing phir wahi doubling ka jodh hai", d: "Har resize poori table rehash karta hai. Map ki poori zindagi mein jodo to wahi series hai jo growable array deta hai." },
+      { t: "Open addressing: end ke paas probes phat jaate hain", d: "Chains ke bina, lagbhag bhari table ko khaali slot ke liye chalna padta hai. Yeh chalna table bharne se kahin tez badhta hai." },
+      { t: "Worst case asli attack hai, footnote nahi", d: "Har key ek bucket mein gire to map chupchaap list ban gaya. Aapka hash function jaanne wala attacker theek yahi karwa sakta hai." },
+    ],
+
+    costs: [
+      ["d[k] lookup / insert / delete", "O(1) average", "ek hash calculation plus ek chhota bucket"],
+      ["worst case, saari keys collide", "O(n)", "bucket list ban jaata hai"],
+      ["k in my_set", "O(1) average", "k in my_list ke O(n) ke against: zyadatar O(n²) theek karne wala swap"],
+      ["n items ki dict banana", "O(n) average", "growth par amortised rehash milakar"],
+      ["hash map par iterate", "O(n)", "Python/JS mein insertion order; Java HashMap aur C++ unordered_map mein UNORDERED"],
+      ["memory", "O(n)", "raw data ka lagbhag 2 se 3 guna: speed ki keemat"],
+    ],
+
+    traps: [
+      "<b>Set ki jagah list lena.</b> Loop ke andar <code>if x in seen_list</code> O(<var>n</var>²) hai. Ek word ka badlaav, set, ise O(<var>n</var>) banata hai.",
+      "<b>Insert ke baad key badalna.</b> Lists wale tuples isi wajah se unhashable hain. Isse lado mat.",
+      "<b>Maan lena ki dict ka order sorted hai.</b> Yeh <i>insertion</i> order hai. Sorted output O(<var>n</var> log <var>n</var>) ka hai.",
+      "<b>Worst case O(1) bolna.</b> Yeh average O(1) aur worst O(<var>n</var>) hai. Interviewers yeh jaan-boojh kar poochte hain.",
+      "<b>Memory ki keemat bhoolna.</b> Interviewer “O(1) space” bole to hash map bahar. Two pointers ya sorting lo.",
+    ],
+
+    impl: [
+      ["Python", "dict · set · Counter · defaultdict", "Insertion-ordered. Sirf immutable keys: tuples haan, lists nahi."],
+      ["Java", "HashMap · HashSet · getOrDefault / computeIfAbsent", "UNORDERED. Custom keys ko equals() aur hashCode() DONO override karne hain."],
+      ["C++", "unordered_map · unordered_set", "UNORDERED aur O(1) average. map/set ordered TREES hain, O(log n): soch kar chuno."],
+      ["JavaScript", "Map · Set", "Plain object ki jagah Map lo: object keys strings ban jaati hain aur prototype keys bhi aa jaati hain."],
+    ],
+
+    codecap: "seen / freq / graph / index: lagbhag har hash-map solution in chaar shapes mein se ek hai.",
+
+    q: [
+      ["Ek sentence mein, hash map O(1) kyun hai?", "Yeh key se slot calculate karta hai, dhoondhta nahi: ek hash aur ek modulo seedha address par le jaate hain."],
+      ["Collisions se bacha kyun nahi ja sakta?", "Keys anant hain aur slots limited, to do keys ko kabhi na kabhi ek slot share karna hi hai. Isliye hash table ko collisions ka plan chahiye."],
+      ["Load factor kya hai aur kyun maayne rakhta hai?", "Items divided by slots. Ise lagbhag teen-chauthai se neeche rakhte hain taaki buckets lagbhag ek item ke rahein. Paar jaane par O(n) resize hota hai, jo baantne par har insert O(1) padta hai."],
+      ["Asli worst case kya hai, aur kyun hota hai?", "Har operation O(n), jab saari keys ek bucket mein giren. Runtimes isse bachte hain: Python har process mein string hashing randomise karta hai, aur Java lamba bucket balanced tree bana deta hai."],
+      ["List dict key kyun nahi ban sakti?", "Slot contents se aata hai. Woh badle to hash badla aur entry pahunch ke bahar. Sirf immutable objects hashable hain."],
+      ["Hash map ki keemat kya hai?", "O(n) extra memory. Problem O(1) space maange to two pointers ya sorting lo."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "ordering",
   n: "Equality, ordering and comparators",
   group: "Fundamentals",
+  need: {
+    ask: `<p>You write a small class, <code>Rec</code>, with two fields: a letter and a number. You have four records: <b>B2, A1, B1, A2</b>. There are two jobs. Skip duplicates using a hash set. Then print the records sorted by letter, and by number within a letter: A1, A2, B1, B2.</p>
+<p>Both jobs fail. The set says <code>Rec('A', 1)</code> is missing, straight after you added one. And the sort prints B2 before B1 on some inputs but not others.</p>`,
+    tries: [
+      ["Compare with ==", "In Java, <code>==</code> on objects asks “same object?”, not “same contents?”. Two separately built <code>Rec('A', 1)</code> are two objects, so the answer is false."],
+      ["Override equals, and leave the hash alone", "The set looks for the key by its hash first. The default hash comes from the object's address, so your new <code>Rec('A', 1)</code> lands in, say, bucket 9, while the stored one sits in bucket 7. Equality is never even asked."],
+      ["Sort by number, then by letter, with C++ std::sort", "That trick needs a <b>stable</b> sort, one that keeps equal items in their old order. <code>std::sort</code> is not stable, so the second pass may put B2 before B1."],
+    ],
+    so: `<p>These are three separate questions. <b>Identity</b>: are these the same object? <b>Equality</b>: do they hold the same contents? <b>Ordering</b>: which comes first? Each has its own tool. A hash set needs equality <i>and</i> a hash computed from the same fields, so that equal records land in the same bucket.</p>
+<p>Sorting needs a <b>comparator</b>, a function that says which of two items comes first. Compare the letter, and on a tie compare the number, all in one comparator. This page follows B2, A1, B1, A2 through both jobs.</p>`,
+  },
+
   one: "Two objects are equal because you said so, and a hash map believes you. Break the equals and hash agreement and your key vanishes into a map that is still holding it.",
 
-  plain: `<p>Three questions look similar and are not: are these the same object, are they equal, and which one comes first. Languages answer them with different operators, and disagreeing with your language about which question you asked is a fine way to spend an afternoon.</p>
-<p><b>Identity</b> asks whether two names point at one object. <b>Equality</b> asks whether two objects have the same contents. For built-in values the distinction rarely bites. For your own types it decides whether a hash set can find them at all.</p>
-<p>Then there is <b>ordering</b>, which is what sorting needs. A comparator is a promise about a total order, one consistent ranking of every item, and the promise has rules. Break them and the standard library is entitled to do anything it likes, up to and including crashing, and C++ takes that entitlement seriously.</p>
-<p><b>Analogy.</b> Two identical twins. Same appearance, so equal. Different people, so not identical. If the school files them by appearance alone, one of them is going to get the other's report card.</p>`,
+  plain: `<p>Three questions look alike and are not: are these the same object, are they equal, and which one comes first? Languages answer them with different operators. Mix them up and you get a very quiet bug.</p>
+<p><b>Identity</b> asks whether two names point at one object. <b>Equality</b> asks whether two objects hold the same contents. Two separately built <code>Rec('A', 1)</code> records are equal but not identical. For built-in values the difference rarely matters. For your own types it decides whether a hash set can find them at all.</p>
+<p><b>Ordering</b> is what sorting needs. A <b>comparator</b> takes two items and answers negative, zero or positive: first comes before, a tie, or first comes after. It must be consistent: if A1 comes before B1, then B1 must never come before A1.</p>
+<p><b>Analogy.</b> Identical twins. Same appearance, so equal. Different people, so not identical. File them by appearance alone and one will get the other's report card.</p>`,
 
   why: [
-    { t: "The two questions are different, so there are two operators", d: "Identity compares addresses and is always O(1). Equality compares contents and costs whatever that takes. When a language uses the same symbol for both, it has quietly chosen one for you. <code>==</code> on Java objects compares addresses. That is why two strings built at runtime can hold the same letters and still fail <code>==</code>." },
-    { t: "A hash map asks the hash first and equality second", d: "Look-up computes the hash to find a bucket, then uses equality to pick the right entry inside it. So the two must agree: <b>equal objects must produce the same hash</b>. If they do not, the map searches the wrong bucket, finds nothing, and reports that your key is absent while holding it a few slots away. This is the contract, and it is the reason it exists." },
-    { t: "The reverse is not required, and cannot be", d: "Unequal objects may share a hash. They have to: there are unlimited possible values and a fixed number of hashes. That is why the map still runs an equality check after finding the bucket, and why a hash on its own is never proof of equality." },
-    { t: "And this is why keys must be immutable", d: "The bucket is chosen from the contents. Mutate a key after inserting it and its hash changes, so it is now filed under an address nobody will look at. The entry is not deleted, it is unreachable, which is worse: it still occupies the map and still turns up when you iterate. Immutability is not a purity preference here, it is the only way the mechanism holds together." },
-    { t: "Ordering is a third question with its own rules", d: "A comparator must be a genuine total order: consistent (a before b implies b never before a), transitive, and honest about ties. Return a boolean where a three-way answer is expected, or claim both a &lt; b and b &lt; a, and you have not merely produced odd output. C++ calls it undefined behaviour and may run off the end of the array; Java throws \"Comparison method violates its general contract\", generally in production." },
-    { t: "Sorting by two keys is where stability quietly matters", d: "Sort by the secondary key, then by the primary, and a <b>stable</b> sort keeps the first ordering intact inside each group. With an unstable sort, the same code is right on small inputs and wrong on large ones. Whether it reorders equal items depends on what the algorithm is doing internally, which changes with size. Alternatively, compare both keys in one comparator and stop depending on a property your language may not have." },
+    { t: "Two questions, so two operators",
+      d: "Identity compares addresses and is always O(1). Equality compares contents and costs whatever that takes. Where one symbol does both, the language chose for you. <code>==</code> on Java objects compares addresses, so two <code>Rec('A', 1)</code> built separately fail it." },
+    { t: "A hash set asks the hash first and equality second",
+      d: "A lookup computes the hash to pick a bucket, then uses equality inside that bucket. So the two must agree: <b>equal objects must produce the same hash</b>. If the stored <code>Rec('A', 1)</code> is in bucket 7 and the new one hashes to bucket 9, the set searches bucket 9, finds nothing, and says “absent”." },
+    { t: "The reverse is not required, and cannot be",
+      d: "Unequal objects may share a hash, and some must. There are endless possible records and a fixed number of hash values. So after finding the bucket, the map still checks equality. A matching hash alone never proves two objects are equal." },
+    { t: "And this is why keys must be immutable",
+      d: "The bucket is chosen from the contents. Change a key's letter after inserting it, and its hash changes. It is now filed where nobody will look. It is not deleted, just unreachable: still in the map, still counted, never found." },
+    { t: "Ordering is a third question, with its own rules",
+      d: "A comparator must be a real ordering. If A1 comes before B1, B1 never comes before A1. If A1 is before A2 and A2 before B1, then A1 is before B1. Break this and C++ may read past the end of the array. Java throws “Comparison method violates its general contract”, usually in production." },
+    { t: "Sorting by two keys is where stability matters",
+      d: "A <b>stable</b> sort keeps equal items in their existing order. So sort by number, then stable-sort by letter, and A1 A2 B1 B2 comes out right. With an unstable sort the same code can print B2 B1. The safe route: compare the letter, then the number, in one comparator." },
   ],
 
   hing: `<p><b>Teen sawaal alag hain, aur log unhe ek hi samajh lete hain:</b> kya yeh <b>ek hi</b> object hai, kya yeh <b>barabar</b> hai, aur <b>pehle kaun</b> aayega. Teeno ka jawab alag ho sakta hai.</p>
@@ -2841,7 +3915,7 @@ groups.get(key).push(w);
   see: [["DOC", "https://docs.oracle.com/javase/8/docs/api/java/lang/Object.html#hashCode--", "The equals and hashCode contract, stated formally"]],
 
   math: [
-    { t: "One direction of the contract is required, the other is impossible", d: "Equal objects must hash the same. Equal hashes cannot imply equal objects, and the reason is a counting argument, not an implementation detail.", w:
+    { t: "One direction of the contract is required, the other is impossible", d: "Equal objects must hash the same. Equal hashes cannot mean equal objects, and the reason is counting, not an implementation detail.", w:
 `required:      a equals b   =>   hash(a) == hash(b)
 not required:  hash(a) == hash(b)   =>   a equals b
 
@@ -2849,36 +3923,39 @@ why the second cannot hold:
   hashes:  2^32 distinct values
   objects: unbounded
 pigeonhole: some distinct objects must share a hash` },
-    { t: "What a mutated key costs, traced through the buckets", d: "The map stored the entry by the hash it had at insertion time. Change the field and you are looking in a different bucket for something that never moved.", w:
-`b = 16 buckets
+    { t: "equals without hash, traced through the buckets", d: "The set files each record by its hash. With the default hash, which comes from the address, two equal records are filed in different places.", w:
+`b = 16 buckets, equals() overridden, hash() left alone
 
-put(key, v):   hash(key) = 7    ->  bucket 7 mod 16 = 7
-mutate a field used by hash()
-get(key):      hash(key) = 41   ->  bucket 41 mod 16 = 9
+add(Rec('A', 1))       hash = 7    ->  bucket 7 mod 16 = 7
+contains(Rec('A', 1))  hash = 41   ->  bucket 41 mod 16 = 9
+                       (a new object, so a new address)
 
-bucket 9 is empty. The entry is still sitting in bucket 7.
-size() = 1 and get() = null, at the same time.` },
-    { t: "The comparator subtraction that returns the wrong sign", d: "Returning a difference is the classic shortcut and it is correct for small values. The two extremes of the range are where it inverts.", w:
-`return a.x - b.x;
+bucket 9 is empty, so equals() is never called.
+size() = 1 and contains() = false, at the same time.
 
-a.x =  2,000,000,000
-b.x = -2,000,000,000
-a.x - b.x = 4,000,000,000  >  2^31 - 1
+fix: hash() from letter and num, the same fields as equals()` },
+    { t: "Two sort keys, pass by pass", d: "Stability means equal items keep their existing order. That is what lets two simple passes do the work of one comparator with a tie-break.", w:
+`input:                          B2  A1  B1  A2
+
+stable sort by number:          A1  B1  B2  A2
+then stable sort by letter:     A1  A2  B1  B2   correct
+
+unstable second pass may give:  A1  A2  B2  B1   wrong
+
+one comparator, no stability needed:
+  compare letter; if equal, compare number` },
+    { t: "The comparator subtraction that returns the wrong sign", d: "Returning <code>a.num - b.num</code> is the classic shortcut, and it is right for small values. At the two ends of the range it flips.", w:
+`return a.num - b.num;
+
+a.num =  2,000,000,000
+b.num = -2,000,000,000
+a.num - b.num = 4,000,000,000  >  2^31 - 1
 
 wraps to 4,000,000,000 - 2^32 = -294,967,296
 
 negative means "a is smaller", which is the opposite
 Integer.compare branches instead, and cannot overflow` },
-    { t: "Two sort keys, and where stability actually earns its keep", d: "Stability means equal elements keep their previous order. That is what lets you sort twice instead of writing one comparator with a tie-break.", w:
-`want: score descending, then name ascending
-
-with a stable sort: sort by name, then sort by score
-  equal scores keep the name order. Two clean passes.
-with an unstable sort: the second pass scrambles the first
-
-comparisons either way, n = 10^6:
-  n log2 n = 10^6 x 20 = 2 x 10^7` },
-    { t: "The three laws, and the exception that fires when you break them", d: "A comparator that is not a total order does not merely sort oddly. Modern sorts detect the contradiction and refuse to continue.", w:
+    { t: "The three laws, and the exception that fires when you break them", d: "A comparator that is not a real ordering does not merely sort oddly. Modern sorts detect the contradiction and refuse to go on.", w:
 `for all a, b, c the comparator must satisfy
   antisymmetry   cmp(a,b) = -cmp(b,a)
   transitivity   cmp(a,b) <= 0 and cmp(b,c) <= 0 => cmp(a,c) <= 0
@@ -2894,23 +3971,23 @@ so an array of 10 will pass every test you write` },
     ["equality on contents", "O(size)", "compares field by field, or element by element"],
     ["hashing a key", "O(size of key)", "read once and cached for immutable types"],
     ["hash map lookup", "O(1) average", "one hash to find the bucket, then equality inside it"],
-    ["lookup with a broken hash", "O(1) and wrong", "finds the wrong bucket and reports absence, which is the expensive kind of fast"],
+    ["lookup with a broken hash", "O(1) and wrong", "finds the wrong bucket and reports absence: the expensive kind of fast"],
     ["sort with a comparator", "O(n log n) comparisons", "each comparison costs whatever your comparator costs"],
   ],
 
   traps: [
-    "<b>Overriding equals without hashCode.</b> Equal objects then land in different buckets, so a set holds two copies of the same thing and a map cannot find a key it contains.",
+    "<b>Overriding equals without hashCode.</b> Equal objects then land in different buckets. A set holds two copies of the same thing, and a map cannot find a key it contains.",
     "<b>Using <code>==</code> on Java objects.</b> It compares addresses. Two strings with identical characters can fail it, depending on where they came from.",
-    "<b>Mutating a key after insertion.</b> The entry becomes unreachable but not gone: still in the map, still iterated, never found.",
-    "<b>A comparator that returns a boolean</b> where a negative, zero or positive value is expected. It compiles in some languages and sorts approximately.",
-    "<b>Comparing floats for order with tolerance.</b> Almost-equal is not transitive, so it is not a valid ordering, and the sort is free to misbehave.",
-    "<b>Relying on stability you do not have.</b> C++ <code>sort</code> is unstable; Java is stable for objects but not for primitive arrays.",
+    "<b>Changing a key after inserting it.</b> The entry becomes unreachable but not gone: still in the map, still iterated, never found.",
+    "<b>A comparator that returns a boolean</b> where negative, zero or positive is expected. It compiles in some languages and sorts approximately.",
+    "<b>Ordering floats with a tolerance.</b> “Almost equal” is not transitive: 1.0 ≈ 1.05 and 1.05 ≈ 1.1, but not 1.0 ≈ 1.1. That is not a valid ordering.",
+    "<b>Relying on stability you do not have.</b> C++ <code>sort</code> is unstable. Java is stable for objects but not for arrays of primitives.",
   ],
 
   impl: [
     ["Python", "__eq__ and __hash__ together", "Defining __eq__ alone sets __hash__ to None and the object becomes unhashable. dataclass(frozen=True) does both properly."],
     ["Java", "equals and hashCode, always both", "== is identity for objects. A record generates both for you and is usually the right answer."],
-    ["C++", "operator== and std::hash specialisation", "sort needs a strict weak ordering; violating it is undefined behaviour, not a warning."],
+    ["C++", "operator== and std::hash specialisation", "sort needs a strict weak ordering; breaking it is undefined behaviour, not a warning."],
     ["JavaScript", "no equality hook at all", "Map and Set compare object keys by reference. Serialise the key, or key by a string you build yourself."],
   ],
 
@@ -3039,11 +4116,11 @@ rows.sort((a, b) => a.score - b.score);`,
 
   q: [
     ["What are the three different questions people confuse here?", "Identity (same object, compares addresses), equality (same contents, compares fields), and ordering (which comes first, a three-way answer)."],
-    ["State the hash contract and explain why it exists.", "Equal objects must have equal hashes. A lookup uses the hash to pick a bucket and equality to search inside it, so if equal objects hash differently the map searches the wrong bucket and reports the key as absent while still holding it."],
+    ["State the hash contract and explain why it exists.", "Equal objects must have equal hashes. A lookup uses the hash to pick a bucket and equality to search inside it. If equal objects hash differently, the map searches the wrong bucket and reports the key absent while still holding it."],
     ["Why is the converse of that contract not required?", "There are unlimited possible values and a fixed number of hashes, so unequal objects must sometimes collide. That is exactly why the bucket is still searched with an equality check."],
-    ["Why must a hash-map key be immutable?", "The bucket is derived from the contents. Change them after insertion and the entry is filed where nothing will look, so it stays in the map, still appears when iterating, and can never be found."],
-    ["What makes a comparator invalid, and what happens then?", "Inconsistency (claiming a < b and b < a), non-transitivity, or dishonest ties. C++ treats it as undefined behaviour and may read past the end of the array; Java throws about the general contract, usually in production."],
-    ["How do you sort by two keys without relying on stability?", "Compare both keys inside a single comparator: primary first, and fall through to the secondary only on a tie. Then the result does not depend on whether your language's sort happens to be stable."],
+    ["Why must a hash-map key be immutable?", "The bucket comes from the contents. Change them after insertion and the entry is filed where nothing will look. It stays in the map, still appears when iterating, and can never be found."],
+    ["What makes a comparator invalid, and what happens then?", "Inconsistency (claiming a < b and b < a), non-transitivity, or dishonest ties. C++ treats it as undefined behaviour and may read past the end of the array. Java throws about the general contract, usually in production."],
+    ["How do you sort by two keys without relying on stability?", "Compare both keys inside a single comparator: primary first, and fall through to the secondary only on a tie. Then the result does not depend on whether your sort is stable."],
   ],
 
   p: [
@@ -3054,47 +4131,160 @@ rows.sort((a, b) => a.score - b.score);`,
     [937, "reorder-data-in-log-files", "Reorder Log Files, multi-key with stability", "M"],
     [451, "sort-characters-by-frequency", "Sort by Frequency, sorting on a computed key", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Aap ek chhoti class likhte ho, <code>Rec</code>, do fields ke saath: ek letter aur ek number. Chaar records hain: <b>B2, A1, B1, A2</b>. Do kaam hain. Hash set se duplicates chhodo. Phir records ko letter se sort karke print karo, aur ek letter ke andar number se: A1, A2, B1, B2.</p>
+<p>Dono kaam fail. Set kehta hai <code>Rec('A', 1)</code> nahi hai, ek add karne ke theek baad. Aur sort kuch inputs par B2 ko B1 se pehle print karta hai, kuch par nahi.</p>`,
+      tries: [
+        ["== se compare karo", "Java mein objects par <code>==</code> poochta hai “same object?”, “same contents?” nahi. Alag alag bane do <code>Rec('A', 1)</code> do objects hain, to answer false."],
+        ["equals override karo, hash ko chhod do", "Set key ko pehle hash se dhoondhta hai. Default hash object ke address se aata hai, to aapka naya <code>Rec('A', 1)</code> maan lo bucket 9 mein girta hai, jabki store wala bucket 7 mein baitha hai. Equality poochhi tak nahi jaati."],
+        ["C++ std::sort se pehle number, phir letter se sort karo", "Is trick ko <b>stable</b> sort chahiye, jo barabar items ko unke purane order mein rakhe. <code>std::sort</code> stable nahi hai, to doosra pass B2 ko B1 se pehle rakh sakta hai."],
+      ],
+      so: `<p>Yeh teen alag sawaal hain. <b>Identity</b>: kya yeh ek hi object hai? <b>Equality</b>: kya inka content same hai? <b>Ordering</b>: pehle kaun aata hai? Har ek ka apna tool hai. Hash set ko equality <i>aur</i> unhi fields se bana hash chahiye, taaki barabar records ek hi bucket mein giren.</p>
+<p>Sorting ko <b>comparator</b> chahiye, ek function jo batata hai do items mein pehle kaun. Letter compare karo, aur tie par number, sab ek hi comparator mein. Yeh page B2, A1, B1, A2 ko dono kaamon se guzaarta hai.</p>`,
+    },
+
+    one: "Do objects barabar hain kyunki aapne kaha, aur hash map aap par bharosa karta hai. Equals aur hash ka samjhauta todo to aapki key ek aise map mein gayab hoti hai jo use abhi bhi pakde hue hai.",
+
+    plain: `<p>Teen sawaal ek jaise dikhte hain par hain nahi: kya yeh ek hi object hai, kya yeh barabar hain, aur pehle kaun aata hai? Languages inke liye alag operators deti hain. Gadbad karo to bahut chupa hua bug milta hai.</p>
+<p><b>Identity</b> poochti hai ki kya do naam ek hi object ko point karte hain. <b>Equality</b> poochti hai ki kya do objects ka content same hai. Alag alag bane do <code>Rec('A', 1)</code> barabar hain par identical nahi. Built-in values ke liye yeh farak kam hi maayne rakhta hai. Apne types ke liye yahi tay karta hai ki hash set unhe dhoondh bhi paayega ya nahi.</p>
+<p><b>Ordering</b> sorting ko chahiye. <b>Comparator</b> do items leta hai aur negative, zero ya positive batata hai: pehla pehle aata hai, tie, ya pehla baad mein. Yeh consistent hona chahiye: agar A1 B1 se pehle hai, to B1 kabhi A1 se pehle nahi ho sakta.</p>
+<p><b>Analogy.</b> Judwa bhai. Shakal same, to barabar. Alag insaan, to identical nahi. Sirf shakal se file karoge to ek ko doosre ka report card milega.</p>`,
+
+    why: [
+      { t: "Do sawaal, isliye do operators",
+        d: "Identity addresses compare karti hai aur hamesha O(1) hai. Equality content compare karti hai aur jitna lage utna leti hai. Jahan ek hi symbol dono karta hai, wahan language ne aapke liye chun liya. Java objects par <code>==</code> address compare karta hai, to alag bane do <code>Rec('A', 1)</code> fail hote hain." },
+      { t: "Hash set pehle hash poochta hai, equality baad mein",
+        d: "Lookup hash se bucket chunta hai, phir us bucket ke andar equality use karta hai. To dono ko agree karna chahiye: <b>barabar objects ka hash same hona chahiye</b>. Stored <code>Rec('A', 1)</code> bucket 7 mein ho aur naya bucket 9 mein hash ho, to set bucket 9 dhoondhta hai, kuch nahi milta, aur kehta hai “nahi hai”." },
+      { t: "Ulta zaroori nahi hai, aur ho bhi nahi sakta",
+        d: "Alag objects ka hash same ho sakta hai, aur kuch ka hoga hi. Records anant ho sakte hain aur hash values gini chuni. To bucket milne ke baad bhi map equality check karta hai. Sirf hash match hona kabhi saabit nahi karta ki objects barabar hain." },
+      { t: "Aur isiliye keys immutable honi chahiye",
+        d: "Bucket content se chuna jaata hai. Insert ke baad key ka letter badlo, to uska hash badal jaata hai. Ab woh aisi jagah file hai jahan koi nahi dekhega. Delete nahi hui, bas pahunch ke bahar: map mein hai, gini jaati hai, par kabhi milti nahi." },
+      { t: "Ordering teesra sawaal hai, apne niyamon ke saath",
+        d: "Comparator ek sachcha ordering hona chahiye. A1 B1 se pehle hai, to B1 kabhi A1 se pehle nahi. A1 A2 se pehle aur A2 B1 se pehle, to A1 B1 se pehle. Yeh todo to C++ array ke end ke paar padh sakta hai. Java “Comparison method violates its general contract” phenkta hai, aksar production mein." },
+      { t: "Do keys par sort mein stability maayne rakhti hai",
+        d: "<b>Stable</b> sort barabar items ko unke maujooda order mein rakhta hai. To pehle number se sort karo, phir letter se stable sort, aur A1 A2 B1 B2 sahi aata hai. Unstable sort ke saath wahi code B2 B1 print kar sakta hai. Safe raasta: letter, phir number, ek hi comparator mein compare karo." },
+    ],
+
+    math: [
+      { t: "Contract ki ek direction zaroori hai, doosri naamumkin", d: "Barabar objects ka hash same hona chahiye. Same hash ka matlab barabar objects nahi ho sakta, aur wajah ginti hai, implementation detail nahi." },
+      { t: "Hash ke bina equals, buckets mein trace karke", d: "Set har record ko uske hash se file karta hai. Default hash, jo address se aata hai, ke saath do barabar records alag jagah file hote hain." },
+      { t: "Do sort keys, pass by pass", d: "Stability matlab barabar items apna maujooda order rakhte hain. Isi se do simple passes tie-break wale ek comparator ka kaam kar dete hain." },
+      { t: "Comparator subtraction jo galat sign deta hai", d: "<code>a.num - b.num</code> return karna classic shortcut hai, aur chhoti values par sahi hai. Range ke dono siron par yeh ulta ho jaata hai." },
+      { t: "Teen niyam, aur unhe todne par aane wala exception", d: "Jo comparator sachcha ordering nahi, woh sirf ajeeb sort nahi karta. Aaj ke sorts contradiction pakad lete hain aur aage badhne se mana kar dete hain." },
+    ],
+
+    costs: [
+      ["identity check", "O(1)", "do addresses compare, aur kuch nahi"],
+      ["content par equality", "O(size)", "field by field, ya element by element compare"],
+      ["key hash karna", "O(size of key)", "ek baar padha, immutable types mein cache"],
+      ["hash map lookup", "O(1) average", "bucket ke liye ek hash, phir andar equality"],
+      ["toote hash ke saath lookup", "O(1) and wrong", "galat bucket dhoondh kar kehta hai nahi hai: mehenga wala fast"],
+      ["comparator se sort", "O(n log n) comparisons", "har comparison utna jitna aapka comparator leta hai"],
+    ],
+
+    traps: [
+      "<b>hashCode ke bina equals override karna.</b> Barabar objects alag buckets mein girte hain. Set ek hi cheez ki do copies rakhta hai, aur map apni hi key nahi dhoondh paata.",
+      "<b>Java objects par <code>==</code>.</b> Yeh addresses compare karta hai. Same characters wali do strings bhi fail ho sakti hain, is par depend karta hai ki woh kahan se aayi.",
+      "<b>Insert ke baad key badalna.</b> Entry pahunch ke bahar ho jaati hai par gayab nahi: map mein hai, iterate hoti hai, kabhi milti nahi.",
+      "<b>Boolean return karne wala comparator</b> jahan negative, zero ya positive chahiye. Kuch languages mein compile ho jaata hai aur lagbhag sort karta hai.",
+      "<b>Tolerance ke saath floats ka order.</b> “Lagbhag barabar” transitive nahi: 1.0 ≈ 1.05 aur 1.05 ≈ 1.1, par 1.0 ≈ 1.1 nahi. Yeh valid ordering nahi.",
+      "<b>Jo stability hai hi nahi, us par bharosa.</b> C++ <code>sort</code> unstable hai. Java objects ke liye stable hai par primitives ke arrays ke liye nahi.",
+    ],
+
+    impl: [
+      ["Python", "__eq__ and __hash__ together", "Sirf __eq__ define karne se __hash__ None ho jaata hai aur object unhashable. dataclass(frozen=True) dono sahi karta hai."],
+      ["Java", "equals and hashCode, always both", "Objects ke liye == identity hai. Record dono aapke liye bana deta hai, aur aksar wahi sahi answer hai."],
+      ["C++", "operator== and std::hash specialisation", "sort ko strict weak ordering chahiye; use todna undefined behaviour hai, warning nahi."],
+      ["JavaScript", "no equality hook at all", "Map aur Set object keys ko reference se compare karte hain. Key serialise karo, ya khud banayi string ko key banao."],
+    ],
+
+    codecap: "Equality override karo to hashing bhi unhi fields se override karo. Comparator likho to use sachcha ordering banao.",
+
+    q: [
+      ["Kaunse teen alag sawaal log yahan mila dete hain?", "Identity (same object, addresses compare), equality (same content, fields compare), aur ordering (pehle kaun, teen-tarah ka answer)."],
+      ["Hash contract batao aur samjhao ki kyun hai.", "Barabar objects ke hash barabar hone chahiye. Lookup hash se bucket chunta hai aur andar equality se dhoondhta hai. Barabar objects ka hash alag ho, to map galat bucket dhoondhta hai aur key pakde hue bhi kehta hai nahi hai."],
+      ["Us contract ka ulta zaroori kyun nahi?", "Values anant hain aur hashes gine chune, to alag objects ko kabhi kabhi collide karna hi hai. Isiliye bucket ko ab bhi equality check se dhoondha jaata hai."],
+      ["Hash-map key immutable kyun honi chahiye?", "Bucket content se aata hai. Insert ke baad badlo to entry wahan file hai jahan koi nahi dekhega. Map mein rehti hai, iterate karne par dikhti hai, aur kabhi milti nahi."],
+      ["Comparator invalid kab hai, aur tab kya hota hai?", "Inconsistency (a < b aur b < a dono kehna), non-transitivity, ya ties par jhooth. C++ ise undefined behaviour maanta hai aur array ke end ke paar padh sakta hai. Java general contract wala exception phenkta hai, aksar production mein."],
+      ["Stability par bharosa kiye bina do keys par sort kaise?", "Dono keys ek hi comparator mein compare karo: pehle primary, aur sirf tie par secondary. Phir result is baat par depend nahi karta ki aapka sort stable hai ya nahi."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "stack-queue",
   n: "Stack & Queue",
   group: "Fundamentals",
+  need: {
+    ask: `<p>Two small jobs ask the same question, <b>what do I handle next?</b>, and need opposite answers.</p>
+<p><b>Job 1:</b> check that the brackets in <code>([{}])</code> close properly. <b>Job 2:</b> find the fewest steps from A to D in a tiny network. A links to B and C, B links to D, C links to E, and E links to D. So there is a short route, A B D, and a detour, A C E D.</p>`,
+    tries: [
+      ["Brackets: just count opens and closes", "<code>([)]</code> has one of each kind opened and closed, so every count balances. It is still wrong: <code>)</code> arrives while <code>[</code> is the one waiting to close."],
+      ["Route: explore with whatever container is handy", "Take the newest place first and you may follow the detour to the end: A, C, E, D is 3 steps. It reaches D, just not by the shortest route, and nothing tells you so."],
+      ["Use a plain list, and take from the front when needed", "Removing the first item shifts every other item left. On 100,000 items, emptying the list from the front is about 5 × 10⁹ moves."],
+    ],
+    so: `<p>Brackets need <b>the most recent unfinished thing</b>: the last bracket opened must close first. A <b>stack</b> gives exactly that: last in, first out, like a pile of plates. The route needs <b>arrival order</b>: finish everything 1 step away before anything 2 steps away. A <b>queue</b> gives that: first in, first out, like a line at a counter.</p>
+<p>Both only ever touch their ends, which keeps every operation O(1). The page uses these two examples throughout: <code>([{}])</code> for the stack, and the A to D network for the queue.</p>`,
+  },
+
   one: "Both restrict you to <b>one end</b>. A stack (LIFO) remembers what is still unfinished; a queue (FIFO) processes in arrival order, which is exactly why DFS uses one and BFS the other.",
 
-  plain: `<p>A stack and a queue are the same thing, a list, with a rule about <i>where you are allowed to touch it</i>. The rule is the whole point: by giving up random access you gain a guarantee about ordering, and that guarantee is what solves problems.</p>
-<p><b>Stack = LIFO</b> (last in, first out): a pile of plates, you only take the top one. It naturally remembers <b>the most recent unfinished thing</b>, exactly what nested brackets, undo history and function calls need.</p>
-<p><b>Queue = FIFO</b> (first in, first out): a queue at a counter, served in arrival order. It naturally finishes <b>everything at distance 1 before anything at distance 2</b>, exactly what shortest-path-in-an-unweighted-graph needs.</p>
-<p><b>Analogy.</b> Stack = the browser back button (most recent page first). Queue = a printer spool (first submitted, first printed). Neither is better; they encode different answers to "what next?".</p>`,
+  plain: `<p>A stack and a queue are both just a list with a rule about <i>where you may touch it</i>. The rule is the point. Giving up access to the middle buys a guarantee about order, and that guarantee solves problems.</p>
+<p><b>Stack, or LIFO</b> (last in, first out): a pile of plates, where you only take the top one. It always hands back <b>the most recent unfinished thing</b>. In <code>([{}])</code>, the <code>{</code> opened last is the one <code>}</code> must close.</p>
+<p><b>Queue, or FIFO</b> (first in, first out): a line at a counter, served in arrival order. Searching from A, it finishes <b>everything 1 step away before anything 2 steps away</b>. So the first time it reaches D, it got there by the shortest route.</p>
+<p><b>Analogy.</b> A stack is the browser's back button: most recent page first. A queue is a printer: first submitted, first printed. Neither is better. They give different answers to “what next?”.</p>`,
 
   why: [
     { t: "Let the problem pick the structure",
-      d: "Given <code>([{}])</code>, which bracket must close first? Always <b>the most recently opened one</b>. So you need a container whose easiest question is \"what did I add last?\". That is a stack. You did not choose it, the problem did." },
+      d: "In <code>([{}])</code>, which bracket must close first? Always <b>the most recently opened one</b>. So you want a container whose easiest question is “what did I add last?”. That is a stack. You did not choose it; the problem did." },
     { t: "Touching only one end is what keeps it cheap",
-      d: "Push and pop both happen at the <b>end</b> of an array, so nothing has to shift: both O(1). Giving up access to the middle is exactly what buys that speed." },
+      d: "Push and pop both happen at the <b>end</b> of an array, so nothing shifts: both are O(1). Giving up the middle is exactly what buys that speed." },
     { t: "Function calls run on a stack too",
-      d: "Calling a function stores the caller's variables and where to resume; returning pops them back. Recursion <i>is</i> a stack, which is why it can overflow, and why any recursion can be rewritten with a stack you manage yourself." },
-    { t: "Shortest path needs the opposite rule",
-      d: "BFS has to finish everything one step away before it looks at anything two steps away. Otherwise the first time it reaches the target may not be by the shortest route. That means serving in <b>arrival order</b>: a queue. Swap in a stack and you get DFS: still a valid walk, but no shortest-path guarantee." },
+      d: "Calling a function saves the caller's variables and where to resume. Returning pops them back. So recursion <i>is</i> a stack. That is why it can overflow, and why any recursion can be rewritten with a stack you manage yourself." },
+    { t: "Shortest route needs the opposite rule",
+      d: "From A, the queue finishes B and C (1 step) before D and E (2 steps). So D is first reached through B, in 2 steps. Swap in a stack and the newest place goes first: A, C, E, D, which is 3 steps. That is DFS, a valid walk with no shortest-path promise." },
     { t: "Never use a plain array as a queue",
-      d: "Removing from the front shifts every remaining element, O(n) each time. A deque is built to be cheap at both ends. Get this wrong and an O(V+E) BFS silently becomes O(V²) with nothing looking wrong." },
+      d: "Taking from the front shifts every remaining item: O(<var>n</var>) each time. A <b>deque</b>, a list built to be cheap at both ends, does it in O(1). Get this wrong and an O(<var>V</var> + <var>E</var>) BFS quietly becomes O(<var>V</var>²)." },
     { t: "The monotonic stack, in one line",
-      d: "\"Next greater element\" looks like O(n²). But keep a stack of indices whose values only decrease: when a bigger value arrives, it is the answer for everything you pop. Each index goes in once and comes out once → <b>O(n)</b>." },
+      d: "“Next greater element” looks like O(<var>n</var>²). Instead, keep a stack of indexes whose values only decrease. When a bigger value arrives, it is the answer for everything it pops. Each index goes in once and out once, so it is <b>O(<var>n</var>)</b>." },
   ],
 
   hing: `<p><b>Dono cheezein ek hi list hain</b>, bas niyam alag hai ki tum <i>kahaan haath laga sakte ho</i>. Aur wahi niyam problem solve karta hai.</p>
 <p><b>Stack (LIFO)</b>, platon ka dher. Sirf upar wali plate uthao. Yeh naturally yaad rakhta hai "sabse recent adhoora kaam kaun sa hai". Bracket matching mein <code>([{}])</code>, sabse baad mein khula bracket hi sabse pehle band hoga. Isliye stack koi random choice nahi, <b>problem ne khud force kiya hai</b>.</p>
-<p><b>Queue (FIFO)</b>, line mein khade log, jo pehle aaya woh pehle. Isliye BFS mein distance 1 ke saare nodes pehle nipat jaate hain, phir distance 2 shuru hota hai. Yahi <b>shortest path ki guarantee</b> deta hai. Queue ki jagah stack laga do → DFS ban jaayega: traversal sahi, par shortest path ki guarantee khatam.</p>
-<p><b>Sabse zaroori practical baat:</b> queue ke liye <code>list.pop(0)</code> kabhi mat use karna. Woh <b>O(n)</b> hai kyunki saare elements khisakte hain. <code>collections.deque</code> use karo, <code>popleft()</code> <b>O(1)</b>. Yeh galti BFS ko O(V+E) se chupke se O(V²) bana deti hai, aur bade test case par TLE deti hai.</p>
+<p><b>Queue (FIFO)</b>, line mein khade log, jo pehle aaya woh pehle. Isliye BFS mein distance 1 ke saare nodes pehle nipat jaate hain, phir distance 2 shuru hota hai. Yahi <b>shortest path ki guarantee</b> deta hai. Queue ki jagah stack laga do to DFS ban jaayega: traversal sahi, par shortest path ki guarantee khatam.</p>
+<p><b>Sabse zaroori practical baat:</b> queue ke liye <code>list.pop(0)</code> kabhi mat use karna. Woh <b>O(<var>n</var>)</b> hai kyunki saare elements khisakte hain. <code>collections.deque</code> use karo, <code>popleft()</code> <b>O(1)</b>. Yeh galti BFS ko O(<var>V</var>+<var>E</var>) se chupke se O(<var>V</var>²) bana deti hai, aur bade test case par TLE deti hai.</p>
 <p><b>Recursion = stack.</b> Har call mein local variables aur return address stack par push hote hain. Isliye gehri recursion RecursionError deti hai, aur isiliye <b>koi bhi recursion</b> explicit stack se iterative banayi ja sakti hai.</p>
-<p><b>Monotonic stack (yeh zaroor samajhna):</b> "next greater element" pehli nazar mein O(n²) lagta hai. Par stack mein indices <b>ghatte hue</b> order mein rakho, jaise hi bada element aata hai, woh un sabka answer hai jinhe tum pop kar rahe ho. Har index sirf <b>ek baar push, ek baar pop</b> → total 2n operations → <b>O(n)</b>. Daily Temperatures aur Largest Rectangle isi ek idea par khade hain.</p>`,
+<p><b>Monotonic stack (yeh zaroor samajhna):</b> "next greater element" pehli nazar mein O(<var>n</var>²) lagta hai. Par stack mein indices <b>ghatte hue</b> order mein rakho. Jaise hi bada element aata hai, woh un sabka answer hai jinhe tum pop kar rahe ho. Har index sirf <b>ek baar push, ek baar pop</b>, total 2<var>n</var> operations, to <b>O(<var>n</var>)</b>.</p>`,
 
   viz: ["stack", "queue"],
   see: [["VA", "https://visualgo.net/en/list", "VisuAlgo, stack & queue operations"]],
 
   math: [
-    { t: "One end is cheap, the other end is the whole array", d: "The restriction is not a rule about tidiness. Removing from the front of a contiguous block moves everything behind it.", w:
+    { t: "The brackets, traced on the stack", d: "Push every opener. On a closer, the top of the stack must be its partner. At the end, the stack must be empty.", w:
+`"([{}])"
+  (   push            stack: (
+  [   push            stack: ( [
+  {   push            stack: ( [ {
+  }   top is {, pop   stack: ( [
+  ]   top is [, pop   stack: (
+  )   top is (, pop   stack: empty    valid
+
+"([)]"
+  )   top is [, not (                 invalid, counts or not` },
+    { t: "The route, traced on the queue", d: "Take from the front, add new places at the back, and write down how far each one is. The first time D comes out of the queue, its distance is final.", w:
+`A: B C     B: D     C: E     E: D
+
+queue          take   add          distance
+[A]            A      B, C         B = 1, C = 1
+[B, C]         B      D            D = 2
+[C, D]         C      E            E = 2
+[D, E]         D      reached      A to D in 2 steps
+
+a stack takes the newest first: A, C, E, D = 3 steps` },
+    { t: "One end is cheap, the other end is the whole array", d: "The restriction is not about tidiness. Removing from the front of a single block of memory moves everything behind it.", w:
 `pop from the END:    read index n-1, n = n - 1      O(1)
 pop from the FRONT:  shift n-1 elements left        O(n)
 
@@ -3103,16 +4293,7 @@ n pops from the front:
   n = 100,000  ->  5 x 10^9 element moves
 
 a real deque does the same n pops in n operations` },
-    { t: "The two-stack queue: four moves per element, for ever", d: "One dequeue can cost O(n), and yet the whole sequence is linear, because an element can only make the trip once.", w:
-`an element's entire life across in-stack and out-stack:
-  1  push onto in
-  2  pop from in
-  3  push onto out
-  4  pop from out
-
-n operations  <=  4n moves  ->  amortised O(1) each
-worst single dequeue: O(n), when out is empty and in is full` },
-    { t: "The call stack is a stack, and it has a published size", d: "Recursion depth is not an abstract concern. It is bytes, and you can work out roughly how many frames fit before anything overflows.", w:
+    { t: "The call stack is a stack, and it has a size", d: "Recursion depth is not abstract. It is bytes, and you can estimate roughly how many frames fit before anything overflows.", w:
 `typical thread stack:  1 MB (JVM, Windows), 8 MB (Linux main)
 one frame with a few locals: 50 to 100 bytes
 
@@ -3121,7 +4302,7 @@ Python's own ceiling: recursion limit 1000 by default
 
 walking a 100,000-node list recursively: overflow
 the same walk as a loop: zero frames` },
-    { t: "DFS and BFS differ by one word, and by a lot of memory", d: "Same code, same visited set, different container. What changes is not the order so much as how much of the structure you are holding at once.", w:
+    { t: "DFS and BFS differ by one word, and by a lot of memory", d: "Same code, same visited set, different container. What changes is how much of the structure you hold at once.", w:
 `take from the same end you added -> stack -> depth first
 take from the other end          -> queue -> breadth first
 
@@ -3133,26 +4314,26 @@ a complete binary tree of n = 10^6 nodes:
   ],
 
   costs: [
-    ["stack push / pop (list)", "O(1)", "both at the end. Nothing shifts"],
-    ["queue append / popleft (deque)", "O(1)", "ring buffer, both ends addressable"],
-    ["list.pop(0) used as a queue", "O(n)", "shifts every element, never do this"],
+    ["stack push / pop (list)", "O(1)", "both at the end, so nothing shifts"],
+    ["queue append / popleft (deque)", "O(1)", "ring buffer, both ends reachable"],
+    ["list.pop(0) used as a queue", "O(n)", "shifts every element: never do this"],
     ["peek (a[-1] / q[0])", "O(1)", "just a read"],
     ["monotonic stack over n items", "O(n)", "each index pushed once, popped once"],
-    ["space", "O(n)", "worst case everything is held at once"],
+    ["space", "O(n)", "worst case, everything is held at once"],
   ],
 
   traps: [
-    "<b>Removing from the front of a plain array in BFS</b> (<code>list.pop(0)</code>, <code>ArrayList.remove(0)</code>, JS <code>shift()</code>). The most common silent performance bug in graph problems, use a deque.",
-    "<b>Popping an empty stack.</b> Always guard with <code>if stack:</code>, unbalanced input is the first edge case tested.",
-    "<b>Forgetting the final emptiness check.</b> In bracket matching <code>\"(((\"</code> never fails inside the loop; it fails because the stack is non-empty at the end.",
-    "<b>Marking visited on dequeue instead of on enqueue.</b> The same node gets queued many times and the complexity blows up.",
+    "<b>Removing from the front of a plain array in BFS</b> (<code>list.pop(0)</code>, <code>ArrayList.remove(0)</code>, JS <code>shift()</code>). The most common silent slowdown in graph problems. Use a deque.",
+    "<b>Popping an empty stack.</b> Always guard with <code>if stack:</code>. <code>)(</code> tries to pop before anything was pushed, and it is the first edge case anyone tests.",
+    "<b>Forgetting the final emptiness check.</b> <code>(((</code> never fails inside the loop. It fails because the stack is not empty at the end.",
+    "<b>Marking visited when you take a node out instead of when you add it.</b> A node can then be added once per neighbour before it is first taken out. On a dense graph that is far more than <var>V</var> additions.",
   ],
 
   impl: [
-    ["Python", "list (stack) · collections.deque (queue)", "list.pop(0) is O(n), always deque.popleft() for BFS."],
-    ["Java", "ArrayDeque for BOTH", "push/pop for a stack, offer/poll for a queue. The legacy Stack class is synchronised and slow."],
-    ["C++", "std::stack · std::queue · std::deque", "stack/queue are adapters over deque. front()/pop() are separate calls, pop() returns void."],
-    ["JavaScript", "Array (stack) · index-pointer queue", "No deque. shift() is O(n), keep a head index, or use two stacks."],
+    ["Python", "list (stack) · collections.deque (queue)", "list.pop(0) is O(n): always deque.popleft() for BFS."],
+    ["Java", "ArrayDeque for BOTH", "push/pop for a stack, offer/poll for a queue. The old Stack class is synchronised and slow."],
+    ["C++", "std::stack · std::queue · std::deque", "stack/queue are adapters over deque. front()/pop() are separate calls, and pop() returns void."],
+    ["JavaScript", "Array (stack) · index-pointer queue", "No deque. shift() is O(n): keep a head index, or use two stacks."],
   ],
 
   code: {
@@ -3312,121 +4493,212 @@ function nextGreater(a) {
   codecap: "The level-by-level BFS loop and the monotonic stack are the two templates worth typing from memory.",
 
   q: [
-    ["Why does bracket matching require a stack specifically?", "The bracket that must close next is always the most recently opened one, and a stack is the structure whose cheapest question is 'what did I add last?'. The problem forces LIFO."],
-    ["Why does BFS need a queue rather than a stack?", "Shortest path requires exhausting distance 1 before distance 2, i.e. arrival order (FIFO). A stack gives DFS, which traverses correctly but loses the shortest-path guarantee."],
-    ["Why is removing from the front of an array a bug in BFS?", "It shifts every remaining element, so it is O(n). Over V dequeues an O(V+E) BFS degrades to O(V²). A deque does it in O(1)."],
-    ["Why is a monotonic stack O(n) despite containing a while loop?", "Each index is pushed exactly once and popped at most once, so the inner while runs at most n times in total across the whole outer loop."],
-    ["How is recursion related to a stack?", "Every call pushes a frame of locals and a return address onto the call stack, popped on return. Any recursion can be rewritten with an explicit stack to dodge depth limits."],
-    ["In BFS, mark visited on enqueue or dequeue?", "On enqueue, otherwise the same node can be queued many times before it is first processed."],
+    ["Why does bracket matching require a stack specifically?", "The bracket that must close next is always the most recently opened one. A stack is the structure whose cheapest question is 'what did I add last?'. The problem forces LIFO."],
+    ["Why does BFS need a queue rather than a stack?", "Shortest path needs everything at distance 1 finished before distance 2, which is arrival order (FIFO). A stack gives DFS, which visits everything but loses the shortest-path guarantee."],
+    ["Why is removing from the front of an array a bug in BFS?", "It shifts every remaining element, so it is O(n). Over V removals, an O(V+E) BFS slows to O(V²). A deque does it in O(1)."],
+    ["Why is a monotonic stack O(n) despite containing a while loop?", "Each index is pushed exactly once and popped at most once. So the inner while runs at most n times in total, across the whole outer loop."],
+    ["How is recursion related to a stack?", "Every call pushes a frame of locals and a return address onto the call stack, popped on return. Any recursion can be rewritten with an explicit stack to avoid depth limits."],
+    ["In BFS, mark visited on enqueue or dequeue?", "On enqueue. Otherwise the same node can be queued many times before it is first processed."],
   ],
 
   p: [
-    [20, "valid-parentheses", "Valid Parentheses", "E"],
+    [20, "valid-parentheses", "Valid Parentheses, the running stack example", "E"],
+    [232, "implement-queue-using-stacks", "Queue using Stacks, amortised O(1)", "E"],
     [155, "min-stack", "Min Stack, carry the min alongside", "M"],
     [739, "daily-temperatures", "Daily Temperatures, monotonic stack", "M"],
-    [232, "implement-queue-using-stacks", "Queue using Stacks, amortised O(1)", "E"],
     [102, "binary-tree-level-order-traversal", "Level Order Traversal, BFS by levels", "M"],
     [84, "largest-rectangle-in-histogram", "Largest Rectangle, monotonic stack", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Do chhote kaam ek hi sawaal poochte hain, <b>agla kya handle karoon?</b>, aur unhe ulte jawab chahiye.</p>
+<p><b>Kaam 1:</b> check karo ki <code>([{}])</code> ke brackets sahi band hote hain. <b>Kaam 2:</b> ek chhote network mein A se D tak sabse kam steps dhoondho. A B aur C se juda hai, B D se, C E se, aur E D se. To ek chhota raasta hai, A B D, aur ek lamba chakkar, A C E D.</p>`,
+      tries: [
+        ["Brackets: bas khulne aur band hone gino", "<code>([)]</code> mein har tarah ka ek khula aur ek band hua, to har ginti barabar. Phir bhi galat hai: <code>)</code> tab aata hai jab <code>[</code> band hone ka intezaar kar raha hai."],
+        ["Raasta: jo container haath mein ho usse explore karo", "Sabse naya place pehle lo to shayad chakkar end tak follow karoge: A, C, E, D, yaani 3 steps. D tak pahunch gaye, bas sabse chhote raaste se nahi, aur kuch batata bhi nahi."],
+        ["Simple list lo, aur zaroorat par aage se nikaalo", "Pehla item hataane se baaki har item left khisakta hai. 100,000 items par list ko aage se khaali karna lagbhag 5 × 10⁹ moves hai."],
+      ],
+      so: `<p>Brackets ko <b>sabse recent adhoori cheez</b> chahiye: jo bracket sabse baad mein khula, woh pehle band ho. <b>Stack</b> theek yahi deta hai: last in, first out, platon ke dher jaisa. Raaste ko <b>aane ka order</b> chahiye: 1 step door sab kuch 2 step door se pehle nipto. <b>Queue</b> yahi deta hai: first in, first out, counter ki line jaisa.</p>
+<p>Dono sirf apne siron ko chhoote hain, isliye har operation O(1) rehta hai. Page poore mein yahi do examples use karta hai: stack ke liye <code>([{}])</code>, aur queue ke liye A se D wala network.</p>`,
+    },
+
+    one: "Dono aapko <b>ek sire</b> tak rok dete hain. Stack (LIFO) yaad rakhta hai kya adhoora hai; queue (FIFO) aane ke order mein kaam karta hai, aur isiliye DFS ek use karta hai aur BFS doosra.",
+
+    plain: `<p>Stack aur queue dono bas ek list hain, is niyam ke saath ki use <i>kahan chhoo sakte ho</i>. Niyam hi point hai. Beech ka access chhodne se order ki ek guarantee milti hai, aur wahi guarantee problems solve karti hai.</p>
+<p><b>Stack, yaani LIFO</b> (last in, first out): platon ka dher, jahan sirf upar wali uthate ho. Yeh hamesha <b>sabse recent adhoori cheez</b> wapas deta hai. <code>([{}])</code> mein sabse baad khula <code>{</code> hi woh hai jise <code>}</code> band karega.</p>
+<p><b>Queue, yaani FIFO</b> (first in, first out): counter ki line, aane ke order mein. A se dhoondhte hue yeh <b>1 step door sab kuch 2 step door se pehle</b> nipta deta hai. To jab pehli baar D milta hai, woh sabse chhote raaste se mila.</p>
+<p><b>Analogy.</b> Stack browser ka back button hai: sabse recent page pehle. Queue printer hai: pehle bheja, pehle chhapa. Koi behtar nahi. Dono “aage kya?” ke alag jawab dete hain.</p>`,
+
+    why: [
+      { t: "Structure problem ko chunne do",
+        d: "<code>([{}])</code> mein pehle kaunsa bracket band hona chahiye? Hamesha <b>sabse recent khula</b>. To aisa container chahiye jiska sabse aasaan sawaal ho “maine aakhri mein kya daala?”. Yahi stack hai. Aapne nahi chuna; problem ne chuna." },
+      { t: "Sirf ek sira chhoona hi ise sasta rakhta hai",
+        d: "Push aur pop dono array ke <b>end</b> par hote hain, to kuch nahi khisakta: dono O(1). Beech ko chhodna hi yeh speed khareedta hai." },
+      { t: "Function calls bhi stack par chalti hain",
+        d: "Function call caller ke variables aur wapas kahan aana hai save karti hai. Return unhe pop karke wapas laata hai. To recursion stack <i>hi</i> hai. Isiliye overflow ho sakta hai, aur isiliye koi bhi recursion apne banaye stack se likhi ja sakti hai." },
+      { t: "Sabse chhote raaste ko ulta niyam chahiye",
+        d: "A se queue pehle B aur C (1 step) nipta-ti hai, phir D aur E (2 steps). To D pehli baar B se hokar, 2 steps mein milta hai. Stack laga do to sabse naya pehle: A, C, E, D, yaani 3 steps. Yeh DFS hai, valid walk par shortest-path ka koi vaada nahi." },
+      { t: "Simple array ko kabhi queue mat banao",
+        d: "Aage se nikaalne par har bacha item khisakta hai: har baar O(<var>n</var>). <b>Deque</b>, dono siron par saste hone ke liye bani list, yeh O(1) mein karti hai. Yeh galat kiya to O(<var>V</var> + <var>E</var>) BFS chupchaap O(<var>V</var>²) ban jaata hai." },
+      { t: "Monotonic stack, ek line mein",
+        d: "“Next greater element” O(<var>n</var>²) jaisa lagta hai. Iski jagah indexes ka aisa stack rakho jinki values sirf ghat-ti hain. Bada value aate hi woh har pop hone wale ka answer hai. Har index ek baar andar aur ek baar bahar, to <b>O(<var>n</var>)</b>." },
+    ],
+
+    math: [
+      { t: "Brackets, stack par trace karke", d: "Har opener push karo. Closer par stack ka top uska partner hona chahiye. End mein stack khaali hona chahiye." },
+      { t: "Raasta, queue par trace karke", d: "Aage se lo, naye places peeche jodo, aur har ek ki doori likho. Jab D pehli baar queue se nikalta hai, uski doori final hai." },
+      { t: "Ek sira sasta hai, doosra poora array", d: "Yeh rok safai ke liye nahi. Memory ke ek block ke aage se hataane par uske peeche ka sab khisakta hai." },
+      { t: "Call stack ek stack hai, aur uska size hai", d: "Recursion depth abstract nahi. Yeh bytes hai, aur andaaza laga sakte ho ki overflow se pehle kitne frames fit honge." },
+      { t: "DFS aur BFS mein ek word ka farak, aur bahut memory ka", d: "Wahi code, wahi visited set, alag container. Badalta yeh hai ki ek saath structure ka kitna hissa pakde rehte ho." },
+    ],
+
+    costs: [
+      ["stack push / pop (list)", "O(1)", "dono end par, to kuch nahi khisakta"],
+      ["queue append / popleft (deque)", "O(1)", "ring buffer, dono sire pahunch mein"],
+      ["list.pop(0) ko queue banana", "O(n)", "har element khisakta hai: kabhi mat karo"],
+      ["peek (a[-1] / q[0])", "O(1)", "bas ek read"],
+      ["n items par monotonic stack", "O(n)", "har index ek baar push, ek baar pop"],
+      ["space", "O(n)", "worst case mein sab kuch ek saath pakda hua"],
+    ],
+
+    traps: [
+      "<b>BFS mein simple array ke aage se hataana</b> (<code>list.pop(0)</code>, <code>ArrayList.remove(0)</code>, JS <code>shift()</code>). Graph problems ka sabse common chhupa slowdown. Deque use karo.",
+      "<b>Khaali stack se pop.</b> Hamesha <code>if stack:</code> se bachao. <code>)(</code> kuch push hone se pehle pop karne ki koshish karta hai, aur yahi pehla edge case hai jo sab test karte hain.",
+      "<b>Aakhri khaali-check bhoolna.</b> <code>(((</code> loop ke andar kabhi fail nahi hota. Yeh isliye fail hota hai kyunki end mein stack khaali nahi.",
+      "<b>Node ko jodte waqt ki jagah nikaalte waqt visited mark karna.</b> Tab ek node pehli baar nikalne se pehle har padosi se ek baar jud sakta hai. Dense graph par yeh <var>V</var> se kahin zyada additions hai.",
+    ],
+
+    impl: [
+      ["Python", "list (stack) · collections.deque (queue)", "list.pop(0) O(n) hai: BFS ke liye hamesha deque.popleft()."],
+      ["Java", "ArrayDeque for BOTH", "Stack ke liye push/pop, queue ke liye offer/poll. Purani Stack class synchronised aur slow hai."],
+      ["C++", "std::stack · std::queue · std::deque", "stack/queue deque ke upar adapters hain. front()/pop() alag calls hain, aur pop() void return karta hai."],
+      ["JavaScript", "Array (stack) · index-pointer queue", "Deque nahi. shift() O(n) hai: head index rakho, ya do stacks use karo."],
+    ],
+
+    codecap: "Level-by-level BFS loop aur monotonic stack, yahi do templates yaad se type karne layak hain.",
+
+    q: [
+      ["Bracket matching ko khaas taur par stack kyun chahiye?", "Jo bracket agla band hona hai woh hamesha sabse recent khula hota hai. Stack woh structure hai jiska sabse sasta sawaal hai 'maine aakhri mein kya daala?'. Problem khud LIFO force karti hai."],
+      ["BFS ko stack ki jagah queue kyun chahiye?", "Shortest path ke liye distance 1 ka sab kuch distance 2 se pehle khatam hona chahiye, jo aane ka order (FIFO) hai. Stack DFS deta hai, jo sab visit karta hai par shortest-path ki guarantee kho deta hai."],
+      ["BFS mein array ke aage se hataana bug kyun hai?", "Yeh har bache element ko khisakata hai, to O(n) hai. V baar hataane par O(V+E) BFS O(V²) ban jaata hai. Deque yeh O(1) mein karta hai."],
+      ["While loop hone ke bawajood monotonic stack O(n) kyun hai?", "Har index theek ek baar push aur zyada se zyada ek baar pop hota hai. To poore outer loop mein andar wala while total n baar se zyada nahi chalta."],
+      ["Recursion ka stack se kya rishta hai?", "Har call locals aur return address ka frame call stack par push karti hai, jo return par pop hota hai. Depth limits se bachne ke liye koi bhi recursion explicit stack se likhi ja sakti hai."],
+      ["BFS mein visited enqueue par mark karein ya dequeue par?", "Enqueue par. Warna pehli baar process hone se pehle hi ek node kai baar queue ho sakta hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "heap",
   n: "Heap / Priority Queue",
   group: "Fundamentals",
-  one: "A heap promises <b>only that the minimum is on top</b>, not a sorted order. That weaker promise is why push and pop are O(log n), and why top-K costs O(n log k) instead of O(n log n).",
+  need: {
+    ask: `<p>A job scheduler receives <b>10⁶ jobs</b> over a day, each with an urgency number: smaller means more urgent. About <b>10⁵</b> are waiting at any moment. Whenever a worker is free, it must run the most urgent job waiting.</p>
+<p>So two operations, over and over: <b>add a job</b>, and <b>take the smallest</b>. Both must be fast, at the same time.</p>`,
+    tries: [
+      ["Keep the waiting jobs sorted", "Taking the smallest is instant. But each new job must be slotted into place, shifting on average half of 10⁵ jobs. Over 10⁶ arrivals that is about 5 × 10¹⁰ moves."],
+      ["Keep them unsorted, and scan for the smallest", "Adding is instant. Every removal scans all 10⁵ waiting jobs, so 10⁶ removals cost 10¹¹ comparisons."],
+      ["Sort once, up front", "Jobs keep arriving. Re-sorting after every arrival is 10⁵ × 17 ≈ 1.7 × 10⁶ steps each time, far worse than either option above."],
+    ],
+    so: `<p>Both fixes promise too much, or too little. You only ever need <b>the smallest</b>, never the full order. A <b>heap</b> promises exactly that: arrange the jobs as a tree where <b>every parent is smaller than or equal to its children</b>. Then the top is the smallest, and fixing the tree after a change touches only one path from top to bottom: about log₂ 10⁵ ≈ 17 steps.</p>
+<p>That is about 3.4 × 10⁷ steps for the whole day. The page follows one small heap, <b>2, 5, 7, 9, 6, 8</b>, as it takes a new job with urgency 1 and then hands out the smallest.</p>`,
+  },
 
-  plain: `<p>You need the smallest item repeatedly, and new items keep arriving. Sorting gives you that, but it orders <i>everything</i> when you only ever look at <b>one</b> element. You paid for information you never used.</p>
-<p>Picture the items as a pyramid, one on top, each item sitting above two others lower down. The item above is a <b>parent</b>, the two below are its <b>children</b>, and the very top one is the <b>root</b>. A heap makes a deliberately weaker promise: <b>every parent is ≤ its children</b>. Siblings are unordered, the underlying array is not sorted. All you are guaranteed is that the root is the minimum, which is all you asked for.</p>
-<p>Because the promise is <i>local</i>, repairing it after a change is local too. A new item swaps upward along one path toward the root. That is about log n swaps, not n.</p>
-<p><b>Analogy.</b> A hospital waiting room. Nobody ranks all 200 patients; they only need to know who is treated <b>next</b>. A new critical case is moved up past a few people, not inserted into a full ranking of everyone.</p>`,
+  one: "A heap promises <b>only that the minimum is on top</b>, not a sorted order. That weaker promise is why push and pop are O(log <var>n</var>), and why top-K costs O(<var>n</var> log <var>k</var>) instead of O(<var>n</var> log <var>n</var>).",
+
+  plain: `<p>You need the smallest item again and again, while new items keep arriving. Sorting would give you that, but it orders <i>everything</i> when you only ever look at <b>one</b> item.</p>
+<p>Picture the items as a pyramid. The top one is the <b>root</b>. Each item sits above up to two others: it is their <b>parent</b>, and they are its <b>children</b>. A heap makes one promise: <b>every parent is ≤ its children</b>. In the heap 2, 5, 7, 9, 6, 8, the root 2 sits above 5 and 7, and 5 sits above 9 and 6. Nothing says 5 must be less than 7.</p>
+<p>Because the promise is <i>local</i>, repairing it is local too. Add 1 at the bottom, under 7. It is smaller than its parent, so swap. Then smaller than 2, so swap again. Two swaps, one path, about log <var>n</var> steps rather than <var>n</var>.</p>
+<p><b>Analogy.</b> A hospital waiting room. Nobody ranks all 200 patients. They only need to know who goes <b>next</b>. A new critical case moves up past a few people, not into a full ranking of everyone.</p>`,
 
   why: [
     { t: "Sorting hands you more than you asked for",
-      d: "You want the smallest item, over and over, as new items arrive. Sorting orders <i>everything</i> when you only ever look at <i>one</i>. Keeping a sorted list costs O(n) per insert. Scanning for the minimum costs O(n) per removal. All three overpay." },
-    { t: "So promise less: every parent is smaller than its children",
-      d: "That is the only rule. Siblings are in no particular order and the array is not sorted. But follow parents down and each is smaller than what is below it, so the <b>top item is the minimum</b>, which is all you wanted." },
+      d: "You want the smallest item, over and over, while new ones arrive. A sorted list costs O(<var>n</var>) per insert. Scanning for the minimum costs O(<var>n</var>) per removal. Both pay for order you never look at." },
+    { t: "So promise less: every parent ≤ its children",
+      d: "That is the only rule. In 2, 5, 7, 9, 6, 8, siblings 5 and 7 are in no particular order, and the array is not sorted. But every parent is ≤ what sits below it. Follow that up and the <b>top is the minimum</b>, which is all you wanted." },
     { t: "A small promise is cheap to repair",
-      d: "Add a new item at the bottom and swap it upward while it is smaller than its parent. Remove the top, move the last item up there, and swap it downward. Either way you walk <b>one path</b>, never the whole structure." },
+      d: "Add 1 at the next free spot, under 7. Swap it up while it is smaller than its parent: past 7, then past 2. To remove the top, move the last item up there and swap it <i>down</i> past its smaller child. Either way you walk <b>one path</b>, never the whole structure." },
     { t: "Keep the tree full and that path is short",
-      d: "A heap fills every level before starting the next, so n items give a height of exactly log₂n. So push and pop are <b>O(log n)</b>, guaranteed rather than on average. And because there are no gaps, the whole thing fits in a plain array: the children of position i sit at 2i+1 and 2i+2. No pointers, no nodes." },
+      d: "A heap fills each level before starting the next, so <var>n</var> items make a tree about log₂ <var>n</var> levels deep. Push and pop are therefore <b>O(log <var>n</var>)</b>, guaranteed. With no gaps, it fits in a plain array: the children of position <var>i</var> are at 2<var>i</var> + 1 and 2<var>i</var> + 2." },
     { t: "Top-K is the payoff",
-      d: "For the k largest of n items, keep a <b>min</b>-heap holding only k items: add each item, and whenever it holds more than k, drop the smallest. That is <b>O(n log k)</b> time and O(k) memory instead of sorting's O(n log n) and O(n)." },
+      d: "For the <var>k</var> largest of <var>n</var> items, keep a <b>min</b>-heap of just <var>k</var> items. Add each item, and when it holds more than <var>k</var>, drop the smallest. That is <b>O(<var>n</var> log <var>k</var>)</b> time and O(<var>k</var>) memory, against sorting's O(<var>n</var> log <var>n</var>) and O(<var>n</var>)." },
     { t: "Know what it refuses to do",
-      d: "You cannot search a heap, iterate it in order, or ask for the second smallest without removing the first. If you need any of those, you wanted a sorted structure or a balanced tree instead." },
+      d: "You cannot search a heap, walk it in order, or read the second smallest without removing the first. If you need any of those, you wanted a sorted structure or a balanced tree." },
   ],
 
   variants: [
     { n: "Top-K with a size-k heap", cost: "O(n log k) time, O(k) space",
-      idea: "For the k largest, keep a MIN-heap of size k and pop whenever it grows past k, so the smallest of the current best is always the one discarded.",
-      when: "k is much smaller than n, or the data is a stream you cannot hold entirely.",
-      watch: "The instinct is a max-heap of size n. That is O(n log n) and O(n) space for the same answer." },
-
+      idea: "For the <var>k</var> largest, keep a MIN-heap of size <var>k</var>, and pop whenever it grows past <var>k</var>. The smallest of the current best is always the one thrown out.",
+      when: "<var>k</var> is much smaller than <var>n</var>, or the data is a stream too big to hold.",
+      watch: "The instinct is a max-heap of all <var>n</var>. That is O(<var>n</var> log <var>n</var>) time and O(<var>n</var>) space for the same answer." },
     { n: "Two heaps, running median", cost: "O(log n) per insert, O(1) per query",
-      idea: "A max-heap for the lower half and a min-heap for the upper half, kept within one element of the same size. The median sits on one or both tops.",
-      when: "A median over a stream, or any question needing the middle of data that keeps arriving.",
-      watch: "Rebalancing after every insert is the whole trick, and pushing to the wrong heap first is the usual bug. Push, then move the top across, then rebalance sizes." },
-
+      idea: "A max-heap holds the lower half and a min-heap the upper half, kept within one item of the same size. The median sits on one or both tops.",
+      when: "The median of a stream, or any question about the middle of data that keeps arriving.",
+      watch: "Rebalancing after every insert is the whole trick. Push, move the top across, then even up the sizes." },
     { n: "Heapify an existing array", cost: "O(n), not O(n log n)",
-      idea: "Sift down from the last internal node backwards. Most nodes sit near the leaves and have almost nothing to sift, so the sum converges to linear.",
-      when: "You already hold all the data and want a heap out of it.",
-      watch: "n individual pushes cost O(n log n). Building in one go is strictly cheaper, and this is a favourite follow-up." },
-
+      idea: "Sift down from the last parent backwards to the root. Most nodes sit near the bottom and have almost nowhere to sift, so the total is linear.",
+      when: "You already hold all the data and want a heap of it.",
+      watch: "<var>n</var> separate pushes cost O(<var>n</var> log <var>n</var>). Building in one go is cheaper, and it is a favourite follow-up." },
     { n: "K-way merge", cost: "O(N log k)",
-      idea: "Hold one element from each of the k sorted sources in a heap. Pop the smallest, then push the next element from whichever source it came from.",
-      when: "Merging k sorted lists, arrays or files, and the smallest range covering all k lists.",
-      watch: "Push the source index alongside the value, or you will not know where to pull the replacement from." },
-
+      idea: "Hold one item from each of <var>k</var> sorted sources in a heap. Pop the smallest, then push the next item from the same source.",
+      when: "Merging <var>k</var> sorted lists, arrays or files, and the smallest range covering all <var>k</var> lists.",
+      watch: "Push the source index with the value, or you will not know where the replacement comes from." },
     { n: "Priority scheduling", cost: "O(log n) per event",
-      idea: "The heap holds pending work ordered by cost, deadline or arrival, and you always process the front. Dijkstra and Prim are both this.",
-      when: "Task schedulers, event simulation, anything with a next-best-thing rule.",
-      watch: "Ties need a deterministic second key, or a comparison between two objects with equal priority will throw or behave inconsistently." },
+      idea: "The heap holds pending work ordered by cost, deadline or arrival, and you always process the top. The job scheduler above is this, and so are Dijkstra and Prim.",
+      when: "Task schedulers, event simulation, anything with a “next best thing” rule.",
+      watch: "Ties need a second key that always decides. Otherwise comparing two equal-priority objects may throw, or behave differently each run." },
   ],
 
   hing: `<p><b>Zaroorat kya hai?</b> Baar-baar sabse chhota element chahiye, aur naye elements aate rehte hain. Poora sort karna <b>zyada kaam</b> hai, tumne sabko order kar diya jabki dekhna sirf <b>ek</b> tha.</p>
 <p><b>Heap ka kamzor waada:</b> sirf itna ki <b>har parent apne children se chhota hai</b>. Siblings mein koi order nahi, array sorted nahi. Bas root par minimum milega, aur wahi to chahiye tha.</p>
 <p><b>Kamzor waada = sasti repair.</b> Naya element sabse neeche daalo aur parent se chhota hai to swap karte upar jao (<b>sift up</b>). Root nikaalna ho to root hatao, aakhri element upar rakho, aur chhote child se swap karte neeche jao (<b>sift down</b>). Dono mein sirf <b>ek raasta</b> chalna padta hai, poora tree nahi.</p>
-<p><b>Woh raasta chhota kyun hai?</b> Kyunki heap hamesha <b>complete binary tree</b> hoti hai, har level bhara, aakhri level left se fill. n nodes ka matlab height exactly ⌊log₂n⌋. Isliye push/pop <b>O(log n)</b>, guaranteed.</p>
+<p><b>Woh raasta chhota kyun hai?</b> Kyunki heap hamesha <b>complete binary tree</b> hoti hai, har level bhara, aakhri level left se fill. <var>n</var> nodes ka matlab height lagbhag log₂<var>n</var>. Isliye push/pop <b>O(log <var>n</var>)</b>, guaranteed.</p>
 <p><b>Complete hone ka bonus:</b> tree ki zaroorat hi nahi! Poora heap ek simple <b>array</b> hai, node <code>i</code> ke children <code>2i+1</code> aur <code>2i+2</code>, parent <code>(i-1)//2</code>. Na pointers, na node objects. Isliye practically bhi bahut fast.</p>
 <p><b>Language ka zaroori point:</b> default kya hai yeh har language mein alag hai. Python <code>heapq</code> aur Java <code>PriorityQueue</code> <b>min</b>-heap hain; C++ <code>priority_queue</code> <b>max</b>-heap hai; JavaScript mein built-in hai hi nahi. Ulta chahiye to values <b>negative</b> karke daalo (ya comparator do).</p>
-<p><b>Top-K ka asli trick:</b> k sabse bade chahiye to <b>size-k ki min-heap</b> rakho. Har element push karo; size k se zyada hui to pop kar do. Jo pop hota hai woh current best-k ka sabse chhota hota hai. Cost <b>O(n log k)</b>, memory O(k), sort ke O(n log n) aur O(n) se kaafi behtar, khaaskar jab n bahut bada ho aur k chhota.</p>`,
+<p><b>Top-K ka asli trick:</b> <var>k</var> sabse bade chahiye to <b>size-<var>k</var> ki min-heap</b> rakho. Har element push karo; size <var>k</var> se zyada hui to pop kar do. Jo pop hota hai woh current best-<var>k</var> ka sabse chhota hota hai. Cost <b>O(<var>n</var> log <var>k</var>)</b>, memory O(<var>k</var>), sort ke O(<var>n</var> log <var>n</var>) aur O(<var>n</var>) se kaafi behtar.</p>`,
 
   viz: ["heap"],
   see: [["VA", "https://visualgo.net/en/heap", "VisuAlgo, heap insert & extract, animated"]],
 
   math: [
-    { t: "Count what a sorted order promises, then count what a heap promises", d: "Sorting establishes every pairwise fact. A heap establishes one fact per node. The gap between those two numbers is the speed.", w:
-`n = 1,000,000
+    { t: "push(1) into 2, 5, 7, 9, 6, 8, traced in the array", d: "The heap is a plain array. The parent of position <var>i</var> is (<var>i</var> − 1) / 2, rounded down, so every step up is one division.", w:
+`index      0  1  2  3  4  5  6
+start      2  5  7  9  6  8
+append 1   2  5  7  9  6  8  1    parent of 6 is (6-1)/2 = 2
+1 < 7      2  5  1  9  6  8  7    parent of 2 is (2-1)/2 = 0
+1 < 2      1  5  2  9  6  8  7    at the root: stop
 
-a sorted array asserts every pair:  n(n-1)/2 = 5 x 10^11 facts
-a heap asserts parent < child:      n - 1    = 10^6 facts
-
-top-of-heap is all that was asked for, so the rest
-was never bought. Building: O(n) instead of O(n log n).` },
-    { t: "The repair path is the height, and the height is log2 n", d: "Keeping the tree complete is what bounds every operation. A complete tree of a million nodes is twenty levels deep, so nothing ever walks far.", w:
+2 swaps. The height of 7 items is 2, so 2 is the most it could be.` },
+    { t: "pop() from the same heap, traced", d: "Take the root, move the last item up, then swap it down past its smaller child until neither child is smaller.", w:
+`index      0  1  2  3  4  5  6
+before     1  5  2  9  6  8  7
+take 1, move 7 to the root
+           7  5  2  9  6  8
+children of 0 are 5 and 2; smaller is 2, and 7 > 2: swap
+           2  5  7  9  6  8
+children of 2: index 5 holds 8, and 7 <= 8: stop` },
+    { t: "The repair path is the height, and the height is log2 n", d: "Keeping the tree complete is what bounds every operation. A complete tree of a million nodes is only twenty levels deep.", w:
 `complete binary tree, n nodes -> height floor(log2 n)
 
-n = 1,000      height 9
+n = 7          height 2
+n = 100,000    height 16
 n = 1,000,000  height 19
-n = 10^9       height 29
 
-push: one sift-up   <= 19 swaps at n = 10^6
-pop:  one sift-down <= 19 levels, 2 comparisons each
-
-no pointers needed:
-  parent(i) = (i-1)/2   left(i) = 2i+1   right(i) = 2i+2` },
-    { t: "Build-heap is O(n), and here is the sum that proves it", d: "The usual guess is n log n, one sift-down per node. It is wrong because almost every node is near the bottom, where a sift-down has nowhere to go.", w:
+the scheduler: 10^6 pushes + 10^6 pops, about 17 levels each
+  about 3.4 x 10^7 steps, against 10^11 for scanning` },
+    { t: "Build-heap is O(n), and here is the sum that proves it", d: "The usual guess is n log n, one sift-down per node. It is wrong, because almost every node is near the bottom, where a sift-down has nowhere to go.", w:
 `nodes at height h:      about n / 2^(h+1)
 sift-down from height h costs at most h
 
 total = sum over h of  (n / 2^(h+1)) x h
       = n x sum of  h / 2^(h+1)
-      = n x 1                      (the series converges to 1)
+      = n x 1                      (the series adds up to 1)
       = O(n)
 
 half the nodes are leaves and cost 0. Only the root pays 19.` },
-    { t: "Top-K, and why the k inside the log is the point", d: "Keeping a heap of size k rather than sorting everything changes both the time and, more importantly, the memory by orders of magnitude.", w:
+    { t: "Top-K, and why the k inside the log is the point", d: "Keeping a heap of size <var>k</var> instead of sorting everything changes the time, and changes the memory far more.", w:
 `n = 10^7 items, k = 10
 
 sort it all:      n log2 n = 10^7 x 23  = 2.3 x 10^8
@@ -3437,28 +4709,28 @@ heap of size k:   n log2 k = 10^7 x 3.3 = 3.3 x 10^7
   ],
 
   costs: [
-    ["peek min (heap[0])", "O(1)", "the invariant puts it at the root"],
-    ["heappush", "O(log n)", "one sift-up along a root-to-leaf path"],
-    ["heappop", "O(log n)", "one sift-down along a root-to-leaf path"],
-    ["heapify(list)", "O(n)", "bottom-up. NOT n log n; most nodes sit near the leaves"],
+    ["peek min (heap[0])", "O(1)", "the rule puts it at the root"],
+    ["heappush", "O(log n)", "one sift-up along one root-to-leaf path"],
+    ["heappop", "O(log n)", "one sift-down along one root-to-leaf path"],
+    ["heapify(list)", "O(n)", "bottom-up. NOT n log n: most nodes sit near the leaves"],
     ["find an arbitrary value", "O(n)", "a heap is not searchable, by design"],
     ["top-k of n items", "O(n log k)", "size-k heap; beats sorting's O(n log n)"],
     ["space", "O(n)", "a flat list, no node objects"],
   ],
 
   traps: [
-    "<b>Know your language's default.</b> Python <code>heapq</code> and Java <code>PriorityQueue</code> are MIN-heaps; C++ <code>priority_queue</code> is a MAX-heap. Flip by negating values or passing a comparator.",
-    "<b>Tuples compare element by element.</b> <code>(priority, task)</code> crashes when two priorities tie and <code>task</code> is not comparable. Push <code>(priority, counter, task)</code> with a unique counter.",
-    "<b>heapify is O(n), not O(n log n).</b> Building from a list in one go is strictly cheaper than n pushes, a favourite follow-up.",
-    "<b>Using a size-n max-heap for top-k.</b> Correct but wasteful: a <b>min</b>-heap of size k gives O(n log k) time and O(k) space.",
-    "<b>Expecting sorted iteration.</b> Printing the underlying list is not sorted; only repeated pops produce sorted output.",
+    "<b>Know your language's default.</b> Python <code>heapq</code> and Java <code>PriorityQueue</code> are MIN-heaps. C++ <code>priority_queue</code> is a MAX-heap. Flip it by negating values or passing a comparator.",
+    "<b>Tuples compare element by element.</b> <code>(priority, task)</code> crashes when two priorities tie and <code>task</code> cannot be compared. Push <code>(priority, counter, task)</code> with a unique counter.",
+    "<b>heapify is O(<var>n</var>), not O(<var>n</var> log <var>n</var>).</b> Building from a list in one go is cheaper than <var>n</var> pushes: a favourite follow-up.",
+    "<b>Using a size-<var>n</var> max-heap for top-k.</b> Correct but wasteful. A <b>min</b>-heap of size <var>k</var> gives O(<var>n</var> log <var>k</var>) time and O(<var>k</var>) space.",
+    "<b>Expecting sorted iteration.</b> The underlying list of 2, 5, 7, 9, 6, 8 is not sorted. Only repeated pops come out in order.",
   ],
 
   impl: [
     ["Python", "heapq (MIN-heap, on a plain list)", "No max-heap: push -x. heapq.heapify is O(n); nlargest(k, xs) does top-K for you."],
-    ["Java", "PriorityQueue (MIN-heap)", "new PriorityQueue<>(Comparator.reverseOrder()) for max. peek/poll, and remove(x) is O(n)."],
+    ["Java", "PriorityQueue (MIN-heap)", "new PriorityQueue<>(Comparator.reverseOrder()) for max. peek/poll; remove(x) is O(n)."],
     ["C++", "priority_queue (MAX-heap!)", "The opposite default. priority_queue<int, vector<int>, greater<int>> for a min-heap."],
-    ["JavaScript", "no built-in", "Hand-roll sift-up/sift-down over an array, or sort when n is small."],
+    ["JavaScript", "no built-in", "Write sift-up and sift-down over an array, or sort when n is small."],
   ],
 
   code: {
@@ -3594,12 +4866,12 @@ class MinHeap {
   codecap: "The size-k min-heap and the (priority, counter, task) tuple are the two things people get wrong under pressure.",
 
   q: [
-    ["What does a heap guarantee, and what does it not?", "It guarantees each parent ≤ its children, so the root is the global minimum. It does NOT order siblings or keep the array sorted."],
-    ["Why are push and pop O(log n)?", "The heap is a complete binary tree of height ⌊log₂n⌋, and both operations repair the invariant along a single root-to-leaf path."],
-    ["Why can a heap live in a plain array?", "It is always complete, so positions are computable: children of i are 2i+1 and 2i+2, parent is (i-1)//2. No pointers required."],
-    ["Top-k largest: which heap, what size, what cost?", "A MIN-heap of size k, push each element, pop when size > k so the smallest of the current best k is discarded. O(n log k) time, O(k) space."],
-    ["Why is heapify O(n) rather than O(n log n)?", "It runs bottom-up and most nodes are near the leaves with a very short sift-down; the sum over all levels converges to O(n)."],
-    ["How do you flip a min-heap into a max-heap?", "Negate the values (or the priority in a tuple) on the way in and out, or supply a reversed comparator where the language allows one. Java's PriorityQueue takes Comparator.reverseOrder(); C++ is already a max-heap and needs greater<> for a min-heap."],
+    ["What does a heap guarantee, and what does it not?", "It guarantees each parent ≤ its children, so the root is the overall minimum. It does NOT order siblings or keep the array sorted."],
+    ["Why are push and pop O(log n)?", "The heap is a complete binary tree about log₂n levels deep, and both operations repair the rule along a single root-to-leaf path."],
+    ["Why can a heap live in a plain array?", "It is always complete, so positions can be computed: the children of i are 2i+1 and 2i+2, and the parent is (i-1)//2. No pointers needed."],
+    ["Top-k largest: which heap, what size, what cost?", "A MIN-heap of size k. Push each element, and pop when the size passes k, so the smallest of the current best k is thrown out. O(n log k) time, O(k) space."],
+    ["Why is heapify O(n) rather than O(n log n)?", "It runs bottom-up, and most nodes are near the leaves with a very short sift-down. The sum over all levels adds up to O(n)."],
+    ["How do you flip a min-heap into a max-heap?", "Negate the values, or the priority in a tuple, on the way in and out. Or pass a reversed comparator: Java's PriorityQueue takes Comparator.reverseOrder(). C++ is already a max-heap and needs greater<> for a min-heap."],
   ],
 
   p: [
@@ -3609,119 +4881,235 @@ class MinHeap {
     [23, "merge-k-sorted-lists", "Merge K Sorted Lists", "H"],
     [295, "find-median-from-data-stream", "Median from Data Stream, two heaps", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek job scheduler ko din bhar mein <b>10⁶ jobs</b> milti hain, har ek ka urgency number: chhota matlab zyada urgent. Kisi bhi waqt lagbhag <b>10⁵</b> intezaar mein hoti hain. Jab bhi koi worker free ho, use sabse urgent waiting job chalani hai.</p>
+<p>To do operations, baar baar: <b>job jodo</b>, aur <b>sabse chhoti lo</b>. Dono tez chahiye, ek saath.</p>`,
+      tries: [
+        ["Waiting jobs ko sorted rakho", "Sabse chhoti lena turant hai. Par har nayi job ko sahi jagah daalna hai, average 10⁵ ki aadhi jobs khisaka kar. 10⁶ arrivals par lagbhag 5 × 10¹⁰ moves."],
+        ["Unsorted rakho, aur sabse chhoti ke liye scan karo", "Jodna turant. Har removal saari 10⁵ waiting jobs scan karta hai, to 10⁶ removals mein 10¹¹ comparisons."],
+        ["Ek baar, shuru mein sort kar do", "Jobs aati rehti hain. Har arrival ke baad dobara sort karna har baar 10⁵ × 17 ≈ 1.7 × 10⁶ steps hai, upar ke dono tareekon se kahin bura."],
+      ],
+      so: `<p>Dono fixes ya zyada vaada karte hain, ya kam. Aapko sirf <b>sabse chhoti</b> chahiye, poora order kabhi nahi. <b>Heap</b> theek yahi vaada karta hai: jobs ko aise tree mein rakho jahan <b>har parent apne children se chhota ya barabar ho</b>. Tab top sabse chhota hai, aur badlaav ke baad tree theek karna sirf upar se neeche ka ek raasta chhoota hai: lagbhag log₂ 10⁵ ≈ 17 steps.</p>
+<p>Poore din ke liye yeh lagbhag 3.4 × 10⁷ steps hain. Page ek chhoti heap follow karta hai: <b>2, 5, 7, 9, 6, 8</b>. Woh urgency 1 wali nayi job leti hai, phir sabse chhoti deti hai.</p>`,
+    },
+
+    one: "Heap <b>sirf yeh vaada karta hai ki minimum top par hai</b>, sorted order nahi. Isi kamzor vaade se push aur pop O(log <var>n</var>) hain, aur top-K O(<var>n</var> log <var>n</var>) ki jagah O(<var>n</var> log <var>k</var>) ka hai.",
+
+    plain: `<p>Aapko baar baar sabse chhota item chahiye, jabki naye items aate rehte hain. Sorting yeh de deti, par woh <i>sab kuch</i> order karti hai jabki aap sirf <b>ek</b> item dekhte ho.</p>
+<p>Items ko ek pyramid socho. Sabse upar wala <b>root</b> hai. Har item do tak items ke upar baitha hai: woh unka <b>parent</b> hai, aur woh uske <b>children</b>. Heap ek vaada karta hai: <b>har parent apne children se ≤ hai</b>. Heap 2, 5, 7, 9, 6, 8 mein root 2, 5 aur 7 ke upar hai, aur 5, 9 aur 6 ke upar. Kahin nahi likha ki 5, 7 se chhota ho.</p>
+<p>Vaada <i>local</i> hai, to theek karna bhi local hai. Neeche 7 ke niche 1 jodo. Woh apne parent se chhota hai, to swap. Phir 2 se chhota, to phir swap. Do swaps, ek raasta, <var>n</var> ki jagah lagbhag log <var>n</var> steps.</p>
+<p><b>Analogy.</b> Hospital ka waiting room. Koi saare 200 patients ko rank nahi karta. Bas pata hona chahiye <b>agla</b> kaun. Naya critical case kuch logon se aage jaata hai, sabki poori ranking mein nahi.</p>`,
+
+    why: [
+      { t: "Sorting aapki maang se zyada deta hai",
+        d: "Aapko baar baar sabse chhota item chahiye, jabki naye aate rehte hain. Sorted list har insert par O(<var>n</var>) hai. Minimum ke liye scan har removal par O(<var>n</var>). Dono us order ki keemat dete hain jise aap kabhi dekhte hi nahi." },
+      { t: "To kam vaada karo: har parent ≤ uske children",
+        d: "Bas yahi niyam hai. 2, 5, 7, 9, 6, 8 mein siblings 5 aur 7 kisi order mein nahi, aur array sorted nahi. Par har parent apne neeche wale se ≤ hai. Yeh upar tak follow karo to <b>top minimum hai</b>, jo bas chahiye tha." },
+      { t: "Chhota vaada theek karna sasta hai",
+        d: "1 ko agli khaali jagah jodo, 7 ke neeche. Jab tak parent se chhota hai, upar swap karo: 7 ke paar, phir 2 ke paar. Top hataane ke liye aakhri item wahan rakho aur use chhote child ke paar <i>neeche</i> swap karo. Dono mein <b>ek raasta</b> chalte ho, poora structure kabhi nahi." },
+      { t: "Tree bhara rakho to woh raasta chhota hai",
+        d: "Heap agla level shuru karne se pehle har level bharta hai, to <var>n</var> items ka tree lagbhag log₂ <var>n</var> levels gehra hai. Isliye push aur pop <b>O(log <var>n</var>)</b> hain, guaranteed. Gaps nahi, to yeh simple array mein fit hota hai: position <var>i</var> ke children 2<var>i</var> + 1 aur 2<var>i</var> + 2 par." },
+      { t: "Top-K asli fayda hai",
+        d: "<var>n</var> items mein se <var>k</var> sabse bade ke liye sirf <var>k</var> items ki <b>min</b>-heap rakho. Har item jodo, aur <var>k</var> se zyada ho to sabse chhota nikaal do. Yeh <b>O(<var>n</var> log <var>k</var>)</b> time aur O(<var>k</var>) memory hai, sorting ke O(<var>n</var> log <var>n</var>) aur O(<var>n</var>) ke against." },
+      { t: "Jaano yeh kya karne se mana karta hai",
+        d: "Heap mein search nahi kar sakte, order mein chal nahi sakte, ya pehla hataaye bina doosra sabse chhota nahi padh sakte. Inme se kuch chahiye to aapko sorted structure ya balanced tree chahiye tha." },
+    ],
+
+    variants: [
+      { n: "Top-K with a size-k heap", cost: "O(n log k) time, O(k) space",
+        idea: "<var>k</var> sabse bade ke liye size <var>k</var> ki MIN-heap rakho, aur <var>k</var> se badhte hi pop karo. Current best ka sabse chhota hamesha bahar jaata hai.",
+        when: "<var>k</var>, <var>n</var> se bahut chhota ho, ya data aisa stream ho jo poora pakda na ja sake.",
+        watch: "Pehli soch saare <var>n</var> ki max-heap hoti hai. Wahi answer O(<var>n</var> log <var>n</var>) time aur O(<var>n</var>) space mein." },
+      { n: "Two heaps, running median", cost: "har insert O(log n), har query O(1)",
+        idea: "Max-heap neeche ka aadha rakhti hai aur min-heap upar ka, size mein ek item ke andar. Median ek ya dono tops par hai.",
+        when: "Stream ka median, ya aate rehne wale data ke beech ka koi bhi sawaal.",
+        watch: "Har insert ke baad rebalance hi poori trick hai. Push karo, top doosri taraf le jao, phir sizes barabar karo." },
+      { n: "Heapify an existing array", cost: "O(n), O(n log n) nahi",
+        idea: "Aakhri parent se peeche ki taraf root tak sift down karo. Zyadatar nodes neeche hain aur unke paas sift karne ki jagah lagbhag nahi, to total linear hai.",
+        when: "Saara data pehle se haath mein hai aur uski heap chahiye.",
+        watch: "<var>n</var> alag pushes O(<var>n</var> log <var>n</var>) hain. Ek saath banana sasta hai, aur yeh pasandeeda follow-up hai." },
+      { n: "K-way merge", cost: "O(N log k)",
+        idea: "<var>k</var> sorted sources mein se har ek ka ek item heap mein rakho. Sabse chhota pop karo, phir usi source ka agla item push karo.",
+        when: "<var>k</var> sorted lists, arrays ya files merge karna, aur saari <var>k</var> lists ko cover karne wali sabse chhoti range.",
+        watch: "Value ke saath source index bhi push karo, warna pata nahi chalega replacement kahan se aaye." },
+      { n: "Priority scheduling", cost: "har event O(log n)",
+        idea: "Heap pending kaam ko cost, deadline ya arrival se order karke rakhta hai, aur aap hamesha top process karte ho. Upar wala job scheduler yahi hai, aur Dijkstra aur Prim bhi.",
+        when: "Task schedulers, event simulation, jahan bhi “agla sabse accha” wala niyam ho.",
+        watch: "Ties ke liye ek doosri key chahiye jo hamesha faisla kare. Warna do barabar priority wale objects compare karna throw kar sakta hai, ya har run mein alag chal sakta hai." },
+    ],
+
+    math: [
+      { t: "2, 5, 7, 9, 6, 8 mein push(1), array mein trace karke", d: "Heap ek simple array hai. Position <var>i</var> ka parent (<var>i</var> − 1) / 2 hai, neeche round karke, to upar ka har step ek division hai." },
+      { t: "Usi heap se pop(), trace karke", d: "Root lo, aakhri item upar rakho, phir use chhote child ke paar neeche swap karo jab tak koi child chhota na ho." },
+      { t: "Repair ka raasta height hai, aur height log2 n hai", d: "Tree ko complete rakhna hi har operation ko baandhta hai. Das lakh nodes ka complete tree sirf bees levels gehra hai." },
+      { t: "Build-heap O(n) hai, aur yeh raha saboot wala jodh", d: "Aam andaaza n log n hai, har node par ek sift-down. Galat hai, kyunki lagbhag har node neeche ke paas hai, jahan sift-down ko jaane ki jagah nahi." },
+      { t: "Top-K, aur log ke andar k hi point kyun hai", d: "Sab sort karne ki jagah size <var>k</var> ki heap rakhna time badalta hai, aur memory usse bhi zyada." },
+    ],
+
+    costs: [
+      ["peek min (heap[0])", "O(1)", "niyam use root par rakhta hai"],
+      ["heappush", "O(log n)", "ek root-to-leaf raaste par ek sift-up"],
+      ["heappop", "O(log n)", "ek root-to-leaf raaste par ek sift-down"],
+      ["heapify(list)", "O(n)", "bottom-up. n log n NAHI: zyadatar nodes leaves ke paas"],
+      ["koi bhi value dhoondhna", "O(n)", "heap jaan-boojh kar searchable nahi"],
+      ["n items ka top-k", "O(n log k)", "size-k heap; sorting ke O(n log n) se behtar"],
+      ["space", "O(n)", "ek flat list, koi node objects nahi"],
+    ],
+
+    traps: [
+      "<b>Apni language ka default jaano.</b> Python <code>heapq</code> aur Java <code>PriorityQueue</code> MIN-heaps hain. C++ <code>priority_queue</code> MAX-heap hai. Values negate karke ya comparator dekar palto.",
+      "<b>Tuples element by element compare hote hain.</b> <code>(priority, task)</code> tab crash karta hai jab do priorities barabar hon aur <code>task</code> compare na ho sake. <code>(priority, counter, task)</code> push karo, unique counter ke saath.",
+      "<b>heapify O(<var>n</var>) hai, O(<var>n</var> log <var>n</var>) nahi.</b> List se ek saath banana <var>n</var> pushes se sasta hai: pasandeeda follow-up.",
+      "<b>Top-k ke liye size-<var>n</var> max-heap.</b> Sahi par bekaar kharcha. Size <var>k</var> ki <b>min</b>-heap O(<var>n</var> log <var>k</var>) time aur O(<var>k</var>) space deti hai.",
+      "<b>Sorted iteration ki ummeed.</b> 2, 5, 7, 9, 6, 8 ki andar ki list sorted nahi. Sirf baar baar pop karne par order mein aata hai.",
+    ],
+
+    impl: [
+      ["Python", "heapq (MIN-heap, on a plain list)", "Max-heap nahi: -x push karo. heapq.heapify O(n) hai; nlargest(k, xs) top-K kar deta hai."],
+      ["Java", "PriorityQueue (MIN-heap)", "Max ke liye new PriorityQueue<>(Comparator.reverseOrder()). peek/poll; remove(x) O(n) hai."],
+      ["C++", "priority_queue (MAX-heap!)", "Ulta default. Min-heap ke liye priority_queue<int, vector<int>, greater<int>>."],
+      ["JavaScript", "no built-in", "Array par sift-up aur sift-down khud likho, ya n chhota ho to sort kar lo."],
+    ],
+
+    codecap: "Size-k min-heap aur (priority, counter, task) tuple, yahi do cheezein pressure mein log galat karte hain.",
+
+    q: [
+      ["Heap kya guarantee deta hai, aur kya nahi?", "Har parent ≤ uske children, to root poora minimum hai. Siblings ko order NAHI karta, aur array sorted NAHI rakhta."],
+      ["Push aur pop O(log n) kyun hain?", "Heap lagbhag log₂n levels gehra complete binary tree hai, aur dono operations ek hi root-to-leaf raaste par niyam theek karte hain."],
+      ["Heap simple array mein kaise reh sakta hai?", "Yeh hamesha complete hai, to positions calculate ho sakti hain: i ke children 2i+1 aur 2i+2, parent (i-1)//2. Pointers nahi chahiye."],
+      ["Top-k largest: kaunsi heap, kitna size, kitni cost?", "Size k ki MIN-heap. Har element push karo, aur size k se upar jaaye to pop, taaki current best k ka sabse chhota bahar jaaye. O(n log k) time, O(k) space."],
+      ["heapify O(n log n) ki jagah O(n) kyun hai?", "Yeh bottom-up chalta hai, aur zyadatar nodes leaves ke paas hain jinka sift-down bahut chhota hai. Saare levels ka jodh O(n) banta hai."],
+      ["Min-heap ko max-heap kaise palatte ho?", "Values negate karo, ya tuple mein priority, andar aate aur bahar jaate. Ya ulta comparator do: Java ka PriorityQueue Comparator.reverseOrder() leta hai. C++ pehle se max-heap hai aur min-heap ke liye greater<> chahiye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "recursion",
   n: "Recursion",
   group: "Fundamentals",
+  need: {
+    ask: `<p>A staircase has <var>n</var> steps, and you climb 1 or 2 steps at a time. How many different ways are there to reach the top? For 4 steps the answer is <b>5</b>: 1+1+1+1, 1+1+2, 1+2+1, 2+1+1 and 2+2.</p>
+<p>Now make it 50 steps. You need a method that works for any <var>n</var>, without listing anything by hand.</p>`,
+    tries: [
+      ["List every route", "Fine for 4 steps. For 50 steps there are 20,365,011,074 routes. Writing them out is not a method."],
+      ["Write one loop per step taken", "“For the first step, try 1 or 2; inside that, for the second step…” The number of nested loops depends on <var>n</var>. You cannot write a different program for every staircase."],
+      ["Recurse, and stop there", "The idea below, with nothing added, calls itself about 2.5 × 10¹⁰ times for 50 steps. Most of those calls repeat work already done."],
+    ],
+    so: `<p>Look at the <b>last</b> move. You arrived at step <var>n</var> either from step <var>n</var> − 1 with a 1, or from step <var>n</var> − 2 with a 2. So <code>ways(n) = ways(n-1) + ways(n-2)</code>. Now <b>trust</b> that the smaller calls work, without tracing them. That trust is safe because of two small facts: <code>ways(1) = 1</code> and <code>ways(2) = 2</code>, answered with no call at all.</p>
+<p>That is <b>recursion</b>: a function that solves a problem by calling itself on a smaller one. Store each answer the first time, and 50 steps need only about 50 calls. The page follows <code>ways(4)</code> throughout.</p>`,
+  },
+
   one: "Solve a problem by <b>assuming the smaller version is already solved</b>. Write exactly two things, the base case and one honest step, and stop tracing the rest.",
 
-  plain: `<p>The instinct is to trace it in your head: this calls that, which calls that… Three levels down you are lost. That is not how recursion is meant to be read, and trying is why it feels hard.</p>
-<p>The correct move is a <b>leap of faith</b>. To compute <code>factorial(5)</code>, assume <code>factorial(4)</code> already works. Do not ask how. Your job is then one line: <code>5 × factorial(4)</code>. You wrote one step honestly and delegated the rest.</p>
-<p>Two things make the leap safe: a <b>base case</b> that returns without recursing, and every call moving strictly <b>toward</b> it. Miss either and the leap becomes an infinite fall.</p>
-<p><b>Analogy.</b> You are in a queue and want your position. You do not count the whole line. You tap the person ahead and ask "what's your number?", then add one. The first person knows theirs without asking anyone (base case), and every question moves one person closer to them (progress). The answer comes back down the line.</p>`,
+  plain: `<p>The instinct is to trace a recursion in your head: this calls that, which calls that. Three levels down you are lost. That is not how recursion is meant to be read, and trying is why it feels hard.</p>
+<p>The right move is a <b>leap of faith</b>. To get <code>ways(4)</code>, assume <code>ways(3)</code> and <code>ways(2)</code> already work. Do not ask how. Your job is one line: <code>ways(3) + ways(2)</code>, which is 3 + 2 = 5.</p>
+<p>Two things make the leap safe. A <b>base case</b>: an input you answer without calling anything, here <code>ways(1) = 1</code> and <code>ways(2) = 2</code>. And <b>progress</b>: every call is on a smaller <var>n</var>, so it must reach a base case. Miss either and the leap becomes an endless fall.</p>
+<p><b>Analogy.</b> You are in a queue and want your position. You do not count the whole line. You ask the person ahead for their number and add one. The person at the front knows theirs without asking, and every question moves one person closer to them.</p>`,
 
   why: [
     { t: "Do not trace it, trust it",
-      d: "For <code>factorial(5)</code>, assume <code>factorial(4)</code> already works. Do not ask how. Your job is one line: <code>5 × factorial(4)</code>. Trying to follow the calls three levels deep in your head is why recursion feels hard; you are not meant to." },
+      d: "For <code>ways(4)</code>, assume <code>ways(3)</code> and <code>ways(2)</code> already give the right answers. Your job is one line: add them. Following the calls three levels deep in your head is why recursion feels hard. You are not meant to." },
     { t: "Three questions, and the function writes itself",
-      d: "What is the smallest input I can answer with no call at all? (the <b>base case</b>) If the smaller version were solved. How do I build my answer from it? (the <b>step</b>) Does every call get strictly smaller? (<b>progress</b>) Answer those three and you are done." },
+      d: "What is the smallest input I can answer with no call? That is the <b>base case</b>: <code>ways(1) = 1</code>, <code>ways(2) = 2</code>. If the smaller versions were solved, how do I build my answer? That is the <b>step</b>: add them. Does every call get strictly smaller? That is <b>progress</b>: <var>n</var> − 1 and <var>n</var> − 2 both do." },
     { t: "Space is the depth, not the number of calls",
-      d: "Each call keeps its own variables in a frame, and the frames stack up until they return. So memory is however deep you go, and every language caps that depth." },
+      d: "Each call keeps its own variables in a <b>frame</b>, and frames pile up on the call stack until they return. <code>ways(4)</code> goes at most 3 frames deep: 4, then 3, then 2. So memory is the depth, O(<var>n</var>), and every language caps how deep you may go." },
     { t: "Time is the number of calls, so draw the tree",
-      d: "One call per level gives n calls: O(n). Two calls per level gives about 2ⁿ calls: O(2ⁿ). Notice that the second one is still only O(n) space, because the tree is wide but not deep." },
+      d: "<code>ways(4)</code> calls <code>ways(3)</code> and <code>ways(2)</code>, and <code>ways(3)</code> calls two more: 5 calls in all. Each call splits in two, so the count grows about 1.6 times per extra step, which is O(2<sup><var>n</var></sup>): about 2.5 × 10¹⁰ calls for 50 steps. The tree is wide, but only <var>n</var> deep." },
     { t: "If the same call repeats, remember the answer",
-      d: "In naive <code>fib</code>, <code>fib(2)</code> is recomputed over and over. Store each answer the first time you compute it and the huge tree collapses to a line: <b>O(2ⁿ) becomes O(n)</b>. That is memoisation, and memoisation <i>is</i> dynamic programming. DP is not a separate topic; it is recursion plus a lookup table." },
+      d: "In <code>ways(4)</code>, <code>ways(2)</code> is computed twice, and for bigger <var>n</var> the repeats explode. Store each answer the first time. The tree collapses to one call per <var>n</var>: <b>O(2<sup><var>n</var></sup>) becomes O(<var>n</var>)</b>. That is <b>memoisation</b>, and it <i>is</i> dynamic programming: recursion plus a lookup table." },
     { t: "Backtracking is recursion that puts things back",
-      d: "Choose an option, recurse, then <b>undo the choice</b> before trying the next one. The undo matters because the next branch must start from a clean slate." },
+      d: "To list the 5 routes rather than count them, add a step to the route, recurse, then <b>remove that step</b> before trying the other one. The undo matters because the next branch must start from a clean route." },
   ],
 
   hing: `<p><b>Sabse badi galti:</b> recursion ko dimaag mein trace karne ki koshish. Do-teen level ke baad sab gadbad. <b>Trace karna hai hi nahi.</b></p>
-<p><b>Sahi tarika: bharosa (leap of faith).</b> <code>factorial(5)</code> chahiye? Maan lo <code>factorial(4)</code> pehle se sahi kaam karta hai. Kaise? Mat poocho. Tumhara kaam sirf ek line: <code>5 × factorial(4)</code>. Tumne <b>ek step imaandari se likha</b>, baaki delegate kar diya.</p>
+<p><b>Sahi tarika: bharosa (leap of faith).</b> <code>ways(4)</code> chahiye? Maan lo <code>ways(3)</code> aur <code>ways(2)</code> pehle se sahi kaam karte hain. Kaise? Mat poocho. Tumhara kaam sirf ek line: <code>ways(3) + ways(2)</code>. Tumne <b>ek step imaandari se likha</b>, baaki delegate kar diya.</p>
 <p><b>Do cheezein is bharose ko safe banati hain:</b> (1) <b>base case</b>, matlab sabse chhota input jiska jawab bina kisi call ke pata ho. (2) har call base case ke <b>kareeb</b> jaaye. Ek bhi missing to infinite recursion.</p>
-<p><b>Machine kaise sambhalti hai?</b> Har call ka apna <b>stack frame</b> banta hai, apne parameters, apne locals. Isliye har level ke variables alag rehte hain. Depth d matlab d frames zinda → <b>space O(depth)</b>. Har language ki limit hoti hai, Python ~1000 frames par RecursionError deta hai, JVM/C++ StackOverflow.</p>
-<p><b>Time kaise ginein?</b> Call tree banao. <b>Time = kitne nodes hain</b>, <b>space = kitni gehrai hai</b>. Ek call per level → O(n) time. Do call per level (jaise fib) → ~2ⁿ nodes → O(2ⁿ) time, par space phir bhi sirf O(n). Yeh farak interview mein pucha jaata hai.</p>
-<p><b>Ab sabse important baat.</b> Naive fib mein <code>fib(2)</code> baar-baar compute hota hai, subproblems <b>repeat</b> ho rahe hain. Answer cache kar do, ek memo table mein. Phir har alag subproblem sirf ek baar chalega, aur O(2ⁿ) seedha <b>O(n)</b> ban jaayega. <b>Yahi memoization hai, aur yahi top-down DP hai.</b> DP koi alag jaadu nahi, recursion + dictionary hai.</p>
-<p><b>Backtracking:</b> choose → recurse → <b>un-choose</b>. Woh un-choose isliye zaroori hai taaki agli branch saaf state se shuru ho. Aur <code>res.append(path)</code> mat likhna, <code>path[:]</code> likhna, warna sab results ek hi badalti hui list ki taraf point karenge.</p>`,
+<p><b>Machine kaise sambhalti hai?</b> Har call ka apna <b>stack frame</b> banta hai, apne parameters, apne locals. Isliye har level ke variables alag rehte hain. Depth <var>d</var> matlab <var>d</var> frames zinda, to <b>space O(depth)</b>. Har language ki limit hoti hai: Python lagbhag 1000 frames par RecursionError deta hai, JVM/C++ StackOverflow.</p>
+<p><b>Time kaise ginein?</b> Call tree banao. <b>Time = kitne nodes hain</b>, <b>space = kitni gehrai hai</b>. Ek call per level to O(<var>n</var>) time. Do call per level (jaise <code>ways</code>) to lagbhag 2ⁿ nodes, O(2ⁿ) time, par space phir bhi sirf O(<var>n</var>). Yeh farak interview mein pucha jaata hai.</p>
+<p><b>Ab sabse important baat.</b> Naive <code>ways</code> mein <code>ways(2)</code> baar-baar compute hota hai, subproblems <b>repeat</b> ho rahe hain. Answer cache kar do, ek memo table mein. Phir har alag subproblem sirf ek baar chalega, aur O(2ⁿ) seedha <b>O(<var>n</var>)</b> ban jaayega. <b>Yahi memoization hai, aur yahi top-down DP hai.</b> DP koi alag jaadu nahi, recursion + dictionary hai.</p>
+<p><b>Backtracking:</b> choose, recurse, <b>un-choose</b>. Woh un-choose isliye zaroori hai taaki agli branch saaf state se shuru ho. Aur <code>res.append(path)</code> mat likhna, <code>path[:]</code> likhna, warna sab results ek hi badalti hui list ki taraf point karenge.</p>`,
 
   viz: ["recursion-tree"],
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, recursion tree, animated"],
         ["DOC", "https://docs.python.org/3/library/functools.html#functools.lru_cache", "Python docs, functools.lru_cache"]],
 
   math: [
-    { t: "Watch one answer build up and come back", d: "The leap of faith is easier to trust once you have seen it resolve. Here is factorial(4) in full, with nothing assumed.", w:
-`factorial(4) = 4 x factorial(3)      needs the smaller call
-  factorial(3) = 3 x factorial(2)    needs it
-    factorial(2) = 2 x factorial(1)  needs it
-      factorial(1) = 1               base case, no more calls
+    { t: "Watch ways(4) build up and come back", d: "The leap of faith is easier to trust once you have seen it resolve. Here it is in full, with nothing assumed.", w:
+`ways(4) = ways(3) + ways(2)          needs two smaller calls
+  ways(3) = ways(2) + ways(1)        needs two more
+    ways(2) = 2                      base case, no call
+    ways(1) = 1                      base case, no call
+  ways(2) = 2                        base case again
 
-the answers now come back up the chain:
-      factorial(1) = 1
-    factorial(2) = 2 x 1 = 2
-  factorial(3) = 3 x 2 = 6
-factorial(4) = 4 x 6 = 24` },
-    { t: "Depth is memory, and the memory runs out at a specific number", d: "Every pending call is a frame on the stack. Multiply frames by bytes and you can predict the overflow instead of discovering it.", w:
+the answers come back up:
+  ways(3) = 2 + 1 = 3
+ways(4) = 3 + 2 = 5          5 calls in total, 3 frames deep` },
+    { t: "Time is the number of calls, so count them", d: "Each call makes two more, so the count grows by about 1.6 each time <var>n</var> goes up by one. That is what makes 50 steps hopeless without memoising.", w:
+`calls(n) = calls(n-1) + calls(n-2) + 1,   calls(1) = calls(2) = 1
+
+n = 4      5 calls
+n = 10     109
+n = 30     1,664,079
+n = 40     2.0 x 10^8       seconds
+n = 50     2.5 x 10^10      minutes
+
+memoised: each n from 1 to 50 computed once, about 50 calls` },
+    { t: "Depth is memory, and the memory runs out at a specific number", d: "Every call still waiting is a frame on the stack. Multiply frames by bytes and you can predict the overflow instead of meeting it.", w:
 `one frame: return address, saved registers, locals
             roughly 50 to 100 bytes
 
-recursion over a 100,000-node list
-  100,000 x 100 bytes = 10 MB of stack
-  available:            1 MB typical
+ways(4):        3 frames deep
+ways(100,000):  100,000 x 100 bytes = 10 MB of stack
+  available:    1 MB typical
 
 Python refuses sooner: default recursion limit 1000` },
-    { t: "Time is the number of calls, so count the nodes of the call tree", d: "Naive fib is the standard example because the repetition is visible. The call count grows by the golden ratio, which is what makes n = 50 hopeless.", w:
-`calls(n) = calls(n-1) + calls(n-2) + 1  =  2 fib(n+1) - 1
-
-n = 5      15 calls
-n = 10     177
-n = 30     2,692,537
-n = 40     3.3 x 10^8       seconds
-n = 50     4.0 x 10^10      minutes
-
-memoised: 50 calls. Same recurrence, each one answered once.` },
-    { t: "Five recurrences, five complexity classes", d: "Almost every recursion you meet is one of these. Read off how many branches there are and how fast the argument shrinks, and the class follows.", w:
+    { t: "Five recurrences, five complexity classes", d: "Almost every recursion you meet is one of these. Count the branches and how fast the input shrinks, and the class follows.", w:
 `T(n) = T(n/2) + 1     -> log2 n calls      binary search
 T(n) = T(n-1) + 1     -> n calls, n deep   linear recursion
 T(n) = 2T(n/2) + 1    -> 2n - 1 calls      tree traversal
 T(n) = 2T(n/2) + n    -> n log2 n work     merge sort
-T(n) = 2T(n-1) + 1    -> 2^n - 1 calls     every subset
+T(n) = T(n-1) + T(n-2) + 1  -> about 1.6^n  ways(n), naive
 
 n = 10^6 under the first: 20 calls
-n = 30 under the last:    10^9 calls` },
-    { t: "Tail position, and the three languages where it buys nothing", d: "A tail call has nothing waiting for it, so the frame could be reused. Whether it actually is depends entirely on the language.", w:
-`sum(n)      = n + sum(n-1)        not tail: the + waits
-sum(n, acc) = sum(n-1, acc + n)   tail: nothing waits
+n = 50 under the last:    2.5 x 10^10 calls` },
+    { t: "Tail position, and the three languages where it buys nothing", d: "A tail call has nothing left to do after it returns, so its frame could be reused. Whether it actually is depends on the language.", w:
+`ways(n)       = ways(n-1) + ways(n-2)   not tail: the + waits
+ways(n, a, b) = ways(n-1, b, a + b)     tail: nothing waits
+                (a, b = the last two answers so far)
 
-flattened to a loop, depth 1:  C++, Kotlin, Scala, most Lisps
-not flattened, depth n:        Python, Java, JavaScript
+guaranteed loop, depth 1:   Scheme; Scala @tailrec; Kotlin tailrec
+often, never promised:      C++ at -O2, not in debug builds
+kept as calls, depth n:     Python, Java, JavaScript
 
-so in those three, convert it yourself or accept the depth` },
+so in those three, write the loop yourself` },
   ],
 
   costs: [
     ["linear recursion (factorial, list walk)", "O(n) time · O(n) space", "n frames alive at the deepest point"],
-    ["binary recursion (naive fib)", "O(2ⁿ) time · O(n) space", "2ⁿ nodes, but only depth-n frames at once"],
+    ["binary recursion (naive ways / fib)", "O(2ⁿ) time · O(n) space", "about 2ⁿ calls, but only n frames at once"],
     ["memoised recursion (top-down DP)", "O(distinct states)", "each subproblem computed exactly once"],
     ["tree DFS", "O(n) time · O(h) space", "h = height: O(log n) balanced, O(n) skewed"],
     ["subsets / permutations", "O(2ⁿ) / O(n!)", "the number of nodes in the decision tree"],
-    ["runtime recursion limit", "~10³–10⁵ frames", "Python ~1000 (raise it or go iterative); JVM/C++ overflow silently deeper down"],
+    ["runtime recursion limit", "~10³–10⁵ frames", "Python about 1000 (raise it or go iterative); JVM/C++ overflow further down"],
   ],
 
   traps: [
-    "<b>No base case, or one that is unreachable.</b> Check that <i>every</i> path reduces the input, including the empty and odd/even branches.",
-    "<b>Mutating shared state without undoing it.</b> In backtracking every <code>path.append</code> needs its matching <code>path.pop()</code>.",
-    "<b>Appending the live list to your results.</b> <code>res.append(path)</code> stores a reference that keeps changing, use <code>res.append(path[:])</code>.",
-    "<b>Slicing the input at each level.</b> <code>f(a[1:])</code> copies O(n) per level → O(n²). Pass an index instead.",
-    "<b>Claiming O(1) space because 'there are no data structures'.</b> The call stack is real memory, say O(depth).",
+    "<b>No base case, or one that cannot be reached.</b> <code>ways</code> with only <code>ways(1) = 1</code> calls <code>ways(0)</code>, then <code>ways(-1)</code>, forever. Check that <i>every</i> path reaches a base case.",
+    "<b>Changing shared state without undoing it.</b> In backtracking, every <code>path.append</code> needs its matching <code>path.pop()</code>.",
+    "<b>Appending the live list to your results.</b> <code>res.append(path)</code> stores a reference that keeps changing. Use <code>res.append(path[:])</code>.",
+    "<b>Slicing the input at each level.</b> <code>f(a[1:])</code> copies O(<var>n</var>) per level, which makes O(<var>n</var>²). Pass an index instead.",
+    "<b>Claiming O(1) space because “there are no data structures”.</b> The call stack is real memory. Say O(depth).",
   ],
 
   impl: [
-    ["Python", "@lru_cache / dict memo", "Default limit ~1000 frames: sys.setrecursionlimit, or rewrite iteratively."],
-    ["Java", "HashMap memo / int[] memo", "Default JVM stack ≈ 10k–20k frames. -Xss raises it; an explicit stack is safer."],
-    ["C++", "vector memo (fill with -1)", "Deep recursion overflows silently, no exception. Prefer iterative for depth > ~10^5."],
-    ["JavaScript", "Map memo", "V8 caps at ~10k frames and throws RangeError. No tail-call optimisation in practice."],
+    ["Python", "@lru_cache / dict memo", "Default limit about 1000 frames: sys.setrecursionlimit, or rewrite as a loop."],
+    ["Java", "HashMap memo / int[] memo", "Default JVM stack is about 10k to 20k frames. -Xss raises it; an explicit stack is safer."],
+    ["C++", "vector memo (fill with -1)", "Deep recursion overflows silently, with no exception. Prefer a loop for depth above about 10^5."],
+    ["JavaScript", "Map memo", "V8 caps at about 10k frames and throws RangeError. No tail-call optimisation in practice."],
   ],
 
   code: {
@@ -3870,51 +5258,147 @@ function subsets(nums) {
   return res;
 }`,
   },
-  codecap: "The base case, the honest step, and path[:] on append, three lines that carry most recursion questions.",
+  codecap: "The base case, the honest step, and path[:] on append: three lines that carry most recursion questions.",
 
   q: [
-    ["What are the only three questions needed to write a recursion?", "What is the base case? If the smaller version were solved. How do I build my answer from it? Does every call move strictly toward the base case?"],
-    ["Why should you not trace a recursion in your head?", "Correctness comes from induction, not simulation: prove the base case and the single step and every deeper level follows automatically."],
-    ["Naive fib is O(2ⁿ) time. What is its space, and why?", "O(n). Time counts nodes in the call tree, but space counts only the frames alive at once, which is the depth."],
-    ["Why does memoising turn O(2ⁿ) into O(n)?", "The subproblems overlap; caching by argument makes each distinct subproblem run once, so cost becomes the number of distinct states. That is exactly top-down DP."],
-    ["In backtracking, why must you un-choose?", "The path is shared mutable state, without popping, the sibling branch inherits choices from the branch you just finished."],
-    ["Why does res.append(path) give wrong answers?", "It stores a reference to a list that keeps mutating, so all stored results change together. Append a copy: path[:]."],
+    ["What are the only three questions needed to write a recursion?", "What is the base case? If the smaller version were solved, how do I build my answer from it? Does every call move strictly toward the base case?"],
+    ["Why should you not trace a recursion in your head?", "Correctness comes from induction, not simulation. Prove the base case and the single step, and every deeper level follows automatically."],
+    ["Naive fib is O(2ⁿ) time. What is its space, and why?", "O(n). Time counts every node in the call tree, but space counts only the frames alive at once, which is the depth."],
+    ["Why does memoising turn O(2ⁿ) into O(n)?", "The subproblems overlap. Caching by argument makes each distinct subproblem run once, so the cost becomes the number of distinct states. That is exactly top-down DP."],
+    ["In backtracking, why must you un-choose?", "The path is shared, changing state. Without popping, the next branch inherits choices from the branch you just finished."],
+    ["Why does res.append(path) give wrong answers?", "It stores a reference to a list that keeps changing, so all stored results change together. Append a copy: path[:]."],
   ],
 
   p: [
+    [70, "climbing-stairs", "Climbing Stairs, the running example", "E"],
     [509, "fibonacci-number", "Fibonacci, write it naive, then memoised", "E"],
     [104, "maximum-depth-of-binary-tree", "Max Depth of Binary Tree", "E"],
-    [70, "climbing-stairs", "Climbing Stairs, recursion → DP", "E"],
     [78, "subsets", "Subsets, choose / un-choose", "M"],
     [46, "permutations", "Permutations", "M"],
     [39, "combination-sum", "Combination Sum", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek seedhi mein <var>n</var> steps hain, aur aap ek baar mein 1 ya 2 steps chadhte ho. Upar pahunchne ke kitne alag tareeke hain? 4 steps ke liye answer <b>5</b> hai: 1+1+1+1, 1+1+2, 1+2+1, 2+1+1 aur 2+2.</p>
+<p>Ab 50 steps karo. Aisa tareeka chahiye jo kisi bhi <var>n</var> par chale, bina haath se kuch list kiye.</p>`,
+      tries: [
+        ["Har raasta list karo", "4 steps ke liye theek. 50 steps ke liye 20,365,011,074 raaste hain. Unhe likhna koi tareeka nahi."],
+        ["Har step ke liye ek loop likho", "“Pehle step ke liye 1 ya 2 try karo; uske andar doosre step ke liye…” Nested loops ki ginti <var>n</var> par depend karti hai. Har seedhi ke liye alag program nahi likh sakte."],
+        ["Recurse karo, aur bas", "Neeche wala idea, bina kuch jode, 50 steps ke liye khud ko lagbhag 2.5 × 10¹⁰ baar call karta hai. Zyadatar calls pehle ho chuka kaam dohraati hain."],
+      ],
+      so: `<p><b>Aakhri</b> move dekho. Aap step <var>n</var> par ya to step <var>n</var> − 1 se 1 lekar pahunche, ya step <var>n</var> − 2 se 2 lekar. To <code>ways(n) = ways(n-1) + ways(n-2)</code>. Ab <b>bharosa</b> karo ki chhoti calls sahi kaam karti hain, bina trace kiye. Yeh bharosa do chhote facts ki wajah se safe hai: <code>ways(1) = 1</code> aur <code>ways(2) = 2</code>, bina kisi call ke.</p>
+<p>Yahi <b>recursion</b> hai: aisa function jo chhoti problem par khud ko call karke problem solve kare. Har answer pehli baar mein store karo, to 50 steps ko sirf lagbhag 50 calls chahiye. Page poore mein <code>ways(4)</code> follow karta hai.</p>`,
+    },
+
+    one: "Problem ko is <b>maan ke solve karo ki chhota version pehle se solved hai</b>. Theek do cheezein likho, base case aur ek imaandaar step, aur baaki trace karna band karo.",
+
+    plain: `<p>Pehli aadat hoti hai recursion ko dimaag mein trace karna: yeh usko call karta hai, woh usko. Teen level neeche aap kho jaate ho. Recursion aise padhne ke liye nahi, aur yahi koshish use mushkil banati hai.</p>
+<p>Sahi move hai <b>leap of faith</b>. <code>ways(4)</code> ke liye maan lo <code>ways(3)</code> aur <code>ways(2)</code> pehle se kaam karte hain. Kaise, mat poocho. Aapka kaam ek line hai: <code>ways(3) + ways(2)</code>, yaani 3 + 2 = 5.</p>
+<p>Do cheezein is chhalaang ko safe banati hain. <b>Base case</b>: aisa input jiska answer bina kuch call kiye do, yahan <code>ways(1) = 1</code> aur <code>ways(2) = 2</code>. Aur <b>progress</b>: har call chhote <var>n</var> par hai, to use base case tak pahunchna hi hai. Ek bhi chhoota to chhalaang ek kabhi na khatam hone wala girna ban jaati hai.</p>
+<p><b>Analogy.</b> Aap line mein ho aur apni position jaanni hai. Poori line nahi ginte. Aage wale se uska number poochte ho aur ek jodte ho. Sabse aage wala bina pooche apna jaanta hai, aur har sawaal ek insaan aur paas le jaata hai.</p>`,
+
+    why: [
+      { t: "Trace mat karo, bharosa karo",
+        d: "<code>ways(4)</code> ke liye maan lo <code>ways(3)</code> aur <code>ways(2)</code> sahi answers dete hain. Aapka kaam ek line: unhe jodo. Dimaag mein teen level gehri calls follow karna hi recursion ko mushkil lagata hai. Aapko aisa karna hi nahi hai." },
+      { t: "Teen sawaal, aur function khud likh jaata hai",
+        d: "Sabse chhota input kaunsa hai jiska answer bina call ke de sakta hoon? Woh <b>base case</b> hai: <code>ways(1) = 1</code>, <code>ways(2) = 2</code>. Chhote versions solved hon to apna answer kaise banaaun? Woh <b>step</b> hai: jodo. Kya har call sach mein chhoti hoti hai? Woh <b>progress</b> hai: <var>n</var> − 1 aur <var>n</var> − 2 dono." },
+      { t: "Space depth hai, calls ki ginti nahi",
+        d: "Har call apne variables ek <b>frame</b> mein rakhti hai, aur frames return hone tak call stack par jamte hain. <code>ways(4)</code> zyada se zyada 3 frames gehra jaata hai: 4, phir 3, phir 2. To memory depth hai, O(<var>n</var>), aur har language limit lagati hai ki kitna gehra ja sakte ho." },
+      { t: "Time calls ki ginti hai, to tree banao",
+        d: "<code>ways(4)</code> <code>ways(3)</code> aur <code>ways(2)</code> ko call karta hai, aur <code>ways(3)</code> do aur ko: kul 5 calls. Har call do mein batti hai, to har extra step par ginti lagbhag 1.6 guna badhti hai, jo O(2<sup><var>n</var></sup>) hai: 50 steps ke liye lagbhag 2.5 × 10¹⁰ calls. Tree chauda hai, par sirf <var>n</var> gehra." },
+      { t: "Wahi call repeat ho to answer yaad rakho",
+        d: "<code>ways(4)</code> mein <code>ways(2)</code> do baar compute hota hai, aur bade <var>n</var> par repeats phat jaate hain. Har answer pehli baar store karo. Tree har <var>n</var> par ek call mein simat jaata hai: <b>O(2<sup><var>n</var></sup>) ban jaata hai O(<var>n</var>)</b>. Yeh <b>memoisation</b> hai, aur yahi dynamic programming <i>hai</i>: recursion plus lookup table." },
+      { t: "Backtracking woh recursion hai jo cheezein wapas rakhti hai",
+        d: "5 raaste ginne ki jagah list karne ke liye raaste mein ek step jodo, recurse karo, phir doosra try karne se pehle <b>woh step hatao</b>. Undo zaroori hai kyunki agli branch saaf raaste se shuru honi chahiye." },
+    ],
+
+    math: [
+      { t: "ways(4) ko banta aur wapas aata dekho", d: "Leap of faith par bharosa karna aasaan hai jab use ek baar hal hote dekh lo. Yeh raha poora, kuch bhi maane bina." },
+      { t: "Time calls ki ginti hai, to gino", d: "Har call do aur karti hai, to <var>n</var> ek badhne par ginti lagbhag 1.6 guna badhti hai. Isiliye memoise kiye bina 50 steps naamumkin hain." },
+      { t: "Depth memory hai, aur memory ek khaas number par khatam hoti hai", d: "Har intezaar karti call stack par ek frame hai. Frames ko bytes se guna karo to overflow pehle se bata sakte ho, usse takraane ki jagah." },
+      { t: "Paanch recurrences, paanch complexity classes", d: "Lagbhag har recursion inme se ek hai. Branches gino aur input kitni tezi se chhota hota hai, class nikal aati hai." },
+      { t: "Tail position, aur woh teen languages jahan isse kuch nahi milta", d: "Tail call ke return ke baad kuch karna baaki nahi, to uska frame dobara use ho sakta hai. Hota hai ya nahi, yeh language par depend hai." },
+    ],
+
+    costs: [
+      ["linear recursion (factorial, list walk)", "O(n) time · O(n) space", "sabse gehre point par n frames zinda"],
+      ["binary recursion (naive ways / fib)", "O(2ⁿ) time · O(n) space", "lagbhag 2ⁿ calls, par ek saath sirf n frames"],
+      ["memoised recursion (top-down DP)", "O(distinct states)", "har subproblem theek ek baar compute"],
+      ["tree DFS", "O(n) time · O(h) space", "h = height: balanced O(log n), skewed O(n)"],
+      ["subsets / permutations", "O(2ⁿ) / O(n!)", "decision tree ke nodes ki ginti"],
+      ["runtime recursion limit", "~10³–10⁵ frames", "Python lagbhag 1000 (badhao ya loop banao); JVM/C++ aur neeche overflow"],
+    ],
+
+    traps: [
+      "<b>Base case nahi, ya aisa jahan pahunch hi na sako.</b> Sirf <code>ways(1) = 1</code> wala <code>ways</code> <code>ways(0)</code> call karta hai, phir <code>ways(-1)</code>, hamesha. Check karo ki <i>har</i> raasta base case tak pahunche.",
+      "<b>Shared state badal kar undo na karna.</b> Backtracking mein har <code>path.append</code> ke saath uska <code>path.pop()</code> chahiye.",
+      "<b>Results mein zinda list daalna.</b> <code>res.append(path)</code> aisa reference rakhta hai jo badalta rehta hai. <code>res.append(path[:])</code> use karo.",
+      "<b>Har level par input slice karna.</b> <code>f(a[1:])</code> har level par O(<var>n</var>) copy karta hai, jo O(<var>n</var>²) banata hai. Index pass karo.",
+      "<b>“Koi data structure nahi” keh kar O(1) space bolna.</b> Call stack asli memory hai. O(depth) bolo.",
+    ],
+
+    impl: [
+      ["Python", "@lru_cache / dict memo", "Default limit lagbhag 1000 frames: sys.setrecursionlimit, ya loop mein likho."],
+      ["Java", "HashMap memo / int[] memo", "Default JVM stack lagbhag 10k se 20k frames. -Xss badhata hai; explicit stack zyada safe."],
+      ["C++", "vector memo (fill with -1)", "Gehri recursion chupchaap overflow hoti hai, koi exception nahi. Lagbhag 10^5 se gehri ho to loop lo."],
+      ["JavaScript", "Map memo", "V8 lagbhag 10k frames par rukta hai aur RangeError deta hai. Practice mein tail-call optimisation nahi."],
+    ],
+
+    codecap: "Base case, imaandaar step, aur append par path[:]: yeh teen lines zyadatar recursion sawaal sambhaalti hain.",
+
+    q: [
+      ["Recursion likhne ke liye sirf kaunse teen sawaal chahiye?", "Base case kya hai? Chhota version solved ho to usse apna answer kaise banaaun? Kya har call sach mein base case ki taraf jaati hai?"],
+      ["Recursion dimaag mein trace kyun nahi karni chahiye?", "Sahi hona induction se aata hai, simulation se nahi. Base case aur ek step saabit karo, aur har gehra level apne aap follow karta hai."],
+      ["Naive fib O(2ⁿ) time hai. Space kya hai, aur kyun?", "O(n). Time call tree ka har node ginta hai, par space sirf ek saath zinda frames ginta hai, jo depth hai."],
+      ["Memoise karne se O(2ⁿ) O(n) kyun ban jaata hai?", "Subproblems overlap karte hain. Argument se cache karne par har alag subproblem ek baar chalta hai, to cost alag states ki ginti ban jaati hai. Yahi top-down DP hai."],
+      ["Backtracking mein un-choose kyun zaroori hai?", "Path shared, badalta hua state hai. Pop kiye bina agli branch abhi khatam hui branch ke choices le leti hai."],
+      ["res.append(path) galat answers kyun deta hai?", "Yeh badalti rehne wali list ka reference rakhta hai, to saare stored results saath badalte hain. Copy append karo: path[:]."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "loops-invariants",
   n: "Loops, ranges and invariants",
   group: "Fundamentals",
-  one: "Write every range as half-open <b>[lo, hi)</b> and say your invariant out loud before the loop. Almost every off-by-one bug is one of those two habits missing.",
+  need: {
+    ask: `<p>You show a list of six items, <b>a b c d e f</b>, in pages of 3. Later you also need to split any range in half, the way binary search and merge sort do. Every one of those ranges is a place to be off by one: show an item twice, or skip one.</p>
+<p>The positions are 0 to 5. Page 1 should be a, b, c. Page 2 should be d, e, f.</p>`,
+    tries: [
+      ["Write ranges the way you say them: “items 0 to 3”", "Read as including both ends, 0 to 3 is <b>four</b> items: a, b, c, d. Page 2, “3 to 5”, starts at d again. One item shown twice, and nothing crashed."],
+      ["Include both ends, and remember the −1", "Pages 0–2 and 3–5 are correct. But now the size is <var>hi</var> − <var>lo</var> + 1. An empty page has to be written as 3 to 2. A split needs a −1 on one half and a +1 on the other. Three places to forget."],
+      ["Test it until it looks right", "Off-by-one bugs live at the edges: the first item, the last page, the empty list. Six items in pages of 3 pass. Seven items ask for a last page of 6 to 8, and positions 7 and 8 do not exist."],
+    ],
+    so: `<p>Use one rule everywhere: <b>the low end is in, the high end is out</b>. It is written <code>[lo, hi)</code>. Page 1 is [0, 3) = a, b, c, and page 2 is [3, 6) = d, e, f. The size is just <var>hi</var> − <var>lo</var>. Empty is <var>lo</var> == <var>hi</var>. A split at <var>mid</var> gives [<var>lo</var>, <var>mid</var>) and [<var>mid</var>, <var>hi</var>): nothing shared, nothing skipped.</p>
+<p>The second habit is the <b>invariant</b>: one sentence that stays true on every pass of the loop, such as “everything before <var>lo</var> has been shown”. The page uses a to f throughout, and the range [2, 5) = c, d, e.</p>`,
+  },
 
-  plain: `<p>Off-by-one errors are not carelessness. They come from ambiguity: when you say "from 2 to 5", nobody is certain whether 5 is included, including you three lines later.</p>
-<p>The fix is a convention, applied everywhere without exception: <b>the low end is included, the high end is not</b>. That is what <code>[lo, hi)</code> means, and it is why array indices start at 0 and why slices and iterators stop one past the end.</p>
-<p>Adopt it and the arithmetic becomes free. The size is <code>hi − lo</code>, with no +1 to remember. An empty range is <code>lo == hi</code>, with no special case. Splitting at <code>mid</code> gives <code>[lo, mid)</code> and <code>[mid, hi)</code>. Nothing shared, nothing skipped, no adjustment.</p>
-<p>The second habit is the <b>invariant</b>: one sentence that is true before the loop and still true after every pass. Write it in a comment first. Then each branch has an obvious job, keep it true, and the questions about <code>&lt;</code> versus <code>&lt;=</code> answer themselves.</p>
-<p><b>Analogy.</b> A fence. "From post 2 to post 5" is ambiguous, but "the panels between post 2 and post 5" is not. There are exactly three, and 5 − 2 says so.</p>`,
+  one: "Write every range as half-open <b>[<var>lo</var>, <var>hi</var>)</b> and say your invariant out loud before the loop. Almost every off-by-one bug is one of those two habits missing.",
+
+  plain: `<p>Off-by-one errors are not carelessness. They come from doubt: “from 2 to 5” does not say whether 5 is included, and three lines later you will not remember either.</p>
+<p>The fix is one rule, used everywhere: <b>the low end is included, the high end is not</b>. That is what <code>[lo, hi)</code> means. With a to f at positions 0 to 5, [2, 5) is c, d, e. The same rule is why indexes start at 0, and why <code>range(0, n)</code> and slices stop one short.</p>
+<p>With that rule the arithmetic is free. The size is <var>hi</var> − <var>lo</var>: 5 − 2 = 3. An empty range is <var>lo</var> == <var>hi</var>, like [3, 3). Splitting [0, 6) at 3 gives [0, 3) and [3, 6), which meet exactly.</p>
+<p>The second habit is the <b>invariant</b>: one sentence that is true before the loop and after every pass. Write it as a comment first. Each branch then has an obvious job: keep it true. Questions like <code>&lt;</code> versus <code>&lt;=</code> answer themselves.</p>
+<p><b>Analogy.</b> A fence. “Post 2 to post 5” is ambiguous, but “the panels between post 2 and post 5” is not. There are exactly three, and 5 − 2 says so.</p>`,
 
   why: [
-    { t: "The bug is ambiguity, not arithmetic", d: "An inclusive range forces you to remember a +1 in the size, a −1 in the last index, and a special case for emptiness. Every one of those is a chance to be wrong, and they compound as soon as ranges are split or joined." },
-    { t: "Half-open removes all three at once", d: "With <b>[lo, hi)</b> the size is <code>hi − lo</code> and empty means <code>lo == hi</code>. Two ranges also join seamlessly, because one ends exactly where the next begins. Nothing has to be adjusted, so nothing can be adjusted wrongly. This is why <code>range(0, n)</code>, <code>slice[a:b]</code> and <code>end()</code> iterators all work this way." },
-    { t: "An invariant turns a loop into something you can check", d: "State one sentence that stays true on every pass through the loop. \"Everything before <code>slow</code> is already sorted.\" \"The answer, if it exists, is inside [lo, hi).\" \"The window always satisfies the condition.\" Now correctness is local: check that each branch preserves it, and the loop is right by construction." },
-    { t: "Termination is a separate promise", d: "An invariant says the loop is <i>correct</i>; it does not say the loop <i>ends</i>. For that, something must strictly decrease every pass, the range shrinks, an index advances. Every infinite loop is a branch that failed to shrink anything, which is exactly the classic binary-search hang." },
-    { t: "The edge cases then fall out of the invariant", d: "Empty input, one element, everything identical, the answer at the first or last position. You no longer guess which to test. You ask whether the invariant holds when the range is empty, or when it holds one element. The test cases come from the statement rather than from memory." },
+    { t: "The bug is doubt, not arithmetic",
+      d: "A range that includes both ends needs a +1 in its size, a −1 in its last index, and a special case for empty. Each one is a chance to be wrong. Say “0 to 3” for the first page and you get four items, a to d." },
+    { t: "Half-open removes all three at once",
+      d: "With <b>[<var>lo</var>, <var>hi</var>)</b>, [2, 5) has size 5 − 2 = 3, and [3, 3) is empty with no special case. Ranges also join cleanly: [0, 3) and [3, 6) meet at 3, with nothing shared or skipped. That is why <code>range(0, n)</code>, <code>a[2:5]</code> and C++ <code>end()</code> all work this way." },
+    { t: "An invariant turns a loop into something you can check",
+      d: "State one sentence that stays true on every pass. For the pages: “positions [0, <var>lo</var>) have been shown, and [<var>lo</var>, <var>n</var>) have not”. It is true at the start, with <var>lo</var> = 0. Each pass shows [<var>lo</var>, <var>lo</var> + 3) and moves <var>lo</var> up by 3, which keeps it true. At the end, <var>lo</var> = <var>n</var>, so everything was shown." },
+    { t: "Ending the loop is a separate promise",
+      d: "An invariant says the loop is <i>right</i>. It does not say the loop <i>stops</i>. For that, something must shrink on every pass: here, <var>n</var> − <var>lo</var> falls by 3 each time. An infinite loop is always a branch that shrank nothing, which is exactly the classic binary-search hang." },
+    { t: "The edge cases fall out of the invariant",
+      d: "Empty list, one item, a last page that is not full. You no longer guess which to test. Ask whether the invariant still holds when <var>n</var> = 0, or when <var>n</var> = 7 and the last page is [6, 7). The tests come from the sentence, not from memory." },
   ],
 
   hing: `<p><b>Off-by-one galti laaparwahi nahi hai, confusion hai.</b> "2 se 5 tak" bolne par pata hi nahi chalta ki 5 andar hai ya nahi. Teen line baad tumhe khud yaad nahi rahega.</p>
 <p><b>Ilaaj ek convention hai, aur usse kabhi mat todo:</b> <b>shuruaat andar, aakhir bahar</b>, yani <code>[lo, hi)</code>. Isi wajah se array index 0 se shuru hote hain, aur isi wajah se <code>range(0, n)</code> aur slicing <code>a[2:5]</code> aakhri wale ko chhod dete hain.</p>
-<p><b>Isse teen faayde ek saath milte hain:</b><br>1. <b>Size = hi − lo</b>, koi +1 yaad nahi rakhna.<br>2. <b>Khaali range = lo == hi</b>, koi special case nahi.<br>3. <b>Todna aasaan</b>, <code>[lo, mid)</code> aur <code>[mid, hi)</code>, na kuch chhoota na kuch do baar aaya.</p>
+<p><b>Isse teen faayde ek saath milte hain:</b><br>1. <b>Size = <var>hi</var> − <var>lo</var></b>, koi +1 yaad nahi rakhna.<br>2. <b>Khaali range = <var>lo</var> == <var>hi</var></b>, koi special case nahi.<br>3. <b>Todna aasaan</b>, <code>[lo, mid)</code> aur <code>[mid, hi)</code>, na kuch chhoota na kuch do baar aaya.</p>
 <p><b>Doosri aadat, invariant.</b> Loop likhne se <b>pehle</b> ek line comment mein likho jo har iteration ke baad sach rahegi. Jaise: "answer agar hai to hamesha [lo, hi) ke andar hai", ya "slow se pehle wala hissa hamesha sorted hai", ya "window hamesha valid hai".</p>
 <p><b>Iska faayda kya hai?</b> Ab har branch ka kaam saaf hai, invariant ko sach rakhna. <code>&lt;</code> lagaaun ya <code>&lt;=</code>, <code>mid</code> ya <code>mid+1</code>, yeh sawaal apne aap hal ho jaate hain. Guess karna band.</p>
 <p><b>Ek aur alag baat, loop rukega ya nahi.</b> Invariant sirf yeh kehta hai ki loop <b>sahi</b> hai, yeh nahi ki woh <b>rukega</b>. Rukne ke liye har pass mein kuch <b>zaroor chhota</b> hona chahiye. Har infinite loop wahi branch hai jisme kuch chhota nahi hua, binary search ka famous hang isi ka example hai.</p>
@@ -3924,69 +5408,70 @@ function subsets(nums) {
   see: [["DOC", "https://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD831.html", "Dijkstra, why numbering should start at zero"]],
 
   math: [
-    { t: "Half-open, priced against closed, on every operation you need", d: "The convention is not taste. Each line below is somewhere an off-by-one can live, and one column has fewer of them.", w:
-`[lo, hi) with lo = 2, hi = 5  ->  {2, 3, 4}
+    { t: "Half-open against closed, on every operation you need", d: "The rule is not taste. Each line below is a place an off-by-one can live, and one column has none of them.", w:
+`a b c d e f at positions 0..5
 
                   half-open [lo,hi)     closed [lo,hi]
-size              hi - lo               hi - lo + 1
-empty when        lo == hi              lo > hi
-split at m        [lo,m) and [m,hi)     [lo,m-1] and [m+1,hi]
-join              [a,b) + [b,c) = [a,c) needs b and b+1
+c d e             [2, 5)                [2, 4]
+size              5 - 2 = 3             4 - 2 + 1 = 3
+empty             [3, 3)                [3, 2]
+split [0,6) at 3  [0,3) and [3,6)       [0,2] and [3,5]
+join              [0,3) + [3,6) = [0,6) needs 2 and 2+1
 
-three chances to be off by one, versus none` },
-    { t: "An invariant is a sentence you can check at three moments", d: "Say what is true before the loop, show each step preserves it, and read the answer off what it means when the loop ends. That is the whole method.", w:
-`binary search over [lo, hi)
-invariant: if the answer exists, it lies in [lo, hi)
+three chances to be off by one, against none` },
+    { t: "The pages, with the invariant checked at three moments", d: "Say what is true before the loop, show each pass keeps it true, and read the answer off what it means when the loop ends.", w:
+`n = 6, page size 3
+invariant: [0, lo) has been shown, [lo, n) has not
 
-before:  lo = 0, hi = n     the range is everything, true
-step:    discard a half that cannot hold the answer, so
-         the invariant still holds afterwards
-after:   lo == hi, the range is empty
-         so the answer does not exist
+before:   lo = 0     nothing shown, true
+pass 1:   show [0, 3) = a b c,   lo = 3     still true
+pass 2:   show [3, 6) = d e f,   lo = 6     still true
+after:    lo == n, so [lo, n) is empty: everything shown
 
-three lines, and they are the same three lines every time` },
-    { t: "Termination is a second promise: name the measure", d: "The invariant says the loop is right. It does not say the loop stops. For that you need a non-negative integer that strictly falls on every path.", w:
-`measure = hi - lo, never negative, must strictly decrease
+n = 7: pass 3 shows [6, min(9, 7)) = [6, 7) = g` },
+    { t: "Ending is a second promise: name what shrinks", d: "The invariant says the loop is right. It does not say the loop stops. For that you need a whole number, never negative, that falls on every pass.", w:
+`pages:  measure = n - lo:  6 -> 3 -> 0     falls by 3, stops
 
+binary search over [lo, hi), measure = hi - lo
 lo = mid + 1   ->  falls by at least 1            safe
 hi = mid       ->  falls by at least 1 (mid < hi) safe
 lo = mid       ->  may not fall at all            hangs
 
 with hi = lo + 1:  mid = lo + (hi-lo)/2 = lo
   lo = mid leaves lo unchanged: the loop never ends` },
-    { t: "The four ranges, and which two fail silently", d: "Only one of these is right. The interesting part is that the two obviously broken ones are the safe kind of broken.", w:
-`n = 5, valid indices 0..4
+    { t: "The four ranges, and which two fail silently", d: "Only one of these is right. The two obviously broken ones are the safe kind of broken.", w:
+`n = 6, valid positions 0..5 (a to f)
 
-for i in [0, n)     5 passes, last index 4   correct
-for i in [0, n]     6 passes, last index 5   crashes, loudly
-for i in [1, n)     4 passes, misses 0       silent, plausible
-for i in [0, n-1)   4 passes, misses 4       silent, plausible
+for i in [0, n)     6 passes, last is f      correct
+for i in [0, n]     7 passes, reads a[6]     loud in Python, Java
+for i in [1, n)     5 passes, misses a       silent, plausible
+for i in [0, n-1)   5 passes, misses f       silent, plausible
 
 the crash is the good outcome: it tells you` },
   ],
 
   costs: [
     ["size of [lo, hi)", "hi − lo", "no +1 to remember or forget"],
-    ["empty range", "lo == hi", "expressible without a special case"],
+    ["empty range", "lo == hi", "written without a special case"],
     ["split at mid", "[lo, mid) + [mid, hi)", "nothing shared, nothing skipped"],
     ["last valid index", "hi − 1", "the one place the −1 is explicit and obvious"],
     ["inclusive [lo, hi] size", "hi − lo + 1", "the +1 that goes missing in most off-by-one bugs"],
-    ["loop termination", "something must strictly shrink", "otherwise it hangs, however correct the invariant is"],
+    ["loop termination", "something must strictly shrink", "otherwise it hangs, however right the invariant is"],
   ],
 
   traps: [
-    "<b>Mixing conventions in one function.</b> Pick half-open and use it for every range, including your own helper parameters.",
-    "<b>A branch that shrinks nothing.</b> In binary search, <code>hi = mid</code> paired with <code>lo = mid</code> can loop forever, one side must move past mid.",
-    "<b>Reading <code>a[hi]</code> in a half-open range.</b> <code>hi</code> is one past the end; the last element is <code>a[hi - 1]</code>.",
-    "<b>Mutating the collection while looping over it.</b> Indices shift underneath you, iterate a copy, or build a new collection.",
-    "<b>Caching <code>len()</code> in a loop that changes the length</b>, or failing to cache it in a BFS level loop. Decide deliberately which you want.",
+    "<b>Mixing conventions in one function.</b> Pick half-open and use it for every range, including your own helper's parameters.",
+    "<b>A branch that shrinks nothing.</b> In binary search, <code>hi = mid</code> paired with <code>lo = mid</code> can loop forever. One side must move past <var>mid</var>.",
+    "<b>Reading <code>a[hi]</code> in a half-open range.</b> <var>hi</var> is one past the end. In [2, 5) the last item is <code>a[4]</code>, which is e.",
+    "<b>Changing the collection while looping over it.</b> Indexes shift underneath you. Loop over a copy, or build a new collection.",
+    "<b>Caching <code>len()</code> in a loop that changes the length</b>, or failing to cache it in a BFS level loop. Decide on purpose which you want.",
   ],
 
   impl: [
-    ["Python", "range(lo, hi) · a[lo:hi]", "Both exclusive at the top. Negative indices count from the end; a[-1] is the last."],
+    ["Python", "range(lo, hi) · a[lo:hi]", "Both exclusive at the top. Negative indexes count from the end; a[-1] is the last."],
     ["Java", "for (int i = lo; i < hi; i++)", "subList(lo, hi) and String.substring(lo, hi) are exclusive at the top too."],
     ["C++", "iterators [begin, end)", "end() points one past the last element and must never be dereferenced."],
-    ["JavaScript", "slice(lo, hi) exclusive", "But splice(start, count) takes a COUNT, not an end index, a common mix-up."],
+    ["JavaScript", "slice(lo, hi) exclusive", "But splice(start, count) takes a COUNT, not an end index: a common mix-up."],
   ],
 
   code: {
@@ -4113,138 +5598,223 @@ const levelSize = q.length - head;`,
   codecap: "One convention and one sentence: half-open ranges everywhere, and the invariant written down before the loop.",
 
   q: [
-    ["What does [lo, hi) mean and what three things does it buy you?", "lo is included, hi is not. Size becomes hi − lo with no +1, an empty range is simply lo == hi, and splitting at mid needs no adjustment because the halves meet exactly."],
-    ["Why do array indices start at 0?", "So that an index is an offset from the start, which makes half-open ranges work out: [0, n) covers exactly n elements and the size is n − 0."],
-    ["What is a loop invariant?", "A single statement that is true before the loop and still true after every iteration. Each branch's job is to preserve it, which makes correctness checkable locally instead of by simulation."],
-    ["An invariant is not enough on its own. What else must you show?", "Termination. Something must strictly decrease each pass. Every infinite loop is a branch that failed to shrink anything."],
-    ["In a half-open range, what is the last valid index?", "hi − 1. Reading a[hi] is out of bounds, hi is one past the end, which is why C++ end() must never be dereferenced."],
-    ["Where should your edge-case tests come from?", "The invariant: check whether it still holds for an empty range, for a single element, and when the answer sits at the first or last position."],
+    ["What does [lo, hi) mean, and what three things does it buy you?", "lo is included and hi is not. The size is hi − lo with no +1, and an empty range is simply lo == hi. Splitting at mid needs no adjustment, because the halves meet exactly."],
+    ["Why do array indices start at 0?", "So an index is an offset from the start, which makes half-open ranges work out: [0, n) covers exactly n elements, and the size is n − 0."],
+    ["What is a loop invariant?", "One statement that is true before the loop and still true after every pass. Each branch's job is to keep it true, which makes the loop checkable step by step instead of by simulation."],
+    ["An invariant is not enough on its own. What else must you show?", "That the loop ends. Something must strictly decrease on every pass. Every infinite loop is a branch that failed to shrink anything."],
+    ["In a half-open range, what is the last valid index?", "hi − 1. Reading a[hi] is out of bounds, because hi is one past the end. That is why C++ end() must never be dereferenced."],
+    ["Where should your edge-case tests come from?", "The invariant. Check whether it still holds for an empty range, for a single element, and when the answer sits at the first or last position."],
   ],
 
   p: [
     [704, "binary-search", "Binary Search, state the invariant first", "E"],
-    [34, "find-first-and-last-position-of-element-in-sorted-array", "First & Last Position, two boundaries", "M"],
     [26, "remove-duplicates-from-sorted-array", "Remove Duplicates. Everything before slow is kept", "E"],
     [27, "remove-element", "Remove Element, the same invariant", "E"],
+    [34, "find-first-and-last-position-of-element-in-sorted-array", "First & Last Position, two boundaries", "M"],
     [189, "rotate-array", "Rotate Array, index arithmetic under a convention", "M"],
     [54, "spiral-matrix", "Spiral Matrix, four moving boundaries at once", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Aap chhe items ki list, <b>a b c d e f</b>, 3-3 ke pages mein dikhate ho. Baad mein kisi bhi range ko aadha bhi karna hai, jaise binary search aur merge sort karte hain. Har range off by one hone ki jagah hai: ek item do baar dikhana, ya ek chhod dena.</p>
+<p>Positions 0 se 5 hain. Page 1 a, b, c hona chahiye. Page 2 d, e, f.</p>`,
+      tries: [
+        ["Ranges waise likho jaise bolte ho: “items 0 se 3”", "Dono sire andar maano to 0 se 3 <b>chaar</b> items hain: a, b, c, d. Page 2, “3 se 5”, phir d se shuru. Ek item do baar, aur kuch crash nahi hua."],
+        ["Dono sire andar rakho, aur −1 yaad rakho", "Pages 0–2 aur 3–5 sahi hain. Par ab size <var>hi</var> − <var>lo</var> + 1 hai. Khaali page 3 se 2 likhna padta hai. Split mein ek aadhe par −1 aur doosre par +1. Bhoolne ki teen jagah."],
+        ["Tab tak test karo jab tak sahi dikhe", "Off-by-one bugs kinaaron par rehte hain: pehla item, aakhri page, khaali list. 3 ke pages mein chhe items pass. Saat items aakhri page 6 se 8 maangte hain, aur positions 7 aur 8 hain hi nahi."],
+      ],
+      so: `<p>Har jagah ek hi niyam: <b>neeche wala sira andar, upar wala bahar</b>. Likhte hain <code>[lo, hi)</code>. Page 1 hai [0, 3) = a, b, c, aur page 2 [3, 6) = d, e, f. Size bas <var>hi</var> − <var>lo</var> hai. Khaali matlab <var>lo</var> == <var>hi</var>. <var>mid</var> par split se [<var>lo</var>, <var>mid</var>) aur [<var>mid</var>, <var>hi</var>) milte hain: na kuch shared, na kuch chhoota.</p>
+<p>Doosri aadat hai <b>invariant</b>: ek sentence jo loop ke har pass par sach rahe, jaise “<var>lo</var> se pehle ka sab dikh chuka hai”. Page poore mein a se f use karta hai, aur range [2, 5) = c, d, e.</p>`,
+    },
+
+    one: "Har range half-open <b>[<var>lo</var>, <var>hi</var>)</b> likho aur loop se pehle apna invariant zor se bolo. Lagbhag har off-by-one bug inme se ek aadat ke na hone se aata hai.",
+
+    plain: `<p>Off-by-one galtiyaan laaparwahi nahi hain. Yeh shak se aati hain: “2 se 5 tak” nahi batata ki 5 andar hai ya nahi, aur teen line baad aapko bhi yaad nahi rahega.</p>
+<p>Ilaaj ek niyam hai, har jagah: <b>neeche wala sira andar, upar wala bahar</b>. <code>[lo, hi)</code> ka matlab yahi hai. Positions 0 se 5 par a se f ho, to [2, 5) hai c, d, e. Isi niyam ki wajah se indexes 0 se shuru hote hain, aur <code>range(0, n)</code> aur slices ek pehle ruk jaate hain.</p>
+<p>Is niyam ke saath hisaab muft hai. Size <var>hi</var> − <var>lo</var> hai: 5 − 2 = 3. Khaali range <var>lo</var> == <var>hi</var> hai, jaise [3, 3). [0, 6) ko 3 par todo to [0, 3) aur [3, 6), jo theek milte hain.</p>
+<p>Doosri aadat hai <b>invariant</b>: ek sentence jo loop se pehle aur har pass ke baad sach ho. Pehle use comment mein likho. Har branch ka kaam phir saaf hai: use sach rakhna. <code>&lt;</code> vs <code>&lt;=</code> jaise sawaal khud hal ho jaate hain.</p>
+<p><b>Analogy.</b> Baad. “Post 2 se post 5” adhoora hai, par “post 2 aur post 5 ke beech ke panels” nahi. Theek teen hain, aur 5 − 2 yahi kehta hai.</p>`,
+
+    why: [
+      { t: "Bug shak hai, hisaab nahi",
+        d: "Jis range mein dono sire andar hon, use size mein +1, aakhri index mein −1, aur khaali ke liye special case chahiye. Har ek galti ka mauka hai. Pehle page ke liye “0 se 3” bolo to chaar items milte hain, a se d." },
+      { t: "Half-open teeno ek saath hata deta hai",
+        d: "<b>[<var>lo</var>, <var>hi</var>)</b> ke saath [2, 5) ka size 5 − 2 = 3 hai, aur [3, 3) bina special case ke khaali hai. Ranges saaf judti bhi hain: [0, 3) aur [3, 6) 3 par milti hain, kuch shared ya chhoota nahi. Isiliye <code>range(0, n)</code>, <code>a[2:5]</code> aur C++ <code>end()</code> sab aise chalte hain." },
+      { t: "Invariant loop ko check karne layak bana deta hai",
+        d: "Ek sentence bolo jo har pass par sach rahe. Pages ke liye: “[0, <var>lo</var>) dikh chuka, [<var>lo</var>, <var>n</var>) nahi”. Shuru mein sach, <var>lo</var> = 0 ke saath. Har pass [<var>lo</var>, <var>lo</var> + 3) dikhata hai aur <var>lo</var> ko 3 badhata hai, jo ise sach rakhta hai. End mein <var>lo</var> = <var>n</var>, to sab dikh gaya." },
+      { t: "Loop ka khatam hona alag vaada hai",
+        d: "Invariant kehta hai loop <i>sahi</i> hai. Yeh nahi kehta ki loop <i>rukega</i>. Uske liye har pass par kuch chhota hona chahiye: yahan <var>n</var> − <var>lo</var> har baar 3 ghat-ta hai. Infinite loop hamesha woh branch hai jisne kuch chhota nahi kiya, binary search ka classic hang theek yahi hai." },
+      { t: "Edge cases invariant se nikal aate hain",
+        d: "Khaali list, ek item, aakhri adhoora page. Ab guess nahi karna ki kya test karein. Poocho ki invariant tab bhi sach hai kya jab <var>n</var> = 0, ya jab <var>n</var> = 7 aur aakhri page [6, 7) ho. Tests sentence se aate hain, yaad se nahi." },
+    ],
+
+    math: [
+      { t: "Half-open vs closed, har zaroori operation par", d: "Yeh niyam pasand ka maamla nahi. Neeche ki har line ek jagah hai jahan off-by-one reh sakta hai, aur ek column mein ek bhi nahi." },
+      { t: "Pages, invariant teen pal par check karke", d: "Batao loop se pehle kya sach hai, dikhao har pass use sach rakhta hai, aur loop khatam hone par iska matlab padh lo." },
+      { t: "Khatam hona doosra vaada hai: batao kya chhota hota hai", d: "Invariant kehta hai loop sahi hai. Yeh nahi kehta ki rukega. Uske liye ek whole number chahiye, kabhi negative nahi, jo har pass par ghate." },
+      { t: "Chaar ranges, aur kaunsi do chupchaap fail hoti hain", d: "Inme se sirf ek sahi hai. Jo do saaf toote dikhte hain, woh safe wale toote hain." },
+    ],
+
+    costs: [
+      ["[lo, hi) ka size", "hi − lo", "koi +1 yaad rakhna ya bhoolna nahi"],
+      ["khaali range", "lo == hi", "bina special case ke likhi jaati hai"],
+      ["mid par split", "[lo, mid) + [mid, hi)", "kuch shared nahi, kuch chhoota nahi"],
+      ["aakhri valid index", "hi − 1", "ek hi jagah jahan −1 saaf aur seedha hai"],
+      ["inclusive [lo, hi] size", "hi − lo + 1", "woh +1 jo zyadatar off-by-one bugs mein gum hota hai"],
+      ["loop termination", "kuch zaroor chhota ho", "warna hang, invariant kitna bhi sahi ho"],
+    ],
+
+    traps: [
+      "<b>Ek function mein conventions milana.</b> Half-open chuno aur har range par use karo, apne helper ke parameters par bhi.",
+      "<b>Aisi branch jo kuch chhota nahi karti.</b> Binary search mein <code>hi = mid</code> ke saath <code>lo = mid</code> hamesha chal sakta hai. Ek taraf ko <var>mid</var> ke paar jaana hi hai.",
+      "<b>Half-open range mein <code>a[hi]</code> padhna.</b> <var>hi</var> end se ek aage hai. [2, 5) mein aakhri item <code>a[4]</code> hai, yaani e.",
+      "<b>Collection par loop karte hue use badalna.</b> Indexes neeche khisak jaate hain. Copy par loop karo, ya naya collection banao.",
+      "<b>Length badalne wale loop mein <code>len()</code> cache karna</b>, ya BFS level loop mein cache na karna. Soch kar tay karo kya chahiye.",
+    ],
+
+    impl: [
+      ["Python", "range(lo, hi) · a[lo:hi]", "Dono upar exclusive. Negative indexes end se ginte hain; a[-1] aakhri hai."],
+      ["Java", "for (int i = lo; i < hi; i++)", "subList(lo, hi) aur String.substring(lo, hi) bhi upar exclusive hain."],
+      ["C++", "iterators [begin, end)", "end() aakhri element se ek aage point karta hai aur use kabhi dereference nahi karna."],
+      ["JavaScript", "slice(lo, hi) exclusive", "Par splice(start, count) COUNT leta hai, end index nahi: common gadbad."],
+    ],
+
+    codecap: "Ek convention aur ek sentence: har jagah half-open ranges, aur loop se pehle likha hua invariant.",
+
+    q: [
+      ["[lo, hi) ka matlab kya hai, aur isse kaunsi teen cheezein milti hain?", "lo andar hai aur hi bahar. Size bina +1 ke hi − lo hai, aur khaali range bas lo == hi hai. mid par split mein koi adjustment nahi, kyunki aadhe theek milte hain."],
+      ["Array indexes 0 se kyun shuru hote hain?", "Taaki index shuruaat se offset ho, jisse half-open ranges theek baithti hain: [0, n) theek n elements cover karta hai, aur size n − 0 hai."],
+      ["Loop invariant kya hai?", "Ek statement jo loop se pehle aur har pass ke baad sach ho. Har branch ka kaam use sach rakhna hai, jisse loop simulation ki jagah step by step check hota hai."],
+      ["Akela invariant kaafi nahi. Aur kya dikhana hai?", "Ki loop khatam hota hai. Har pass par kuch sach mein ghatna chahiye. Har infinite loop woh branch hai jo kuch chhota nahi kar paayi."],
+      ["Half-open range mein aakhri valid index kya hai?", "hi − 1. a[hi] padhna bahar jaana hai, kyunki hi end se ek aage hai. Isiliye C++ end() ko kabhi dereference nahi karna."],
+      ["Edge-case tests kahan se aane chahiye?", "Invariant se. Check karo ki woh khaali range par, ek element par, aur jab answer pehli ya aakhri position par ho, tab bhi sach hai kya."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "binary-search",
   n: "Binary Search",
   group: "Fundamentals",
-  one: "If the data is <b>sorted</b>, one comparison eliminates an entire half. Repeat and n collapses to log n, 1,000,000 items in about 20 looks.",
+  need: {
+    ask: `<p>A system stores <b>10⁶ user IDs</b>, kept in sorted order. It must answer <b>10⁵ lookups</b> a second: is this ID present, and if not, which is the first ID after it?</p>
+<p>Shrink it to eight IDs to see the question: <code>1 3 5 7 9 11 13 15</code>. Is 11 there? Where would 10 go?</p>`,
+    tries: [
+      ["Scan from the start", "Each lookup reads up to 10⁶ IDs, so 10⁵ lookups cost up to 10¹¹ reads. That is minutes, for one second of traffic."],
+      ["Put the IDs in a hash set", "“Is 11 there?” becomes instant. But ask about 10 and the set can only say “no”. It keeps no order, so it cannot say that the next ID is 11."],
+      ["Jump ahead 1,000 at a time, then scan", "About 1,000 jumps plus up to 1,000 reads: 2,000 per lookup, 2 × 10⁸ for the second's traffic. That is twice the one-second budget, and a hundred times the work of the fix below."],
+    ],
+    so: `<p>Use the <b>order</b>. Look at the middle ID. If it is smaller than what you want, then so is <i>everything to its left</i>, and one comparison throws away half the list. Repeat on the half that is left. For 10⁶ IDs that is about <b>20 looks</b> per lookup, and it also tells you where a missing ID would go.</p>
+<p>That is binary search. The page follows the search for 11 in <code>1 3 5 7 9 11 13 15</code>: 8 items, found in 3 looks.</p>`,
+  },
 
-  plain: `<p>Looking up a name in a phone book, you do not start at page 1. You open the middle, see whether your name comes before or after, and throw away half the book. Then you do it again. Twenty or so opens and you are there, in a book with a million names.</p>
-<p>That is binary search, and the reason it works is <b>order</b>. In an unsorted pile, seeing one wrong element tells you nothing about the others. In a sorted one, seeing "the middle is too small" tells you about the middle <i>and everything to its left</i> in a single comparison. Sorting is the price; discarding half per step is what you buy.</p>
-<p><b>The bigger idea.</b> Binary search is not really about arrays. It applies to any question where the answer space is ordered and you can ask "is <i>this</i> candidate good enough?". That includes answers you compute rather than store, which is where the harder interview questions live.</p>`,
+  one: "If the data is <b>sorted</b>, one comparison eliminates an entire half. Repeat and <var>n</var> collapses to log <var>n</var>: 1,000,000 items in about 20 looks.",
+
+  plain: `<p>Looking up a name in a phone book, you do not start at page 1. You open the middle, see whether your name comes before or after, and throw away half the book. Then you do it again. About twenty opens find a name among a million.</p>
+<p>That is binary search, and it works because of <b>order</b>. In <code>1 3 5 7 9 11 13 15</code>, looking for 11, the middle is 9. Since 9 is too small, so is everything left of it: 1, 3, 5 and 7 go too, in one comparison. Next the middle of what is left is 13, too big, and then 11 is found.</p>
+<p>Without order that fails. In a jumbled list, one wrong item tells you nothing about the others. Sorting is the price; throwing away half at each step is what you buy.</p>
+<p><b>The bigger idea.</b> It is not really about arrays. It works on any question whose answers run in order, where you can ask “is <i>this</i> one big enough?”. That includes answers you compute rather than store.</p>`,
 
   why: [
-    { t: "One comparison can be worth one item, or half of them",
-      d: "In a jumbled pile, checking one item tells you nothing about the others, so you are stuck at O(n). In a sorted list, learning \"the middle is too small\" also tells you every item to its left is too small. Order is what turns one comparison into a bulk decision." },
+    { t: "One comparison can rule out one item, or half of them",
+      d: "In a jumbled pile, checking one item says nothing about the rest: O(<var>n</var>). In <code>1 3 5 7 9 11 13 15</code>, learning “9 is too small” also rules out 1, 3, 5 and 7. Order turns one comparison into a decision about a whole half." },
     { t: "Halving repeatedly is where log n comes from",
-      d: "n → n/2 → n/4 → … → 1. The number of halvings is <b>log₂n</b>. A million items need about 20 comparisons. That is not a tweak, it is a different class of algorithm." },
-    { t: "The real requirement is a yes/no that flips exactly once",
-      d: "\"Sorted\" is just the usual way to get there. What you actually need is a question whose answer is no, no, no, …, yes, yes, yes across the range. Once you see it that way, \"first item ≥ x\" and \"smallest k that works\" are the same algorithm." },
+      d: "8 → 4 → 2 → 1: three halvings, and 2³ = 8. In general the count is <b>log₂ <var>n</var></b>. A million items need about 20 looks. That is not a tweak. It is a different class of algorithm." },
+    { t: "The real requirement is a yes/no that flips once",
+      d: "Ask “is this ≥ 11?” along the list: no, no, no, no, no, yes, yes, yes. Binary search finds where the answer flips, here position 5. “Sorted” is just the usual way to get such a question. With it, “find 11” and “where would 10 go” are the same search." },
     { t: "So you can search the answer, not the list",
-      d: "\"What is the smallest ship capacity that finishes in D days?\" Capacities are ordered, and \"does capacity c finish in time?\" flips from no to yes exactly once. So binary search the <b>capacity</b>, and check each guess with a simple loop. The array is never searched at all, and this is where the harder questions live." },
+      d: "“Smallest ship capacity that delivers everything in <var>D</var> days?” Capacities are in order, and “does capacity <var>c</var> finish in time?” flips from no to yes once. So binary-search the <b>capacity</b>, checking each guess with a simple loop. No array is searched at all." },
     { t: "Every bug is the range failing to shrink",
-      d: "If some branch can leave both ends where they were, the loop spins forever. Fix it by construction: loop while <code>lo &lt; hi</code>, and move with <code>lo = mid + 1</code> or <code>hi = mid</code>. Now the range provably gets smaller every time." },
+      d: "If some branch can leave both ends where they were, the loop spins forever. Prevent it by construction: search <code>[lo, hi)</code>, loop while <code>lo &lt; hi</code>, and move with <code>lo = mid + 1</code> or <code>hi = mid</code>. Both moves make the range strictly smaller." },
   ],
 
-  hing: `<p><b>Ek comparison se kitna faayda?</b> Bikhre hue data mein ek element check karke sirf <b>ek</b> element hatta hai, isliye O(n) hi best hai. Par sorted data mein beech wale se compare karo to <b>aadha data ek hi baar mein</b> udd jaata hai. Yahi poora khel hai.</p>
-<p><b>log n kahan se aaya?</b> n → n/2 → n/4 → … → 1. Kitni baar aadha karna pada? n/2^k = 1 → k = <b>log₂n</b>. 10 lakh elements = sirf ~20 steps. Yeh optimisation nahi, <b>growth class ka badalna</b> hai.</p>
+  hing: `<p><b>Ek comparison se kitna faayda?</b> Bikhre hue data mein ek element check karke sirf <b>ek</b> element hatta hai, isliye O(<var>n</var>) hi best hai. Par sorted data mein beech wale se compare karo to <b>aadha data ek hi baar mein</b> udd jaata hai. Yahi poora khel hai.</p>
+<p><b>log <var>n</var> kahan se aaya?</b> <var>n</var>, phir <var>n</var>/2, phir <var>n</var>/4, … phir 1. Kitni baar aadha karna pada? <var>n</var>/2<sup><var>k</var></sup> = 1, to <var>k</var> = <b>log₂<var>n</var></b>. 10 lakh elements = sirf lagbhag 20 steps. Yeh optimisation nahi, <b>growth class ka badalna</b> hai.</p>
 <p><b>Asli condition "sorted" nahi hai.</b> Asli condition hai <b>monotonic</b>, ek aisa sawaal jiska jawaab shuru mein false…false ho aur ek point ke baad hamesha true…true. Sorted array to bas ek aasaan tarika hai yeh property paane ka.</p>
 <p><b>Sabse bada unlock, answer par binary search.</b> "Minimum capacity kya ho ki D din mein saara saamaan chala jaaye?" Yahan array par search nahi karte. Search <b>answer ki range</b> par hoti hai. Check: "capacity c se D din mein ho jaayega?", yeh monotonic hai (chhoti capacity par false, badi par true). To capacity ko binary search karo. Interview ki hard problems yahin se aati hain.</p>
 <p><b>Bug hamesha kyun aata hai?</b> Kyunki range <b>har baar sikudni chahiye</b>. Agar kisi branch mein <code>lo</code> aur <code>hi</code> dono waise ke waise reh gaye, to infinite loop. Isliye structure hi aisa rakho: <code>while lo &lt; hi</code>, aur <code>lo = mid + 1</code> / <code>hi = mid</code>. Ab range har iteration mein pakka chhoti hoti hai.</p>
 <p><b>Overflow wali baat (Java/C++ mein important):</b> <code>(lo + hi) / 2</code> bada ho kar overflow kar sakta hai. <code>lo + (hi - lo) / 2</code> likho. Python mein integers unlimited hain isliye dikkat nahi, par interview mein yeh bolna acha impression deta hai.</p>
-<p><b>Loop se pehle invariant bolo:</b> "answer hamesha <code>[lo, hi]</code> ke andar hai". Har branch ko yeh sach rakhna hai. Bas, off-by-one errors khud khatam ho jaate hain.</p>`,
+<p><b>Loop se pehle invariant bolo:</b> "answer hamesha range ke andar hai". Har branch ko yeh sach rakhna hai. Bas, off-by-one errors khud khatam ho jaate hain.</p>`,
 
   viz: ["binary-search"],
   see: [["VA", "https://visualgo.net/en/bst", "VisuAlgo, ordered search, animated"],
         ["GFG", "https://www.geeksforgeeks.org/binary-search/", "GFG, binary search, all variants"]],
 
   math: [
-    { t: "Where log n comes from, as one equation", d: "Each comparison halves the surviving range, so the question is how many halvings reduce n to one. Solve it and the famous number falls out.", w:
-`after k steps the range holds  n / 2^k  items
-stop when   n / 2^k = 1
-            2^k = n
-            k = log2 n
+    { t: "Finding 11, traced, and where log n comes from", d: "Search [<var>lo</var>, <var>hi</var>) for the first position holding a value ≥ 11. Each look halves what is left.", w:
+`a = 1 3 5 7 9 11 13 15      positions 0..7, lo = 0, hi = 8
 
-n = 1,000              10 steps
-n = 1,000,000          20
-n = 1,000,000,000      30
-n = 10^18              60
+mid = 0 + 8/2 = 4    a[4] = 9  < 11   ->  lo = 5    [5, 8)
+mid = 5 + 3/2 = 6    a[6] = 13 >= 11  ->  hi = 6    [5, 6)
+mid = 5 + 1/2 = 5    a[5] = 11 >= 11  ->  hi = 5    [5, 5)
+lo == hi == 5, and a[5] = 11: found in 3 looks
 
-doubling the input adds exactly one step` },
-    { t: "When the sort pays for itself", d: "Binary search is not free: something had to sort the data. The break-even point is a short calculation and it is lower than most people guess.", w:
-`q queries over n items
+after k looks the range holds n / 2^k items; stop at 1
+  2^k = n,  k = log2 n:   8 -> 3,  10^6 -> 20,  10^9 -> 30` },
+    { t: "The same loop answers where 10 would go", d: "Search for the first value ≥ 10 instead. The looks are identical, because 10 and 11 fall on the same side of every middle.", w:
+`mid = 4    a[4] = 9  < 10   ->  lo = 5
+mid = 6    a[6] = 13 >= 10  ->  hi = 6
+mid = 5    a[5] = 11 >= 10  ->  hi = 5
+lo = 5: a[5] = 11 is not 10, so 10 is missing,
+and 11 is the first ID after it. A hash set cannot say that.` },
+    { t: "When the sort pays for itself", d: "Binary search is not free: something had to sort the data. The break-even point is a short sum, and it is lower than most people guess.", w:
+`q lookups over n items
 
-scan every time:     q x n
+scan every time:                    q x n
 sort once, then q binary searches:  n log2 n + q log2 n
 
 n = 10^6, q = 1        10^6       vs  2.0 x 10^7   scan wins
 n = 10^6, q = 20       2 x 10^7   vs  2.0 x 10^7   level
-n = 10^6, q = 1,000    10^9       vs  2.0 x 10^7   search wins
+n = 10^6, q = 10^5     10^11      vs  2.2 x 10^7   search wins
 
-break-even is at about q = log2 n queries` },
-    { t: "The midpoint, and the one assignment that hangs", d: "Floor division puts mid strictly below hi and at or above lo. Everything about termination follows from those two facts.", w:
+break-even is at about q = log2 n lookups` },
+    { t: "The midpoint, and the one assignment that hangs", d: "Rounding down puts <var>mid</var> at or above <var>lo</var> and strictly below <var>hi</var>. Whether the loop ends follows from those two facts.", w:
 `mid = lo + (hi - lo) / 2      lo <= mid < hi, always
 
-the dangerous case is a range of size 1 or 2
-[lo, hi) with hi = lo + 1  ->  mid = lo
+the dangerous case is a range of size 1, like [5, 6)
+  mid = 5 + 1/2 = 5 = lo
 
-  lo = mid + 1   ->  lo = hi, loop ends       fine
-  hi = mid       ->  hi = lo, loop ends       fine
-  lo = mid       ->  nothing changed          hangs
+  lo = mid + 1   ->  lo = 6 = hi, loop ends     fine
+  hi = mid       ->  hi = 5 = lo, loop ends     fine
+  lo = mid       ->  lo = 5, nothing changed    hangs
 
-so every branch must exclude mid from the next range` },
-    { t: "Searching the answer instead of the array", d: "The array was never the requirement. A monotone yes/no over a numeric range is, and the range can be values rather than indices.", w:
-`search over [1, 10^9] instead of over an array
-steps: log2(10^9) = 30
+so every branch must move past mid, or pin hi to it` },
+    { t: "Searching the answer instead of the array", d: "The array was never the requirement. A yes/no that flips once over a range of numbers is, and the range can be values rather than positions.", w:
+`search capacities in [1, 10^9] instead of an array
+looks: log2(10^9) = 30
 
-each step runs a feasibility check costing O(n)
+each look runs a feasibility check costing O(n)
 total: 30 x n, and at n = 10^5 that is 3 x 10^6
 
 the check must flip exactly once:
   false false false true true true
-one flip. Two flips and the halving is meaningless.` },
-    { t: "The rotated array still halves", d: "A rotated sorted array is not sorted, but at any midpoint one of the two halves is, and that is enough to discard a half per comparison.", w:
-`[4, 5, 6, 7, 0, 1, 2]   lo = 0, hi = 6, mid = 3, a[mid] = 7
-
-a[lo] = 4 <= a[mid] = 7   ->  the left half is sorted
-target = 1: is 4 <= 1 < 7?  no  ->  discard the left half
-
-range 7 -> 3 -> 1 on the same rule: still O(log n)
-duplicates break it: [1,1,1,0,1] cannot tell which side
-is sorted, and degrades to O(n)` },
+Two flips, and halving means nothing.` },
   ],
 
   costs: [
     ["search in a sorted array", "O(log n)", "each comparison halves the candidates"],
-    ["sort first, then search once", "O(n log n)", "only worth it if you will query many times"],
-    ["first / last occurrence", "O(log n)", "same loop, different tie-breaking branch"],
-    ["binary search on the answer", "O(n log(range))", "log(range) iterations × an O(n) feasibility check"],
-    ["on a linked list", "O(n)", "no O(1) middle, the whole premise fails"],
-    ["space", "O(1)", "iterative; O(log n) if written recursively"],
+    ["sort first, then search once", "O(n log n)", "only worth it if you will look up many times"],
+    ["first / last occurrence", "O(log n)", "same loop, different branch on ties"],
+    ["binary search on the answer", "O(n log(range))", "log(range) looks, each an O(n) feasibility check"],
+    ["on a linked list", "O(n)", "no O(1) middle, so the whole premise fails"],
+    ["space", "O(1)", "as a loop; O(log n) if written recursively"],
   ],
 
   traps: [
     "<b>Infinite loop.</b> Caused by a branch that does not shrink the range. Use <code>lo &lt; hi</code> with <code>lo = mid+1</code> / <code>hi = mid</code>.",
     "<b>Integer overflow on <code>(lo+hi)/2</code></b> in fixed-width languages (Java, C++, Go). Write <code>lo + (hi-lo)/2</code>.",
-    "<b>Returning any match when the first is required.</b> For duplicates, do not stop at the first hit, keep shrinking toward the boundary.",
-    "<b>Forgetting to verify monotonicity</b> before binary searching on an answer. If the predicate flips back and forth, the result is meaningless.",
-    "<b>Using it on unsorted data.</b> It will return a confident, wrong answer rather than fail loudly.",
+    "<b>Returning any match when the first is required.</b> With duplicates, do not stop at the first hit. Keep shrinking toward the boundary.",
+    "<b>Not checking that the question flips only once</b> before binary searching an answer. If it flips back and forth, the result means nothing.",
+    "<b>Using it on unsorted data.</b> It returns a confident, wrong answer instead of failing loudly.",
   ],
 
   impl: [
-    ["Python", "bisect.bisect_left / bisect_right", "No overflow risk (arbitrary-precision ints). bisect_left = first index ≥ x."],
+    ["Python", "bisect.bisect_left / bisect_right", "No overflow risk (unlimited ints). bisect_left = first index with a value ≥ x."],
     ["Java", "Arrays.binarySearch / Collections.binarySearch", "Returns -(insertionPoint)-1 when absent, not -1. Use lo+(hi-lo)/2."],
-    ["C++", "std::lower_bound / upper_bound", "lower_bound = first ≥ x. On a std::list it is O(n), iterators are not random-access."],
-    ["JavaScript", "no built-in", "Hand-roll it; Math.floor((lo+hi)/2) is safe up to 2^53."],
+    ["C++", "std::lower_bound / upper_bound", "lower_bound = first ≥ x. On a std::list it is O(n): its iterators cannot jump."],
+    ["JavaScript", "no built-in", "Write it yourself; Math.floor((lo+hi)/2) is safe up to 2^53."],
   ],
 
   code: {
@@ -4385,27 +5955,104 @@ function minFeasible(low, high, ok) {
   return low;
 }`,
   },
-  codecap: "Learn the boundary form (lo < hi, hi = mid), not the exact-match form. It generalises to first/last occurrence and to searching the answer space.",
+  codecap: "Learn the boundary form (lo < hi, hi = mid), not the exact-match form. It extends to first/last occurrence and to searching the answer space.",
 
   q: [
-    ["Why does binary search need sorted data?", "Because one comparison must rule out many candidates. Order guarantees that everything on one side of the middle is also on the wrong side; without it a comparison eliminates only that one element."],
-    ["Where does log n come from?", "The candidate count halves each step: n → n/2 → … → 1. Solving n/2^k = 1 gives k = log₂n."],
-    ["What is the real precondition, more general than 'sorted'?", "A monotonic predicate, false…false then true…true across the search space. Sorted order is just one way to obtain it."],
-    ["What is 'binary search on the answer'?", "Searching the range of possible answers instead of the array, using a monotonic feasibility check. Cost is O(log(range)) iterations × the cost of one check."],
-    ["Why do binary searches loop forever, and what fixes it structurally?", "A branch that leaves lo and hi unchanged. Using while lo < hi with lo = mid+1 and hi = mid guarantees the interval shrinks every iteration."],
-    ["Why write mid = lo + (hi-lo)/2?", "In fixed-width integer languages lo+hi can overflow. Python is immune, but Java/C++/Go are not. This was a real JDK bug for nine years."],
+    ["Why does binary search need sorted data?", "Because one comparison must rule out many candidates. Order guarantees that everything on one side of the middle is also wrong. Without it, a comparison rules out only that one element."],
+    ["Where does log n come from?", "The candidate count halves each step: n, n/2, and so on down to 1. Solving n/2^k = 1 gives k = log₂n."],
+    ["What is the real precondition, more general than 'sorted'?", "A yes/no question that flips once across the search space: false, false, then true, true. Sorted order is one way to get it."],
+    ["What is 'binary search on the answer'?", "Searching the range of possible answers instead of an array, using a feasibility check that flips once. The cost is O(log(range)) looks times the cost of one check."],
+    ["Why do binary searches loop forever, and what fixes it by structure?", "A branch that leaves lo and hi unchanged. Using while lo < hi with lo = mid+1 and hi = mid guarantees the range shrinks every time."],
+    ["Why write mid = lo + (hi-lo)/2?", "In fixed-width integer languages, lo+hi can overflow. Python is immune, but Java, C++ and Go are not. It was a real JDK bug for nine years."],
   ],
 
   p: [
-    [704, "binary-search", "Binary Search", "E"],
-    [35, "search-insert-position", "Search Insert Position, lower bound", "E"],
+    [704, "binary-search", "Binary Search, the running example", "E"],
+    [35, "search-insert-position", "Search Insert Position, where 10 would go", "E"],
     [34, "find-first-and-last-position-of-element-in-sorted-array", "First & Last Position", "M"],
     [153, "find-minimum-in-rotated-sorted-array", "Min in Rotated Sorted Array", "M"],
     [875, "koko-eating-bananas", "Koko Eating Bananas, search the answer", "M"],
     [1011, "capacity-to-ship-packages-within-d-days", "Ship Capacity, search the answer", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek system <b>10⁶ user IDs</b> sorted order mein rakhta hai. Use har second <b>10⁵ lookups</b> ka jawab dena hai: kya yeh ID hai, aur nahi hai to iske baad pehli ID kaunsi hai?</p>
+<p>Sawaal samajhne ke liye ise aath IDs tak chhota karo: <code>1 3 5 7 9 11 13 15</code>. Kya 11 hai? 10 kahan jaayega?</p>`,
+      tries: [
+        ["Shuru se scan karo", "Har lookup 10⁶ IDs tak padhta hai, to 10⁵ lookups 10¹¹ reads tak. Ek second ke traffic ke liye minutes."],
+        ["IDs hash set mein daal do", "“Kya 11 hai?” turant. Par 10 ke baare mein poocho to set sirf “nahi” keh sakta hai. Usme order nahi, to nahi bata sakta ki agli ID 11 hai."],
+        ["1,000-1,000 aage kood kar, phir scan", "Lagbhag 1,000 jumps plus 1,000 tak reads: har lookup 2,000, second ke traffic ke liye 2 × 10⁸. Yeh ek second ke budget ka dugna hai, aur neeche wale fix se sau guna zyada kaam."],
+      ],
+      so: `<p><b>Order</b> ka fayda uthao. Beech wali ID dekho. Woh chahiye wali se chhoti hai, to <i>uske left ka sab kuch</i> bhi chhota hai, aur ek comparison aadhi list phenk deta hai. Bache aadhe par repeat karo. 10⁶ IDs ke liye har lookup mein lagbhag <b>20 looks</b>, aur yeh bhi pata chalta hai ki missing ID kahan jaati.</p>
+<p>Yahi binary search hai. Page <code>1 3 5 7 9 11 13 15</code> mein 11 ki search follow karta hai: 8 items, 3 looks mein mila.</p>`,
+    },
+
+    one: "Data <b>sorted</b> ho to ek comparison poora aadha hata deta hai. Repeat karo aur <var>n</var> simat kar log <var>n</var> ban jaata hai: 10,00,000 items lagbhag 20 looks mein.",
+
+    plain: `<p>Phone book mein naam dhoondhte waqt page 1 se shuru nahi karte. Beech kholte ho, dekhte ho naam pehle aata hai ya baad mein, aur aadhi book phenk dete ho. Phir yahi dobara. Lagbhag bees baar kholne par das lakh mein se naam mil jaata hai.</p>
+<p>Yahi binary search hai, aur yeh <b>order</b> ki wajah se chalta hai. <code>1 3 5 7 9 11 13 15</code> mein 11 dhoondhte hue beech 9 hai. 9 chhota hai, to uske left ka sab bhi chhota: 1, 3, 5 aur 7 bhi gaye, ek comparison mein. Bache hisse ka beech 13 hai, bada, aur phir 11 mil jaata hai.</p>
+<p>Order ke bina yeh fail hota hai. Bikhri list mein ek galat item baaki ke baare mein kuch nahi batata. Sorting keemat hai; har step par aadha phenkna woh hai jo khareedte ho.</p>
+<p><b>Bada idea.</b> Yeh asal mein arrays ke baare mein nahi. Yeh har us sawaal par chalta hai jiske answers order mein chalte hain, jahan pooch sako “kya <i>yeh</i> kaafi bada hai?”. Isme woh answers bhi aate hain jo store nahi, calculate karte ho.</p>`,
+
+    why: [
+      { t: "Ek comparison ek item hata sakta hai, ya aadhe",
+        d: "Bikhre dher mein ek item check karna baaki ke baare mein kuch nahi kehta: O(<var>n</var>). <code>1 3 5 7 9 11 13 15</code> mein “9 chhota hai” jaanne se 1, 3, 5 aur 7 bhi hat jaate hain. Order ek comparison ko poore aadhe ka faisla bana deta hai." },
+      { t: "Baar baar aadha karna hi log n hai",
+        d: "8, phir 4, phir 2, phir 1: teen baar aadha, aur 2³ = 8. General mein ginti <b>log₂ <var>n</var></b> hai. Das lakh items ko lagbhag 20 looks chahiye. Yeh chhota sudhaar nahi. Yeh algorithm ki alag class hai." },
+      { t: "Asli zaroorat ek haan/na hai jo ek baar palte",
+        d: "List par poocho “kya yeh ≥ 11 hai?”: nahi, nahi, nahi, nahi, nahi, haan, haan, haan. Binary search dhoondhta hai answer kahan palta, yahan position 5. “Sorted” aisa sawaal paane ka bas usual tareeka hai. Isse “11 dhoondho” aur “10 kahan jaayega” ek hi search hain." },
+      { t: "To list nahi, answer search kar sakte ho",
+        d: "“Sabse chhoti ship capacity jo <var>D</var> din mein sab deliver kare?” Capacities order mein hain, aur “kya capacity <var>c</var> time par khatam karti hai?” ek baar nahi se haan palatta hai. To <b>capacity</b> ko binary search karo, har guess ko ek simple loop se check karke. Koi array search nahi hota." },
+      { t: "Har bug range ka na sikudna hai",
+        d: "Koi branch dono sire wahin chhod sake to loop hamesha ghoomta hai. Structure se roko: <code>[lo, hi)</code> search karo, <code>lo &lt; hi</code> tak loop, aur <code>lo = mid + 1</code> ya <code>hi = mid</code> se aage badho. Dono moves range ko sach mein chhota karte hain." },
+    ],
+
+    math: [
+      { t: "11 dhoondhna, trace karke, aur log n kahan se", d: "[<var>lo</var>, <var>hi</var>) mein pehli position dhoondho jiski value ≥ 11 ho. Har look bacha hua aadha karta hai." },
+      { t: "Wahi loop batata hai 10 kahan jaayega", d: "Iski jagah pehli value ≥ 10 dhoondho. Looks bilkul same hain, kyunki 10 aur 11 har beech ki ek hi taraf girte hain." },
+      { t: "Sort kab apni keemat vasool karta hai", d: "Binary search muft nahi: kisi ko data sort karna pada. Break-even ek chhota sa jodh hai, aur zyadatar logon ke andaaze se neeche hai." },
+      { t: "Midpoint, aur woh ek assignment jo hang karta hai", d: "Neeche round karne se <var>mid</var> <var>lo</var> ya usse upar aur <var>hi</var> se sach mein neeche rehta hai. Loop khatam hoga ya nahi, isi do baaton se nikalta hai." },
+      { t: "Array ki jagah answer search karna", d: "Array kabhi zaroorat thi hi nahi. Numbers ki range par ek baar palatne wala haan/na zaroorat hai, aur range positions ki jagah values ho sakti hai." },
+    ],
+
+    costs: [
+      ["sorted array mein search", "O(log n)", "har comparison candidates aadhe karta hai"],
+      ["pehle sort, phir ek search", "O(n log n)", "tabhi faayda jab bahut baar lookup karna ho"],
+      ["first / last occurrence", "O(log n)", "wahi loop, ties par alag branch"],
+      ["answer par binary search", "O(n log(range))", "log(range) looks, har ek O(n) feasibility check"],
+      ["linked list par", "O(n)", "O(1) mein beech nahi milta, to poora idea fail"],
+      ["space", "O(1)", "loop ki tarah; recursive likho to O(log n)"],
+    ],
+
+    traps: [
+      "<b>Infinite loop.</b> Aisi branch se jo range chhota nahi karti. <code>lo &lt; hi</code> ke saath <code>lo = mid+1</code> / <code>hi = mid</code> use karo.",
+      "<b><code>(lo+hi)/2</code> par integer overflow</b> fixed-width languages mein (Java, C++, Go). <code>lo + (hi-lo)/2</code> likho.",
+      "<b>Pehla chahiye tha aur koi bhi match lauta diya.</b> Duplicates ke saath pehle hit par mat ruko. Boundary ki taraf chhota karte raho.",
+      "<b>Answer ko binary search karne se pehle check na karna ki sawaal sirf ek baar palatta hai.</b> Aage peeche palte to result ka koi matlab nahi.",
+      "<b>Unsorted data par use karna.</b> Zor se fail hone ki jagah bharose wala galat answer deta hai.",
+    ],
+
+    impl: [
+      ["Python", "bisect.bisect_left / bisect_right", "Overflow ka dar nahi (unlimited ints). bisect_left = pehla index jiski value ≥ x."],
+      ["Java", "Arrays.binarySearch / Collections.binarySearch", "Na mile to -(insertionPoint)-1 deta hai, -1 nahi. lo+(hi-lo)/2 use karo."],
+      ["C++", "std::lower_bound / upper_bound", "lower_bound = pehla ≥ x. std::list par O(n) hai: uske iterators kood nahi sakte."],
+      ["JavaScript", "no built-in", "Khud likho; Math.floor((lo+hi)/2) 2^53 tak safe hai."],
+    ],
+
+    codecap: "Boundary form (lo < hi, hi = mid) seekho, exact-match form nahi. Yeh first/last occurrence aur answer space search tak chalta hai.",
+
+    q: [
+      ["Binary search ko sorted data kyun chahiye?", "Kyunki ek comparison ko bahut saare candidates hataane hain. Order guarantee karta hai ki beech ki ek taraf ka sab bhi galat hai. Uske bina comparison sirf wahi ek element hataata hai."],
+      ["log n kahan se aata hai?", "Har step par candidates aadhe hote hain: n, n/2, aise hi 1 tak. n/2^k = 1 solve karo to k = log₂n."],
+      ["'Sorted' se zyada general asli precondition kya hai?", "Ek haan/na sawaal jo search space par ek baar palte: false, false, phir true, true. Sorted order use paane ka ek tareeka hai."],
+      ["'Answer par binary search' kya hai?", "Array ki jagah possible answers ki range search karna, ek baar palatne wale feasibility check se. Cost O(log(range)) looks guna ek check ki cost hai."],
+      ["Binary search hamesha kyun ghoomta hai, aur structure se kya theek karta hai?", "Aisi branch jo lo aur hi ko wahin chhod de. while lo < hi ke saath lo = mid+1 aur hi = mid har baar range chhota hona pakka karta hai."],
+      ["mid = lo + (hi-lo)/2 kyun likhein?", "Fixed-width integer languages mein lo+hi overflow ho sakta hai. Python bacha hai, par Java, C++ aur Go nahi. Yeh JDK mein nau saal tak asli bug tha."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "linked-list",
