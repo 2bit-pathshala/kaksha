@@ -40,6 +40,16 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
     if (c.q.length < 5)     problems.push(c.id + " has only " + c.q.length + " questions");
     if (c.traps.length < 4) problems.push(c.id + " has only " + c.traps.length + " traps");
     if (c.p.length < 5)     problems.push(c.id + " has only " + c.p.length + " practice links");
+    // why you need this: the problem, at least two fixes that fail, then the idea
+    if (c.need && (!c.need.ask || !c.need.so || (c.need.tries || []).length < 2))
+      problems.push(c.id + " has a thin 'why you need this'");
+    // the Hinglish mirrors the English one for one, or the switch shows a mismatch
+    if (c.hi) for (const k of ["why", "math", "costs", "traps", "impl", "q"]) {
+      if (c.hi[k] && c.hi[k].length !== c[k].length)
+        problems.push(c.id + " hi." + k + " has " + c.hi[k].length + " entries, English has " + c[k].length);
+    }
+    if (c.hi && c.hi.need && c.need && (c.hi.need.tries || []).length !== (c.need.tries || []).length)
+      problems.push(c.id + " hi.need.tries out of step with the English");
   }
   test("structure", problems.length === 0,
     CONCEPTS.length + " concepts, " + CONCEPTS.reduce((a,c)=>a+c.q.length,0) + " questions" +
@@ -67,6 +77,28 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
     Object.keys(VIZ).length + " visuals, " + frames + " frames, " + labels + " labels fitted" +
     (spills.length ? "   <-- spilling: " + spills.slice(0,3).join(", ") : "") +
     (broken.length ? "   <-- broken: " + broken.join(", ") : ""));
+}
+
+/* ---------- 2b. the guess-first questions inside visuals ----------
+   A question with its answer out of range, or a Hinglish version with a
+   different number of options, would mark the reader wrong for being right. */
+{
+  const problems = [];
+  let asks = 0, scenes = 0;
+  for (const [id, spec] of Object.entries(VIZ)) spec.frames.forEach((f, i) => {
+    if (f.scene) scenes++;
+    if (!f.ask) return;
+    asks++;
+    const a = f.ask;
+    if (i === spec.frames.length - 1) problems.push(id + " asks on its last frame, which has no reveal");
+    if (!a.q || !Array.isArray(a.opts) || a.opts.length < 2) problems.push(id + " frame " + i + ": malformed ask");
+    else if (!(a.a >= 0 && a.a < a.opts.length)) problems.push(id + " frame " + i + ": answer index out of range");
+    const h = f.hi && f.hi.ask;
+    if (h && h.opts && h.opts.length !== a.opts.length) problems.push(id + " frame " + i + ": Hinglish options out of step");
+  });
+  test("visual asks", problems.length === 0,
+    asks + " questions and " + scenes + " scene cards, all answerable" +
+    (problems.length ? "   <-- " + problems.slice(0, 3).join("; ") : ""));
 }
 
 /* ---------- 3. the visuals are painted with variables the stylesheet defines ---------- */
@@ -140,10 +172,20 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
   const wc = t => { const s = strip(t); return s ? s.split(/\s+/).length : 0; };
   const over = [];
   let counted = 0;
+  // the same prose fields, wherever they appear: the English, and the Hinglish in `hi`
+  const prose = (c, tag) => {
+    const out = [[tag + "plain", c.plain || ""]];
+    if (c.hing) out.push([tag + "hing", c.hing]);
+    (c.why || []).forEach((w, i) => out.push([tag + "why" + i, w.d]));
+    (c.math || []).forEach((m, i) => out.push([tag + "math" + i, m.d || ""]));
+    if (c.need) {
+      out.push([tag + "need", c.need.ask || ""], [tag + "need.so", c.need.so || ""]);
+      (c.need.tries || []).forEach((t, i) => out.push([tag + "need.try" + i, t[1]]));
+    }
+    return out;
+  };
   for (const c of CONCEPTS) {
-    const parts = [["plain", c.plain], ["hing", c.hing]];
-    c.why.forEach((w, i) => parts.push(["why" + i, w.d]));
-    (c.math || []).forEach((m, i) => parts.push(["math" + i, m.d || ""]));
+    const parts = prose(c, "").concat(c.hi ? prose(c.hi, "hi.") : []);
     for (const [label, text] of parts)
       String(text).split(SPLIT).forEach(sent => {
         const n = wc(sent);
@@ -153,7 +195,7 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
       });
   }
   test("plain english", over.length === 0,
-    counted + " sentences across plain, why, hing and the derivations, none over " + LIMIT + " words" +
+    counted + " sentences across plain, why, need, hing, Hinglish and the derivations, none over " + LIMIT + " words" +
     (over.length ? "   <-- " + over.slice(0, 4).join(", ") : ""));
 }
 
@@ -311,11 +353,37 @@ if (!JSDOM) {
     const { d, w, errs } = render("concept.html", "concept.html?c=" + c.id);
     const n = s => d.querySelectorAll(s).length;
     if (errs.length) problems.push(c.id + ": " + errs[0]);
-    const expectSections = 9 + (c.variants ? 1 : 0) + (c.math ? 1 : 0);
+    const expectSections = 9 + (c.variants ? 1 : 0) + (c.math ? 1 : 0) + (c.need ? 1 : 0);
     if (n(".rung") !== expectSections)
       problems.push(c.id + ": " + n(".rung") + " sections, expected " + expectSections);
+    // walk every guess-first question: answer it, and the reveal must follow
+    d.querySelectorAll(".viz").forEach(v => {
+      for (let k = 0; k < 40; k++) {
+        const opt = v.querySelector(".vizask:not([hidden]) .aopts button:not(:disabled)");
+        if (opt) {
+          opt.dispatchEvent(new w.Event("click"));
+          const go = v.querySelector(".averdict .go");
+          if (!go) { problems.push(c.id + ": a question gave no way on"); break; }
+          go.dispatchEvent(new w.Event("click"));
+        } else v.querySelector('[data-a="next"]').dispatchEvent(new w.Event("click"));
+        if (v.querySelector(".step").textContent.startsWith("1 /")) break;
+      }
+    });
+    // the reading-language switch: a translated page drops the separate
+    // Hinglish section and says so in its headings; switching back restores it
+    if (c.hi) {
+      const lt = d.querySelector("#langToggle");
+      const before = d.querySelector(".toc").textContent;
+      lt.dispatchEvent(new w.Event("click"));
+      if (n(".rung") !== expectSections - 1)
+        problems.push(c.id + ": Hinglish shows " + n(".rung") + " sections, expected " + (expectSections - 1));
+      if (d.querySelector(".toc").textContent === before) problems.push(c.id + ": Hinglish headings unchanged");
+      if (!n(".vizstage svg, .vizstage .vizscene")) problems.push(c.id + ": no visual in Hinglish");
+      lt.dispatchEvent(new w.Event("click"));
+      if (n(".rung") !== expectSections) problems.push(c.id + ": switching back lost a section");
+    }
     if (n(".langtabs button") !== 5) problems.push(c.id + ": " + n(".langtabs button") + " code tabs");
-    if (!n(".vizstage svg")) problems.push(c.id + ": no visual rendered");
+    if (!n(".vizstage svg, .vizstage .vizscene")) problems.push(c.id + ": no visual rendered");
     if (n(".nav-list a") !== CONCEPTS.length) problems.push(c.id + ": sidebar out of step");
     if (n("input[type=checkbox]") || n(".ptrack")) problems.push(c.id + ": progress tracking is back");
     // inline markup inside prose must stay inline, or sentences shatter across lines

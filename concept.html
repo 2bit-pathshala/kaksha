@@ -20,7 +20,7 @@
   <script src="js/scroll-focus.js" defer></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
-  <link rel="stylesheet" href="css/learn.css?v=3" />
+  <link rel="stylesheet" href="css/learn.css?v=4" />
 </head>
 <body>
   <header class="bar">
@@ -31,6 +31,7 @@
       <div class="sp"></div>
       <a class="nav" href="revise.html">Revision</a>
       <a class="nav" href="dsa-notes.html">DSA notes</a>
+      <button class="nav" id="langToggle" aria-label="Switch explanations to Hinglish">Hinglish</button>
       <button class="nav" id="themeToggle">Dark</button>
     </div>
   </header>
@@ -64,7 +65,8 @@
     const LANGS = [["pseudo", "Pseudocode"], ["py", "Python"], ["java", "Java"], ["cpp", "C++"], ["js", "JavaScript"]];
     const HLJS  = { pseudo: "plaintext", py: "python", java: "java", cpp: "cpp", js: "javascript" };
     let lang = localStorage.getItem("ms-lang") || "pseudo";   // a view preference, not progress
-
+    let L = "en";                                              // reading language, also a view preference
+    try { if (localStorage.getItem("ms-read") === "hi") L = "hi"; } catch (e) {}
     const current = CONCEPTS.find(c => c.id === new URLSearchParams(location.search).get("c")) || CONCEPTS[0];
     document.title = current.n;
 
@@ -90,24 +92,55 @@
 
     /* ---------------- the fixed order of sections ---------------- */
     const SECTIONS = [
-      { k: "one",   id: "one",      t: "In one line" },
-      { k: "viz",   id: "see",      t: "See it work" },
-      { k: "plain", id: "plain",    t: "In plain words" },
-      { k: "why",   id: "why",      t: "Why it works" },
-      { k: "variants", id: "family", t: "Which one, and when" },
-      { k: "hing",  id: "hinglish", t: "In Hinglish" },
-      { k: "math",  id: "maths",    t: "The maths, step by step" },
-      { k: "costs", id: "costs",    t: "Costs and traps" },
-      { k: "code",  id: "code",     t: "The template" },
-      { k: "q",     id: "check",    t: "Check yourself" },
-      { k: "p",     id: "practice", t: "Practice" },
+      { k: "need",  id: "need",     t: "Why you need this",       h: "Yeh kyun chahiye" },
+      { k: "one",   id: "one",      t: "In one line",             h: "Ek line mein" },
+      { k: "viz",   id: "see",      t: "See it work",             h: "Chalta hua dekho" },
+      { k: "plain", id: "plain",    t: "In plain words",          h: "Seedhi bhasha mein" },
+      { k: "why",   id: "why",      t: "Why it works",            h: "Yeh kaam kyun karta hai" },
+      { k: "variants", id: "family", t: "Which one, and when",    h: "Kaunsa, aur kab" },
+      { k: "hing",  id: "hinglish", t: "In Hinglish",             h: "Hinglish mein" },
+      { k: "math",  id: "maths",    t: "The maths, step by step", h: "Maths, step by step" },
+      { k: "costs", id: "costs",    t: "Costs and traps",         h: "Cost aur traps" },
+      { k: "code",  id: "code",     t: "The template",            h: "Template" },
+      { k: "q",     id: "check",    t: "Check yourself",          h: "Khud check karo" },
+      { k: "p",     id: "practice", t: "Practice",                h: "Practice" },
     ];
 
+    // the small labels inside sections, in both reading languages
+    const UI = {
+      en: { elsewhere: "Elsewhere", traps: "⚠️ Traps", yours: "In your language",
+            op: "Operation", cost: "Cost", why: "Why", lang: "Language", called: "What it is called",
+            watchFor: "What to watch for", reach: "Reach for it when", watch: "Watch out",
+            problem: "The problem", tries: "Why not the obvious fixes?", so: "So the idea is",
+            prev: "Previous", next: "Next", toggle: "Hinglish", toggleLabel: "Switch explanations to Hinglish" },
+      hi: { elsewhere: "Aur kahan padhein", traps: "⚠️ Traps", yours: "Aapki language mein",
+            op: "Operation", cost: "Cost", why: "Kyun", lang: "Language", called: "Kya naam hai",
+            watchFor: "Kis cheez ka dhyan rakhein", reach: "Kab use karein", watch: "Dhyan rahe",
+            problem: "Problem kya hai", tries: "Seedhe tareeke kyun fail hote hain?", so: "Isliye yeh idea",
+            prev: "Pichhla", next: "Agla", toggle: "English", toggleLabel: "Switch explanations to English" },
+    };
+
     const main = $("#main");
+
+    /* The whole page is drawn from the data, so switching language just draws it
+       again. A concept carries its Hinglish in `hi`, field for field; anything
+       not translated yet falls back to the English, so a half-done page still reads. */
+    function render(vizAt) {
+    main.innerHTML = "";
+    const hi = L === "hi" && current.hi ? current.hi : null;
+    const u = UI[hi ? "hi" : "en"];
+    document.documentElement.lang = hi ? "hi-Latn" : "en";
+    const tx = k => {
+      if (!hi || hi[k] == null) return current[k];
+      // derivations keep their English working block; only the words around it change
+      if (k === "math") return current.math.map((m, i) => Object.assign({}, m, hi.math[i] || {}));
+      return hi[k];
+    };
     main.appendChild(el("div", "crumb", esc(current.group)));
     main.appendChild(el("h1", "ctitle", esc(current.n)));
 
     const present = SECTIONS.filter(s => {
+      if (s.k === "hing" && hi) return false;   // the whole page is Hinglish now
       const v = current[s.k];
       return v && (!Array.isArray(v) || v.length);
     });
@@ -115,7 +148,7 @@
     // whitespace anywhere, the strip had no break opportunity and ran off the
     // side of the page; .toc is a wrapping flex row and its gap separates them
     main.appendChild(el("nav", "toc", present.map(s =>
-      `<a href="#${s.id}">${esc(s.t)}</a>`).join("")));
+      `<a href="#${s.id}">${esc(hi ? s.h : s.t)}</a>`).join("")));
     main.querySelector(".toc").setAttribute("aria-label", "On this page");
 
     // tables can be wider than a phone; give each one its own scroll box
@@ -131,7 +164,7 @@
       sec.dataset.k = s.k;            // lets the stylesheet treat a section specially
                                       // (the drop cap on "in plain words", for one)
       sec.appendChild(el("h2", null,
-        `<span class="num">${String(present.indexOf(s) + 1).padStart(2, "0")}</span>${esc(s.t)}`));
+        `<span class="num">${String(present.indexOf(s) + 1).padStart(2, "0")}</span>${esc(hi ? s.h : s.t)}`));
       const body = el("div", "body");
       build(body);
       sec.appendChild(body);
@@ -139,14 +172,28 @@
     }
 
     present.forEach(s => {
-      const v = current[s.k];
-
+      const v = tx(s.k);
+      // the reason the idea exists, before any of its mechanics
+      if (s.k === "need") return section(s, b => {
+        b.appendChild(el("div", "tbl-title first", u.problem));
+        b.appendChild(el("div", "need-ask", v.ask));
+        if (v.tries && v.tries.length) {
+          b.appendChild(el("div", "tbl-title", u.tries));
+          b.appendChild(el("ul", "tries", v.tries.map(([what, whyNot]) =>
+            `<li><b>${what}</b><div>${whyNot}</div></li>`).join("")));
+        }
+        b.appendChild(el("div", "tbl-title", u.so));
+        b.appendChild(el("div", "need-so", v.so));
+      });
       if (s.k === "one") return section(s, b => { b.appendChild(el("div", "oneline", v)); });
 
       if (s.k === "viz") return section(s, b => {
-        v.forEach(id => { const w = el("div", "vizwrap"); b.appendChild(w); mountViz(id, w); });
+        v.forEach((id, k) => {
+          const w = el("div", "vizwrap"); b.appendChild(w);
+          mountViz(id, w, hi ? "hi" : "en", vizAt && vizAt[k]);
+        });
         if (current.see && current.see.length) {
-          b.appendChild(el("div", "tbl-title", "Elsewhere"));
+          b.appendChild(el("div", "tbl-title", u.elsewhere));
           b.appendChild(el("ul", "links", current.see.map(([src, url, title]) =>
             `<li><span class="src">${esc(src)}</span><a href="${url}" target="_blank" rel="noopener">${esc(title)}</a></li>`).join("")));
         }
@@ -163,8 +210,8 @@
           `<div class="variant">` +
             `<div class="vhead"><b>${esc(x.n)}</b><span class="vcost">${esc(x.cost)}</span></div>` +
             `<div class="vbody">${x.idea}` +
-            (x.when  ? `<div class="vwhen"><i>Reach for it when</i> ${x.when}</div>`  : "") +
-            (x.watch ? `<div class="vwatch"><i>Watch out</i> ${x.watch}</div>` : "") +
+            (x.when  ? `<div class="vwhen"><i>${u.reach}</i> ${x.when}</div>`  : "") +
+            (x.watch ? `<div class="vwatch"><i>${u.watch}</i> ${x.watch}</div>` : "") +
           `</div></div>`).join("")));
       });
 
@@ -181,18 +228,19 @@
 
       if (s.k === "costs") return section(s, b => {
         table(b,
-          `<thead><tr><th>Operation</th><th>Cost</th><th>Why</th></tr></thead><tbody>` +
+          `<thead><tr><th>${u.op}</th><th>${u.cost}</th><th>${u.why}</th></tr></thead><tbody>` +
           v.map(([op, cost, why]) => `<tr><td>${op}</td><td><code>${esc(cost)}</code></td><td class="why">${why}</td></tr>`).join("") +
           `</tbody>`);
-        if (current.traps && current.traps.length) {
-          b.appendChild(el("div", "tbl-title", "⚠️ Traps"));
-          b.appendChild(el("ul", "traps", current.traps.map(t => `<li>${t}</li>`).join("")));
+        const traps = tx("traps"), impl = tx("impl");
+        if (traps && traps.length) {
+          b.appendChild(el("div", "tbl-title", u.traps));
+          b.appendChild(el("ul", "traps", traps.map(t => `<li>${t}</li>`).join("")));
         }
-        if (current.impl && current.impl.length) {
-          b.appendChild(el("div", "tbl-title", "In your language"));
+        if (impl && impl.length) {
+          b.appendChild(el("div", "tbl-title", u.yours));
           table(b,
-            `<thead><tr><th>Language</th><th>What it is called</th><th>What to watch for</th></tr></thead><tbody>` +
-            current.impl.map(([l, api, note]) =>
+            `<thead><tr><th>${u.lang}</th><th>${u.called}</th><th>${u.watchFor}</th></tr></thead><tbody>` +
+            impl.map(([l, api, note]) =>
               `<tr><td>${esc(l)}</td><td><code>${esc(api)}</code></td><td class="why">${esc(note)}</td></tr>`).join("") +
             `</tbody>`);
         }
@@ -222,7 +270,7 @@
         });
         b.appendChild(tabs);
         b.appendChild(pre);
-        if (current.codecap) b.appendChild(el("div", "codecap", esc(current.codecap)));
+        if (tx("codecap")) b.appendChild(el("div", "codecap", esc(tx("codecap"))));
         show(lang);
       });
 
@@ -252,17 +300,36 @@
     const i = CONCEPTS.indexOf(current);
     const pager = el("nav", "pager");
     if (i > 0) {
-      const a = el("a", null, `<span>Previous</span>${esc(CONCEPTS[i - 1].n)}`);
+      const a = el("a", null, `<span>${u.prev}</span>${esc(CONCEPTS[i - 1].n)}`);
       a.href = "concept.html?c=" + CONCEPTS[i - 1].id;
       pager.appendChild(a);
     }
     if (i < CONCEPTS.length - 1) {
-      const a = el("a", "next", `<span>Next</span>${esc(CONCEPTS[i + 1].n)}`);
+      const a = el("a", "next", `<span>${u.next}</span>${esc(CONCEPTS[i + 1].n)}`);
       a.href = "concept.html?c=" + CONCEPTS[i + 1].id;
       pager.appendChild(a);
     }
     if (pager.children.length) main.appendChild(pager);
+    const lt = $("#langToggle");
+    lt.textContent = u.toggle;
+    lt.setAttribute("aria-label", u.toggleLabel);
+    }
+    render();
 
+    /* ---------------- reading language ----------------
+       Redrawing moves everything, so remember which section was at the top of
+       the screen and put it back there, rather than jumping to the page top. */
+    $("#langToggle").addEventListener("click", () => {
+      const top = [...main.querySelectorAll(".rung")].find(x => x.getBoundingClientRect().bottom > 100);
+      const anchor = top ? top.id : null, offset = top ? top.getBoundingClientRect().top : 0;
+      // and keep each visual on the step it was showing: the reader was mid-walk
+      const vizAt = [...main.querySelectorAll(".viz")].map(v => +v.dataset.i || 0);
+      L = L === "hi" ? "en" : "hi";
+      try { localStorage.setItem("ms-read", L); } catch (e) {}
+      render(vizAt);
+      const back = anchor && document.getElementById(anchor);
+      if (back) window.scrollBy(0, back.getBoundingClientRect().top - offset);
+    });
     /* ---------------- chrome ---------------- */
     const side = $("#side"), scrim = $("#scrim");
     const toggleSide = () => { side.classList.toggle("open"); scrim.classList.toggle("open"); };

@@ -1063,65 +1063,78 @@ Number(power(2n, 100n, M));               // convert back only at the very end`,
   id: "mod-inverse",
   n: "Modular multiplicative inverse",
   group: "Fundamentals",
-  one: "Under a modulus there is no division, only multiplication. <b>a / b becomes a × inv(b)</b>, the one residue with <code>b × inv(b) ≡ 1</code>.",
+  need: {
+    ask: `<p>Many counting problems end with <b>“return the answer mod 10⁹ + 7”</b>. The real answer is far too big to store, so you keep only its <b>remainder</b> after dividing by 10⁹ + 7. For <code>+</code>, <code>−</code> and <code>×</code> this is easy: take the remainder after every step, and the final remainder still comes out right.</p>
+<p>Then the formula needs a <b>division</b>. The most common one is “ways to choose <var>r</var> things out of <var>n</var>”, <code>nCr = n! / (r! × (n−r)!)</code>. But you never stored the real <code>n!</code>, only its remainder. How do you divide a remainder?</p>`,
+    tries: [
+      ["Just divide the remainders", "Try it small, with 7 in place of 10⁹ + 7. The real answer to 24 / 2 is 12, which leaves remainder 5. The remainders you kept are 24 → 3 and 2 → 2. Dividing those gives 3 / 2 = 1.5, which is not a remainder at all."],
+      ["Compute the real number, then take the remainder", "21! is already too big for a 64-bit integer. 100000! has about 456,000 digits. A big-number library can hold it, but far too slowly for a contest."],
+      ["Use floating point (a double)", "A double keeps about 16 significant digits. The remainder depends on the <i>last</i> digits, exactly the ones a double throws away. The answer comes out silently wrong."],
+      ["Avoid division, e.g. build Pascal's triangle", "This one is correct, since the triangle only ever adds. But filling it up to <var>n</var> = 10⁵ is about 5 × 10⁹ additions. Keep it for small <var>n</var>, or for a modulus where the trick below fails."],
+    ],
+    so: `<p>Division is the only operation that breaks, so rebuild it from one that works: <b>multiplication</b>. In ordinary maths, dividing by 2 is the same as multiplying by ½, because <code>2 × ½ = 1</code>. Under mod 7 a whole number plays the part of ½. It is <b>4</b>, because <code>2 × 4 = 8</code>, and 8 leaves remainder 1.</p>
+<p>That stand-in is the <b>modular inverse</b>, written <code>inv(2) = 4</code>. Now <code>3 / 2</code> becomes <code>3 × 4 = 12</code>, remainder <b>5</b>. That is exactly what the real 24 / 2 = 12 gave. The rest of this page answers two questions: when does such a number exist, and how do you find it fast?</p>`,
+  },
 
-  plain: `<p>Some problems ask for the answer <b>mod 10⁹ + 7</b>. That means: give the remainder after dividing by that number. It is asked for so the numbers stay small, because the true answer might have a thousand digits.</p>
-<p>Adding, subtracting and multiplying all survive that. You can take the remainder at every step and still end up with the right final remainder. Then the problem asks for an average, or a probability, or a count that involves a division, and you are stuck. <b>There is no divide.</b></p>
-<p>Not slow, not fiddly. It is not there. Working mod 7, the value <code>3 / 5</code> is not a whole number, so there is no remainder for it to be.</p>
-<p>So keep what division was <i>for</i> and throw away the fraction. Dividing by 5 always meant multiplying by the thing that undoes 5. So look for a number <code>inv</code> where <code>5 × inv</code> leaves remainder 1, and then read <code>a / 5</code> as <code>a × inv</code>. Such a number exists only when 5 and the modulus share no factor, and when it exists there is exactly one of it.</p>
-<p><b>Analogy.</b> A clock with m hours, and you always jump b hours forward. Start at 0 and keep going. If b and m share no factor you eventually stand on every hour there is. So you must pass through 1, and the number of jumps that took is the inverse. If they share a factor you only ever land on some of the hours, and 1 is not one of them. The whole existence question is that picture.</p>`,
+  one: "You cannot divide under a modulus, so <b><var>a</var> / <var>b</var> becomes <var>a</var> × inv(<var>b</var>)</b>, where inv(<var>b</var>) is the number that makes <code>b × inv(b)</code> leave remainder 1.",
+
+  plain: `<p>The <b>modular inverse</b> of <var>b</var>, written <code>inv(b)</code>, is the number that <i>undoes</i> multiplying by <var>b</var> when you only keep remainders. One rule defines it: <code>b × inv(b)</code> leaves remainder <b>1</b>.</p>
+<p>Once you have it, division turns into multiplication. <code>a / b</code> becomes <code>a × inv(b)</code>, then take the remainder. That is its whole job. Any “answer mod 10⁹ + 7” problem with a division in its formula needs it.</p>
+<p>Take mod 7. <code>inv(2) = 4</code>, because <code>2 × 4 = 8</code> leaves remainder 1. So “divide by 2” becomes “multiply by 4”. Check it on 24 / 2 = 12, which leaves remainder 5. From the remainders alone: 24 leaves 3, and <code>3 × 4 = 12</code> leaves 5. Same answer.</p>
+<p>It does not always exist. Mod 6, no number times 2 leaves remainder 1. Two times anything is even, 6 is even, so the remainder stays even. The rule: <b>inv(<var>b</var>) exists only when <var>b</var> and <var>m</var> share no common factor</b>.</p>
+<p><b>Analogy.</b> A clock with <var>m</var> hours. Start at 0 and keep jumping <var>b</var> hours forward. If <var>b</var> and <var>m</var> share no factor, you end up standing on every hour, 1 included. The number of jumps it took to reach 1 is the inverse. If they share a factor, some hours are never visited, and 1 is always one of them.</p>`,
 
   why: [
-    { t: "The modulus is there so nothing overflows, and three operations survive it", d: "An answer is requested <code>mod m</code> so you can reduce after every step and keep every value under m. That works because remainders are compatible with <b>addition, subtraction and multiplication</b>: reduce first or reduce last, same result. Division is the one operation left outside, and everything below is the cost of that." },
-    { t: "There is no fraction to reduce, and the number you would divide is already gone", d: "Under mod 7, <code>3 / 5</code> is not an integer, so asking for it mod 7 has no answer by that route at all. And where the quotient <i>is</i> a whole number, the route is still blocked: <code>nCr = n! / (r!(n-r)!)</code> is an integer, but you never stored <code>n!</code>, only <code>n! mod m</code>. The one value you wanted to divide is the one that was thrown away on purpose." },
-    { t: "So keep the definition of division and drop the fraction", d: "In ordinary arithmetic, dividing by b means multiplying by the number that undoes b: <code>b × (1/b) = 1</code>. Keep exactly that, and look for the undoing number among the remainders. Find x with <code>b × x ≡ 1 (mod m)</code> and call it <code>inv(b)</code>. Then <code>a / b</code> simply means <code>a × inv(b)</code>. When b really does divide a, this agrees with the ordinary quotient, because multiplying the result back by b returns a." },
-    { t: "It exists exactly when gcd(b, m) = 1, and then there is only one", d: "Picture a clock with <b>m hours</b>, and jump <b>b hours</b> forward each time, starting at 0. Asking whether an inverse exists is asking one thing: <b>do you ever land on 1?</b> You get back to 0 after <code>m / gcd(b, m)</code> jumps. You have stood on that many hours, and on no others. If <code>gcd(b, m) = 1</code> that is all m hours, so 1 is one of them. You stand on it exactly once, which is why the inverse exists and why there is only one. Now let <code>d = gcd(b, m)</code> be bigger than 1. Every hour you land on is a multiple of d, because b is one and m is one, so jumping and wrapping both keep you on them. 1 is not a multiple of d. You never reach it, however long you walk." },
-    { t: "When m is prime, Fermat hands it to you in one fast power", d: "Fermat's little theorem: for prime m and b not a multiple of m, <code>b^(m-1) ≡ 1</code>. Peel off one factor of b and read it as a product: <code>b × b^(m-2) ≡ 1</code>. The second factor satisfies the definition, so <code>inv(b) = b^(m-2) mod m</code>, computed by squaring in <b>O(log m)</b>. That is the whole reason problems pick 10⁹ + 7: it is prime, so every division in the problem costs one fast power." },
-    { t: "When m is not prime, Euclid still works, and also tells you when to stop", d: "Run Euclid while carrying coefficients and it produces x and y with <code>b × x + m × y = gcd(b, m)</code>. If that gcd is 1, take both sides mod m. The <code>m × y</code> term disappears, leaving <code>b × x ≡ 1</code>. So x is the inverse, once you have shifted it into <code>[0, m)</code>. Same <b>O(log m)</b>, no primality needed. And if the gcd comes back as anything other than 1, the algorithm has just proved no inverse exists, which is the useful half of the answer." },
-    { t: "For many inverses, pay one power. And know what this still cannot do", d: "nCr mod a prime needs every inverse factorial. Doing each with its own power is <code>O(n log m)</code> and wasteful: invert <code>fact[n]</code> once, then walk down with <code>invfact[i-1] = invfact[i] × i</code>, since <code>1/(i-1)! = (1/i!) × i</code>. One power, then n multiplications. What none of this buys you: an inverse is a residue, not a size. <code>inv(2) mod 7</code> is 4, which is larger than 2 and means nothing, so you cannot compare, sort, floor or maximise modular values. And when <code>gcd(b, m) &gt; 1</code> there is no answer at all. The only way out is to avoid dividing: Pascal's triangle only ever adds, which is why it survives any modulus." },
+    { t: "Remainders survive +, − and ×", d: "Take the remainder early or late, the final remainder is the same. Mod 7: <code>10 × 12 = 120</code>, which leaves 1. Reduce first instead: 10 leaves 3, 12 leaves 5, and <code>3 × 5 = 15</code> also leaves 1. That is the only reason a problem can ask for an answer mod <var>m</var>." },
+    { t: "Division does not survive", d: "<code>24 / 2 = 12</code>, which leaves 5 mod 7. Reduce first and you get <code>3 / 2 = 1.5</code>, which is not a remainder at all. The real 24 is gone, and only the 3 is left. So division cannot be patched. It has to be rebuilt." },
+    { t: "Rebuild it: multiply by the number that undoes <var>b</var>", d: "In normal maths, dividing by <var>b</var> is multiplying by <code>1/b</code>, because <code>b × 1/b = 1</code>. Keep that rule, and look for a whole number <var>x</var> where <code>b × x</code> leaves remainder 1. Call it <code>inv(b)</code>. Then <code>a / b</code> means <code>a × inv(b)</code>. Mod 7, <code>inv(2) = 4</code>, since <code>2 × 4 = 8</code> leaves 1. Books write this as <code>b × x ≡ 1 (mod m)</code>, where ≡ just means “same remainder as”." },
+    { t: "It exists only when <var>b</var> and <var>m</var> share no factor", d: "Walk the clock: <var>m</var> hours, jumps of <var>b</var>, starting at 0. With <var>b</var> = 2 and <var>m</var> = 7 you visit 0, 2, 4, 6, 1, 3, 5, which is every hour. So 1 appears after 4 jumps, and <code>inv(2) = 4</code>. With <var>b</var> = 2 and <var>m</var> = 6 you visit only 0, 2, 4. Every stop is even, because 2 and 6 are both even. 1 never comes. In general, if <var>b</var> and <var>m</var> share a factor <var>d</var>, you only ever land on multiples of <var>d</var>. So the test is <code>gcd(b, m) = 1</code>." },
+    { t: "Prime <var>m</var>: one fast power does it (Fermat)", d: "If <var>m</var> is prime and <var>b</var> is not a multiple of <var>m</var>, Fermat's little theorem says <code>b^(m-1)</code> leaves remainder 1. Split off one <var>b</var>: <code>b × b^(m-2)</code> leaves 1. So <code>b^(m-2)</code> is the inverse. Check mod 7: <code>2^5 = 32</code>, which leaves 4. Fast power needs about log₂ <var>m</var> squarings, around 30 for 10⁹ + 7. That is why contests pick a prime modulus: every <var>b</var> from 1 to <var>m</var> − 1 then has an inverse." },
+    { t: "Any <var>m</var>: extended Euclid, which also tells you when there is none", d: "If <var>m</var> is not prime, the extended Euclid algorithm finds whole numbers <var>x</var> and <var>y</var> with <code>b × x + m × y = gcd(b, m)</code>. When the gcd is 1, take remainders mod <var>m</var>. The <code>m × y</code> part vanishes and <code>b × x</code> leaves 1, so <var>x</var> is the inverse. This also costs O(log <var>m</var>). When the gcd is not 1, you have proof that no inverse exists." },
+    { t: "Many inverses: pay for one. And what inverses cannot do", d: "nCr needs the inverse of every factorial up to <var>n</var>. One fast power each is about 30n steps. Instead, invert only <code>fact[n]</code>, then walk down with <code>invfact[i-1] = invfact[i] × i</code>. That works because <code>1/(i-1)! = i / i!</code>. One warning: an inverse is a label, not a size. <code>inv(2) = 4</code> mod 7, so comparing or taking the max of modular values means nothing." },
   ],
 
-  hing: `<p><b>Sabse pehle yeh samajh lo: mod ke andar division exist hi nahi karta.</b> Plus, minus, multiply theek chalte hain. Divide ke liye <code>inv(b)</code> chahiye, matlab woh residue jiska <code>b × inv(b)</code> mod m mein <b>1</b> ho. Phir <code>a / b</code> ka matlab hai <code>a × inv(b)</code>.</p>
+  hing: `<p><b>Sabse pehle yeh samajh lo: mod ke andar division exist hi nahi karta.</b> Plus, minus, multiply theek chalte hain. Divide ke liye <code>inv(b)</code> chahiye, matlab woh residue jiska <code>b × inv(b)</code> mod <var>m</var> mein <b>1</b> ho. Phir <code>a / b</code> ka matlab hai <code>a × inv(b)</code>.</p>
 <p><b>1. Exist kab karta hai? Ek ghadi soch lo, algebra ki zaroorat nahi.</b> Ghadi mein <code>m</code> ghante hain, aur aap har baar <code>b</code> ghante aage kood rahe ho, 0 se shuru karke. Sawaal bas itna hai: <b>kya aap kabhi 1 par khade honge?</b></p>
-<p><b>m = 7, b = 5 lo.</b> 0 se chalo: 0, 5, 3, 1, 6, 4, 2, aur phir wapas 0. <b>Saat ke saat ghante</b> aa gaye, to 1 to aana hi tha. Aur 1 tak pahunchne mein <b>3 chhalaang</b> lagi, isliye <code>inv(5) = 3</code>. Bas, inverse mil gaya, bina kisi formula ke.</p>
-<p><b>Ab m = 6, b = 2 lo.</b> 0, 2, 4, aur wapas 0. Sirf <b>teen</b> jagah. Aap hamesha even ghante par hi rukoge, kyunki 2 bhi even hai aur 6 bhi. 1 odd hai, to woh kabhi aayega hi nahi, chahe jitna chal lo. <b>Inverse nahi milta kyunki hai hi nahi</b>, dhoondhne mein mushkil nahi hai.</p>
-<p><b>Poora rule ek line mein:</b> aap 0 par wapas <code>m / gcd(b, m)</code> chhalaang ke baad aate ho, aur utne hi ghante dekhte ho. gcd 1 hua to poori ghadi ghoom jaati hai, matlab 1 bhi zaroor aayega. gcd <code>d</code> hua to sirf d ke multiples aate hain, aur 1 unmein hai hi nahi. Interview mein itna bol do: <b>"exists if and only if gcd(b, m) = 1"</b>.</p>
-<p><b>2. Fermat ka derivation, ratna mat, nikalna seekho.</b> m prime hai to <code>b^(m-1) ≡ 1</code>. Ab ek b bahar nikal lo: <code>b × b^(m-2) ≡ 1</code>. Definition ke hisaab se doosra factor hi inverse hai. Bas: <code>inv(b) = power(b, m - 2, m)</code>, <b>O(log m)</b>. 10⁹ + 7 prime isliye chuna jaata hai.</p>
-<p><b>3. m prime nahi hai to extended Euclid.</b> Woh x, y deta hai jisme <code>b×x + m×y = gcd</code>. gcd 1 hua to mod m lene par <code>m×y</code> gayab, bacha <code>b×x ≡ 1</code>. x negative aa sakta hai, to <code>((x % m) + m) % m</code> zaroor karna.</p>
-<p><b>4. Yeh wali galti sabse mehngi padti hai.</b> nCr ke liye har factorial ka inverse alag power se nikalna <code>O(n log m)</code> hai, aur n = 10⁶ par TLE. <b>Ek hi power lagao</b> <code>invfact[n]</code> ke liye, phir neeche walk karo: <code>invfact[i-1] = invfact[i] * i</code>. Kyunki <code>1/(i-1)! = (1/i!) × i</code>. Ek power, phir n multiplications.</p>
+<p><b><var>m</var> = 7, <var>b</var> = 5 lo.</b> 0 se chalo: 0, 5, 3, 1, 6, 4, 2, aur phir wapas 0. <b>Saat ke saat ghante</b> aa gaye, to 1 to aana hi tha. Aur 1 tak pahunchne mein <b>3 chhalaang</b> lagi, isliye <code>inv(5) = 3</code>. Bas, inverse mil gaya, bina kisi formula ke.</p>
+<p><b>Ab <var>m</var> = 6, <var>b</var> = 2 lo.</b> 0, 2, 4, aur wapas 0. Sirf <b>teen</b> jagah. Aap hamesha even ghante par hi rukoge, kyunki 2 bhi even hai aur 6 bhi. 1 odd hai, to woh kabhi aayega hi nahi, chahe jitna chal lo. <b>Inverse nahi milta kyunki hai hi nahi</b>, dhoondhne mein mushkil nahi hai.</p>
+<p><b>Poora rule ek line mein:</b> aap 0 par wapas <code>m / gcd(b, m)</code> chhalaang ke baad aate ho, aur utne hi ghante dekhte ho. gcd 1 hua to poori ghadi ghoom jaati hai, matlab 1 bhi zaroor aayega. gcd <code>d</code> hua to sirf <var>d</var> ke multiples aate hain, aur 1 unmein hai hi nahi. Interview mein itna bol do: <b>"exists if and only if gcd(<var>b</var>, <var>m</var>) = 1"</b>.</p>
+<p><b>2. Fermat ka derivation, ratna mat, nikalna seekho.</b> <var>m</var> prime hai to <code>b^(m-1) ≡ 1</code>. Ab ek <var>b</var> bahar nikal lo: <code>b × b^(m-2) ≡ 1</code>. Definition ke hisaab se doosra factor hi inverse hai. Bas: <code>inv(b) = power(b, m - 2, m)</code>, <b>O(log <var>m</var>)</b>. 10⁹ + 7 prime isliye chuna jaata hai.</p>
+<p><b>3. <var>m</var> prime nahi hai to extended Euclid.</b> Woh <var>x</var>, <var>y</var> deta hai jisme <code>b×x + m×y = gcd</code>. gcd 1 hua to mod <var>m</var> lene par <code>m×y</code> gayab, bacha <code>b×x ≡ 1</code>. <var>x</var> negative aa sakta hai, to <code>((x % m) + m) % m</code> zaroor karna.</p>
+<p><b>4. Yeh wali galti sabse mehngi padti hai.</b> nCr ke liye har factorial ka inverse alag power se nikalna <code>O(n log m)</code> hai, aur <var>n</var> = 10⁶ par TLE. <b>Ek hi power lagao</b> <code>invfact[n]</code> ke liye, phir neeche walk karo: <code>invfact[i-1] = invfact[i] * i</code>. Kyunki <code>1/(i-1)! = (1/i!) × i</code>. Ek power, phir <var>n</var> multiplications.</p>
 <p><b>Ek aakhri baat:</b> inverse ek residue hai, size nahi. <code>inv(2) mod 7 = 4</code>, jo 2 se bada hai aur iska koi matlab nahi. Mod ke andar compare, sort, floor, maximum, kuch bhi meaningful nahi hota. Problem "maximum ratio mod 10⁹ + 7" maange to woh problem galat likhi hai.</p>`,
 
   viz: ["mod-inverse"],
 
   math: [
-    { t: "Find one by hand, then find the same one by Fermat", d: "Walking the row is the definition. Fermat is the shortcut that lands on the identical value without walking anything.", w:
-`m = 7, b = 5.  the row 5k mod 7:
+    { t: "Find inv(2) mod 7 by walking, then by Fermat", d: "Walking the row is the definition. Fermat lands on the same number with one power and no walking.", w:
+`m = 7, b = 2.  the row 2k mod 7:
 
 k     0   1   2   3   4   5   6
-5k    0   5   3   1   6   4   2
-                  ^ 1 sits at k = 3, so inv(5) = 3
+2k    0   2   4   6   1   3   5
+                      ^ 1 sits at k = 4, so inv(2) = 4
 
-Fermat: inv(5) = 5^(7-2) = 5^5 = 3125
-        3125 = 446 x 7 + 3   ->  3 . Same answer.` },
-    { t: "Now do the division, and check it the only way that means anything", d: "The check is the definition read backwards: multiply the answer by the divisor and the original value has to reappear.", w:
-`3 / 5 (mod 7)
-  = 3 x inv(5)
-  = 3 x 3 = 9 = 2   (mod 7)
+Fermat: inv(2) = 2^(7-2) = 2^5 = 32
+        32 = 4 x 7 + 4   ->  4 . Same answer.` },
+    { t: "Do 24 / 2 from the remainders alone", d: "Only one check means anything: multiply the answer by the divisor, and the original remainder must come back.", w:
+`the real answer:  24 / 2 = 12,  and 12 = 7 + 5  ->  5
 
-check: 2 x 5 = 10 = 3 (mod 7)    the 3 came back` },
-    { t: "Extended Euclid on the same pair, both directions", d: "Run Euclid forwards for the gcd, then substitute backwards to get the coefficients. The coefficient of b is the inverse.", w:
+from the remainders only:
+  24 = 3 x 7 + 3        ->  3
+  3 / 2  =  3 x inv(2)  =  3 x 4  =  12  =  5   (mod 7)
+
+check: 5 x 2 = 10 = 3 (mod 7)    the 3 came back` },
+    { t: "Extended Euclid on the same pair", d: "Run Euclid forwards for the gcd, then substitute backwards. The coefficient of 2 is the inverse, once it is shifted into the range 0 to 6.", w:
 `forwards:
-  7 = 1 x 5 + 2
-  5 = 2 x 2 + 1
+  7 = 3 x 2 + 1
   2 = 2 x 1 + 0        gcd = 1, so an inverse exists
 
 backwards:
-  1 = 5 - 2 x 2
-    = 5 - 2 x (7 - 1 x 5)
-    = 3 x 5 - 2 x 7
+  1 = 7 - 3 x 2        the coefficient of 2 is -3
 
-mod 7 the second term vanishes: 3 x 5 = 1, inv(5) = 3` },
-    { t: "And the case where there is nothing to find", d: "Change the modulus to 6 and the row stops being a permutation. It visits only the multiples of the gcd, and 1 is not one of them.", w:
+mod 7 the 7 vanishes:   -3 x 2 = 1   (mod 7)
+-3 is below 0, so add 7:  -3 + 7 = 4 = inv(2)` },
+    { t: "And the case where there is nothing to find", d: "Change the modulus to 6. The row no longer hits every remainder, only the multiples of the gcd, and 1 is not one of them.", w:
 `m = 6, b = 2.  the row 2k mod 6:
 
 k     0   1   2   3   4   5
@@ -1150,10 +1163,10 @@ invfact[i-1] = invfact[i] x i,  since 1/(i-1)! = (1/i!) x i` },
   ],
 
   traps: [
-    "<b>Using Fermat on a composite modulus.</b> <code>b^(m-2)</code> is a perfectly good number for m = 12, it is simply not an inverse. Nothing throws, nothing warns, and the answer is wrong by a value you cannot reverse engineer. Fermat needs m prime, full stop.",
-    "<b>Inverting 0, or any b that is a multiple of m.</b> <code>pow(0, m-2, m)</code> returns 0, which multiplies back to 0, not 1. This happens for real when a factorial or a product legitimately reduces to 0 mod m, so guard the divisor rather than trusting the formula.",
-    "<b>Forgetting that extended Euclid can return a negative x.</b> Outside Python the coefficient often comes back below zero and indexes or multiplies as garbage. Normalise once with <code>((x % m) + m) % m</code>.",
-    "<b>Computing an inverse inside the loop.</b> Every nCr costing its own <code>O(log m)</code> power turns an O(n) solution into O(n log m), which at n = 10⁶ is the difference between passing and a timeout. Precompute the inverse factorial table once.",
+    "<b>Using Fermat on a composite modulus.</b> <code>b^(m-2)</code> is a perfectly good number for <var>m</var> = 12, it is simply not an inverse. Nothing throws, nothing warns, and the answer is wrong by a value you cannot reverse engineer. Fermat needs <var>m</var> prime, full stop.",
+    "<b>Inverting 0, or any <var>b</var> that is a multiple of <var>m</var>.</b> <code>pow(0, m-2, m)</code> returns 0, which multiplies back to 0, not 1. This happens for real when a factorial or a product legitimately reduces to 0 mod <var>m</var>, so guard the divisor rather than trusting the formula.",
+    "<b>Forgetting that extended Euclid can return a negative <var>x</var>.</b> Outside Python the coefficient often comes back below zero and indexes or multiplies as garbage. Normalise once with <code>((x % m) + m) % m</code>.",
+    "<b>Computing an inverse inside the loop.</b> Every nCr costing its own <code>O(log m)</code> power turns an O(<var>n</var>) solution into O(<var>n</var> log <var>m</var>), which at <var>n</var> = 10⁶ is the difference between passing and a timeout. Precompute the inverse factorial table once.",
     "<b>Writing <code>fact[n] / fact[r] % M</code> in code.</b> Both values are already reduced, so this is integer division on two residues: it silently produces a number that has nothing to do with the answer. If a <code>/</code> appears anywhere inside a modular expression, it is a bug.",
     "<b>Treating the result as a magnitude.</b> Modular values have no order, so comparing them, taking a maximum, or rounding one is meaningless even though the code compiles and runs.",
   ],
@@ -1162,7 +1175,7 @@ invfact[i-1] = invfact[i] x i,  since 1/(i-1)! = (1/i!) x i` },
     ["Python", "pow(b, -1, m) since 3.8 · pow(b, m - 2, m) · math.gcd", "The negative exponent form works for any m coprime to b, not just primes, and raises ValueError when no inverse exists, which is the behaviour you want. No overflow to plan around."],
     ["Java", "BigInteger.modInverse · BigInteger.modPow", "Correct but allocation heavy in a tight loop. For long arithmetic write the four-line fast power yourself, hold everything in long, and reduce after every multiply. modInverse throws ArithmeticException when the gcd is not 1."],
     ["C++", "nothing built in, std::gcd in numeric (C++17)", "Write the power or the extended Euclid, both short. Use long long for the products, and __int128 once the modulus passes about 3 × 10⁹, since the square of the operand is what overflows."],
-    ["JavaScript", "no built-in, and numbers are doubles", "Integers are exact only to 2⁵³, so <code>b * b</code> with b near 10⁹ is already wrong. Do all of it in BigInt. BigInt has no modPow, so the squaring loop is yours to write, and convert back with Number only at the end."],
+    ["JavaScript", "no built-in, and numbers are doubles", "Integers are exact only to 2⁵³, so b * b with b near 10⁹ is already wrong. Do all of it in BigInt. BigInt has no modPow, so the squaring loop is yours to write, and convert back with Number only at the end."],
   ],
 
   code: {
@@ -1321,7 +1334,7 @@ Number(inverse(5n));                          // back to Number only at the end`
   codecap: "Two routes to the same residue: one fast power when the modulus is prime, extended Euclid when it is not. Everything else here is one of those two, batched.",
 
   q: [
-    ["Why can you not simply divide under a modulus?", "Because the quotient need not be an integer, so there is no residue for it to be: 3 / 5 mod 7 has no answer as a fraction. And where the quotient is an integer, you no longer hold the value to divide, only its remainder. Division is rebuilt as multiplication by the inverse instead."],
+    ["Why can you not simply divide under a modulus?", "Because the quotient need not be an integer, so there is no residue for it to be: 3 / 2 mod 7 is 1.5, which is no remainder at all. And where the quotient is an integer, you no longer hold the value to divide, only its remainder. Division is rebuilt as multiplication by the inverse instead."],
     ["When does an inverse exist, and why?", "Exactly when gcd(b, m) = 1. Jump b hours at a time around a clock of m hours, starting at 0: you return to 0 after m / gcd(b, m) jumps, having stood on that many hours. If the gcd is 1 you stand on all m of them, so you land on 1, exactly once, and the number of jumps that took is the inverse. If the gcd is d > 1 you only ever land on multiples of d, since b and m are both multiples of d, and 1 is not one of them, so you never reach it at all."],
     ["Derive Fermat's inverse rather than quoting it.", "For prime m and b not a multiple of m, b^(m-1) ≡ 1. Split off one b: b × b^(m-2) ≡ 1. The second factor is by definition the inverse, so inv(b) = b^(m-2) mod m, one fast power in O(log m)."],
     ["The modulus is 2³², and the divisor is even. What do you do?", "Nothing, on that route: gcd is at least 2, so no inverse exists. The division has to be avoided instead. Build the value by addition (Pascal's triangle for binomials, since it only ever adds), or factor the powers of two out of the numerator and denominator first and invert what remains."],
@@ -1338,6 +1351,84 @@ Number(inverse(5n));                          // back to Number only at the end`
     [1569, "number-of-ways-to-reorder-array-to-get-same-bst", "Reorder Array for the Same BST, inverse factorials or a timeout", "H"],
     [1250, "check-if-it-is-a-good-array", "Check If It Is a Good Array, gcd = 1 is exactly when an inverse exists", "H"],
   ],
+
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Bahut saare counting problems ke end mein likha hota hai <b>“answer mod 10⁹ + 7 return karo”</b>. Asli answer itna bada hota hai ki store hi nahi hota. Isliye aap sirf uska <b>remainder</b> rakhte ho, 10⁹ + 7 se divide karne ke baad. <code>+</code>, <code>−</code> aur <code>×</code> mein yeh aasaan hai: har step ke baad remainder le lo, final remainder phir bhi sahi aata hai.</p>
+<p>Phir formula mein <b>division</b> aa jaata hai. Sabse common hai “<var>n</var> cheezon mein se <var>r</var> kaise chunein”, yaani <code>nCr = n! / (r! × (n−r)!)</code>. Par aapne asli <code>n!</code> kabhi store hi nahi kiya, sirf uska remainder. Ab remainder ko divide kaise karein?</p>`,
+      tries: [
+        ["Seedha remainders ko divide kar do", "Chhote number se try karo, 10⁹ + 7 ki jagah 7. Asli 24 / 2 = 12, jiska remainder 5 hai. Aapke paas remainders hain 24 → 3 aur 2 → 2. Inhe divide karo to 3 / 2 = 1.5, jo remainder hai hi nahi."],
+        ["Pehle asli number nikalo, phir remainder lo", "21! hi 64-bit integer mein nahi aata. 100000! mein lagbhag 4,56,000 digits hain. Big-number library se ho jaayega, par contest ke liye bahut slow."],
+        ["Floating point (double) use karo", "Double sirf lagbhag 16 digits yaad rakhta hai. Remainder <i>aakhri</i> digits par depend karta hai, aur double wahi digits phenk deta hai. Answer chupchaap galat aata hai."],
+        ["Division se bacho, jaise Pascal's triangle", "Yeh sahi hai, kyunki triangle sirf add karta hai. Par <var>n</var> = 10⁵ tak bharna lagbhag 5 × 10⁹ additions hai. Chhote <var>n</var> ke liye rakho, ya us modulus ke liye jahan neeche wala trick kaam nahi karta."],
+      ],
+      so: `<p>Sirf division toot-ta hai, to use ek kaam karne wale operation se dobara banao: <b>multiplication</b>. Normal maths mein 2 se divide karna aur ½ se multiply karna same hai, kyunki <code>2 × ½ = 1</code>. Mod 7 mein ek whole number ½ ka kaam karta hai. Woh hai <b>4</b>, kyunki <code>2 × 4 = 8</code>, aur 8 ka remainder 1 hai.</p>
+<p>Isi stand-in ko <b>modular inverse</b> kehte hain, likhte hain <code>inv(2) = 4</code>. Ab <code>3 / 2</code> ban jaata hai <code>3 × 4 = 12</code>, remainder <b>5</b>. Bilkul wahi answer jo asli 24 / 2 = 12 ne diya tha. Baaki page do sawaalon ka jawab hai: aisa number kab exist karta hai, aur use jaldi kaise nikaalein?</p>`,
+    },
+
+    one: "Modulus ke andar divide nahi kar sakte, isliye <b><var>a</var> / <var>b</var> ban jaata hai <var>a</var> × inv(<var>b</var>)</b>. inv(<var>b</var>) woh number hai jiske saath <code>b × inv(b)</code> ka remainder 1 aata hai.",
+
+    plain: `<p>Kisi number <var>b</var> ka <b>modular inverse</b>, likhte hain <code>inv(b)</code>, woh number hai jo <var>b</var> se multiply karne ko <i>undo</i> kar deta hai. Yeh tab kaam aata hai jab aap sirf remainders rakh rahe ho. Rule ek hi hai: <code>b × inv(b)</code> ka remainder <b>1</b> aana chahiye.</p>
+<p>Yeh mil gaya to division multiplication ban jaata hai. <code>a / b</code> ki jagah <code>a × inv(b)</code> karo, phir remainder lo. Bas itna hi kaam hai iska. Jis bhi “answer mod 10⁹ + 7” problem ke formula mein division ho, wahan yeh chahiye.</p>
+<p>Mod 7 lo. <code>inv(2) = 4</code>, kyunki <code>2 × 4 = 8</code> ka remainder 1 hai. To “2 se divide” ban gaya “4 se multiply”. 24 / 2 = 12 par check karo, 12 ka remainder 5 hai. Sirf remainders se: 24 ka remainder 3, aur <code>3 × 4 = 12</code> ka remainder 5. Same answer.</p>
+<p>Yeh hamesha exist nahi karta. Mod 6 mein koi bhi number × 2 ka remainder 1 nahi deta. 2 × kuch bhi even hai, 6 bhi even hai, to remainder even hi rehta hai. Rule: <b>inv(<var>b</var>) tabhi exist karta hai jab <var>b</var> aur <var>m</var> ka koi common factor na ho</b>.</p>
+<p><b>Analogy.</b> <var>m</var> ghanton wali ghadi socho. 0 se shuru karke har baar <var>b</var> ghante aage koodo. Agar <var>b</var> aur <var>m</var> ka koi common factor nahi, to aap kabhi na kabhi har ghante par khade hoge, 1 par bhi. 1 tak jitni chhalaang lagi, wahi inverse hai. Common factor hai to kuch ghante kabhi nahi aate, aur 1 hamesha unmein se ek hota hai.</p>`,
+
+    why: [
+      { t: "Remainders +, − aur × mein bach jaate hain", d: "Remainder pehle lo ya baad mein, final remainder same aata hai. Mod 7: <code>10 × 12 = 120</code>, remainder 1. Pehle reduce karo: 10 ka 3, 12 ka 5, aur <code>3 × 5 = 15</code> ka remainder bhi 1. Isi wajah se problem answer mod <var>m</var> maang sakti hai." },
+      { t: "Division nahi bachta", d: "<code>24 / 2 = 12</code>, mod 7 mein remainder 5. Pehle reduce karo to <code>3 / 2 = 1.5</code>, jo remainder hi nahi hai. Asli 24 ja chuka hai, sirf 3 bacha hai. To division ko jod-tod ke theek nahi kar sakte. Use naye sire se banana padega." },
+      { t: "Naya division: us number se multiply karo jo <var>b</var> ko undo kare", d: "Normal maths mein <var>b</var> se divide matlab <code>1/b</code> se multiply, kyunki <code>b × 1/b = 1</code>. Yahi rule rakho, aur ek whole number <var>x</var> dhoondho jiske saath <code>b × x</code> ka remainder 1 aaye. Use <code>inv(b)</code> kaho. Phir <code>a / b</code> ka matlab <code>a × inv(b)</code>. Mod 7 mein <code>inv(2) = 4</code>, kyunki <code>2 × 4 = 8</code> ka remainder 1. Books mein likha milega <code>b × x ≡ 1 (mod m)</code>, jahan ≡ ka matlab bas “same remainder” hai." },
+      { t: "Tabhi exist karta hai jab <var>b</var> aur <var>m</var> ka common factor na ho", d: "Ghadi par chalo: <var>m</var> ghante, <var>b</var> ki chhalaang, 0 se shuru. <var>b</var> = 2, <var>m</var> = 7 mein aap 0, 2, 4, 6, 1, 3, 5 par rukte ho, yaani har ghanta. To 1 aata hai, 4 chhalaang ke baad, aur <code>inv(2) = 4</code>. <var>b</var> = 2, <var>m</var> = 6 mein sirf 0, 2, 4. Har stop even hai, kyunki 2 aur 6 dono even hain. 1 kabhi nahi aata. General rule: <var>b</var> aur <var>m</var> ka common factor <var>d</var> ho, to aap sirf <var>d</var> ke multiples par rukoge. Isliye test hai <code>gcd(b, m) = 1</code>." },
+      { t: "Prime <var>m</var>: ek fast power kaafi hai (Fermat)", d: "<var>m</var> prime ho aur <var>b</var>, <var>m</var> ka multiple na ho, to Fermat's little theorem kehta hai ki <code>b^(m-1)</code> ka remainder 1 hai. Ek <var>b</var> alag karo: <code>b × b^(m-2)</code> ka remainder 1. To <code>b^(m-2)</code> hi inverse hai. Mod 7 par check: <code>2^5 = 32</code>, remainder 4. Fast power mein lagbhag log₂ <var>m</var> squaring lagti hai, 10⁹ + 7 ke liye kareeb 30. Isiliye contests prime modulus lete hain: 1 se <var>m</var> − 1 tak har <var>b</var> ka inverse milta hai." },
+      { t: "Koi bhi <var>m</var>: extended Euclid, jo yeh bhi batata hai ki inverse nahi hai", d: "<var>m</var> prime nahi hai to extended Euclid algorithm whole numbers <var>x</var> aur <var>y</var> deta hai, jisme <code>b × x + m × y = gcd(b, m)</code>. gcd 1 ho to mod <var>m</var> lo. <code>m × y</code> wala hissa gayab ho jaata hai, aur <code>b × x</code> ka remainder 1 bachta hai. To <var>x</var> hi inverse hai. Yeh bhi O(log <var>m</var>) hai. gcd 1 nahi aaya, to yeh proof hai ki inverse exist hi nahi karta." },
+      { t: "Bahut saare inverse: kharcha sirf ek ka. Aur inverse kya nahi kar sakta", d: "nCr ke liye <var>n</var> tak har factorial ka inverse chahiye. Har ek ke liye alag fast power matlab lagbhag 30n steps. Iski jagah sirf <code>fact[n]</code> ka inverse nikalo, phir neeche chalo: <code>invfact[i-1] = invfact[i] × i</code>. Kyunki <code>1/(i-1)! = i / i!</code>. Ek warning: inverse ek label hai, size nahi. Mod 7 mein <code>inv(2) = 4</code>, to modular values ko compare karna ya max lena bekaar hai." },
+    ],
+
+    math: [
+      { t: "inv(2) mod 7: pehle chal ke nikalo, phir Fermat se", d: "Row par chalna hi definition hai. Fermat bina chale, ek power se wahi number de deta hai." },
+      { t: "24 / 2 sirf remainders se karo", d: "Check ka ek hi matlab wala tareeka hai: answer ko divisor se multiply karo, original remainder wapas aana chahiye." },
+      { t: "Isi pair par extended Euclid", d: "Aage Euclid chalao gcd ke liye, phir peeche substitute karo. 2 ka coefficient hi inverse hai, bas use 0 se 6 ki range mein shift karna padta hai." },
+      { t: "Aur woh case jahan kuch milna hi nahi", d: "Modulus 6 kar do. Ab row har remainder par nahi rukti, sirf gcd ke multiples par. 1 unmein nahi hai." },
+      { t: "Ek power, n nahi", d: "Pass aur timeout ka farak bas itna hai, aur yeh ek line ka hisaab hai." },
+    ],
+
+    costs: [
+      ["Fermat se inverse, prime m", "O(log m)", "bas ek fast power, b^(m-2), aur kuch nahi"],
+      ["extended Euclid se inverse, gcd(b, m) = 1", "O(log m)", "normal gcd jaise hi steps, bas saath mein do coefficients chalte hain"],
+      ["inverse exist karta hai ya nahi", "O(log m)", "yeh ek gcd hai, aur answer haan tabhi hai jab gcd 1 aaye"],
+      ["modulus ke andar ek division", "O(log m)", "ek inverse plus ek multiply, isliye ise kabhi hot loop ke andar mat rakho"],
+      ["n tak factorials aur inverse factorials", "O(n) precompute, O(1) per nCr", "invfact[n] ke liye ek power, phir i se multiply karte hue neeche chalo"],
+      ["prime m ke liye saare inv[1..n]", "O(n) total", "inv[i] banta hai inv[m mod i] se, jo pehle se pata hai"],
+    ],
+
+    traps: [
+      "<b>Composite modulus par Fermat lagana.</b> <var>m</var> = 12 ke liye <code>b^(m-2)</code> ek number to hai, bas inverse nahi hai. Na error aata hai, na warning, aur answer aise galat aata hai ki pata bhi nahi chalta. Fermat ke liye <var>m</var> prime hona zaroori hai, bas.",
+      "<b>0 ka inverse lena, ya kisi aise <var>b</var> ka jo <var>m</var> ka multiple hai.</b> <code>pow(0, m-2, m)</code> 0 deta hai, jo wapas multiply karne par 0 hi rehta hai, 1 nahi. Yeh sach mein hota hai jab koi factorial ya product mod <var>m</var> mein 0 ban jaata hai. Isliye divisor ko check karo, formula par bharosa mat karo.",
+      "<b>Bhool jaana ki extended Euclid negative <var>x</var> de sakta hai.</b> Python ke bahar coefficient aksar zero se neeche aata hai, aur index ya multiply mein kachra deta hai. Ek baar normalise karo: <code>((x % m) + m) % m</code>.",
+      "<b>Loop ke andar inverse nikalna.</b> Har nCr par alag <code>O(log m)</code> power lagane se O(<var>n</var>) solution O(<var>n</var> log <var>m</var>) ban jaata hai. <var>n</var> = 10⁶ par yahi pass aur timeout ka farak hai. Inverse factorial table ek baar precompute karo.",
+      "<b>Code mein <code>fact[n] / fact[r] % M</code> likhna.</b> Dono values pehle se reduced hain, to yeh do remainders ka integer division hai. Isse jo number aata hai uska answer se koi lena-dena nahi. Modular expression ke andar kahin bhi <code>/</code> dikhe, to woh bug hai.",
+      "<b>Result ko size samajhna.</b> Modular values ka koi order nahi hota. Unhe compare karna, max lena ya round karna bekaar hai, bhale hi code compile aur run ho jaaye.",
+    ],
+
+    impl: [
+      ["Python", "pow(b, -1, m) since 3.8 · pow(b, m - 2, m) · math.gcd", "Negative exponent wala form kisi bhi coprime m ke liye chalta hai, sirf prime ke liye nahi. Inverse na ho to ValueError deta hai, jo aapko chahiye bhi. Overflow ki koi tension nahi."],
+      ["Java", "BigInteger.modInverse · BigInteger.modPow", "Sahi hai, par tight loop mein bahut allocate karta hai. long ke liye chaar line ka fast power khud likho, sab long mein rakho, aur har multiply ke baad reduce karo. gcd 1 na ho to modInverse ArithmeticException deta hai."],
+      ["C++", "nothing built in, std::gcd in numeric (C++17)", "Power ya extended Euclid khud likho, dono chhote hain. Products ke liye long long lo. Modulus lagbhag 3 × 10⁹ se upar jaaye to __int128, kyunki operand ka square overflow karta hai."],
+      ["JavaScript", "no built-in, and numbers are doubles", "Integers sirf 2⁵³ tak exact hain, to b lagbhag 10⁹ ho to b * b pehle hi galat hai. Sab BigInt mein karo. BigInt mein modPow nahi hai, to squaring loop khud likho, aur end mein hi Number mein wapas convert karo."],
+    ],
+
+    codecap: "Ek hi residue tak do raaste: modulus prime ho to ek fast power, nahi to extended Euclid. Baaki sab inhi do mein se ek hai, bas batch mein.",
+
+    q: [
+      ["Modulus ke andar seedha divide kyun nahi kar sakte?", "Kyunki quotient ka whole number hona zaroori nahi, aur tab uska koi remainder hi nahi: mod 7 mein 3 / 2 = 1.5 ka koi remainder nahi. Aur jahan quotient whole number ho, wahan bhi aapke paas divide karne wali value nahi, sirf uska remainder hai. Isliye division ko inverse se multiply karke dobara banate hain."],
+      ["Inverse kab exist karta hai, aur kyun?", "Sirf tab jab gcd(b, m) = 1. m ghante ki ghadi par 0 se b-b ghante koodo. m / gcd(b, m) chhalaang ke baad aap 0 par wapas aate ho, aur utne hi ghante dekhte ho. gcd 1 ho to saare m ghante aate hain, to 1 par bhi ek baar rukte ho, aur wahan tak ki chhalaang hi inverse hai. gcd d > 1 ho to sirf d ke multiples aate hain, kyunki b aur m dono d ke multiple hain. 1 unmein nahi, to kabhi nahi pahunchte."],
+      ["Fermat ka inverse ratna nahi, derive karo.", "Prime m aur b jo m ka multiple nahi: b^(m-1) ka remainder 1. Ek b alag karo: b × b^(m-2) ka remainder 1. Definition se doosra factor hi inverse hai, to inv(b) = b^(m-2) mod m. Ek fast power, O(log m)."],
+      ["Modulus 2³² hai aur divisor even hai. Kya karoge?", "Is raaste se kuch nahi: gcd kam se kam 2 hai, to inverse exist hi nahi karta. Division se bachna padega. Value addition se banao (binomials ke liye Pascal's triangle, kyunki woh sirf add karta hai). Ya numerator aur denominator se pehle 2 ki powers nikaal do, aur jo bache uska inverse lo."],
+      ["2 × 10⁵ tak har inverse factorial chahiye. Kitni fast powers lagengi?", "Ek. fact[N] ka inverse ek power se nikalo, phir neeche chalo: invfact[i-1] = invfact[i] × i, kyunki 1/(i-1)! = (1/i!) × i. Har entry ke liye alag power O(n log m) hai, aur timeout ki common wajah hai."],
+      ["m = 7 ke liye extended Euclid x = -3 deta hai. Inverse kya hai, aur gcd 2 aaye to matlab?", "Inverse hai ((-3 % 7) + 7) % 7 = 4, kyunki coefficient m ke multiples tak hi defined hota hai. gcd 2 ka matlab algorithm ne prove kar diya ki inverse hai hi nahi. Yeh poora answer hai, failure nahi."],
+    ],
+  },
 },
 
 /* ==================================================================== */

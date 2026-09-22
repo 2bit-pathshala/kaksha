@@ -15,6 +15,7 @@ meters or per-person state.
 
 | # | Section | Field | Job |
 |---|---------|-------|-----|
+| 0 | Why you need this | `need` | The problem, the obvious fixes that fail, then the idea |
 | 1 | In one line | `one` | The sentence you say in an interview |
 | 2 | See it work | `viz`, `see` | Watch the mechanism, one step at a time |
 | 3 | In plain words | `plain` | What and why, no jargon, one analogy |
@@ -31,6 +32,21 @@ as good as the recall line**, so spend real effort on `one`.
 
 ## Rules per field
 
+**`need`** (being rolled out, concept by concept), `{ ask, tries, so }`. It comes before
+everything else, because a reader who does not know what problem an idea solves cannot
+tell which of its details matter. `ask` is the problem in a real situation, in HTML
+paragraphs. `tries` is `[[approach, why it fails]]`, at least two: the fixes a sensible
+person would try first, each killed with a number or a tiny worked case. `so` names the
+idea as the way out, using the **same small example** that the visual and the maths will
+reuse. One example carried through the whole page beats a fresh one per section.
+
+**`hi`**, the whole page again in Hinglish, shown when the reader flips the
+English / Hinglish switch in the top bar. It mirrors the English field for field:
+`need`, `one`, `plain`, `why`, `math` (only `t` and `d`; the working block is shared),
+`costs`, `traps`, `impl`, `codecap`, `q`. Arrays must be the same length as the English
+ones (there is a test). Anything missing falls back to English, so a concept can be
+translated a field at a time. When `hi` exists, the separate "In Hinglish" section is
+hidden in Hinglish mode, since the whole page already is. The rules for `hing` below apply.
 **`one`**, under 30 words. State the mechanism, not the name. Bold the load-bearing phrase.
 Weak: "Sliding window is a technique for subarray problems." Strong: "Consecutive windows
 overlap, so never recompute one from scratch: subtract what leaves, add what joins."
@@ -72,6 +88,20 @@ each family member needs a paragraph rather than a page: sorting has ten, shorte
 has seven, string search has six. `cost` is a one-line summary, `when` is the situation
 that should make you reach for it, `watch` is the thing that will bite you. If a member
 needs its own derivation, its own visual and its own code, it wants a page instead.
+
+**Variables** are wrapped in `<var>`: <code>&lt;var&gt;b&lt;/var&gt;</code>. They render as
+italic accent letters, which is what lets a Hinglish reader tell the maths from the
+sentence in "<var>b</var> ka inverse". Wrap them in any field rendered as HTML (`need`,
+`one`, `plain`, `why`, `hing`, `math` `d`, `traps`, and visual `cap`, `scene`, `ask`), never
+inside `<code>`, and not in the fields shown as plain text (`math` `t`, `q`, `costs`,
+`impl`, `codecap`, visual `out`), where the tag would print literally.
+
+**Visual frames** (in `js/viz.js`) can carry three extras. `scene` is an HTML card drawn
+instead of the diagram: open with one that says **why this example** and what the reader
+is trying to get, before any boxes appear. `ask: { q, opts, a, why? }` is a
+guess-first question about what the next frame will show; the player waits at it. Put
+one at each real turn in the walk, not on every frame. `hi: { cap, out, scene, ask }` is
+the frame's Hinglish; `ask.a` is written once, on the English.
 
 **`costs`**, `[operation, cost, why]`. The `why` column is what makes it stick; never let it
 restate the first two columns.

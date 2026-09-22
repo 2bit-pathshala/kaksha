@@ -10,12 +10,13 @@
   --bg-soft:#f4f4f0;
   --text:#1c1c1a;
   --text-2:#38382f;
-  --muted:#6e6e66;
+  --muted:#62625a;
   --faint:#6e6e68;
+  --card:#ffffff;
   --rule:#e4e3dd;
   --rule-2:#d6d5cd;
   --accent:#F0540C;
-  --accent-ink:#c2440a;   /* the accent as small text: same hue, 4.6:1 on --bg */
+  --accent-ink:#b83c0a;   /* the accent as small text, the landing page's --accent-text */
   --accent-soft:#FDECE1;
   --warm:#a4551b;
   --warm-soft:#fbf2e9;
@@ -30,8 +31,9 @@
   --bg-soft:#1a1b1d;
   --text:#e4e3de;
   --text-2:#cfcec8;
-  --muted:#96958d;
+  --muted:#a3a29a;
   --faint:#868681;
+  --card:#1c1d20;
   --rule:#292a2d;
   --rule-2:#35363a;
   --accent:#F5A623;
@@ -274,6 +276,24 @@ pre.derive{scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
 .hing b{color:var(--warm);font-weight:600}
 [data-theme="dark"] .hing b{color:var(--warm)}
 
+/* 0, why you need this: the problem, the fixes that fail, then the idea */
+.tbl-title.first{margin-top:0}
+.need-ask p,.need-so p{margin:0 0 12px}
+.need-ask p:last-child,.need-so p:last-child{margin:0}
+.tries{list-style:none;margin:0;padding:0}
+.tries li{position:relative;padding:0 0 14px 30px;margin:0}
+.tries li:last-child{padding-bottom:0}
+.tries li::before{
+  content:"✗";position:absolute;left:4px;top:.1em;color:var(--h);
+  font-family:"Inter","Inter Fallback",sans-serif;font-weight:600;
+}
+.tries li>b{display:block;font-family:"Inter","Inter Fallback",sans-serif;font-size:.92rem;color:var(--text);margin-bottom:3px}
+.tries li div{font-size:1rem;line-height:1.65}
+.need-so{
+  border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:16px 20px;border-radius:0 5px 5px 0;
+}
+
 /* 6, tables */
 .tbl-title{
   font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
@@ -404,6 +424,51 @@ pre.code code{background:none!important;padding:0;font-size:inherit;color:inheri
   .vizstage{padding:20px 12px}
 }
 
+/* a scene: the words-only opening card of a visual, where the problem is set */
+.vizscene{
+  max-width:60ch;margin:0 auto;padding:6px 4px;
+  font-family:"Source Serif 4","Source Serif Fallback","Iowan Old Style",Georgia,serif;
+  font-size:1.05rem;line-height:1.65;color:var(--text-2);
+}
+.vizscene p{margin:0 0 10px}
+.vizscene p:last-child{margin:0}
+.vizscene b{color:var(--text);font-weight:600}
+.vizscene code{font-family:"JetBrains Mono","JetBrains Mono Fallback",ui-monospace,monospace;font-size:.84em;background:var(--bg-soft);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.vizscene .kicker{
+  display:block;font-family:"Inter","Inter Fallback",sans-serif;font-size:.72rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--accent-ink);margin-bottom:8px;
+}
+.vizscene table{border-collapse:collapse;margin:6px 0 12px;font-family:"JetBrains Mono","JetBrains Mono Fallback",ui-monospace,monospace;font-size:.84rem}
+.vizscene td{padding:4px 18px 4px 0;border-bottom:1px solid var(--rule)}
+.vizscene tr:last-child td{border-bottom:0}
+
+/* predict before reveal */
+.vizask{padding:14px 18px;border-top:1px solid var(--rule);font-family:"Inter","Inter Fallback",sans-serif;font-size:.92rem;color:var(--text-2)}
+.vizask[hidden]{display:none}
+.vizask .aq{line-height:1.55;color:var(--text)}
+.vizask .tag{
+  font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--accent-ink);margin-right:9px;
+}
+.vizask code{font-family:"JetBrains Mono","JetBrains Mono Fallback",ui-monospace,monospace;font-size:.85em;background:var(--bg-soft);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.aopts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.aopts button{
+  font:inherit;font-size:.88rem;color:var(--text);background:var(--bg);
+  border:1px solid var(--rule-2);border-radius:4px;padding:6px 12px;cursor:pointer;
+}
+.aopts button:hover:not(:disabled){border-color:var(--accent)}
+.aopts button:disabled{cursor:default;opacity:.55}
+.aopts button.right{opacity:1;border-color:var(--e);color:var(--e);font-weight:600}
+.aopts button.wrong{opacity:1;border-color:var(--h);color:var(--h);text-decoration:line-through}
+.averdict{margin-top:10px;line-height:1.6}
+.averdict:empty{display:none}
+.averdict b{color:var(--text)}
+.averdict .go{
+  font:inherit;font-weight:600;color:var(--accent-ink);background:none;border:0;
+  padding:0;margin-left:4px;cursor:pointer;
+}
+.averdict .go::after{content:" →"}
+
 /* svg classes, driven by the theme tokens */
 .v-box{fill:var(--bg-soft);stroke:var(--rule-2);stroke-width:1.25}
 .v-box.on{fill:var(--accent-soft);stroke:var(--accent)}
@@ -491,3 +556,41 @@ pre.code::-webkit-scrollbar-thumb:hover{background:#55565c}
 footer{max-width:1120px;margin:0 auto;padding:24px 22px 44px;border-top:1px solid var(--rule);color:var(--faint);font-size:.8rem}
 footer a{color:var(--muted);text-decoration:none}
 footer a:hover{color:var(--text)}
+
+/* ---------------- the landing page's language ----------------
+   index.html speaks in rounded cards, pill buttons and the brand gradient.
+   These pages keep their calmer reading layout, but share that vocabulary so
+   going from the landing page to a concept does not feel like another site. */
+.bar-in{padding:12px 24px;align-items:center}
+.bar-in a.nav{font-size:.9rem;font-weight:500}
+.bar-in button.nav{
+  font-size:.82rem;font-weight:500;color:var(--text-2);
+  border:1px solid var(--rule-2);border-radius:999px;padding:7px 14px;min-height:34px;
+}
+.bar-in button.nav:hover{border-color:var(--text-2);color:var(--text)}
+h1.ctitle{font-weight:700;letter-spacing:-.035em}
+
+.viz{position:relative;border-radius:16px;background:var(--card);
+  box-shadow:0 1px 0 var(--rule),0 24px 48px -32px rgba(0,0,0,.25)}
+.viz::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;z-index:1;
+  background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
+.vizcap,.vizbar,.vizask{background:transparent}
+.vizcap{background:var(--bg-soft)}
+.vizbar button{
+  border:1px solid var(--rule-2);border-radius:999px;padding:5px 13px;
+  font-size:.8rem;font-weight:500;color:var(--text-2);background:none;
+}
+.vizbar button:hover{border-color:var(--text-2)}
+.aopts button{border-radius:999px;padding:7px 15px;background:var(--card)}
+.oneline,.hing,.need-so{border-radius:0 14px 14px 0}
+pre.code{border-radius:14px}
+pre.derive{border-radius:0 10px 10px 0}
+
+/* a variable is not a word. In Hinglish especially, "b ka inverse" has to show
+   at a glance that b is the maths and ka is the sentence, so variables are set
+   the way maths sets them: italic serif, in the accent. */
+var{
+  font-family:"Source Serif 4","Source Serif Fallback","Iowan Old Style",Georgia,serif;
+  font-style:italic;font-weight:600;color:var(--accent-ink);padding:0 .06em;
+}
+.chain li>b var,.tries li>b var{font-family:"Source Serif 4","Source Serif Fallback",Georgia,serif}

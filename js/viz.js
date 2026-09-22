@@ -12,6 +12,16 @@
      curve, growth curves for complexity          frame: { show:[names], mark?:n, cap }
      tree, nodes + edges, optional array strip    frame: { on:[ids], dim:[ids], edge:[[a,b]], cap }
      hash, keys -> hash function -> buckets       frame: { k:"key", b:bucketIndex, cap }
+
+   any frame, any kind:
+     scene:"<html>"   a text card drawn instead of the diagram. The opening frame
+                      uses it to state the problem before any mechanics appear.
+     ask:{ q, opts:[...], a:index, why? }
+                      a question about what the NEXT frame will show. The player
+                      holds there until it is answered or skipped. Nothing is
+                      remembered past the page, so this is practice, not a score.
+     hi:{ cap?, out?, scene?, ask:{ q, opts, why? }? }
+                      the Hinglish for this frame; missing parts fall back to English.
 */
 
 const VIZ = {};
@@ -334,12 +344,24 @@ const DRAW = { cells: drawCells, curve: drawCurve, tree: drawTree, hash: drawHas
 
 /* ============================ player ============================ */
 
-function mountViz(id, host) {
+function mountViz(id, host, lang, start) {
   const spec = VIZ[id];
   if (!spec) { host.innerHTML = `<div class="vizcap">Visual "${esc(id)}" not authored yet.</div>`; return; }
   const n = spec.frames.length;
-  let i = 0, timer = null;
-
+  const hi = lang === "hi";
+  // a frame as it should be read: its Hinglish laid over the English, the ask merged
+  // so the answer index is authored once
+  const view = f => {
+    if (!hi || !f.hi) return f;
+    const v = Object.assign({}, f, f.hi);
+    if (f.ask) v.ask = Object.assign({}, f.ask, f.hi.ask || {});
+    return v;
+  };
+  const W = hi
+    ? { guess: "Pehle guess karo", right: "Sahi!", wrong: "Nahi.", show: "Aage dekho" }
+    : { guess: "Guess first", right: "Right.", wrong: "Not quite.", show: "See it" };
+  const answered = new Set();
+  let i = Math.min(Math.max(0, start | 0), n - 1), timer = null;
   host.className = "viz";
   host.innerHTML =
     `<div class="vizstage"></div>` +
@@ -354,16 +376,55 @@ function mountViz(id, host) {
 
   const stage = host.querySelector(".vizstage"),
         cap   = host.querySelector(".vizcap"),
+        box   = document.createElement("div"),
         range = host.querySelector("input"),
         play  = host.querySelector('[data-a="play"]'),
         step  = host.querySelector(".step");
 
+  box.className = "vizask";
+  box.setAttribute("aria-live", "polite");
+  cap.after(box);
+
   function draw() {
-    const f = spec.frames[i];
-    stage.innerHTML = (DRAW[spec.kind] || drawCells)(spec, f);
+    const f = view(spec.frames[i]);
+    stage.innerHTML = f.scene
+      ? `<div class="vizscene">${f.scene}</div>`
+      : (DRAW[spec.kind] || drawCells)(spec, f);
     cap.innerHTML = f.cap || "";
     range.value = i;
     step.textContent = `${i + 1} / ${n}`;
+    host.dataset.i = i;               // lets a redraw of the page come back to this step
+    ask(f);
+  }
+
+  // predict before reveal: the options, then the verdict, then a way on
+  function ask(f) {
+    box.innerHTML = "";
+    box.hidden = !f.ask || i === n - 1;
+    if (box.hidden) return;
+    const a = f.ask, done = answered.has(i);
+    box.innerHTML =
+      `<div class="aq"><span class="tag">${W.guess}</span>${a.q}</div>` +
+      `<div class="aopts">` + a.opts.map((o, k) =>
+        `<button data-k="${k}"${done ? " disabled" : ""}>${o}</button>`).join("") + `</div>` +
+      `<div class="averdict"></div>`;
+    const verdict = box.querySelector(".averdict");
+    const settle = picked => {
+      answered.add(i);
+      box.querySelectorAll(".aopts button").forEach(b => {
+        const k = +b.dataset.k;
+        b.disabled = true;
+        if (k === a.a) b.classList.add("right");
+        else if (k === picked) b.classList.add("wrong");
+      });
+      verdict.innerHTML =
+        (picked == null ? "" : `<b>${picked === a.a ? W.right : W.wrong}</b> `) +
+        (a.why || "") + ` <button class="go">${W.show}</button>`;
+      verdict.querySelector(".go").addEventListener("click", () => go(1));
+    };
+    box.querySelectorAll(".aopts button").forEach(b =>
+      b.addEventListener("click", () => settle(+b.dataset.k)));
+    if (done) settle(null);
   }
   function go(d) { i = (i + d + n) % n; draw(); }
   function stop() { clearInterval(timer); timer = null; play.textContent = "Play"; }
@@ -371,7 +432,14 @@ function mountViz(id, host) {
   play.addEventListener("click", () => {
     if (timer) return stop();
     play.textContent = "Pause";
-    timer = setInterval(() => { if (i === n - 1) { stop(); i = 0; draw(); } else go(1); }, 1400);
+    // a question is a place to stop and think, so the player waits there,
+    // unless Play was pressed on that very question, which reads as "skip it"
+    const from = i;
+    timer = setInterval(() => {
+      if (i === n - 1) { stop(); i = 0; draw(); }
+      else if (spec.frames[i].ask && !answered.has(i) && i !== from) stop();
+      else go(1);
+    }, 1400);
   });
   host.querySelector('[data-a="prev"]').addEventListener("click", () => { stop(); go(-1); });
   host.querySelector('[data-a="next"]').addEventListener("click", () => { stop(); go(1); });
@@ -1108,26 +1176,66 @@ Object.assign(VIZ, {
     cap: "The cost is famously <b>O(n log log n)</b>. Quote it, do not attempt to prove it, and move on. Space is O(n), which is the real constraint when the limit is large." },
 ]},
 
+/* One example carries the whole walk: 24 / 2 = 12, which is 5 mod 7. The
+   reader sees the problem first, predicts at each turn, and meets the clock
+   only once they know what it is being used to find. */
 "mod-inverse": { kind: "cells", arr: ["0", "1", "2", "3", "4", "5", "6"], frames: [
-  { out: "working mod 7, these seven values are every number there is",
-    cap: "A modulus collapses every integer onto one of m values. Addition, subtraction and multiplication all survive that collapse, because remainders add and multiply the way you hope." },
-  { hot: [3], bad: [5], out: "so what is 3 / 5, mod 7?",
-    cap: "Division does not survive. <b>3 / 5 is not an integer</b>, so there is no value to reduce and nothing to look up. The operation has to be rebuilt rather than repaired." },
-  { arr: ["0", "5", "3", "1", "6", "4", "2"], on: [0, 1, 2, 3, 4, 5, 6],
-    out: "cell k = where you stand after k jumps of 5, on a clock of 7 hours",
-    cap: "So ask a different question. Jump <b>5 hours at a time</b> around a 7-hour clock: 0, 5, 3, 1, 6, 4, 2, and back to 0. Because <b>5 and 7 share no factor</b>, the walk stands on every hour there is before it repeats." },
-  { arr: ["0", "5", "3", "1", "6", "4", "2"], hot: [3], ptr: { "inv(5)": 3 },
-    out: "1 is reached after 3 jumps, so inv(5) = 3",
-    cap: "A walk that stands on every hour must stand on <b>1</b>, and it does so once. The number of jumps that took is the inverse: <code>5 × 3 = 15 = 1 (mod 7)</code>." },
-  { arr: ["0", "5", "3", "1", "6", "4", "2"], on: [3], hot: [2],
-    out: "3 / 5 becomes 3 × 3 = 9 = 2 (mod 7). Check: 2 × 5 = 10 = 3.",
-    cap: "Dividing is now multiplying by that number, and the check is the definition itself. Multiply the answer back by 5 and the original value returns, which is all division ever promised." },
+  { scene: `<span class="kicker">Why this example</span><p>Contest answers are huge, so problems ask for them <b>mod 10⁹ + 7</b>: keep only the remainder. Then a formula like <code>nCr = n! / (r! (n−r)!)</code> needs a <b>division</b>, but all you kept were remainders.</p><p>Here is the same problem in miniature. It uses 7 instead of 10⁹ + 7, so every remainder fits on screen:</p><table><tr><td>the real maths</td><td>24 / 2 = 12</td><td>12 mod 7 = <b>5</b></td></tr><tr><td>all you stored</td><td>24 → 3, 2 → 2</td><td>3 / 2 = <b>?</b></td></tr></table><p>Goal: get <b>5</b> using only the remainders 3 and 2.</p>`,
+    cap: "Every step below answers one question: <b>how do you divide when all you kept were remainders?</b> Press Next.",
+    hi: { scene: `<span class="kicker">Yeh example kyun</span><p>Contest ke answers bahut bade hote hain, isliye problem kehti hai <b>mod 10⁹ + 7</b> do, yaani sirf remainder rakho. Phir <code>nCr = n! / (r! (n−r)!)</code> jaise formula mein <b>division</b> aata hai. Par aapke paas to sirf remainders hain.</p><p>Yahi problem chhote size mein dekho. 10⁹ + 7 ki jagah 7 liya hai, taaki saare remainders screen par aa jaayein:</p><table><tr><td>asli maths</td><td>24 / 2 = 12</td><td>12 mod 7 = <b>5</b></td></tr><tr><td>aapne kya rakha</td><td>24 → 3, 2 → 2</td><td>3 / 2 = <b>?</b></td></tr></table><p>Goal: sirf remainders 3 aur 2 se <b>5</b> nikaalna.</p>`,
+          cap: "Neeche ka har step ek hi sawaal ka jawab hai: <b>jab sirf remainders bache hain, to divide kaise karein?</b> Next dabao." } },
+
+  { hot: [3], on: [2], out: "24 lands in box 3, and 2 in box 2",
+    cap: "Mod 7, every whole number lands in one of these <b>7 boxes</b>: its remainder after dividing by 7. 24 = 3 × 7 + 3, so 24 lands in box 3. The 2 stays in box 2.",
+    ask: { q: "Can you just work out 3 / 2 and land in box 5?", opts: ["Yes, 3 / 2 is box 5", "No, 3 / 2 = 1.5 is not a box"], a: 1 },
+    hi: { out: "24 dabba 3 mein, aur 2 dabba 2 mein",
+          cap: "Mod 7 mein har whole number in <b>7 dabbon</b> mein se ek mein jaata hai: 7 se divide karne par jo remainder bache. 24 = 3 × 7 + 3, to 24 dabba 3 mein. 2 dabba 2 mein hi rehta hai.",
+          ask: { q: "Kya seedha 3 / 2 karke dabba 5 mil jaayega?", opts: ["Haan, 3 / 2 dabba 5 hai", "Nahi, 3 / 2 = 1.5 koi dabba nahi"] } } },
+
+  { hot: [3], bad: [2], out: "3 / 2 = 1.5, not one of the 7 boxes",
+    cap: "Division breaks. <b>+, − and × always land back in a box</b>: 3 × 2 = 6 is box 6. But 3 / 2 = 1.5, and there is no box 1.5. Box 5 needs a different route.",
+    ask: { q: "Dividing by 2 normally means multiplying by ½, because 2 × ½ = 1. Which box <var>x</var> makes <code>2 × x</code> leave remainder 1?",
+           opts: ["<var>x</var> = 3  (2 × 3 = 6)", "<var>x</var> = 4  (2 × 4 = 8)", "<var>x</var> = 5  (2 × 5 = 10)"], a: 1, why: "8 = 7 + 1, so the remainder is 1." },
+    hi: { out: "3 / 2 = 1.5, 7 dabbon mein nahi",
+          cap: "Division toot jaata hai. <b>+, − aur × hamesha kisi dabbe mein hi girte hain</b>: 3 × 2 = 6, dabba 6. Par 3 / 2 = 1.5, aur 1.5 ka koi dabba nahi. Dabba 5 tak koi aur raasta chahiye.",
+          ask: { q: "Normal maths mein 2 se divide matlab ½ se multiply, kyunki 2 × ½ = 1. Kaunsa dabba <var>x</var> aisa hai jisme <code>2 × x</code> ka remainder 1 aaye?",
+                 why: "8 = 7 + 1, to remainder 1." } } },
+
+  { hot: [4], ptr: { "inv(2)": 4 }, out: "2 × 4 = 8 = 7 + 1, remainder 1",
+    cap: "Box <b>4</b> is the whole-number stand-in for ½ under mod 7. It is called the <b>inverse of 2</b>, written <code>inv(2) = 4</code>. Multiplying by 4 undoes multiplying by 2, just as ½ would.",
+    ask: { q: "So 3 / 2 should become 3 × 4 = 12. Which box is 12 in?", opts: ["box 5", "box 12", "box 1"], a: 0, why: "12 = 7 + 5." },
+    hi: { cap: "Mod 7 mein dabba <b>4</b> hi ½ ka kaam karta hai, aur woh whole number bhi hai. Isse <b>2 ka inverse</b> kehte hain, likhte hain <code>inv(2) = 4</code>. 4 se multiply karna, 2 se multiply ko undo kar deta hai, bilkul ½ ki tarah.",
+          ask: { q: "To 3 / 2 ban jaata hai 3 × 4 = 12. 12 kaunse dabbe mein hai?", opts: ["dabba 5", "dabba 12", "dabba 1"] } } },
+
+  { hot: [3], on: [5], out: "3 × inv(2) = 3 × 4 = 12, box 5",
+    cap: "<b>Box 5, the same answer</b> as the real 24 / 2 = 12. Dividing by 2 has become multiplying by 4. Check it backwards: 5 × 2 = 10, which is box 3. The 3 we started from came back.",
+    hi: { out: "3 × inv(2) = 3 × 4 = 12, dabba 5",
+          cap: "<b>Dabba 5, wahi answer</b> jo asli 24 / 2 = 12 se aata. 2 se divide ab 4 se multiply ban gaya. Ulta check karo: 5 × 2 = 10, jo dabba 3 hai. Jis 3 se shuru kiya tha, wahi wapas aa gaya." } },
+
+  { arr: ["0", "2", "4", "6", "1", "3", "5"], on: [0, 1, 2, 3, 4, 5, 6],
+    out: "cell k = where you are after k jumps of 2",
+    cap: "Guessing 4 worked, but with 10⁹ + 7 you cannot guess. So here is <b>why the inverse exists</b>. Jump 2 hours at a time around a 7-hour clock, starting at 0. Cell <var>k</var> shows where you stand after <var>k</var> jumps. You visit <b>every hour</b> before repeating.",
+    hi: { out: "cell k = k chhalaang (2-2 ki) ke baad kahan ho",
+          cap: "4 guess karke mil gaya, par 10⁹ + 7 mein guess nahi kar sakte. To dekho <b>inverse exist kyun karta hai</b>. 7 ghante ki ghadi par 0 se 2-2 ghante koodo. Cell <var>k</var> batata hai <var>k</var> chhalaang ke baad aap kahan ho. Repeat hone se pehle <b>har ghanta</b> aa jaata hai." } },
+
+  { arr: ["0", "2", "4", "6", "1", "3", "5"], hot: [4], ptr: { "inv(2)": 4 },
+    out: "1 is reached after 4 jumps, so inv(2) = 4",
+    cap: "The walk visits every hour, so it must stand on <b>1</b>, exactly once. The number of jumps it took is the inverse: 4 jumps of 2 is 8, and 8 is one more than 7.",
+    ask: { q: "Same jumps of 2, but on a <b>6-hour</b> clock. Will you ever stand on 1?", opts: ["Yes, after enough jumps", "No, never"], a: 1 },
+    hi: { out: "4 chhalaang mein 1 aaya, to inv(2) = 4",
+          cap: "Walk har ghante par rukti hai, to <b>1</b> par bhi theek ek baar rukegi. Wahan tak jitni chhalaang lagi, wahi inverse hai: 4 chhalaang × 2 = 8, aur 8 = 7 + 1.",
+          ask: { q: "Wahi 2-2 ki chhalaang, par ab <b>6 ghante</b> ki ghadi. Kya kabhi 1 par pahunchoge?", opts: ["Haan, kaafi chhalaang ke baad", "Nahi, kabhi nahi"] } } },
+
   { arr: ["0", "2", "4", "0", "2", "4"], bad: [0, 1, 2, 3, 4, 5],
-    out: "mod 6, jumping 2: the walk is 0, 2, 4 and straight back to 0",
-    cap: "Now a 6-hour clock, jumping 2. You land on 0, 2, 4, and you are home again after three jumps, not six. Every hour you reach is even, because 2 is and 6 is. <b>1 is odd, so you never stand on it</b>, however long you walk." },
-  { arr: ["0", "5", "3", "1", "6", "4", "2"], on: [3],
-    out: "prime m: inv(b) = b^(m-2) mod m, one fast power, O(log m)",
-    cap: "Nobody actually walks the clock. For a prime modulus Fermat names the answer outright; for any m coprime to b the extended Euclidean algorithm finds it, both in <b>O(log m)</b>. You walk it once, by hand, to see why the answer is there at all." },
+    out: "6-hour clock, jumps of 2: 0, 2, 4, 0, 2, 4",
+    cap: "You only ever land on <b>even</b> hours, because 2 and 6 are both even. 1 is odd, so you never reach it. <b>No inverse exists.</b> The rule: inv(<var>b</var>) exists only when <var>b</var> and <var>m</var> share no common factor, that is, gcd(<var>b</var>, <var>m</var>) = 1.",
+    hi: { out: "6 ghante ki ghadi: 0, 2, 4, 0, 2, 4",
+          cap: "Aap sirf <b>even</b> ghanton par rukte ho, kyunki 2 bhi even hai aur 6 bhi. 1 odd hai, to kabhi nahi aayega. <b>Inverse exist hi nahi karta.</b> Rule: inv(<var>b</var>) tabhi hota hai jab <var>b</var> aur <var>m</var> ka koi common factor na ho, yaani gcd(<var>b</var>, <var>m</var>) = 1." } },
+
+  { arr: ["0", "2", "4", "6", "1", "3", "5"], on: [4],
+    out: "prime m: inv(b) = b^(m-2) mod m, O(log m)",
+    cap: "This is why problems use <b>10⁹ + 7</b>. It is prime, so it shares no factor with any smaller <var>b</var>, and every <var>b</var> has an inverse. Nobody walks a billion-hour clock: Fermat's shortcut <code>inv(b) = b^(m−2) mod m</code> takes about 30 squarings. Try it here: 2⁵ = 32, which is box 4.",
+    hi: { cap: "Isiliye problems <b>10⁹ + 7</b> lete hain. Yeh prime hai, to kisi bhi chhote <var>b</var> ke saath common factor nahi, aur har <var>b</var> ka inverse milta hai. Arab ghante ki ghadi koi nahi ghoomta: Fermat ka shortcut <code>inv(b) = b^(m−2) mod m</code> lagbhag 30 squaring mein ho jaata hai. Yahan try karo: 2⁵ = 32, jo dabba 4 hai." } },
 ]},
 
 "segment-tree": {
