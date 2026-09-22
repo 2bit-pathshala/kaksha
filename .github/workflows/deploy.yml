@@ -108,6 +108,56 @@ jobs:
             wrangler pages project create kaksha --production-branch=main
           fi
 
+      # Idempotent, same as the project step above. Attaching the domain is a
+      # one-time act, but writing it down as a step means the site's address is
+      # in the repo rather than in somebody's memory of a dashboard click, and a
+      # project rebuilt from scratch comes back with its domain.
+      #
+      # The hostname is read from tools/pages.js, which is where every canonical
+      # and every sitemap entry already gets it, so the domain the site claims to
+      # live at and the domain it is actually served on cannot drift apart.
+      - name: Ensure the custom domain is attached
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          HOST=$(node -p "new URL(require('./tools/pages.js').ORIGIN).hostname")
+          API="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects/kaksha/domains"
+          echo "domain: $HOST"
+
+          have=$(curl -sS "$API" -H "Authorization: Bearer $CF_TOKEN" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const j=JSON.parse(s);
+                if(!j.success){console.error("list failed: "+JSON.stringify(j.errors));process.exit(1)}
+                console.log((j.result||[]).map(d=>d.name).join(" "))})')
+
+          if echo " $have " | grep -q " $HOST "; then
+            echo "already attached"
+          else
+            echo "attaching"
+            curl -sS -X POST "$API" -H "Authorization: Bearer $CF_TOKEN" \
+              -H "Content-Type: application/json" --data "{\"name\":\"$HOST\"}" \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                  const j=JSON.parse(s);
+                  if(!j.success){
+                    console.error("::error::could not attach the domain: "+JSON.stringify(j.errors));
+                    console.error("If this says the zone is not on this account, the token is for a");
+                    console.error("different account than the one holding 2bit.in, and the domain has");
+                    console.error("to be added from the account that does.");
+                    process.exit(1)}
+                  console.log("attached")})'
+          fi
+
+          # Say where it got to. A freshly attached domain sits in "pending"
+          # while Cloudflare writes the DNS record and issues the certificate,
+          # so pending here is normal and not a failure.
+          curl -sS "$API" -H "Authorization: Bearer $CF_TOKEN" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const j=JSON.parse(s);
+                for(const d of j.result||[]) console.log(`  ${d.name}: ${d.status}` +
+                  (d.certificate_authority?` (cert via ${d.certificate_authority})`:""))})'
+
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
