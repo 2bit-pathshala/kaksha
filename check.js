@@ -72,7 +72,8 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 /* ---------- 3. the visuals are painted with variables the stylesheet defines ---------- */
 {
   const viz = fs.readFileSync(P + "js/viz.js", "utf8");
-  const css = fs.readFileSync(P + "css/learn.css", "utf8");
+  // the palette lives in tokens.css now, learn.css only shapes the pages
+  const css = fs.readFileSync(P + "css/tokens.css", "utf8");
   const cut = css.indexOf('[data-theme="dark"]');
   const light = css.slice(0, cut), dark = css.slice(cut);
   const wanted = [...new Set([...viz.matchAll(/var\(--([a-z0-9-]+)\)/g)].map(m => m[1]))];

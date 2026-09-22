@@ -1,24 +1,7 @@
-/* style.css — the landing page (index.html) and the placeholder page (ai.html).
-   Same restraint as learn.css: hairlines, whitespace, one accent, nothing blinking. */
+/* style.css, the landing page (index.html) and the placeholder page (ai.html).
+   Same restraint as learn.css: hairlines, whitespace, one accent, nothing blinking.
+   Colours all come from tokens.css. */
 
-:root{
-  --bg:#fcfcfa; --bg-soft:#f4f4f0; --card:#ffffff;
-  --text:#1c1c1a; --text-2:#38382f; --muted:#62625a; --faint:#8a8a81;
-  --rule:#e4e3dd; --rule-2:#d6d5cd;
-  --accent:#F0540C;          /* brand orange: fills, bars, large text */
-  --accent-text:#b83c0a;     /* same hue, dark enough for small text on --bg and on tinted tags */
-  --on-primary:#fcfcfa; --primary:#1c1c1a;
-  --grad:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%);
-  color-scheme:light;
-}
-[data-theme="dark"]{
-  --bg:#131315; --bg-soft:#1a1b1d; --card:#1c1d20;
-  --text:#e4e3de; --text-2:#cfcec8; --muted:#a3a29a; --faint:#7d7d76;
-  --rule:#292a2d; --rule-2:#35363a;
-  --accent:#F5A623; --accent-text:#F5A623;
-  --on-primary:#131315; --primary:#e4e3de;
-  color-scheme:dark;
-}
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -33,7 +16,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25}
 a{color:var(--accent-text);text-underline-offset:2px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 
-.skip{position:absolute;left:12px;top:-60px;z-index:50;background:var(--primary);color:var(--on-primary);
+.skip{position:absolute;left:12px;top:-60px;z-index:50;background:var(--ink);color:var(--on-ink);
   padding:8px 14px;border-radius:8px;text-decoration:none;font-size:.9rem}
 .skip:focus{top:12px}
 
@@ -94,7 +77,7 @@ footer a:hover{color:var(--text)}
 .cta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:40px}
 .button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;
   border-radius:12px;font-weight:600;font-size:.98rem;text-decoration:none;transition:transform .15s ease,background .15s ease}
-.button.primary{background:var(--primary);color:var(--on-primary)}
+.button.primary{background:var(--ink);color:var(--on-ink)}
 .button.primary:hover{transform:translateY(-1px)}
 .button.ghost{color:var(--text);border:1px solid var(--rule-2)}
 .button.ghost:hover{border-color:var(--text-2)}

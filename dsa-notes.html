@@ -14,29 +14,13 @@
   <title>DSA Notes: Topic Notes + Practice</title>
   <meta name="description" content="Study one DSA topic at a time: brief pattern notes, short code, and practice questions to test yourself." />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="css/tokens.css?v=1" />
   <link rel="stylesheet" href="css/fonts.css" />
   <link rel="stylesheet" href="css/brand.css" />
   <script src="js/scroll-focus.js" defer></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
   <style>
-    :root{
-      --bg:#f4f5fb; --surface:#ffffff; --surface2:#f0f2f9; --text:#1e2230; --muted:#666d7a;
-      --primary:#F0540C; --primary-ink:#bc4209; --primary-2:#F5A623; --primary-soft:#FDECE1; --border:#e7e9f2;
-      --accent:#0ea5b7; --accent-ink:#0a7683; --accent-soft:#e2f6f8;
-      --e:#15a349; --e-bg:#e4f8ec; --m:#e08600; --m-bg:#fdf1dc; --h:#e23b52; --h-bg:#fdeaed;
-      --shadow:0 10px 30px rgba(30,34,48,.08); --shadow-sm:0 2px 8px rgba(30,34,48,.05);
-      --code-bg:#0d1117; --code-bar:#161b22;
-      --radius:16px;
-    }
-    [data-theme="dark"]{
-      --bg:#0a0b11; --surface:#14161f; --surface2:#1a1d28; --text:#e7eaf3; --muted:#9aa2b6;
-      --primary:#F5A623; --primary-ink:var(--primary); --primary-2:#F7B84E; --primary-soft:#2A180E; --border:#252938;
-      --accent:#2dd4d4; --accent-ink:var(--accent); --accent-soft:#0e2a2c;
-      --e:#4ade80; --e-bg:#0f3320; --m:#fbbf24; --m-bg:#392b07; --h:#fb7185; --h-bg:#3a1520;
-      --shadow:0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 2px 10px rgba(0,0,0,.4);
-      --code-bg:#0d1117; --code-bar:#161b22;
-    }
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;scroll-padding-top:82px}
     body{font-family:"Inter","Inter Fallback",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
@@ -87,13 +71,13 @@
     @keyframes flashbg{0%{background:var(--primary-soft)}100%{background:transparent}}
     .flash{animation:flashbg 1.6s ease}
     h2.pat{font-size:1.4rem;font-weight:750;letter-spacing:-.01em;margin-bottom:6px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-    h2.pat::before{content:"";width:9px;height:22px;border-radius:5px;background:linear-gradient(var(--primary),var(--accent))}
+    h2.pat::before{content:"";width:9px;height:22px;border-radius:5px;background:linear-gradient(var(--primary),var(--accent-2))}
     h3.sub{font-size:1.12rem;font-weight:700;margin:22px 0 6px;color:var(--text)}
     h4.leaf{font-size:1.02rem;font-weight:650;margin:18px 0 6px;display:flex;align-items:center;gap:9px;color:var(--text)}
-    h4.leaf::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    h4.leaf::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent-2)}
 
     /* Hint & note */
-    .hint{font-size:.95rem;color:var(--text);background:var(--accent-soft);border-radius:11px;padding:12px 15px;margin:10px 0;line-height:1.65}
+    .hint{font-size:.95rem;color:var(--text);background:var(--accent-2-soft);border-radius:11px;padding:12px 15px;margin:10px 0;line-height:1.65}
     .hint b{font-weight:700}
     .note{font-size:.95rem;color:var(--muted);margin:10px 0;line-height:1.7}
     .note b{color:var(--text);font-weight:650}
@@ -128,7 +112,7 @@
     footer a{color:var(--primary-ink)}
     @media(max-width:560px){ .pcard{padding:18px 16px} body{font-size:15px} }
     @media print{header.bar,.nav,.btn,select,.prob input{display:none}body{background:#fff}a{color:#000}}
-      header.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
+      header.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
       /* site badges: each colour nudged until it clears 4.5:1, darker on light, lighter on dark */
     [data-theme="dark"] .pn.gfg{color:#419756}
   </style>

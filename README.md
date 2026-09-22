@@ -45,7 +45,8 @@ Pages stay in the root so their URLs are stable; everything else is grouped by k
   design.html         Design Lab, systems grown stage by stage
   hr.html  ai.html    HR notes; AI placeholder
   study.html dsa.html dsa-cheatsheet.html   redirects to the above
-css/                  learn.css (concept/revise), style.css (landing)
+css/                  tokens.css (the palette, every page), learn.css
+                      (concept/revise), style.css (landing), brand.css (logo lockup)
 js/                   viz.js (stepped visuals), script.js (landing theme toggle)
 fonts/                Inter, self-hosted for the landing page (OFL)
 img/                  logo (logo-512.png is the master) and the icon sizes cut from it

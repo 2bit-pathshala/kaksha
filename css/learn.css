@@ -3,47 +3,9 @@
    Design intent: get out of the way. No cards, no shadows, no gradients, no badges,
    no progress meters. Hairline rules and whitespace do the separating; the only
    colour is on the few things that carry meaning. Long-form text is set in a serif
-   at a comfortable measure, because these pages are meant to be read, not scanned. */
+   at a comfortable measure, because these pages are meant to be read, not scanned.
+   Colours all come from tokens.css. */
 
-:root{
-  --bg:#fcfcfa;
-  --bg-soft:#f4f4f0;
-  --text:#1c1c1a;
-  --text-2:#38382f;
-  --muted:#6e6e66;
-  --faint:#6e6e68;
-  --rule:#e4e3dd;
-  --rule-2:#d6d5cd;
-  --accent:#F0540C;
-  --accent-ink:#c2440a;   /* the accent as small text: same hue, 4.6:1 on --bg */
-  --accent-soft:#FDECE1;
-  --warm:#a4551b;
-  --warm-soft:#fbf2e9;
-  --e:#3f7a4a; --m:#8a6410; --h:#9b3a3a;
-  /* the six growth curves, in the order they appear */
-  --vz1:#3f7a4a; --vz2:#2f8f9c; --vz3:#2f5faa; --vz4:#6b4fa8; --vz5:#b4761c; --vz6:#b04242;
-  --code-bg:#1b1c1e;
-  --code-fg:#d6d4cd;
-}
-[data-theme="dark"]{
-  --bg:#131315;
-  --bg-soft:#1a1b1d;
-  --text:#e4e3de;
-  --text-2:#cfcec8;
-  --muted:#96958d;
-  --faint:#868681;
-  --rule:#292a2d;
-  --rule-2:#35363a;
-  --accent:#F5A623;
-  --accent-ink:var(--accent);
-  --accent-soft:#2A180E;
-  --warm:#e0a878;
-  --warm-soft:#251c13;
-  --e:#7fb98a; --m:#c9a03f; --h:#d08585;
-  --vz1:#7fb98a; --vz2:#5fc4cf; --vz3:#8fb6ea; --vz4:#b09ce8; --vz5:#e0a878; --vz6:#e08a8a;
-  --code-bg:#0f1011;
-  --code-fg:#cfcec7;
-}
 
 *{box-sizing:border-box;margin:0;padding:0}
 /* the sticky bar is 48px on one row and about 91px once it wraps, which it
@@ -71,7 +33,7 @@ header.bar{
   border-bottom:1px solid var(--rule);
 }
 header.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
-  background:linear-gradient(90deg,#F2C31E 0%,#F0540C 55%,#D82424 100%)}
+  background:var(--grad)}
 .bar-in{max-width:1120px;margin:0 auto;padding:11px 22px;display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
 .logo{font-weight:600;font-size:.95rem;color:var(--text);text-decoration:none;letter-spacing:-.01em}
 .bar-in .brandlock{align-self:center}
