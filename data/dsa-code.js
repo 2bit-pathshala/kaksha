@@ -1,4 +1,4 @@
-/* dsa-code.js — code snippets for DSA notes, keyed by normalized node name.
+/* dsa-code.js: code snippets for DSA notes, keyed by normalized node name.
 
    A value is either:
      a string            -> a single Python snippet (legacy, still supported)
@@ -2064,7 +2064,7 @@ function invert(n) {
 }`,
       },
       "Construction & Serialize (Striver)":
-`# O(n) time · O(n) space — index map avoids rescanning inorder
+`# O(n) time · O(n) space, index map avoids rescanning inorder
 def build(preorder, inorder):
     idx = {v:i for i,v in enumerate(inorder)}
     self_pre = iter(preorder)
@@ -2075,7 +2075,7 @@ def build(preorder, inorder):
         return node
     return go(0, len(inorder)-1)`,
       "Misc (distance-K, width, complete count)":
-`# O(log^2 n) time · O(log n) space — compare left/right heights
+`# O(log^2 n) time · O(log n) space, compare left/right heights
 def count_nodes(root):          # complete tree in O(log^2 n)
     if not root: return 0
     def h(n, left):
@@ -2087,7 +2087,7 @@ def count_nodes(root):          # complete tree in O(log^2 n)
     return 1 + count_nodes(root.left) + count_nodes(root.right)`,
 
       "Search / Insert / Delete":
-`# O(h) time · O(h) space — go left/right by BST order
+`# O(h) time · O(h) space, go left/right by BST order
 def insert(root, val):
     if not root: return TreeNode(val)
     if val < root.val: root.left = insert(root.left, val)
@@ -2985,7 +2985,7 @@ def has_cycle_undirected(n, adj):
     return any(not seen[i] and dfs(i, -1) for i in range(n))
 # (Undirected cycle detection is also easy with Union-Find: see MST & DSU.)`,
       "Topological Sort":
-`# O(V+E) time · O(V) space — Kahn's algo (BFS on indegrees)
+`# O(V+E) time · O(V) space, Kahn's algo (BFS on indegrees)
 # DIRECTED ACYCLIC graphs only; empty result signals a cycle exists.
 from collections import deque, defaultdict
 def topo(n, edges):
@@ -3231,7 +3231,7 @@ def union(a, b):
     return True
 # Kruskal: sort edges by weight, union() each; skip if returns False`,
       "Advanced (bridges / SCC / bipartite)":
-`# O(V+E) time · O(V) space — 2-color BFS (bipartite = UNDIRECTED graphs)
+`# O(V+E) time · O(V) space, 2-color BFS (bipartite = UNDIRECTED graphs)
 from collections import deque
 def is_bipartite(n, adj):
     color = [0]*n

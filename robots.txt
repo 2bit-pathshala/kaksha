@@ -1,0 +1,9 @@
+# 2BIT Pathshala. Everything here is free to read and free to index.
+User-agent: *
+Allow: /
+
+# The redirect stubs and the AI placeholder carry their own noindex, which is
+# the honest way to say it: a robots rule stops the crawl, a meta robots stops
+# the listing. A page blocked here can still be listed with no description.
+
+Sitemap: https://pathshala.2bit.in/sitemap.xml

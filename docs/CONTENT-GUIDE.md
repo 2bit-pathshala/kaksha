@@ -125,7 +125,7 @@ needs a fact that appears nowhere above it, the concept is incomplete.
 Three rules, and a test that enforces the first one.
 
 **No sentence over 28 words**, in `plain`, `why`, `hing` or a `math` step. This is checked
-by `check.js` and it fails the build. The limit is not a style preference: a sentence that
+by `tools/check.js` and it fails the build. The limit is not a style preference: a sentence that
 runs past it is almost always two ideas that were never separated, and the reader has to
 hold the first one while parsing the second. Split it at the comma that was doing the work
 of a full stop. A bold lead-in, a `<br>` and the end of a paragraph all count as breaks,
@@ -182,7 +182,7 @@ a long single-page sheet. The test is whether removing it loses meaning.
 
 ## Visuals
 
-Visuals live in `viz.js` as frame lists, not as images, so they follow the colour theme,
+Visuals live in `assets/js/viz.js` as frame lists, not as images, so they follow the colour theme,
 never break, stay diffable in git, and can be stepped one frame at a time.
 
 Four kinds are available: `cells` (a row of boxes: arrays, windows, pointers, stacks,
@@ -193,7 +193,7 @@ Every frame needs a `cap`. **The caption is the teaching**, the drawing shows *w
 changed, the caption says *why*. Aim for 5–8 frames: the first sets up the naive approach,
 the middle ones do the work, the last states the complexity.
 
-Labels are auto-shrunk to fit their box by the `fit()` helper in `viz.js`. If you add a new
+Labels are auto-shrunk to fit their box by the `fit()` helper in `assets/js/viz.js`. If you add a new
 shape, size its text through `fit()` too, or long labels will spill out.
 
 Add one with `VIZ["my-id"] = { kind, …, frames: [...] }`, then reference it as
@@ -202,7 +202,7 @@ Add one with `VIZ["my-id"] = { kind, …, frames: [...] }`, then reference it as
 ## Before committing
 
 ```bash
-node --check concept-data.js && node --check viz.js
+node --check data/concept-data.js && node --check assets/js/viz.js
 ```
 
 Then open `concept.html?c=<id>` and confirm: ten sections render, every visual plays and
@@ -238,7 +238,7 @@ do the teaching are **considered instead** (what lost the argument and why), **d
 Boxes sit on a grid of `{col, row}` and edges are routed with elbows. There is no clever
 router, so **an edge that spans two columns runs straight through whatever sits between
 them**. Keep every edge between adjacent columns, or between two rows of the same column
-with nothing in between. `check.js` fails the build with the crossing named, which is
+with nothing in between. `tools/check.js` fails the build with the crossing named, which is
 usually faster than reasoning about it.
 
 Two more layout facts. `bend` (0 to 1) moves the vertical part of an elbow inside the
@@ -260,7 +260,7 @@ its legend chip to `.lg-*`, all in `design.html`.
 ## Before committing
 
 ```bash
-node --check design-data.js && node check.js
+node --check data/design-data.js && node tools/check.js
 ```
 
 Then open `design.html?p=<id>`, step every stage with the arrow keys, and click every box.

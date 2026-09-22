@@ -7,3 +7,6 @@ node_modules/
 
 # Local-only brand reference, not published
 PALETTE.md
+
+# staged output for the Cloudflare Pages deploy, built in CI
+_site/

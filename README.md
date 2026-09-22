@@ -45,13 +45,18 @@ Pages stay in the root so their URLs are stable; everything else is grouped by k
   design.html         Design Lab, systems grown stage by stage
   hr.html  ai.html    HR notes; AI placeholder
   study.html dsa.html dsa-cheatsheet.html   redirects to the above
-css/                  learn.css (concept/revise), style.css (landing)
-js/                   viz.js (stepped visuals), script.js (landing theme toggle)
-fonts/                Inter, self-hosted for the landing page (OFL)
-img/                  logo (logo-512.png is the master) and the icon sizes cut from it
+assets/
+  css/                tokens.css (the palette and the motion tokens), base
+                      sheets: notes.css (section notes), learn.css
+                      (concept/revise), style.css (landing), brand.css (lockup)
+  js/                 viz.js (stepped visuals), notes.js (the section-note
+                      controller), theme.js (the toggle, every page),
+                      scroll-focus.js
+  fonts/              Inter, JetBrains Mono, Source Serif, self-hosted (OFL)
+  img/                logo (logo-512.png is the master) and the icon sizes cut from it
 data/                 *-data.js, the single source of content per section
 docs/                 CONTENT-GUIDE.md, how to write a new concept
-check.js              build check: run before every commit
+tools/check.js        build check: run `node tools/check.js` before every commit
 ```
 
 Each page loads its matching `data/<name>-data.js`; `concept.html` and `revise.html`

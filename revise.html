@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <script>
     /* set the theme before first paint so dark mode never flashes light */
     (function () { try { var s = localStorage.getItem("dsa-theme");
@@ -13,16 +13,31 @@
   </script>
   <title>Revision</title>
   <meta name="description" content="Every concept as the one line worth remembering, with questions to answer out loud before you check." />
-  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/fonts.css" />
-  <link rel="stylesheet" href="css/brand.css" />
-  <link rel="stylesheet" href="css/learn.css?v=4" />
+  <link rel="canonical" href="https://pathshala.2bit.in/revise" />
+  <meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#131315" media="(prefers-color-scheme: dark)" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="2BIT Pathshala" />
+  <meta property="og:url" content="https://pathshala.2bit.in/revise" />
+  <meta property="og:title" content="Rapid Revision" />
+  <meta property="og:description" content="Every concept as the one line worth remembering, with questions to answer out loud before you check." />
+  <meta property="og:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
+  <meta property="og:locale" content="en_IN" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Rapid Revision" />
+  <meta name="twitter:description" content="Every concept as the one line worth remembering, with questions to answer out loud before you check." />
+  <meta name="twitter:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/brand.css" />
+  <link rel="stylesheet" href="assets/css/learn.css?v=5" />
 </head>
 <body>
   <header class="bar">
     <div class="bar-in">
-      <a class="brandlock" href="index.html"><img src="img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <a class="brandlock" href="index.html"><img src="assets/img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
       <span class="here">Revision</span>
       <div class="sp"></div>
       <a class="nav" href="concept.html">Concepts</a>
@@ -45,7 +60,7 @@
     <div class="empty" id="empty" style="display:none">Nothing matches that.</div>
   </div>
 
-  <footer><a class="brandlock sm" href="index.html"><img src="img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a> · <a href="concept.html">Concepts</a></footer>
+  <footer><a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a> · <a href="concept.html">Concepts</a></footer>
 
   <script src="data/concept-data.js"></script>
   <script>
@@ -159,18 +174,8 @@
       $("#toggleAll").textContent = allOpen ? UI[L].closeAll : UI[L].openAll;
     });
 
-    const t = $("#themeToggle"), root = document.documentElement;
-    const saved = localStorage.getItem("dsa-theme");
-    const setLabel = () => { t.textContent = root.getAttribute("data-theme") === "dark" ? "Light" : "Dark"; };
-    if (saved === "dark" || (!saved && matchMedia("(prefers-color-scheme: dark)").matches)) root.setAttribute("data-theme", "dark");
-    setLabel();
-    t.addEventListener("click", () => {
-      const dark = root.getAttribute("data-theme") === "dark";
-      if (dark) { root.removeAttribute("data-theme"); localStorage.setItem("dsa-theme", "light"); }
-      else      { root.setAttribute("data-theme", "dark"); localStorage.setItem("dsa-theme", "dark"); }
-      setLabel();
-    });
   })();
   </script>
+  <script src="assets/js/theme.js"></script>
 </body>
 </html>

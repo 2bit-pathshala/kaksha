@@ -5,24 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>2BIT Pathshala · Interview prep from first principles</title>
   <meta name="description" content="Free interview prep: 41 DSA concepts explained from first principles with visuals, Hinglish deep-dives and code in 5 languages, ten-minute revision, nine real system designs, LLD, HLD and HR notes." />
+  <link rel="canonical" href="https://pathshala.2bit.in/" />
   <meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#131315" media="(prefers-color-scheme: dark)" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="2BIT Pathshala" />
-  <meta property="og:title" content="2BIT Pathshala · Interview prep from first principles" />
-  <meta property="og:description" content="Understand a concept once, from first principles. Revise it in ten minutes. DSA, system design and HR, all free." />
+  <meta property="og:url" content="https://pathshala.2bit.in/" />
+  <meta property="og:title" content="2BIT Pathshala" />
+  <meta property="og:description" content="Free interview prep: 41 DSA concepts explained from first principles with visuals, Hinglish deep-dives and code in 5 languages, ten-minute revision, nine real system designs, LLD, HLD and HR notes." />
+  <meta property="og:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
+  <meta property="og:locale" content="en_IN" />
   <meta name="twitter:card" content="summary" />
-  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <meta name="twitter:title" content="2BIT Pathshala" />
+  <meta name="twitter:description" content="Free interview prep: 41 DSA concepts explained from first principles with visuals, Hinglish deep-dives and code in 5 languages, ten-minute revision, nine real system designs, LLD, HLD and HR notes." />
+  <meta name="twitter:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <script>
     /* set the theme before first paint so dark mode never flashes light */
     (function () { try { var s = localStorage.getItem("dsa-theme");
       if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
         document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
   </script>
-  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/fonts.css" />
-  <link rel="stylesheet" href="css/style.css?v=4" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/style.css?v=5" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://pathshala.2bit.in/#org",
+        "name": "2BIT Pathshala",
+        "url": "https://pathshala.2bit.in/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://pathshala.2bit.in/assets/img/logo-512.png",
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://pathshala.2bit.in/#site",
+        "name": "2BIT Pathshala",
+        "url": "https://pathshala.2bit.in/",
+        "inLanguage": "en",
+        "publisher": {
+          "@id": "https://pathshala.2bit.in/#org"
+        },
+        "description": "Free interview preparation: DSA from first principles, system design, and HR, with stepped visuals and ten-minute revision."
+      }
+    ]
+  }
+  </script>
 </head>
 <body class="landing">
   <a class="skip" href="#main">Skip to content</a>
@@ -30,7 +68,7 @@
   <header class="nav">
     <div class="nav-in wide">
       <a href="index.html" class="brand" aria-label="2BIT Pathshala home">
-        <img class="brand-logo" src="img/logo-64.png" alt="" width="32" height="32" />
+        <img class="brand-logo" src="assets/img/logo-64.png" alt="" width="32" height="32" />
         <span class="brand-mark">2BIT <span>Pathshala</span></span>
       </a>
       <nav class="nav-links" aria-label="Main">
@@ -162,7 +200,7 @@
 
   <footer class="site-foot">
     <div class="wide foot-in">
-      <span class="brand foot-brand"><img class="brand-logo" src="img/logo-64.png" alt="" width="24" height="24" loading="lazy" /><span class="brand-mark">2BIT <span>Pathshala</span></span></span>
+      <span class="brand foot-brand"><img class="brand-logo" src="assets/img/logo-64.png" alt="" width="24" height="24" loading="lazy" /><span class="brand-mark">2BIT <span>Pathshala</span></span></span>
       <nav aria-label="Footer">
         <a href="concept.html">Concepts</a>
         <a href="revise.html">Revision</a>
@@ -174,6 +212,6 @@
     </div>
   </footer>
 
-  <script src="js/script.js" defer></script>
+  <script src="assets/js/theme.js" defer></script>
 </body>
 </html>

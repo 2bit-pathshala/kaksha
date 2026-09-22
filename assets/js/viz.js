@@ -26,6 +26,7 @@
 */
 
 const VIZ = {};
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 /* ============================ renderers ============================ */
 
@@ -36,10 +37,21 @@ const VIZ = {};
    stage scrolls sideways instead of shrinking further. Small drawings still
    fit a phone outright, so only the wide ones ever scroll. */
 const svgWrap = (w, h, inner) =>
-  `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagram for this step, described in the caption" ` +
+  // the namespace is not decoration: the player re-parses this markup as XML to
+  // step a frame, and without it every element comes back in no namespace at
+  // all, which makes it an unknown tag the browser will not render or style
+  `<svg xmlns="${SVG_NS}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagram for this step, described in the caption" ` +
   `style="--vw:${Math.min(Math.round(w * 0.72), 620)}px">${inner}</svg>`;
 
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/* Every drawn element carries a key that identifies the same thing across
+   frames: cell 3 is "box-3" in every frame of the visual, the pointer called
+   "lo" is "ptr-lo" wherever it happens to be standing. The player uses these
+   to update the drawing in place instead of throwing it away, which is what
+   lets a pointer slide to its new cell rather than blink to it. Keys have to
+   be unique within one drawing and stable across the frames of one visual. */
+const k = name => ` data-k="${name}"`;
 
 /* Shrink a label until it fits the shape it sits in.
    Monospace glyphs run about 0.62em wide, so this is a close enough estimate
@@ -68,7 +80,7 @@ function drawCells(spec, f) {
     const [l, r] = f.band;
     if (r >= l) {
       const x = X0 + l * (BW + GAP) - 4, w = (r - l + 1) * (BW + GAP) - GAP + 8;
-      s += `<rect class="v-band" x="${x}" y="${Y - 10}" width="${w}" height="${H + 20}" rx="10"/>`;
+      s += `<rect class="v-band"${k("band")} x="${x}" y="${Y - 10}" width="${w}" height="${H + 20}" rx="10"/>`;
     }
   }
 
@@ -80,24 +92,29 @@ function drawCells(spec, f) {
     if (has(f.dim, i)) cls += " dim";
     const tcls = "v-txt" + (has(f.dim, i) ? " dim" : "");
     const x = X0 + i * (BW + GAP);
-    s += `<rect class="${cls}" x="${x}" y="${Y}" width="${BW}" height="${H}" rx="9"/>`;
-    s += `<text class="${tcls}" x="${cx(i)}" y="${Y + H / 2 + 1}" ` +
+    s += `<rect class="${cls}"${k("box-" + i)} x="${x}" y="${Y}" width="${BW}" height="${H}" rx="9"/>`;
+    s += `<text class="${tcls}"${k("txt-" + i)} x="${cx(i)}" y="${Y + H / 2 + 1}" ` +
          `style="font-size:${fit(v, BW).toFixed(1)}px">${esc(v)}</text>`;
-    if (spec.idx !== false) s += `<text class="v-idx" x="${cx(i)}" y="${Y - 12}">${i}</text>`;
+    if (spec.idx !== false) s += `<text class="v-idx"${k("idx-" + i)} x="${cx(i)}" y="${Y - 12}">${i}</text>`;
   });
 
   // pointers below, stacked when two land on the same cell
   const seen = {};
-  Object.entries(f.ptr || {}).forEach(([label, i], k) => {
+  Object.entries(f.ptr || {}).forEach(([label, i], n) => {
     if (i == null || i < 0 || i >= arr.length) return;
     const row = seen[i] = (seen[i] || 0);
     seen[i]++;
     const yTop = Y + H + 8 + row * 20, x = cx(i);
-    s += `<path class="v-line on" d="M${x} ${yTop + 9} l-5 7 h10 z" fill="var(--accent)" stroke="none"/>`;
-    s += `<text class="v-lab${k % 2 ? " b" : ""}" x="${x}" y="${yTop + 30}">${esc(label)}</text>`;
+    // Drawn at the origin and placed with a transform, so the pointer slides to
+    // its new cell instead of jumping there. It has to be an inline style and
+    // not a transform attribute: the attribute is geometry to the browser, not
+    // a CSS property, so a transition on it never runs. Measured, not assumed.
+    const at = `style="transform:translate(${x}px,${yTop}px)"`;
+    s += `<path class="v-line on"${k("ptr-" + label)} d="M0 9 l-5 7 h10 z" fill="var(--accent)" stroke="none" ${at}/>`;
+    s += `<text class="v-lab${n % 2 ? " b" : ""}"${k("ptrlab-" + label)} x="0" y="30" ${at}>${esc(label)}</text>`;
   });
 
-  if (f.out) s += `<text class="v-note" x="${X0}" y="${Y + H + 62}" ` +
+  if (f.out) s += `<text class="v-note"${k("out")} x="${X0}" y="${Y + H + 62}" ` +
     `style="font-weight:700;fill:var(--accent);font-size:${fit(f.out, W - X0 * 2, 13, 0).toFixed(1)}px">${esc(f.out)}</text>`;
   return svgWrap(W, Y + H + 80, s);
 }
@@ -128,10 +145,10 @@ function drawCurve(spec, f) {
     used.push(v);
     return v;
   };
-  let s = `<line class="v-line" x1="${L}" y1="${T}" x2="${L}" y2="${B}"/>` +
-          `<line class="v-line" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>` +
-          `<text class="v-note" x="${R - 60}" y="${B + 24}">input size n →</text>` +
-          `<text class="v-note" x="6" y="${T + 6}">work</text>`;
+  let s = `<line class="v-line"${k("axis-y")} x1="${L}" y1="${T}" x2="${L}" y2="${B}"/>` +
+          `<line class="v-line"${k("axis-x")} x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>` +
+          `<text class="v-note"${k("axlab-x")} x="${R - 60}" y="${B + 24}">input size n →</text>` +
+          `<text class="v-note"${k("axlab-y")} x="6" y="${T + 6}">work</text>`;
   (f.show || []).forEach(name => {
     const cv = CURVES[name]; if (!cv) return;
     const pts = [];
@@ -141,9 +158,9 @@ function drawCurve(spec, f) {
       pts.push(`${(L + x * (R - L)).toFixed(1)},${(B - y * (B - T)).toFixed(1)}`);
       if (y >= 1.02) break;
     }
-    s += `<polyline class="v-curve" points="${pts.join(" ")}" style="stroke:${cv.c}"/>`;
+    s += `<polyline class="v-curve"${k("curve-" + name)} points="${pts.join(" ")}" style="stroke:${cv.c}"/>`;
     const last = pts[pts.length - 1].split(",");
-    s += `<text x="${Math.min(+last[0] + 7, R - 4)}" y="${clearOf(+last[1])}" ` +
+    s += `<text${k("curvelab-" + name)} x="${Math.min(+last[0] + 7, R - 4)}" y="${clearOf(+last[1])}" ` +
          `style="fill:${cv.c};font-family:'JetBrains Mono','JetBrains Mono Fallback',monospace;font-size:12px;font-weight:600">${esc(name)}</text>`;
   });
   return svgWrap(W, H, s);
@@ -170,16 +187,16 @@ function drawTree(spec, f) {
     const cutA = t((A.w || 52) / 2 + 2, 22), cutB = t((B.w || 52) / 2 + 2, 22);
     const x1 = A.x + dx / len * cutA, y1 = A.y + dy / len * cutA;
     const x2 = B.x - dx / len * cutB, y2 = B.y - dy / len * cutB;
-    s += `<line class="v-line${hot ? " on" : ""}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" ` +
+    s += `<line class="v-line${hot ? " on" : ""}"${k("edge-" + a + "-" + b)} x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" ` +
          `x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"` + (faded ? ` opacity=".3"` : "") + `/>`;
     if (spec.arrows) {                          // a pointer has a direction; show it
       const ang = Math.atan2(dy, dx) * 180 / Math.PI;
-      s += `<path d="M${x2.toFixed(1)} ${y2.toFixed(1)} l-7 -4 v8 z" fill="var(--accent)" ` +
+      s += `<path${k("arrow-" + a + "-" + b)} d="M${x2.toFixed(1)} ${y2.toFixed(1)} l-7 -4 v8 z" fill="var(--accent)" ` +
            `transform="rotate(${ang.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)})"` +
            (faded ? ` opacity=".3"` : "") + `/>`;
     }
     if (spec.weights && spec.weights[a + ">" + b] != null)
-      s += `<text class="v-idx" x="${((x1 + x2) / 2).toFixed(1)}" y="${((y1 + y2) / 2 - 5).toFixed(1)}">` +
+      s += `<text class="v-idx"${k("w-" + a + "-" + b)} x="${((x1 + x2) / 2).toFixed(1)}" y="${((y1 + y2) / 2 - 5).toFixed(1)}">` +
            `${esc(spec.weights[a + ">" + b])}</text>`;
   });
   Object.entries(spec.nodes).forEach(([id, n]) => {
@@ -191,12 +208,12 @@ function drawTree(spec, f) {
     // frame.t lets a frame relabel a node. That is how a swap or a return value is shown.
     const label = (f.t && f.t[id] != null) ? f.t[id] : n.t;
     const w = n.w || 52;                       // wide enough for a real label
-    s += `<rect class="${cls}" x="${n.x - w / 2}" y="${n.y - 20}" width="${w}" height="40" rx="10"/>`;
-    s += `<text class="v-txt${dim.includes(id) ? " dim" : ""}" x="${n.x}" y="${n.y + 1}" ` +
+    s += `<rect class="${cls}"${k("node-" + id)} x="${n.x - w / 2}" y="${n.y - 20}" width="${w}" height="40" rx="10"/>`;
+    s += `<text class="v-txt${dim.includes(id) ? " dim" : ""}"${k("nodetxt-" + id)} x="${n.x}" y="${n.y + 1}" ` +
          `style="font-size:${fit(label, w).toFixed(1)}px">${esc(label)}</text>`;
-    if (n.sub) s += `<text class="v-idx" x="${n.x}" y="${n.y + 33}">${esc(n.sub)}</text>`;
+    if (n.sub) s += `<text class="v-idx"${k("sub-" + id)} x="${n.x}" y="${n.y + 33}">${esc(n.sub)}</text>`;
   });
-  if (f.out) s += `<text class="v-note" x="12" y="${spec.h - 8}" ` +
+  if (f.out) s += `<text class="v-note"${k("out")} x="12" y="${spec.h - 8}" ` +
     `style="font-weight:700;fill:var(--accent);font-size:${fit(f.out, spec.w - 24, 13, 0).toFixed(1)}px">${esc(f.out)}</text>`;
   return svgWrap(spec.w, spec.h, s);
 }
@@ -214,30 +231,30 @@ function drawHash(spec, f) {
   const W = 660, H = 60 + nb * 40;
   const MY = H / 2;
 
-  let s = `<rect class="v-box on" x="${FX}" y="${MY - 26}" width="${FW}" height="52" rx="11"/>` +
-          `<text class="v-txt" x="${FX + FW / 2}" y="${MY}" style="font-size:${fit(spec.fn, FW, 13).toFixed(1)}px">${esc(spec.fn)}</text>` +
-          `<text class="v-note" x="${KX}" y="22">keys</text>` +
-          `<text class="v-note" x="${BX}" y="22">buckets</text>`;
+  let s = `<rect class="v-box on"${k("fnbox")} x="${FX}" y="${MY - 26}" width="${FW}" height="52" rx="11"/>` +
+          `<text class="v-txt"${k("fntxt")} x="${FX + FW / 2}" y="${MY}" style="font-size:${fit(spec.fn, FW, 13).toFixed(1)}px">${esc(spec.fn)}</text>` +
+          `<text class="v-note"${k("lab-keys")} x="${KX}" y="22">keys</text>` +
+          `<text class="v-note"${k("lab-buckets")} x="${BX}" y="22">buckets</text>`;
 
   if (f.k != null) {
-    s += `<rect class="v-box hot" x="${KX}" y="${MY - 22}" width="${KW}" height="44" rx="10"/>` +
-         `<text class="v-txt" x="${KX + KW / 2}" y="${MY}" style="font-size:${fit(f.k, KW).toFixed(1)}px">${esc(f.k)}</text>` +
-         `<line class="v-line on" x1="${KX + KW + 6}" y1="${MY}" x2="${FX - 6}" y2="${MY}"/>` +
-         `<path d="M${FX - 6} ${MY} l-7 -5 v10 z" fill="var(--accent)"/>`;
+    s += `<rect class="v-box hot"${k("keybox")} x="${KX}" y="${MY - 22}" width="${KW}" height="44" rx="10"/>` +
+         `<text class="v-txt"${k("keytxt")} x="${KX + KW / 2}" y="${MY}" style="font-size:${fit(f.k, KW).toFixed(1)}px">${esc(f.k)}</text>` +
+         `<line class="v-line on"${k("keyline")} x1="${KX + KW + 6}" y1="${MY}" x2="${FX - 6}" y2="${MY}"/>` +
+         `<path${k("keyarrow")} d="M${FX - 6} ${MY} l-7 -5 v10 z" fill="var(--accent)"/>`;
   }
 
   for (let b = 0; b < nb; b++) {
     const y = 40 + b * 40, hit = f.b === b;
-    s += `<rect class="v-box${hit ? " hot" : ""}" x="${BX}" y="${y}" width="${BW}" height="32" rx="8"/>` +
-         `<text class="v-txt" x="${BX + BW / 2}" y="${y + 16}" style="font-size:11px">${b}</text>`;
+    s += `<rect class="v-box${hit ? " hot" : ""}"${k("bkt-" + b)} x="${BX}" y="${y}" width="${BW}" height="32" rx="8"/>` +
+         `<text class="v-txt"${k("bkttxt-" + b)} x="${BX + BW / 2}" y="${y + 16}" style="font-size:11px">${b}</text>`;
     const items = placed[b] || [];
-    items.forEach((k, j) => {
+    items.forEach((key, j) => {
       const x = IX + j * (IW + 6);
-      s += `<rect class="v-box${hit && j === items.length - 1 ? " hot" : " on"}" x="${x}" y="${y}" width="${IW}" height="32" rx="8"/>` +
-           `<text class="v-txt" x="${x + IW / 2}" y="${y + 16}" style="font-size:${fit(k, IW, 12).toFixed(1)}px">${esc(k)}</text>`;
+      s += `<rect class="v-box${hit && j === items.length - 1 ? " hot" : " on"}"${k("item-" + b + "-" + j)} x="${x}" y="${y}" width="${IW}" height="32" rx="8"/>` +
+           `<text class="v-txt"${k("itemtxt-" + b + "-" + j)} x="${x + IW / 2}" y="${y + 16}" style="font-size:${fit(key, IW, 12).toFixed(1)}px">${esc(key)}</text>`;
     });
-    if (hit) s += `<line class="v-line on" x1="${FX + FW}" y1="${MY}" x2="${BX - 6}" y2="${y + 16}"/>` +
-                  `<path d="M${BX - 6} ${y + 16} l-7 -5 v10 z" fill="var(--accent)"/>`;
+    if (hit) s += `<line class="v-line on"${k("hitline")} x1="${FX + FW}" y1="${MY}" x2="${BX - 6}" y2="${y + 16}"/>` +
+                  `<path${k("hitarrow")} d="M${BX - 6} ${y + 16} l-7 -5 v10 z" fill="var(--accent)"/>`;
   }
   return svgWrap(W, H, s);
 }
@@ -261,8 +278,8 @@ function drawChain(spec, f) {
     else if (has(f.hot, i)) cls += " hot";
     else if (has(f.on, i)) cls += " on";
     if (has(f.dim, i)) cls += " dim";
-    s += `<rect class="${cls}" x="${left(i)}" y="${Y}" width="${BW}" height="${H}" rx="8"/>`;
-    s += `<text class="v-txt${has(f.dim, i) ? " dim" : ""}" x="${cx(i)}" y="${Y + H / 2 + 1}" ` +
+    s += `<rect class="${cls}"${k("box-" + i)} x="${left(i)}" y="${Y}" width="${BW}" height="${H}" rx="8"/>`;
+    s += `<text class="v-txt${has(f.dim, i) ? " dim" : ""}"${k("txt-" + i)} x="${cx(i)}" y="${Y + H / 2 + 1}" ` +
          `style="font-size:${fit(v, BW).toFixed(1)}px">${esc(v)}</text>`;
   });
 
@@ -271,34 +288,37 @@ function drawChain(spec, f) {
   links.forEach((dir, i) => {
     const a = left(i) + BW + 6, b = left(i + 1) - 6, mid = Y + H / 2;
     if (dir === 0) {
-      s += `<line class="v-line" x1="${a}" y1="${mid}" x2="${b}" y2="${mid}" ` +
+      s += `<line class="v-line"${k("link-" + i)} x1="${a}" y1="${mid}" x2="${b}" y2="${mid}" ` +
            `stroke-dasharray="3 3" opacity=".45"/>`;
       return;
     }
     const rightwards = dir === 1;
-    s += `<line class="v-line on" x1="${a}" y1="${mid}" x2="${b}" y2="${mid}"/>`;
+    s += `<line class="v-line on"${k("link-" + i)} x1="${a}" y1="${mid}" x2="${b}" y2="${mid}"/>`;
+    // the arrowhead flips end for end when a link reverses, which is the whole
+    // lesson of list reversal, so it is keyed by gap and not by direction
     s += rightwards
-      ? `<path d="M${b} ${mid} l-7 -5 v10 z" fill="var(--accent)"/>`
-      : `<path d="M${a} ${mid} l7 -5 v10 z" fill="var(--accent)"/>`;
+      ? `<path${k("linkarrow-" + i)} d="M${b} ${mid} l-7 -5 v10 z" fill="var(--accent)"/>`
+      : `<path${k("linkarrow-" + i)} d="M${a} ${mid} l7 -5 v10 z" fill="var(--accent)"/>`;
   });
 
   // the terminating null, when the list ends where you would expect it to
   if (f.nullEnd !== false && arr.length) {
     const a = left(arr.length - 1) + BW + 6;
-    s += `<line class="v-line" x1="${a}" y1="${Y + H / 2}" x2="${a + 22}" y2="${Y + H / 2}"/>`;
-    s += `<text class="v-idx" x="${a + 30}" y="${Y + H / 2 + 4}">null</text>`;
+    s += `<line class="v-line"${k("nullline")} x1="${a}" y1="${Y + H / 2}" x2="${a + 22}" y2="${Y + H / 2}"/>`;
+    s += `<text class="v-idx"${k("nulltxt")} x="${a + 30}" y="${Y + H / 2 + 4}">null</text>`;
   }
 
   const seen = {};
-  Object.entries(f.ptr || {}).forEach(([label, i], k) => {
+  Object.entries(f.ptr || {}).forEach(([label, i], n) => {
     if (i == null || i < 0 || i >= arr.length) return;
     const row = seen[i] = (seen[i] || 0); seen[i]++;
     const yTop = Y + H + 8 + row * 20, x = cx(i);
-    s += `<path class="v-line on" d="M${x} ${yTop + 9} l-5 7 h10 z" fill="var(--accent)" stroke="none"/>`;
-    s += `<text class="v-lab${k % 2 ? " b" : ""}" x="${x}" y="${yTop + 30}">${esc(label)}</text>`;
+    const at = `style="transform:translate(${x}px,${yTop}px)"`;
+    s += `<path class="v-line on"${k("ptr-" + label)} d="M0 9 l-5 7 h10 z" fill="var(--accent)" stroke="none" ${at}/>`;
+    s += `<text class="v-lab${n % 2 ? " b" : ""}"${k("ptrlab-" + label)} x="0" y="30" ${at}>${esc(label)}</text>`;
   });
 
-  if (f.out) s += `<text class="v-note" x="${X0}" y="${Y + H + 66}" ` +
+  if (f.out) s += `<text class="v-note"${k("out")} x="${X0}" y="${Y + H + 66}" ` +
     `style="font-weight:700;fill:var(--accent);font-size:${fit(f.out, W - X0 * 2, 13, 0).toFixed(1)}px">${esc(f.out)}</text>`;
   return svgWrap(W, Y + H + 84, s);
 }
@@ -316,8 +336,8 @@ function drawGrid(spec, f) {
   const inList = (l, r, c) => Array.isArray(l) && l.some(p => p[0] === r && p[1] === c);
   let s = "";
 
-  for (let c = 0; c < C; c++) s += `<text class="v-idx" x="${x(c) + S / 2}" y="${Y0 - 8}">${c}</text>`;
-  for (let r = 0; r < R; r++) s += `<text class="v-idx" x="${X0 - 12}" y="${y(r) + S / 2 + 4}">${r}</text>`;
+  for (let c = 0; c < C; c++) s += `<text class="v-idx"${k("col-" + c)} x="${x(c) + S / 2}" y="${Y0 - 8}">${c}</text>`;
+  for (let r = 0; r < R; r++) s += `<text class="v-idx"${k("row-" + r)} x="${X0 - 12}" y="${y(r) + S / 2 + 4}">${r}</text>`;
 
   for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
     let cls = "v-box";
@@ -325,9 +345,9 @@ function drawGrid(spec, f) {
     else if (inList(f.hot, r, c)) cls += " hot";
     else if (inList(f.on, r, c)) cls += " on";
     if (inList(f.dim, r, c)) cls += " dim";
-    s += `<rect class="${cls}" x="${x(c)}" y="${y(r)}" width="${S}" height="${S}" rx="7"/>`;
+    s += `<rect class="${cls}"${k("cell-" + r + "-" + c)} x="${x(c)}" y="${y(r)}" width="${S}" height="${S}" rx="7"/>`;
     const v = String(g[r][c]);
-    if (v !== "") s += `<text class="v-txt${inList(f.dim, r, c) ? " dim" : ""}" ` +
+    if (v !== "") s += `<text class="v-txt${inList(f.dim, r, c) ? " dim" : ""}"${k("celltxt-" + r + "-" + c)} ` +
       `x="${x(c) + S / 2}" y="${y(r) + S / 2 + 1}" style="font-size:${fit(v, S).toFixed(1)}px">${esc(v)}</text>`;
   }
 
@@ -338,13 +358,14 @@ function drawGrid(spec, f) {
     const nx = cxs + dc * len, ny = cys + dr * len;
     const sx = cxs + dc * S * 0.45, sy = cys + dr * S * 0.45;
     const ang = Math.atan2(dr, dc) * 180 / Math.PI;
-    s += `<line class="v-line on" x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" ` +
+    const dk = r + "-" + c + "-" + dr + "-" + dc;
+    s += `<line class="v-line on"${k("dir-" + dk)} x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" ` +
          `x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}"/>`;
-    s += `<path d="M${nx.toFixed(1)} ${ny.toFixed(1)} l-7 -4 v8 z" fill="var(--accent)" ` +
+    s += `<path${k("dirarrow-" + dk)} d="M${nx.toFixed(1)} ${ny.toFixed(1)} l-7 -4 v8 z" fill="var(--accent)" ` +
          `transform="rotate(${ang.toFixed(1)} ${nx.toFixed(1)} ${ny.toFixed(1)})"/>`;
   });
 
-  if (f.out) s += `<text class="v-note" x="${X0}" y="${H - 20}" ` +
+  if (f.out) s += `<text class="v-note"${k("out")} x="${X0}" y="${H - 20}" ` +
     `style="font-weight:700;fill:var(--accent);font-size:${fit(f.out, W - X0 * 2, 13, 0).toFixed(1)}px">${esc(f.out)}</text>`;
   return svgWrap(W, H, s);
 }
@@ -353,6 +374,127 @@ const DRAW = { cells: drawCells, curve: drawCurve, tree: drawTree, hash: drawHas
                chain: drawChain, grid: drawGrid };
 
 /* ============================ player ============================ */
+
+/* Stepping used to be `stage.innerHTML = draw(frame)`: the whole drawing thrown
+   away and built again. Correct, and it taught less than it could. A pointer
+   moving from cell 3 to cell 4 blinked from one to the other, so the reader had
+   to work out what changed instead of watching it change, and that reading is
+   the point of stepping a visual at all.
+
+   So the drawing is now updated in place. Every element carries a data-k that
+   names the same thing across frames, and morph() walks the new drawing against
+   the old one: things in both are updated attribute by attribute and let CSS
+   carry them to their new position or colour, things only in the new drawing
+   fade in, things only in the old one fade out. Nothing here decides how long
+   any of that takes; the durations live in tokens.css and go to zero for a
+   reader who asked for less movement.
+
+   The fallback is the old behaviour: if a drawing has no keys, or the browser
+   cannot parse it, the stage is simply replaced. */
+
+function morph(stage, markup) {
+  const old = stage.firstElementChild;
+  let next;
+  try {
+    next = new DOMParser().parseFromString(markup, "image/svg+xml").documentElement;
+  } catch (e) { next = null; }
+  // a scene card is a div and a drawing is an svg: moving between them is a swap
+  if (!old || !next || next.nodeName === "parsererror" || !next.querySelector("[data-k]") ||
+      old.nodeName.toLowerCase() !== next.nodeName.toLowerCase()) {
+    stage.innerHTML = markup;
+    return;
+  }
+
+  // the viewBox can change between frames (an array that grows); let it animate
+  for (const a of ["viewBox", "style"]) {
+    const v = next.getAttribute(a);
+    if (v != null && old.getAttribute(a) !== v) old.setAttribute(a, v);
+  }
+
+  const was = new Map();
+  old.querySelectorAll("[data-k]").forEach(el => was.set(el.getAttribute("data-k"), el));
+
+  const seen = new Set();
+  const arriving = [];
+  let after = null;                       // keeps the new paint order
+  next.querySelectorAll("[data-k]").forEach(el => {
+    const key = el.getAttribute("data-k");
+    seen.add(key);
+    const prev = was.get(key);
+    if (prev) {
+      sync(prev, el);
+      prev.classList.remove("v-exit");
+      after = place(old, prev, after);
+    } else {
+      const node = document.importNode(el, true);
+      node.classList.add("v-enter");
+      after = place(old, node, after);
+      arriving.push([node, node.classList.contains("v-curve") ? dashOn(node) : null]);
+    }
+  });
+
+  /* An element has to be seen in its arriving state before it can be animated
+     out of it. Reading a layout value forces that, once for the whole batch,
+     which is both cheaper and more dependable than waiting for animation
+     frames: a page in a background tab gets no frames, and anything left
+     holding .v-enter would be left holding opacity 0 with it. */
+  if (arriving.length) {
+    void old.getBoundingClientRect();
+    arriving.forEach(([node, undash]) => {
+      node.classList.remove("v-enter");
+      if (undash) undash();
+    });
+  }
+
+  was.forEach((el, key) => {
+    if (seen.has(key)) return;
+    if (el.classList.contains("v-exit")) return;
+    el.classList.add("v-exit");
+    el.removeAttribute("data-k");          // it is leaving; do not match it again
+    const done = () => el.remove();
+    el.addEventListener("transitionend", done, { once: true });
+    setTimeout(done, 600);                 // in case the transition never runs
+  });
+}
+
+/* A growth curve is introduced by drawing it rather than by having it appear.
+   Hide the whole stroke behind a dash as long as its own length, then run the
+   offset back to zero and the line grows out of the origin, which is the shape
+   of the idea. Returns the function that starts it, or null when the browser
+   cannot measure the path (then it just fades in like everything else). */
+function dashOn(node) {
+  let len;
+  try { len = node.getTotalLength(); } catch (e) { return null; }
+  if (!len || !isFinite(len)) return null;
+  node.style.strokeDasharray = len;
+  node.style.strokeDashoffset = len;
+  return () => {
+    node.style.strokeDashoffset = "0";
+    // let go of the dash once it has run, so a later frame styling this curve
+    // is not fighting an inline stroke-dasharray that no longer means anything
+    setTimeout(() => { node.style.strokeDasharray = ""; node.style.strokeDashoffset = ""; }, 800);
+  };
+}
+
+/* copy the new element's attributes onto the old one, touching only what
+   actually differs so an unchanged element never restarts its transition */
+function sync(prev, el) {
+  for (const { name, value } of el.attributes) {
+    if (prev.getAttribute(name) !== value) prev.setAttribute(name, value);
+  }
+  for (const { name } of [...prev.attributes]) {
+    if (!el.hasAttribute(name)) prev.removeAttribute(name);
+  }
+  if (!el.children.length && prev.textContent !== el.textContent) prev.textContent = el.textContent;
+}
+
+/* put node directly after `after` inside root, without moving it if it is
+   already there: reordering a node restarts its transitions */
+function place(root, node, after) {
+  const want = after ? after.nextSibling : root.firstChild;
+  if (node !== want) root.insertBefore(node, want);
+  return node;
+}
 
 function mountViz(id, host, lang, start) {
   const spec = VIZ[id];
@@ -395,11 +537,12 @@ function mountViz(id, host, lang, start) {
   box.setAttribute("aria-live", "polite");
   cap.after(box);
 
-  function draw() {
+  function draw(first) {
     const f = view(spec.frames[i]);
-    stage.innerHTML = f.scene
+    const markup = f.scene
       ? `<div class="vizscene">${f.scene}</div>`
       : (DRAW[spec.kind] || drawCells)(spec, f);
+    if (first) stage.innerHTML = markup; else morph(stage, markup);
     cap.innerHTML = f.cap || "";
     range.value = i;
     step.textContent = `${i + 1} / ${n}`;
@@ -437,11 +580,22 @@ function mountViz(id, host, lang, start) {
     if (done) settle(null);
   }
   function go(d) { i = (i + d + n) % n; draw(); }
-  function stop() { clearInterval(timer); timer = null; play.textContent = "Play"; }
+  function stop() { clearInterval(timer); timer = null; play.textContent = "Play"; play.setAttribute("aria-label", "Play"); }
+
+  /* Autoplay holds each frame long enough to read its caption, and the hold
+     starts after the movement rather than during it, so a step never begins
+     before the last one has finished arriving. */
+  const HOLD = 1400;
+  const moveMs = () => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue("--t-slow").trim();
+    const ms = v.endsWith("ms") ? parseFloat(v) : parseFloat(v) * 1000;
+    return isFinite(ms) ? ms : 0;
+  };
 
   play.addEventListener("click", () => {
     if (timer) return stop();
     play.textContent = "Pause";
+    play.setAttribute("aria-label", "Pause");
     // a question is a place to stop and think, so the player waits there,
     // unless Play was pressed on that very question, which reads as "skip it"
     const from = i;
@@ -449,12 +603,12 @@ function mountViz(id, host, lang, start) {
       if (i === n - 1) { stop(); i = 0; draw(); }
       else if (spec.frames[i].ask && !answered.has(i) && i !== from) stop();
       else go(1);
-    }, 1400);
+    }, HOLD + moveMs());
   });
   host.querySelector('[data-a="prev"]').addEventListener("click", () => { stop(); go(-1); });
   host.querySelector('[data-a="next"]').addEventListener("click", () => { stop(); go(1); });
   range.addEventListener("input", () => { stop(); i = +range.value; draw(); });
-  draw();
+  draw(true);
 }
 
 /* ============================ the visuals ============================ */

@@ -7,7 +7,8 @@
    are skipped with a note if it is not installed (npm i --no-save jsdom). */
 
 const fs = require("fs"), vm = require("vm"), path = require("path");
-const P = __dirname + path.sep;
+// the checks run from tools/, everything they read lives at the repo root
+const P = path.join(__dirname, "..") + path.sep;
 let fails = 0;
 const ok   = (name, detail) => console.log("  ok    " + name.padEnd(16) + detail);
 const bad  = (name, detail) => { fails++; console.log("  FAIL  " + name.padEnd(16) + detail); };
@@ -16,7 +17,7 @@ const test = (name, pass, detail) => (pass ? ok : bad)(name, detail);
 /* ---------- load the data the same way a browser would ---------- */
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(fs.readFileSync(P + "js/viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
+vm.runInContext(fs.readFileSync(P + "assets/js/viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
 vm.runInContext(fs.readFileSync(P + "data/concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", ctx);
 const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 
@@ -103,8 +104,9 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 
 /* ---------- 3. the visuals are painted with variables the stylesheet defines ---------- */
 {
-  const viz = fs.readFileSync(P + "js/viz.js", "utf8");
-  const css = fs.readFileSync(P + "css/learn.css", "utf8");
+  const viz = fs.readFileSync(P + "assets/js/viz.js", "utf8");
+  // the palette lives in tokens.css now, learn.css only shapes the pages
+  const css = fs.readFileSync(P + "assets/css/tokens.css", "utf8");
   const cut = css.indexOf('[data-theme="dark"]');
   const light = css.slice(0, cut), dark = css.slice(cut);
   const wanted = [...new Set([...viz.matchAll(/var\(--([a-z0-9-]+)\)/g)].map(m => m[1]))];
@@ -290,10 +292,14 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 /* ---------- 5. house style: no em-dashes anywhere we author ---------- */
 {
   const DASH = String.fromCharCode(0x2014);   // written this way so this file passes its own test
-  const OURS = ["data/concept-data.js","js/viz.js","concept.html","revise.html","css/learn.css",
-                "docs/CONTENT-GUIDE.md","README.md","index.html","ai.html","check.js",
-                "design.html","data/design-data.js"];
-  const guilty = OURS.filter(f => fs.existsSync(P + f) && fs.readFileSync(P + f, "utf8").includes(DASH));
+  // every file we author, found rather than listed: the old hand-kept list left the
+  // section notes out, and that is exactly where the em-dashes had collected
+  const OURS = [".", "assets/css", "assets/js", "data", "docs", "tools"].flatMap(dir =>
+    fs.readdirSync(P + dir)
+      .filter(f => /\.(html|css|js|md)$/.test(f))
+      .map(f => (dir === "." ? f : dir + "/" + f)))
+    .filter(f => fs.statSync(P + f).isFile());
+  const guilty = OURS.filter(f => fs.readFileSync(P + f, "utf8").includes(DASH));
   test("house style", guilty.length === 0,
     "no em-dashes across " + OURS.length + " files" +
     (guilty.length ? "   <-- " + guilty.join(", ") : ""));
@@ -304,10 +310,16 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
   const CURVES = ctx.CURVES || null;
   const spec = VIZ["big-o"];
   const svg = DRAW.curve(spec, spec.frames[spec.frames.length - 1]);
-  const ys = [...svg.matchAll(/<text x="[0-9.]+" y="([0-9.]+)"[^>]*font-weight:600/g)].map(m => +m[1]);
+  // count the labels as well as their spacing: this test once kept passing while
+  // matching nothing at all, because an attribute was added ahead of the x it
+  // anchored on. A run that finds no labels is a broken test, not a clean chart.
+  const ys = [...svg.matchAll(/<text\b[^>]*\sy="([0-9.]+)"[^>]*font-weight:600/g)].map(m => +m[1]);
   let collisions = 0;
   ys.forEach((a, i) => ys.slice(i + 1).forEach(b => { if (Math.abs(a - b) < 14) collisions++; }));
-  test("curve labels", collisions === 0, ys.length + " labels on the final frame, none overlapping");
+  const want = spec.frames[spec.frames.length - 1].show.length;
+  test("curve labels", collisions === 0 && ys.length === want,
+    ys.length + " labels on the final frame, none overlapping" +
+    (ys.length !== want ? "   <-- expected " + want : ""));
 }
 
 /* ---------- 7. the Design Lab: shape, geometry, and labels that fit ----------
@@ -516,6 +528,60 @@ if (!JSDOM) {
   const opened = [...d.querySelectorAll(".qa")].filter(e => e.classList.contains("open")).length;
   test("revision page", entries === CONCEPTS.length && qs === opened && !errs.length,
     entries + " entries, " + qs + " questions, all open on demand");
+}
+
+/* ---------- 8. the tags a search engine reads ----------
+   Every page carries a canonical, a description and an Open Graph card, and
+   every indexable page is in the sitemap. These rot silently: nothing on screen
+   changes when a page ships without them, and nobody notices until it is
+   missing from a search or shares as a bare link. */
+{
+  const { ORIGIN, PAGES } = require("./pages.js");
+  const problems = [];
+  for (const page of PAGES) {
+    const f = P + page.file;
+    if (!fs.existsSync(f)) { problems.push(page.file + " is in pages.js but not on disk"); continue; }
+    const h = fs.readFileSync(f, "utf8");
+    // a stub's canonical names where it forwards to; a 404 has none at all
+    const want = page.canonical === null ? null
+               : ORIGIN + (page.canonical || page.path);
+    const canon = (h.match(/<link rel="canonical" href="([^"]+)"/) || [])[1];
+    if (canon !== want && !(want === null && canon === undefined))
+      problems.push(page.file + " canonical is " + (canon || "missing") + ", expected " + (want || "none"));
+    if (!/<title>.+<\/title>/.test(h)) problems.push(page.file + " has no title");
+    if (page.index) {
+      if (!/<meta name="description" content=".{50,}?"/.test(h))
+        problems.push(page.file + " description is missing or too short to be useful");
+      for (const tag of ["og:title", "og:description", "og:image", "og:url", "twitter:card"])
+        if (!h.includes(tag)) problems.push(page.file + " is missing " + tag);
+    } else if (!/<meta name="robots" content="noindex/.test(h)) {
+      problems.push(page.file + " is out of the sitemap but not marked noindex");
+    }
+  }
+  for (const f of fs.readdirSync(P).filter(f => f.endsWith(".html")))
+    if (!PAGES.some(p => p.file === f)) problems.push(f + " exists but is not in pages.js");
+
+  for (const f of ["robots.txt", "sitemap.xml", "404.html"])
+    if (!fs.existsSync(P + f)) problems.push(f + " is missing");
+
+  const rob = fs.existsSync(P + "robots.txt") ? fs.readFileSync(P + "robots.txt", "utf8") : "";
+  if (!rob.includes(ORIGIN + "/sitemap.xml")) problems.push("robots.txt does not point at the sitemap");
+
+  test("seo tags", problems.length === 0,
+    PAGES.length + " pages, " + PAGES.filter(p => p.index).length + " indexable, canonical and cards on each" +
+    (problems.length ? "   <-- " + problems.slice(0, 4).join("; ") : ""));
+}
+
+/* ---------- 9. the sitemap still matches the page table ---------- */
+{
+  try {
+    const out = require("child_process")
+      .execSync("node " + JSON.stringify(path.join(__dirname, "sitemap.js")) + " --check",
+                { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+    test("sitemap", true, out.replace(/^sitemap\.xml /, ""));
+  } catch (e) {
+    test("sitemap", false, "out of date, run: node tools/sitemap.js");
+  }
 }
 
 console.log(fails ? "\n" + fails + " FAILED" : "\nall checks passed");
