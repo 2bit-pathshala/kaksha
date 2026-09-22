@@ -11518,155 +11518,164 @@ function primDense(n, weight) {           // weight(i, j) computed on demand
   id: "sorting",
   n: "Sorting",
   group: "Algorithms",
-  one: "No comparison sort can beat <b>O(n log n)</b>. That is a proof, not a lack of cleverness. Escaping it means not comparing at all.",
+  need: {
+    ask: `<p>A game must rank <b>10⁶ players</b> by score, every few seconds. The obvious question is not “how do I sort?” but <b>how fast can sorting possibly be</b>, and when is it allowed to be faster than that?</p>
+<p>The small version: four scores, <code>5, 2, 8, 1</code>, to be put in order <code>1, 2, 5, 8</code>. There are 4! = 24 ways to arrange them, and only one is right.</p>`,
+    tries: [
+      ["Compare every pair and swap (selection or bubble sort)", "About <var>n</var>² / 2 comparisons: 5 × 10¹¹ for 10⁶ players. That is well over an hour, every few seconds."],
+      ["Find a cleverer comparison sort, faster than n log n", "Impossible. Each comparison has two answers, so it can at best halve the 10⁶! possible orders. Singling one out needs at least 1.85 × 10⁷ comparisons, whatever the algorithm."],
+      ["Count each score instead of comparing", "Legitimately linear, when scores lie in a small range like 0 to 100. With player ids up to 10⁹ as the key, it needs 10⁹ counters."],
+    ],
+    so: `<p>So there is a floor: any sort that works by comparing needs about <var>n</var> log₂ <var>n</var> comparisons. <b>Merge sort</b> meets it by splitting in half and merging sorted halves: 2 × 10⁷ comparisons, a fraction of a second. <b>Quicksort</b> meets it on average without extra memory.</p>
+<p>The only way under the floor is to stop comparing, as counting sort does when the values are small. The page sorts <code>5, 2, 8, 1</code> throughout: merge sort does it in 5 comparisons, which is exactly the floor for 4 items.</p>`,
+  },
 
-  plain: `<p>Sorting looks like a solved problem you should simply call a library for, and mostly it is. What matters in an interview is knowing <i>why</i> the library stops where it does, and when you are allowed to go faster.</p>
-<p>Here is the surprising part. Arranging n items means picking one arrangement out of <b>n factorial</b> possibilities. Each comparison you make has two outcomes, so it can at best halve the field. To narrow n! possibilities down to one you therefore need about <b>log₂(n!) ≈ n log n</b> comparisons, no matter how clever the algorithm is.</p>
-<p>So merge sort and heap sort are not merely good; they are <b>optimal</b> for comparison sorting. And the only way past the barrier is to stop comparing: if you can use the values themselves as array positions, the argument no longer applies.</p>
-<p><b>Analogy.</b> Twenty questions. Each yes-or-no answer halves the possibilities, so twenty questions can distinguish about a million things, and no fewer questions will do, however well you choose them.</p>`,
+  one: "No comparison sort can beat <b>O(<var>n</var> log <var>n</var>)</b>. That is a proof, not a lack of cleverness. Escaping it means not comparing at all.",
+
+  plain: `<p>Sorting looks like a solved problem you should simply call a library for, and mostly it is. What matters is knowing <i>why</i> the library stops where it does, and when you may go faster.</p>
+<p>Here is the surprising part. Arranging <var>n</var> items means picking one order out of <var>n</var>! (“<var>n</var> factorial”) possible orders. For <code>5, 2, 8, 1</code> that is 24. Each comparison has two answers, so at best it halves the orders still possible. Getting from 24 to 1 needs at least 5 halvings, since 2⁴ = 16 is not enough. In general you need about <var>n</var> log₂ <var>n</var> comparisons, however clever the algorithm.</p>
+<p>So merge sort and heap sort are not just good: they are <b>optimal</b> among comparison sorts. The only way past the floor is to stop comparing, and use the values themselves as positions.</p>
+<p><b>Analogy.</b> Twenty questions. Each yes-or-no answer halves the possibilities, so twenty questions can tell apart about a million things, and no fewer will do, however well you choose them.</p>`,
 
   why: [
-    { t: "Count what has to be decided", d: "There are <b>n!</b> possible orderings and only one is correct. A comparison returns one of two answers, so it can at best cut the surviving possibilities in half. You need enough comparisons k that 2<sup>k</sup> ≥ n!, which gives k ≥ log₂(n!) ≈ <b>n log n</b>. This is a lower bound on the problem, not on any particular algorithm." },
-    { t: "Merge sort meets the bound exactly", d: "Split in half repeatedly. That is <b>log n levels</b>. Merging two already-sorted runs is a single walk with two fingers, <b>O(n) per level</b>. Multiply: O(n log n), guaranteed, worst case included. It is also <b>stable</b>, and it pays O(n) scratch memory for both properties." },
-    { t: "Quicksort meets it on average, with no extra memory", d: "Pick a pivot, partition so that smaller values sit left and larger right, recurse on each side. A good pivot halves the array and gives O(n log n) in O(1) extra space. A bad pivot peels off one element at a time and gives <b>O(n²)</b>. That is why real implementations randomise the pivot, or count their recursion depth and switch to heap sort." },
-    { t: "What your standard library actually runs", d: "Rarely a textbook algorithm. <b>Timsort</b> (Python, and Java for objects) hunts for runs that are already ordered and merges those, so nearly-sorted input costs <b>O(n)</b>. <b>Introsort</b> (C++) is quicksort that falls back to heap sort when the recursion gets too deep, so it keeps the O(1) space without the O(n²) risk." },
-    { t: "The bound only binds comparison sorts", d: "The whole proof assumed information arrives one comparison at a time. Counting sort makes no comparisons: it uses each value as an <b>index</b> into a tally array, then reads the tallies back out. That is <b>O(n + k)</b> for k distinct values, genuinely linear, and only worth it when k is small relative to n. Radix sort applies the same trick digit by digit." },
-    { t: "Stability is not a detail", d: "A stable sort keeps equal elements in their original relative order. That is what allows multi-key sorting: sort by the secondary key, then by the primary, and the secondary ordering survives inside each group. If your language's sort is unstable, that technique silently produces wrong answers." },
-    { t: "And sometimes you should not sort at all", d: "Sorting to find the k largest is O(n log n) when a size-k heap does it in O(n log k). Sorting to check for duplicates is O(n log n) when a hash set does it in O(n). Sorting is worth it when you need the <i>order</i> itself, or when order unlocks a two-pointer or binary-search technique." },
+    { t: "Count what has to be decided",
+      d: "There are <b><var>n</var>!</b> possible orders and one is correct: 24 for four items. A comparison returns one of two answers, so it can at best halve the orders still possible. You need <var>k</var> comparisons with 2<sup><var>k</var></sup> ≥ <var>n</var>!: for 24 orders, <var>k</var> = 5. In general <var>k</var> ≈ <b><var>n</var> log <var>n</var></b>. This bound is on the problem, not on any one algorithm." },
+    { t: "Merge sort meets the bound",
+      d: "Split in half until pieces are single items: <b>log <var>n</var> levels</b>. Merging two sorted pieces is one walk with two fingers, taking the smaller front item each time: <b>O(<var>n</var>) per level</b>. For 5, 2, 8, 1: merging [5] with [2] and [8] with [1] takes 1 comparison each; merging [2, 5] with [1, 8] takes 3. Total 5, exactly the floor." },
+    { t: "Quicksort meets it on average, with no extra memory",
+      d: "Pick a pivot, say 5, and move smaller values left and larger ones right: 2, 1, 5, 8. The pivot is now in its final place; recurse on each side. A good pivot halves the array and gives O(<var>n</var> log <var>n</var>) in place. A bad one peels off one item at a time: <b>O(<var>n</var>²)</b>. So real code randomises the pivot." },
+    { t: "What your standard library actually runs",
+      d: "Rarely a textbook algorithm. <b>Timsort</b> (Python, and Java for objects) looks for stretches already in order and merges those, so nearly sorted input costs <b>O(<var>n</var>)</b>. <b>Introsort</b> (C++) is quicksort that switches to heap sort if its recursion gets too deep, so the O(<var>n</var>²) case cannot happen." },
+    { t: "The floor only applies to comparison sorts",
+      d: "The proof assumed information arrives one comparison at a time. Counting sort makes no comparisons: it uses each value as an <b>index</b>. For 5, 2, 8, 1 in the range 0 to 9, tally each value in a 10-slot array, then read the slots back in order. That is <b>O(<var>n</var> + <var>k</var>)</b> for <var>k</var> possible values: linear, when <var>k</var> is small." },
+    { t: "Stability is not a detail",
+      d: "A <b>stable</b> sort keeps equal items in their original order. That is what lets you sort by two keys: sort by the second key, then by the first, and the second order survives within each tie. With an unstable sort, that technique silently gives wrong answers." },
+    { t: "And sometimes you should not sort at all",
+      d: "Sorting to find the <var>k</var> largest is O(<var>n</var> log <var>n</var>) when a size-<var>k</var> heap does it in O(<var>n</var> log <var>k</var>). Sorting to find duplicates is O(<var>n</var> log <var>n</var>) when a hash set does it in O(<var>n</var>). Sort when you need the order itself, or when order unlocks two pointers or binary search." },
   ],
 
   variants: [
-    { n: "Insertion sort", cost: "O(n\u00b2) worst \u00b7 O(n) nearly sorted \u00b7 O(1) space \u00b7 stable",
-      idea: "Walk left to right, and slide each new element back into the part already sorted. Exactly how you sort a hand of cards, which is why nobody has to be taught it twice.",
-      when: "n is tiny, or the data is nearly sorted already. Real libraries switch to it for runs under about 16 elements, because the constants beat everything asymptotically better.",
-      watch: "It is O(n\u00b2) the moment the data is not nearly sorted. Fine as the base case of something bigger, not as your answer." },
-
-    { n: "Selection sort", cost: "O(n\u00b2) always \u00b7 O(1) space \u00b7 unstable",
-      idea: "Find the smallest remaining element, swap it into place, repeat.",
-      when: "Essentially never. It is here because it is taught, and because it makes exactly n-1 swaps, which matters only if writing is enormously more expensive than reading.",
-      watch: "It is O(n\u00b2) even on already-sorted input, because it scans the whole remainder regardless. Insertion sort dominates it in every practical sense." },
-
-    { n: "Bubble sort", cost: "O(n\u00b2) \u00b7 O(1) space \u00b7 stable",
-      idea: "Repeatedly sweep, swapping adjacent pairs that are out of order, until a sweep changes nothing.",
+    { n: "Insertion sort", cost: "O(n²) worst · O(n) nearly sorted · O(1) space · stable",
+      idea: "Walk left to right, sliding each new item back into the part already sorted. Exactly how you sort a hand of cards.",
+      when: "<var>n</var> is tiny, or the data is nearly sorted. Real libraries switch to it for runs under about 16 items, because its constants beat everything else there.",
+      watch: "It is O(<var>n</var>²) the moment the data is not nearly sorted. Fine as the base case of something bigger, not as your answer." },
+    { n: "Selection sort", cost: "O(n²) always · O(1) space · unstable",
+      idea: "Find the smallest remaining item, swap it into place, repeat.",
+      when: "Essentially never. It makes exactly <var>n</var> − 1 swaps, which matters only if writing is far more expensive than reading.",
+      watch: "It is O(<var>n</var>²) even on sorted input, because it scans the whole remainder every time. Insertion sort beats it in every practical sense." },
+    { n: "Bubble sort", cost: "O(n²) · O(1) space · stable",
+      idea: "Sweep again and again, swapping neighbours that are out of order, until a sweep changes nothing.",
       when: "Never, in production. Know it so you can recognise it and say why you are not using it.",
-      watch: "The early-exit version is O(n) on sorted input, which is the only nice thing anyone can say about it." },
-
-    { n: "Merge sort", cost: "O(n log n) guaranteed \u00b7 O(n) space \u00b7 stable",
-      idea: "Split in half until pieces are single elements, then merge sorted runs pairwise. <code>log n</code> levels of splitting, <code>O(n)</code> of merging per level.",
-      when: "You need the worst case guaranteed, or you need stability, or you are sorting a linked list, where it is the natural fit because merging needs no random access.",
-      watch: "The O(n) scratch buffer is the price. In-place merge sort exists, is fiddly, and is slower in practice than just paying for the memory." },
-
-    { n: "Quicksort", cost: "O(n log n) average \u00b7 O(n\u00b2) worst \u00b7 O(log n) stack \u00b7 unstable",
-      idea: "Pick a pivot, partition so smaller values sit left and larger right, then recurse on each side. The pivot lands in its final position and never moves again.",
-      when: "The default for arrays in practice. It sorts in place and has excellent cache behaviour, which is why it usually beats merge sort on real hardware despite the identical Big-O.",
-      watch: "A bad pivot every time gives O(n\u00b2). Randomise the pivot, or use median-of-three, and cap the recursion depth. Never take the first element as pivot on data that might arrive sorted." },
-
-    { n: "Heap sort", cost: "O(n log n) guaranteed \u00b7 O(1) space \u00b7 unstable",
-      idea: "Build a max-heap in O(n), then repeatedly swap the root to the end and sift down over the shrinking prefix.",
-      when: "You need a guaranteed worst case AND constant space. That combination is rare, which is why you rarely see it alone.",
-      watch: "It jumps all over memory, so it loses to quicksort in wall-clock time despite matching it on paper. Its real job is as introsort's safety net." },
-
-    { n: "Counting sort", cost: "O(n + k) \u00b7 O(k) space \u00b7 stable",
-      idea: "Do not compare anything. Tally how many times each value occurs, then read the tallies back out in order. The value <i>is</i> the index.",
-      when: "Keys are small integers with a bounded range k, such as ages, grades, or characters. This is how you legitimately beat the n log n floor.",
-      watch: "Cost and memory both scale with k, not just n. Sorting a handful of values spread across the whole integer range will allocate an array you will regret." },
-
-    { n: "Radix sort", cost: "O(d \u00b7 (n + k)) \u00b7 O(n + k) space \u00b7 stable",
+      watch: "The early-exit version is O(<var>n</var>) on sorted input, the only nice thing anyone says about it." },
+    { n: "Merge sort", cost: "O(n log n) guaranteed · O(n) space · stable",
+      idea: "Split in half until pieces are single items, then merge sorted pieces pairwise. log <var>n</var> levels of splitting, O(<var>n</var>) merging per level.",
+      when: "You need the worst case guaranteed, or stability, or you are sorting a linked list, where merging needs no random access.",
+      watch: "The O(<var>n</var>) scratch buffer is the price. In-place merge sort exists, is fiddly, and is slower in practice." },
+    { n: "Quicksort", cost: "O(n log n) average · O(n²) worst · O(log n) stack · unstable",
+      idea: "Pick a pivot, move smaller values left and larger right, then recurse on each side. The pivot lands in its final place and never moves again.",
+      when: "The practical default for arrays. It sorts in place and uses the cache well, so it usually beats merge sort on real hardware despite the same Big-O.",
+      watch: "A bad pivot every time gives O(<var>n</var>²). Randomise it, or use median-of-three, and cap the recursion depth. Never take the first item as pivot on data that might arrive sorted." },
+    { n: "Heap sort", cost: "O(n log n) guaranteed · O(1) space · unstable",
+      idea: "Build a max-heap in O(<var>n</var>), then repeatedly swap the root to the end and sift down over the shrinking front.",
+      when: "You need a guaranteed worst case AND constant space, a rare combination.",
+      watch: "It jumps all over memory, so it loses to quicksort in practice despite matching it on paper. Its real job is introsort's safety net." },
+    { n: "Counting sort", cost: "O(n + k) · O(k) space · stable",
+      idea: "Compare nothing. Tally how often each value occurs, then read the tallies back in order. The value <i>is</i> the index.",
+      when: "Keys are small whole numbers in a bounded range <var>k</var>: ages, grades, characters. This is how you legitimately beat the <var>n</var> log <var>n</var> floor.",
+      watch: "Time and memory scale with <var>k</var>, not just <var>n</var>. A handful of values spread over the whole integer range allocates an array you will regret." },
+    { n: "Radix sort", cost: "O(d · (n + k)) · O(n + k) space · stable",
       idea: "Counting sort applied one digit at a time, least significant digit first. Stability is what makes the earlier passes survive the later ones.",
-      when: "Large volumes of fixed-width keys: integers, dates, fixed-length strings.",
-      watch: "The d factor is the number of digits, so it is not magically linear. Break stability in the inner sort and the whole thing silently produces nonsense." },
-
-    { n: "Bucket sort", cost: "O(n) average \u00b7 O(n\u00b2) worst \u00b7 O(n) space",
-      idea: "Scatter values into buckets by range, sort each bucket, then concatenate.",
-      when: "Values are roughly uniformly distributed over a known range, floating point being the usual case.",
-      watch: "The average case assumes uniformity. Skewed data puts everything in one bucket and hands you the cost of whatever you sorted that bucket with." },
-
+      when: "Lots of fixed-width keys: integers, dates, fixed-length strings.",
+      watch: "The <var>d</var> factor is the number of digits, so it is not magically linear. Break stability in the inner sort and the result is nonsense." },
+    { n: "Bucket sort", cost: "O(n) average · O(n²) worst · O(n) space",
+      idea: "Scatter values into buckets by range, sort each bucket, then join them.",
+      when: "Values are roughly evenly spread over a known range, floating point being the usual case.",
+      watch: "The average case assumes an even spread. Skewed data puts everything in one bucket, and you pay for whatever sorted that bucket." },
     { n: "What your library actually runs", cost: "Timsort or introsort",
-      idea: "<b>Timsort</b> (Python, and Java for objects) finds runs that are already ordered and merges those, so partly sorted input costs closer to O(n). <b>Introsort</b> (C++) is quicksort that counts its recursion depth and bails out to heap sort before the worst case can happen.",
-      when: "Always, unless the interviewer asked you to implement one by hand.",
-      watch: "Know which one you are calling. Java is stable for objects and unstable for primitive arrays, and C++ sort is unstable while stable_sort is not. That difference decides whether multi-key sorting works." },
+      idea: "<b>Timsort</b> (Python, and Java for objects) merges stretches already in order, so partly sorted input costs closer to O(<var>n</var>). <b>Introsort</b> (C++) is quicksort that bails out to heap sort before its worst case can happen.",
+      when: "Always, unless you are asked to write one by hand.",
+      watch: "Know which you are calling. Java is stable for objects and unstable for primitive arrays; C++ <code>sort</code> is unstable and <code>stable_sort</code> is stable." },
   ],
 
-  hing: `<p><b>Sabse pehle woh baat jo interview mein points dilaati hai:</b> koi bhi comparison-based sort <b>O(n log n)</b> se tez nahi ho sakta. Yeh koi "abhi tak kisi ne socha nahi" wali baat nahi, yeh <b>proof</b> hai.</p>
-<p><b>Proof aasaan hai.</b> n cheezon ko lagane ke <b>n!</b> tarike hain, sahi sirf ek. Har comparison ka jawaab do mein se ek hota hai, matlab woh possibilities ko zyada se zyada <b>aadha</b> kar sakta hai. n! ko 1 tak laane ke liye chahiye ~<b>log₂(n!) ≈ n log n</b> comparisons. Bas.</p>
-<p><b>Merge sort theek isi limit par baithta hai.</b> Aadha-aadha todo → <b>log n levels</b>. Do sorted hisson ko jodna ek hi walk hai, do ungliyon se → <b>O(n) per level</b>. Guna karo: O(n log n), <b>worst case mein bhi</b>. Aur yeh <b>stable</b> hai. Keemat: O(n) extra memory.</p>
-<p><b>Quicksort</b> average par wahi speed deta hai par <b>O(1) extra space</b> mein, pivot chuno, chhote left, bade right, dono taraf recurse. Par pivot har baar ganda nikla to <b>O(n²)</b>. Isliye asli libraries pivot <b>random</b> chunti hain ya depth zyada hone par heap sort par switch kar deti hain.</p>
-<p><b>Library asal mein kya chalati hai?</b> Python aur Java (objects), <b>Timsort</b>: pehle se sorted tukde dhoondh kar unhe merge karta hai, isliye "lagbhag sorted" data par <b>O(n)</b>. C++, <b>introsort</b>: quicksort, aur gehrai badhne par heap sort.</p>
-<p><b>Limit se bachne ka ek hi raasta hai, compare karna hi band kar do.</b> Counting sort value ko seedha <b>index</b> ki tarah use karta hai, gin kar wapas likh deta hai → <b>O(n + k)</b>. Faayda tabhi jab values ki range (k) chhoti ho.</p>
-<p><b>Stability kyun maayne rakhti hai?</b> Barabar elements ka aapsi order na badle. Isi se <b>do keys par sorting</b> possible hoti hai: pehle chhoti key se sort karo, phir badi se. Chhoti wali order har group ke andar bachi reh jaati hai. C++ ka <code>sort</code> stable <b>nahi</b> hai (<code>stable_sort</code> alag hai), yeh yaad rakhna.</p>
-<p><b>Aur aakhri baat:</b> har jagah sort mat kar do. Top-k chahiye? Size-k heap se <b>O(n log k)</b>. Duplicate check karna hai? Hash set se <b>O(n)</b>. Sort tab karo jab tumhe <b>order khud chahiye</b>, ya order milne se two-pointer / binary search khul jaaye.</p>`,
+  hing: `<p><b>Sabse pehle woh baat jo interview mein points dilaati hai:</b> koi bhi comparison-based sort <b>O(<var>n</var> log <var>n</var>)</b> se tez nahi ho sakta. Yeh koi "abhi tak kisi ne socha nahi" wali baat nahi, yeh <b>proof</b> hai.</p>
+<p><b>Proof aasaan hai.</b> <var>n</var> cheezon ko lagane ke <b><var>n</var>!</b> tarike hain, sahi sirf ek. Har comparison ka jawaab do mein se ek hota hai, matlab woh possibilities ko zyada se zyada <b>aadha</b> kar sakta hai. <var>n</var>! ko 1 tak laane ke liye chahiye lagbhag <b>log₂(<var>n</var>!) ≈ <var>n</var> log <var>n</var></b> comparisons. Bas.</p>
+<p><b>Merge sort theek isi limit par baithta hai.</b> Aadha-aadha todo, to <b>log <var>n</var> levels</b>. Do sorted hisson ko jodna ek hi walk hai, do ungliyon se, to <b>O(<var>n</var>) per level</b>. Guna karo: O(<var>n</var> log <var>n</var>), <b>worst case mein bhi</b>. Aur yeh <b>stable</b> hai. Keemat: O(<var>n</var>) extra memory.</p>
+<p><b>Quicksort</b> average par wahi speed deta hai par <b>O(1) extra space</b> mein. Par pivot har baar ganda nikla to <b>O(<var>n</var>²)</b>. Isliye asli libraries pivot <b>random</b> chunti hain ya depth zyada hone par heap sort par switch kar deti hain.</p>
+<p><b>Library asal mein kya chalati hai?</b> Python aur Java (objects), <b>Timsort</b>: pehle se sorted tukde dhoondh kar unhe merge karta hai, isliye "lagbhag sorted" data par <b>O(<var>n</var>)</b>. C++, <b>introsort</b>: quicksort, aur gehrai badhne par heap sort.</p>
+<p><b>Limit se bachne ka ek hi raasta hai, compare karna hi band kar do.</b> Counting sort value ko seedha <b>index</b> ki tarah use karta hai, gin kar wapas likh deta hai: <b>O(<var>n</var> + <var>k</var>)</b>. Faayda tabhi jab values ki range (<var>k</var>) chhoti ho.</p>
+<p><b>Stability kyun maayne rakhti hai?</b> Barabar elements ka aapsi order na badle. Isi se <b>do keys par sorting</b> possible hoti hai. C++ ka <code>sort</code> stable <b>nahi</b> hai (<code>stable_sort</code> alag hai), yeh yaad rakhna.</p>
+<p><b>Aur aakhri baat:</b> har jagah sort mat kar do. Top-k chahiye? Size-k heap se <b>O(<var>n</var> log <var>k</var>)</b>. Duplicate check karna hai? Hash set se <b>O(<var>n</var>)</b>.</p>`,
 
   viz: ["merge-sort"],
   see: [["VA", "https://visualgo.net/en/sorting", "VisuAlgo, every sorting algorithm, animated"]],
 
   math: [
-    { t: "The lower bound, counted rather than asserted", d: "This is the rare complexity claim that is a proof about every possible algorithm, not a statement about the ones we happen to have written.", w:
-`n items have n! possible orderings
+    { t: "The lower bound, counted rather than asserted", d: "This is the rare complexity claim that is a proof about every possible algorithm, not a statement about the ones we happened to write.", w:
+`n items have n! possible orders
 one comparison has 2 outcomes, so k comparisons can
-distinguish at most 2^k arrangements
+tell apart at most 2^k orders
 
   2^k >= n!    ->    k >= log2(n!)
-Stirling:  log2(n!)  ~  n log2 n - 1.44 n
 
-n = 10^6:  at least 1.85 x 10^7 comparisons
+n = 4:     4! = 24,  2^4 = 16 < 24 <= 32 = 2^5
+           so at least 5 comparisons in the worst case
+n = 10^6:  log2(n!) ~ n log2 n - 1.44 n = 1.85 x 10^7
 no comparison sort beats that. Ever.` },
-    { t: "Merge sort meets the bound, levels times work", d: "Split, recurse, merge. Every level does n units of merging and there are log n levels, which lands within a few percent of the floor.", w:
+    { t: "Merge sort on 5, 2, 8, 1, comparison by comparison", d: "Split into single items, then merge pairs by always taking the smaller front item. The count lands exactly on the floor.", w:
+`split:   [5] [2] [8] [1]
+
+merge [5] + [2]:        5 vs 2 -> 2, then 5       1 comparison
+merge [8] + [1]:        8 vs 1 -> 1, then 8       1 comparison
+merge [2,5] + [1,8]:    2 vs 1 -> 1
+                        2 vs 8 -> 2
+                        5 vs 8 -> 5, then 8       3 comparisons
+
+result [1, 2, 5, 8]:    5 comparisons, the floor for n = 4` },
+    { t: "Merge sort at scale, levels times work", d: "Every level does <var>n</var> units of merging, and there are log <var>n</var> levels. That lands within a few percent of the floor.", w:
 `T(n) = 2 T(n/2) + n
 
 levels           log2 n
-work per level   n           (every element merged once)
+work per level   n           (every item merged once)
 total            n log2 n
 
 n = 10^6:  2.0 x 10^7 comparisons
-the proven floor was 1.85 x 10^7
-merge sort is within 8 % of optimal, always` },
-    { t: "Quicksort: the same recurrence with a different pivot", d: "The average and the worst case differ by four orders of magnitude, and which one you get is decided entirely by the pivot rule.", w:
-`good pivot:  T(n) = 2T(n/2) + n  ->  n log2 n
+the proven floor was 1.85 x 10^7: within 8 %` },
+    { t: "Quicksort: the same recurrence with a different pivot", d: "The average and the worst case differ by four orders of magnitude, and the pivot rule alone decides which you get.", w:
+`pivot 5 on [5, 2, 8, 1]:   smaller [2, 1], pivot 5, larger [8]
+                           5 is now in its final place
+
+good pivot:  T(n) = 2T(n/2) + n  ->  n log2 n
 worst pivot: T(n) = T(n-1) + n   ->  n^2 / 2
 
 n = 10^6:   2 x 10^7    vs    5 x 10^11
 
-random pivots, expected: 1.39 n log2 n
-  about 39 % more comparisons than merge sort, and no
-  second array, which is why libraries still ship it
+sorted input + first-item pivot = the worst case` },
+    { t: "Escaping the bound means not comparing", d: "The proof only binds algorithms whose only move is a comparison. Counting sort reads the value itself, which is why it may be linear.", w:
+`values 5, 2, 8, 1 in the range 0..9:
+  count[1] = count[2] = count[5] = count[8] = 1
+  read slots 0..9 in order:  1, 2, 5, 8     no comparisons
 
-sorted input + first-element pivot = the worst case` },
-    { t: "Escaping the bound means not comparing", d: "The proof only binds algorithms whose only move is a comparison. Counting sort looks at the value itself, which is why it is allowed to be linear.", w:
-`values in [0, k): count them, then walk the counts
-  time O(n + k), space O(k)
-
-n = 10^6 values in [0, 100)    ~ 10^6 steps        fine
-n = 10^6 values in [0, 10^9)   10^9 counters       no
-
-radix sort: d passes of counting sort, O(d(n + k))
-32-bit integers, 8 bits per pass: d = 4, k = 256` },
-    { t: "What your library actually runs", d: "Knowing which sort is under the call decides whether a second sort pass is safe, and whether an adversarial input can hurt you.", w:
-`Python  sorted, list.sort   TimSort, stable, n log n worst
-Java    objects             TimSort, stable
-Java    primitives          dual-pivot quicksort, unstable
-C++     std::sort           introsort, unstable
-C++     std::stable_sort    merge, stable, extra memory
-
-introsort = quicksort, switching to heapsort past a
-depth of 2 log2 n, so the n^2 case cannot happen` },
+time O(n + k), space O(k)
+n = 10^6 scores in [0, 100)     ~ 10^6 steps        fine
+n = 10^6 ids in [0, 10^9)       10^9 counters       no` },
   ],
 
   costs: [
-    ["comparison-sort lower bound", "Ω(n log n)", "log₂(n!) comparisons are information-theoretically required"],
+    ["comparison-sort lower bound", "Ω(n log n)", "log₂(n!) comparisons are needed, whatever the algorithm"],
     ["merge sort", "O(n log n) · O(n) space", "worst case too; stable"],
     ["quicksort", "O(n log n) average · O(n²) worst", "O(log n) stack, O(1) extra; unstable"],
     ["heap sort", "O(n log n) · O(1) space", "worst case too, but unstable and cache-unfriendly"],
-    ["Timsort (library)", "O(n log n) · O(n) at worst", "O(n) on nearly-sorted input; stable"],
-    ["counting / radix sort", "O(n + k)", "no comparisons, only when the value range k is small"],
-    ["insertion sort", "O(n²) · O(1)", "genuinely fastest for tiny or nearly-sorted arrays"],
+    ["Timsort (library)", "O(n log n) · O(n) space", "O(n) on nearly sorted input; stable"],
+    ["counting / radix sort", "O(n + k)", "no comparisons, and only when the value range k is small"],
+    ["insertion sort", "O(n²) · O(1)", "really the fastest for tiny or nearly sorted arrays"],
   ],
 
   traps: [
     "<b>JavaScript's default sort compares as text.</b> <code>[10, 9].sort()</code> gives <code>[10, 9]</code>. Always pass a comparator for numbers.",
     "<b>Assuming the library sort is stable.</b> C++ <code>sort</code> is not; <code>stable_sort</code> is. Java is stable for objects but not for primitive arrays.",
-    "<b>Sorting inside a loop.</b> An O(n log n) call in an O(n) loop is O(n² log n), sort once, before the loop.",
-    "<b>A comparator that is not consistent.</b> Returning a boolean, or claiming a &lt; b and b &lt; a, is undefined behaviour and can crash in C++.",
-    "<b>Sorting when a heap or a hash set would do.</b> Top-k is O(n log k); duplicate detection is O(n).",
+    "<b>Sorting inside a loop.</b> An O(<var>n</var> log <var>n</var>) call in an O(<var>n</var>) loop is O(<var>n</var>² log <var>n</var>). Sort once, before the loop.",
+    "<b>A comparator that is not consistent.</b> Returning a boolean, or claiming <var>a</var> &lt; <var>b</var> and <var>b</var> &lt; <var>a</var>, is undefined behaviour and can crash in C++.",
+    "<b>Sorting when a heap or a hash set would do.</b> Top-k is O(<var>n</var> log <var>k</var>); duplicate detection is O(<var>n</var>).",
   ],
 
   impl: [
@@ -11806,107 +11815,267 @@ function countingSort(a, k) {            // O(n + k), no comparisons
   codecap: "Know the merge and the partition by heart; in real code, call the library and know which one it runs.",
 
   q: [
-    ["Why can no comparison sort beat O(n log n)?", "There are n! possible orderings and each comparison has two outcomes, so it can only halve the field. Isolating one ordering needs at least log₂(n!) ≈ n log n comparisons."],
-    ["Merge sort versus quicksort, the real trade?", "Merge sort is O(n log n) even in the worst case and stable, but needs O(n) extra memory. Quicksort sorts in place with O(1) extra but degrades to O(n²) on bad pivots, so libraries randomise or fall back to heap sort."],
-    ["Why is Timsort O(n) on nearly-sorted input?", "It detects runs that are already in order and merges those instead of splitting blindly, so pre-existing order becomes work it does not have to do."],
-    ["How does counting sort beat the lower bound?", "It never compares elements. It uses each value as an index into a tally array, so the information-theoretic argument does not apply. O(n + k), useful only when the value range k is small."],
-    ["What is stability and when do you actually need it?", "Equal elements keep their original relative order. It is what makes multi-key sorting work: sort by the secondary key, then the primary, and the secondary order survives within each group."],
-    ["Name two cases where sorting is the wrong tool.", "Top-k, where a size-k heap gives O(n log k) instead of O(n log n); and duplicate detection, where a hash set gives O(n)."],
+    ["Why can no comparison sort beat O(n log n)?", "There are n! possible orders and each comparison has two outcomes, so it can only halve the field. Singling out one order needs at least log₂(n!) ≈ n log n comparisons."],
+    ["Merge sort against quicksort: the real trade?", "Merge sort is O(n log n) even in the worst case, and stable, but needs O(n) extra memory. Quicksort sorts in place with O(1) extra but falls to O(n²) on bad pivots, so libraries randomise or fall back to heap sort."],
+    ["Why is Timsort O(n) on nearly sorted input?", "It finds stretches already in order and merges those instead of splitting blindly, so existing order is work it does not have to do."],
+    ["How does counting sort beat the lower bound?", "It never compares items. It uses each value as an index into a tally array, so the counting argument does not apply. O(n + k), useful only when the value range k is small."],
+    ["What is stability and when do you actually need it?", "Equal items keep their original order. It is what makes sorting by two keys work: sort by the second key, then the first, and the second order survives within each tie."],
+    ["Name two cases where sorting is the wrong tool.", "Top-k, where a size-k heap gives O(n log k) instead of O(n log n). And duplicate detection, where a hash set gives O(n)."],
   ],
 
   p: [
-    [912, "sort-an-array", "Sort an Array, write merge sort yourself", "M"],
     [88, "merge-sorted-array", "Merge Sorted Array, the merge step alone", "E"],
+    [912, "sort-an-array", "Sort an Array, write merge sort yourself", "M"],
     [75, "sort-colors", "Sort Colors, counting, then one-pass Dutch flag", "M"],
     [148, "sort-list", "Sort List, merge sort on a linked list", "M"],
     [56, "merge-intervals", "Merge Intervals, sorting unlocks the sweep", "M"],
     [179, "largest-number", "Largest Number, a custom comparator", "M"],
     [215, "kth-largest-element-in-an-array", "Kth Largest, where sorting is the wrong tool", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek game ko har kuch second mein <b>10⁶ players</b> ko score se rank karna hai. Obvious sawaal “sort kaise karein?” nahi, balki <b>sorting kitni tez ho sakti hai</b>, aur kab usse tez hone ki ijaazat hai?</p>
+<p>Chhota version: chaar scores, <code>5, 2, 8, 1</code>, jinhe order <code>1, 2, 5, 8</code> mein lagana hai. Inhe lagane ke 4! = 24 tareeke hain, aur sahi sirf ek.</p>`,
+      tries: [
+        ["Har pair compare karo aur swap karo (selection ya bubble sort)", "Lagbhag <var>n</var>² / 2 comparisons: 10⁶ players ke liye 5 × 10¹¹. Yeh ek ghante se kaafi zyada, har kuch second mein."],
+        ["n log n se tez koi hoshiyaar comparison sort dhoondho", "Naamumkin. Har comparison ke do answers, to woh 10⁶! possible orders ko zyada se zyada aadha kar sakta hai. Ek ko alag karne ke liye kam se kam 1.85 × 10⁷ comparisons, algorithm chahe jo ho."],
+        ["Compare ki jagah har score gino", "Sach mein linear, jab scores 0 se 100 jaisi chhoti range mein hon. Player ids 10⁹ tak key hon, to 10⁹ counters chahiye."],
+      ],
+      so: `<p>To ek farsh hai: compare karke chalne wale har sort ko lagbhag <var>n</var> log₂ <var>n</var> comparisons chahiye. <b>Merge sort</b> aadha todkar aur sorted aadhe jodkar isse milta hai: 2 × 10⁷ comparisons, second ka ek hissa. <b>Quicksort</b> average par bina extra memory ke milta hai.</p>
+<p>Farsh ke neeche jaane ka ek hi raasta hai compare karna band karna, jaisa counting sort chhoti values par karta hai. Page poore mein <code>5, 2, 8, 1</code> sort karta hai: merge sort ise 5 comparisons mein karta hai, jo 4 items ka theek farsh hai.</p>`,
+    },
+
+    one: "Koi comparison sort <b>O(<var>n</var> log <var>n</var>)</b> ko nahi haraa sakta. Yeh proof hai, hoshiyaari ki kami nahi. Isse bachne ka matlab hai bilkul compare na karna.",
+
+    plain: `<p>Sorting aisi solved problem lagti hai jiske liye bas library bulao, aur zyadatar hai bhi. Maayne yeh rakhta hai ki library wahan <i>kyun</i> rukti hai, aur kab tez ja sakte ho.</p>
+<p>Hairaan karne wala hissa yeh hai. <var>n</var> items lagana matlab <var>n</var>! (“<var>n</var> factorial”) possible orders mein se ek chunna. <code>5, 2, 8, 1</code> ke liye yeh 24 hai. Har comparison ke do answers, to zyada se zyada bache orders aadhe karta hai. 24 se 1 tak jaane ko kam se kam 5 baar aadha karna padta hai, kyunki 2⁴ = 16 kaafi nahi. General mein lagbhag <var>n</var> log₂ <var>n</var> comparisons, algorithm kitna bhi hoshiyaar ho.</p>
+<p>To merge sort aur heap sort bas achhe nahi: comparison sorts mein <b>optimal</b> hain. Farsh ke paar ek hi raasta hai compare karna band karke values ko khud positions ki tarah use karna.</p>
+<p><b>Analogy.</b> Bees sawaal. Har haan-ya-na answer possibilities aadhi karta hai, to bees sawaal lagbhag das lakh cheezein alag kar sakte hain, aur kam se nahi hoga, kitni bhi achhi tarah chuno.</p>`,
+
+    why: [
+      { t: "Gino kya tay karna hai",
+        d: "<b><var>n</var>!</b> possible orders hain aur ek sahi: chaar items ke liye 24. Comparison do mein se ek answer deta hai, to zyada se zyada bache orders aadhe karta hai. <var>k</var> comparisons chahiye jahan 2<sup><var>k</var></sup> ≥ <var>n</var>!: 24 orders ke liye <var>k</var> = 5. General mein <var>k</var> ≈ <b><var>n</var> log <var>n</var></b>. Yeh bound problem par hai, kisi ek algorithm par nahi." },
+      { t: "Merge sort bound par pahunchta hai",
+        d: "Aadha karte jao jab tak tukde akele items hon: <b>log <var>n</var> levels</b>. Do sorted tukde jodna do ungliyon se ek walk hai, har baar chhota aage wala item lekar: <b>O(<var>n</var>) per level</b>. 5, 2, 8, 1 ke liye: [5] aur [2], aur [8] aur [1] jodna har ek 1 comparison; [2, 5] aur [1, 8] jodna 3. Kul 5, theek farsh." },
+      { t: "Quicksort average par pahunchta hai, bina extra memory",
+        d: "Pivot chuno, maan lo 5, aur chhote values left aur bade right karo: 2, 1, 5, 8. Pivot ab apni final jagah par; har taraf recurse karo. Achha pivot array aadha karta hai aur in place O(<var>n</var> log <var>n</var>) deta hai. Bura har baar ek item chheelta hai: <b>O(<var>n</var>²)</b>. Isliye asli code pivot randomise karta hai." },
+      { t: "Aapki standard library asal mein kya chalati hai",
+        d: "Kam hi textbook algorithm. <b>Timsort</b> (Python, aur objects ke liye Java) pehle se order wale hisse dhoondh kar unhe merge karta hai, to lagbhag sorted input <b>O(<var>n</var>)</b>. <b>Introsort</b> (C++) quicksort hai jo recursion bahut gehri ho to heap sort par jaata hai, to O(<var>n</var>²) case ho hi nahi sakta." },
+      { t: "Farsh sirf comparison sorts par lagta hai",
+        d: "Proof ne maana ki jaankari ek ek comparison se aati hai. Counting sort koi comparison nahi karta: har value ko <b>index</b> ki tarah use karta hai. 0 se 9 ki range mein 5, 2, 8, 1 ke liye har value 10-slot array mein gino, phir slots order mein padho. Yeh <var>k</var> possible values ke liye <b>O(<var>n</var> + <var>k</var>)</b> hai: linear, jab <var>k</var> chhota ho." },
+      { t: "Stability chhoti baat nahi",
+        d: "<b>Stable</b> sort barabar items ko unke original order mein rakhta hai. Isi se do keys par sort hota hai: doosri key se sort karo, phir pehli se, aur har tie mein doosra order bachta hai. Unstable sort ke saath yeh technique chupchaap galat answers deti hai." },
+      { t: "Aur kabhi kabhi sort karna hi nahi chahiye",
+        d: "<var>k</var> sabse bade ke liye sort O(<var>n</var> log <var>n</var>) hai jab size-<var>k</var> heap O(<var>n</var> log <var>k</var>) mein karta hai. Duplicates ke liye sort O(<var>n</var> log <var>n</var>) hai jab hash set O(<var>n</var>) mein. Tab sort karo jab order khud chahiye, ya order two pointers ya binary search khole." },
+    ],
+
+    variants: [
+      { n: "Insertion sort", cost: "O(n²) worst · O(n) nearly sorted · O(1) space · stable",
+        idea: "Left se right chalo, har naye item ko pehle se sorted hisse mein peeche khiskao. Bilkul waise jaise haath ke taash sort karte ho.",
+        when: "<var>n</var> bahut chhota ho, ya data lagbhag sorted. Asli libraries lagbhag 16 items se chhote hisson ke liye isi par jaati hain, kyunki wahan iske constants sabse behtar hain.",
+        watch: "Data lagbhag sorted na ho to yeh O(<var>n</var>²) hai. Kisi bade ka base case theek, aapka answer nahi." },
+      { n: "Selection sort", cost: "O(n²) always · O(1) space · unstable",
+        idea: "Bacha hua sabse chhota item dhoondho, apni jagah swap karo, dohrao.",
+        when: "Lagbhag kabhi nahi. Yeh theek <var>n</var> − 1 swaps karta hai, jo tabhi maayne rakhta hai jab likhna padhne se bahut mehenga ho.",
+        watch: "Sorted input par bhi O(<var>n</var>²), kyunki har baar poora bacha hissa scan karta hai. Insertion sort har practical tarah se behtar." },
+      { n: "Bubble sort", cost: "O(n²) · O(1) space · stable",
+        idea: "Baar baar sweep karo, galat order wale padosiyon ko swap karte hue, jab tak sweep kuch na badle.",
+        when: "Production mein kabhi nahi. Jaano taaki pehchan sako aur bata sako kyun use nahi kar rahe.",
+        watch: "Early-exit version sorted input par O(<var>n</var>) hai, iske baare mein ek hi achhi baat." },
+      { n: "Merge sort", cost: "O(n log n) guaranteed · O(n) space · stable",
+        idea: "Aadha karo jab tak tukde akele items hon, phir sorted tukdon ko jodi mein merge karo. log <var>n</var> levels splitting, har level O(<var>n</var>) merging.",
+        when: "Worst case guaranteed chahiye, ya stability, ya linked list sort kar rahe ho, jahan merge ko random access nahi chahiye.",
+        watch: "O(<var>n</var>) scratch buffer keemat hai. In-place merge sort hai, uljha hua, aur practice mein slow." },
+      { n: "Quicksort", cost: "O(n log n) average · O(n²) worst · O(log n) stack · unstable",
+        idea: "Pivot chuno, chhote values left aur bade right karo, phir har taraf recurse karo. Pivot apni final jagah girta hai aur phir kabhi nahi hilta.",
+        when: "Arrays ke liye practical default. In place sort karta hai aur cache achhe se use karta hai, to same Big-O ke bawajood aksar merge sort ko haraata hai.",
+        watch: "Har baar bura pivot O(<var>n</var>²). Randomise karo, ya median-of-three, aur recursion depth par cap lagao. Sorted aa sakne wale data par pehla item pivot kabhi mat lo." },
+      { n: "Heap sort", cost: "O(n log n) guaranteed · O(1) space · unstable",
+        idea: "O(<var>n</var>) mein max-heap banao, phir baar baar root ko end mein swap karke chhote hote aage wale hisse par sift down.",
+        when: "Guaranteed worst case AUR constant space dono chahiye, ek kam milne wala mel.",
+        watch: "Memory mein idhar udhar koodta hai, to paper par barabar hote hue bhi practice mein quicksort se haarta hai. Iska asli kaam introsort ka safety net hai." },
+      { n: "Counting sort", cost: "O(n + k) · O(k) space · stable",
+        idea: "Kuch compare mat karo. Gino har value kitni baar aati hai, phir tallies order mein wapas padho. Value <i>hi</i> index hai.",
+        when: "Keys bounded range <var>k</var> ke chhote whole numbers: umar, grades, characters. <var>n</var> log <var>n</var> farsh ko jaayaz tareeke se yahi haraata hai.",
+        watch: "Time aur memory <var>k</var> ke saath badhte hain, sirf <var>n</var> nahi. Poori integer range mein bikhri kuch values aisa array allocate karti hain jiska pachtaava hoga." },
+      { n: "Radix sort", cost: "O(d · (n + k)) · O(n + k) space · stable",
+        idea: "Counting sort ek ek digit par, sabse chhote digit se shuru. Stability hi pichhle passes ko agle passes mein bachati hai.",
+        when: "Bahut saari fixed-width keys: integers, dates, fixed-length strings.",
+        watch: "<var>d</var> digits ki ginti hai, to jaadu se linear nahi. Andar ke sort ki stability todi to result bakwaas." },
+      { n: "Bucket sort", cost: "O(n) average · O(n²) worst · O(n) space",
+        idea: "Values ko range se buckets mein bikhero, har bucket sort karo, phir jodo.",
+        when: "Values ek jaani range par lagbhag barabar phaili hon, aam taur par floating point.",
+        watch: "Average case barabar phailaav maanta hai. Tedha data sab ek bucket mein daal deta hai, aur jisne woh bucket sort kiya uski keemat dete ho." },
+      { n: "What your library actually runs", cost: "Timsort or introsort",
+        idea: "<b>Timsort</b> (Python, aur objects ke liye Java) pehle se order wale hisse merge karta hai, to aadha sorted input O(<var>n</var>) ke paas. <b>Introsort</b> (C++) quicksort hai jo worst case se pehle heap sort par nikal jaata hai.",
+        when: "Hamesha, jab tak haath se likhne ko na kaha jaaye.",
+        watch: "Jaano kaunsa bula rahe ho. Java objects ke liye stable aur primitive arrays ke liye unstable hai; C++ <code>sort</code> unstable hai aur <code>stable_sort</code> stable." },
+    ],
+
+    math: [
+      { t: "Lower bound, gin kar, bola nahi", d: "Yeh complexity ka woh kam milne wala daava hai jo har possible algorithm ke baare mein proof hai, sirf unke baare mein nahi jo humne likhe." },
+      { t: "5, 2, 8, 1 par merge sort, comparison by comparison", d: "Akele items mein todo, phir hamesha chhota aage wala item lekar jodiyan merge karo. Ginti theek farsh par girti hai." },
+      { t: "Bade scale par merge sort, levels guna kaam", d: "Har level <var>n</var> units merging karta hai, aur log <var>n</var> levels hain. Yeh farsh ke kuch percent andar girta hai." },
+      { t: "Quicksort: wahi recurrence alag pivot ke saath", d: "Average aur worst case mein chaar orders of magnitude ka farak hai, aur akela pivot rule tay karta hai kaunsa milega." },
+      { t: "Bound se bachna matlab compare na karna", d: "Proof sirf un algorithms ko baandhta hai jinka ek hi move comparison hai. Counting sort khud value padhta hai, isiliye linear ho sakta hai." },
+    ],
+
+    costs: [
+      ["comparison-sort lower bound", "Ω(n log n)", "log₂(n!) comparisons chahiye, algorithm chahe jo ho"],
+      ["merge sort", "O(n log n) · O(n) space", "worst case bhi; stable"],
+      ["quicksort", "O(n log n) average · O(n²) worst", "O(log n) stack, O(1) extra; unstable"],
+      ["heap sort", "O(n log n) · O(1) space", "worst case bhi, par unstable aur cache se dosti nahi"],
+      ["Timsort (library)", "O(n log n) · O(n) space", "lagbhag sorted input par O(n); stable"],
+      ["counting / radix sort", "O(n + k)", "koi comparison nahi, aur sirf jab value range k chhoti ho"],
+      ["insertion sort", "O(n²) · O(1)", "chhote ya lagbhag sorted arrays ke liye sach mein sabse tez"],
+    ],
+
+    traps: [
+      "<b>JavaScript ka default sort text ki tarah compare karta hai.</b> <code>[10, 9].sort()</code> deta hai <code>[10, 9]</code>. Numbers ke liye hamesha comparator do.",
+      "<b>Maan lena ki library sort stable hai.</b> C++ <code>sort</code> nahi; <code>stable_sort</code> hai. Java objects ke liye stable par primitive arrays ke liye nahi.",
+      "<b>Loop ke andar sort.</b> O(<var>n</var>) loop mein O(<var>n</var> log <var>n</var>) call O(<var>n</var>² log <var>n</var>) hai. Loop se pehle ek baar sort karo.",
+      "<b>Consistent na hone wala comparator.</b> Boolean lautana, ya <var>a</var> &lt; <var>b</var> aur <var>b</var> &lt; <var>a</var> dono kehna, undefined behaviour hai aur C++ mein crash kar sakta hai.",
+      "<b>Jab heap ya hash set chal jaata tab sort karna.</b> Top-k O(<var>n</var> log <var>k</var>) hai; duplicate detection O(<var>n</var>).",
+    ],
+
+    impl: [
+      ["Python", "list.sort() / sorted(), Timsort", "Stable. key= cmp= se behtar; sorted() copy karta hai, .sort() in place."],
+      ["Java", "Arrays.sort / Collections.sort", "Objects stable TimSort use karte hain; primitive arrays unstable dual-pivot quicksort."],
+      ["C++", "std::sort / std::stable_sort", "sort introsort hai aur stable NAHI. Comparator strict weak ordering hona chahiye."],
+      ["JavaScript", "Array.prototype.sort", "Comparator ke bina strings ki tarah sort karta hai. ES2019 se stable. In place sort karta hai."],
+    ],
+
+    codecap: "Merge aur partition dil se yaad rakho; asli code mein library bulao aur jaano woh kaunsa chalati hai.",
+
+    q: [
+      ["Koi comparison sort O(n log n) ko kyun nahi haraa sakta?", "n! possible orders hain aur har comparison ke do outcomes, to woh sirf aadha kar sakta hai. Ek order alag karne ko kam se kam log₂(n!) ≈ n log n comparisons chahiye."],
+      ["Merge sort vs quicksort: asli sauda?", "Merge sort worst case mein bhi O(n log n) aur stable hai, par O(n) extra memory chahiye. Quicksort O(1) extra ke saath in place sort karta hai par bure pivots par O(n²) girta hai, to libraries randomise karti hain ya heap sort par jaati hain."],
+      ["Lagbhag sorted input par Timsort O(n) kyun hai?", "Yeh pehle se order wale hisse dhoondh kar bina soche todne ki jagah unhe merge karta hai, to maujood order woh kaam hai jo use nahi karna padta."],
+      ["Counting sort lower bound ko kaise haraata hai?", "Yeh items kabhi compare nahi karta. Har value ko tally array mein index ki tarah use karta hai, to ginti wala argument lagu nahi hota. O(n + k), sirf jab value range k chhoti ho."],
+      ["Stability kya hai aur sach mein kab chahiye?", "Barabar items apna original order rakhte hain. Isi se do keys par sort chalta hai: doosri key se sort karo, phir pehli se, aur har tie mein doosra order bachta hai."],
+      ["Do cases batao jahan sorting galat tool hai.", "Top-k, jahan size-k heap O(n log n) ki jagah O(n log k) deta hai. Aur duplicate detection, jahan hash set O(n) deta hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "divide-conquer",
   n: "Divide and conquer",
   group: "Algorithms",
-  one: "Split until the pieces are trivial, solve them, then <b>combine</b>. The first two steps are bookkeeping. The combine step is where the algorithm actually is.",
+  need: {
+    ask: `<p>A music app wants to know how similar two people's taste is. Both rank the same <b>10⁶ songs</b>, and the measure is simple: count the pairs of songs they put in opposite order. Those pairs are called <b>inversions</b>.</p>
+<p>The small version: four films. One person ranks them 1, 2, 3, 4. The other's ranking, written in the first person's numbering, is <code>4, 2, 1, 3</code>. Of the 6 pairs, they disagree on 4.</p>`,
+    tries: [
+      ["Check every pair", "Fine for 4 films: 6 pairs. For 10⁶ songs it is <var>n</var>(<var>n</var> − 1) / 2 = 5 × 10¹¹ checks."],
+      ["Walk once, keeping the largest value seen so far", "The largest tells you <i>whether</i> something bigger came earlier, not <i>how many</i>. On 4, 2, 1, 3 it counts 1 for each of 2, 1 and 3, total 3. The answer is 4: 1 is behind both 4 and 2."],
+      ["Split in half, count each half, then check every pair across the halves", "The halves are cheap, but the cross pairs are not: the top level alone checks (<var>n</var>/2)² = 2.5 × 10¹¹. Splitting did nothing, because combining is still quadratic."],
+    ],
+    so: `<p>So make the combine step cheap. If each half comes back <b>sorted</b>, the cross pairs can be counted during a single merge walk. Take an item from the right half, and it is smaller than every item still waiting on the left: add that many at once.</p>
+<p>That makes combining O(<var>n</var>) per level, over log₂ <var>n</var> levels: 2 × 10⁷ steps instead of 5 × 10¹¹. The lesson is the whole technique. <b>Splitting is free, and the combine step decides the cost.</b> The page counts the 4 disagreements in <code>4, 2, 1, 3</code> throughout.</p>`,
+  },
 
-  plain: `<p>Three steps, always the same three. Divide the problem into smaller versions of itself, conquer those by recursion, then combine their answers into the answer you were asked for.</p>
-<p>The first two steps are almost never interesting. Splitting an array in half takes no thought. What separates one divide-and-conquer algorithm from another is entirely the third step. And the cost of the whole thing is usually the cost of combining, repeated once per level.</p>
-<p>Merge sort splits trivially and does its real work merging. Quicksort is the mirror image: it does the work up front partitioning, and its combine step is literally nothing, because the pieces are already in the right places. Same shape, opposite distribution of effort.</p>
-<p>And the reason it pays is that halving gives you only <b>log n</b> levels. Doing O(n) work on each of log n levels is O(n log n), which is a completely different animal from doing O(n) work n times.</p>
-<p><b>Analogy.</b> Counting a stadium crowd. You do not count 40,000 people. You split the stands into sections, hand each to somebody, and add up what they report. The addition is the only part you personally do, and it is the only part worth thinking about.</p>`,
+  one: "Split until the pieces are trivial, solve them, then <b>combine</b>. Splitting is bookkeeping. The combine step is the algorithm, and it decides the cost.",
+
+  plain: `<p>Three steps, always the same three. <b>Divide</b> the problem into smaller copies of itself. <b>Conquer</b> those by calling yourself on them. <b>Combine</b> their answers into the answer you were asked for.</p>
+<p>The first two steps need no thought. Splitting <code>4, 2, 1, 3</code> into <code>4, 2</code> and <code>1, 3</code> is just finding the middle. What makes one divide-and-conquer algorithm different from another is entirely the third step.</p>
+<p>Here, each half reports its own disagreements: 1 on the left (4 before 2) and 0 on the right. The combine step counts the pairs that cross the middle, and there are 3. Done by checking every cross pair, that step is as slow as the original problem. Done during a merge of sorted halves, it is one walk.</p>
+<p>Why the split pays at all: halving gives only <b>log <var>n</var> levels</b>. A walk of <var>n</var> steps on each of 20 levels is 2 × 10⁷ for a million items. The same walk done <var>n</var> times is 10¹².</p>
+<p><b>Analogy.</b> Counting a stadium crowd. You split the stands into sections, hand each to somebody, and add up what they report. The adding is the only part you do yourself, and the only part worth thinking about.</p>`,
 
   why: [
-    { t: "The combine step is the algorithm", d: "Dividing is usually a midpoint calculation and conquering is a recursive call. Neither requires insight. Merge sort's merge. Quickselect's decision about which side to recurse into. The counting of cross-pairs when counting inversions. <b>That</b> is where the thinking lives, and it is usually where the cost lives too." },
-    { t: "Cost is levels multiplied by work per level", d: "Draw the recursion tree. Halving gives <b>log n</b> levels. If every level does O(n) total work, you get O(n log n). If the work shrinks geometrically down the levels, the top dominates and the total is just O(n). If it grows, the leaves dominate. You almost never need more machinery than looking at the tree and asking which end is heavier." },
-    { t: "The master theorem is that observation, formalised", d: "For <code>T(n) = a·T(n/b) + f(n)</code>, compare the work at the top, <code>f(n)</code>, against the work at the leaves, <code>n^(log_b a)</code>. Whichever is bigger wins; if they match, you pay an extra log factor. Merge sort is a=2, b=2, f(n)=n, the two sides tie, and out comes n log n. Quote it, but read the tree first, because the tree is what you can reconstruct under pressure." },
-    { t: "Recursing into one side only changes the class", d: "Binary search splits and then recurses into <b>one</b> half, so the levels do O(1) work each and the total is O(log n). Quickselect does the same trick with partitioning. It only recurses into the side holding the rank it wants, so the work halves each time. The whole thing averages <b>O(n)</b> rather than O(n log n). Sorting to find the kth element is throwing away that saving." },
-    { t: "It is not a sorting technique, it is a shape", d: "Counting inversions is merge sort with a counter in the merge. Closest pair of points is a split by x with a clever strip check when combining. Fast exponentiation halves the exponent. Karatsuba multiplication and Strassen's matrix multiplication both beat the obvious algorithm purely by rearranging what gets combined. The shape transfers; the combine step is bespoke each time." },
-    { t: "It ends where the subproblems start to overlap", d: "Divide and conquer assumes the pieces are <b>independent</b>. The moment two branches ask the same question, you are recomputing, and the fix is to cache, which makes it dynamic programming. That independence is also why divide and conquer parallelises almost for free while DP largely does not: no branch is waiting on another." },
+    { t: "The combine step is the algorithm",
+      d: "Dividing is a midpoint and conquering is a recursive call. Neither needs insight. For 4, 2, 1, 3 the halves report 1 and 0, and all the thinking goes into the 3 pairs that cross the middle. <b>That</b> is where the algorithm lives, and usually where the cost lives too." },
+    { t: "Cost is levels multiplied by work per level",
+      d: "Draw the recursion tree. Halving gives <b>log <var>n</var> levels</b>. If every level does O(<var>n</var>) work in total, you get O(<var>n</var> log <var>n</var>). If the work shrinks going down, the top dominates. If it grows, the bottom does. Looking at the tree and asking which end is heavier almost always suffices." },
+    { t: "A slow combine throws the saving away",
+      d: "Count the cross pairs by checking each one, and the top level alone does (<var>n</var>/2)² work. Adding up all the levels gives about <var>n</var>² / 2, exactly what checking every pair cost. The split only pays when the combine is cheaper than the problem." },
+    { t: "The master theorem is that observation, as a formula",
+      d: "For <code>T(n) = a·T(n/b) + f(n)</code>, compare the work at the top, <code>f(n)</code>, with the work at the bottom, <code>n^(log_b a)</code>. The bigger one wins; a tie adds a log factor. Counting inversions is a = 2, b = 2, f(<var>n</var>) = <var>n</var>: a tie, so <var>n</var> log <var>n</var>. Quote it, but draw the tree first." },
+    { t: "Recursing into one side only changes the class",
+      d: "Binary search splits, then keeps <b>one</b> half, so the total is O(log <var>n</var>). Quickselect partitions and keeps only the side holding the rank it wants. For the 2nd smallest of 4, 2, 1, 3, partition around 3 gives 2, 1 | 3 | 4, and the 4 is never looked at again. Work <var>n</var> + <var>n</var>/2 + … adds up to 2<var>n</var>." },
+    { t: "It is a shape, not a sorting trick",
+      d: "Counting inversions is merge sort with a counter. Fast powers halve the exponent. Closest pair of points splits by x and checks a thin strip when combining. Karatsuba multiplies large numbers with 3 half-size products instead of 4. The shape carries over; the combine step is new each time." },
+    { t: "It ends where the pieces start to overlap",
+      d: "Divide and conquer assumes the pieces are <b>independent</b>. Once two branches ask the same question, you are recomputing, and the fix is to cache: that is dynamic programming. Independence is also why it runs in parallel almost for free: no branch waits on another." },
   ],
 
   variants: [
     { n: "Binary search", cost: "O(log n)",
-      idea: "Divide, then recurse into only one half and combine nothing.",
+      idea: "Divide, then keep only one half and combine nothing.",
       when: "The search space is ordered, or a yes/no answer flips exactly once across it.",
-      watch: "The one-sided recursion is what makes it logarithmic rather than linear. See the binary search page for the invariant." },
-
+      watch: "Keeping one side is what makes it logarithmic rather than linear. The binary search page covers the invariant." },
     { n: "Merge sort", cost: "O(n log n), O(n) space",
-      idea: "Trivial split, all the work in the merge.",
+      idea: "A trivial split, and all the work in the merge.",
       when: "You need a guaranteed worst case, stability, or you are sorting a linked list.",
-      watch: "The merge is the whole algorithm. Get the stable comparison right and everything downstream behaves." },
-
+      watch: "The merge is the whole algorithm. Take from the left on ties and it stays stable." },
     { n: "Quicksort", cost: "O(n log n) average, O(n²) worst",
-      idea: "The mirror image: all the work in the partition, nothing at all in the combine.",
-      when: "In-memory arrays, where in-place beats the extra buffer.",
-      watch: "A bad pivot ruins it. Randomise, or cap the depth and fall back to heap sort." },
-
+      idea: "The mirror image: all the work in the partition, and nothing at all in the combine.",
+      when: "Arrays in memory, where sorting in place beats an extra buffer.",
+      watch: "A bad pivot ruins it. Randomise it, or cap the depth and fall back to heap sort." },
     { n: "Quickselect", cost: "O(n) average, O(n²) worst",
-      idea: "Partition, then recurse into only the side that contains the rank you want.",
-      when: "Kth largest or smallest, or a median, where you do not need the rest sorted.",
-      watch: "Beats both sorting and a size-k heap when k is large. C++ hands it to you as nth_element." },
-
+      idea: "Partition, then recurse into only the side that holds the rank you want.",
+      when: "The <var>k</var>-th largest or smallest, or a median, when the rest need not be sorted.",
+      watch: "It beats sorting, and beats a size-<var>k</var> heap when <var>k</var> is large. C++ hands it to you as <code>nth_element</code>." },
     { n: "Counting inversions", cost: "O(n log n)",
-      idea: "Merge sort with a counter: while merging, every time you take from the right half, it forms an inversion with everything remaining on the left.",
-      when: "Counting out-of-order pairs, or measuring how far a list is from sorted.",
-      watch: "Count during the merge, not after. Doing it afterwards means comparing all pairs again." },
-
+      idea: "Merge sort with a counter. Whenever the merge takes from the right half, add the number of items still waiting on the left.",
+      when: "Counting out-of-order pairs, or measuring how far one ranking is from another.",
+      watch: "Count during the merge, not after. Afterwards, the only way left is comparing all the pairs again." },
     { n: "Fast exponentiation", cost: "O(log n)",
-      idea: "x^n is (x^(n/2))², so halving the exponent turns n multiplications into log n.",
+      idea: "<var>x</var>ⁿ is (<var>x</var>ⁿᐟ²)², so halving the exponent turns <var>n</var> multiplications into log <var>n</var>.",
       when: "Large powers, and anything asking for a result modulo a prime.",
-      watch: "Handle odd exponents and a negative n. See the number theory page." },
+      watch: "Handle odd exponents and a negative <var>n</var>. The number theory page has the details." },
   ],
 
   hing: `<p><b>Teen kadam, hamesha wahi teen:</b> problem ko chhote tukdon mein <b>baanto</b>, har tukda recursion se <b>hal karo</b>, phir un jawaabon ko <b>jodo</b>.</p>
 <p><b>Par asli baat yeh hai:</b> pehle do kadam mein koi dimaag nahi lagta. Array ko aadha karna kya sochne wali cheez hai? <b>Poora algorithm teesre kadam mein hota hai</b>, jodne mein. Aur aksar poori cost bhi wahin hoti hai.</p>
 <p><b>Do ulte udaharan yaad rakho:</b> merge sort baantne mein kuch nahi karta, saara kaam <b>merge</b> mein karta hai. Quicksort bilkul ulta hai. Saara kaam <b>partition</b> mein pehle hi ho jaata hai. Uska combine step <b>bilkul khaali</b> hota hai, kyunki tukde pehle se sahi jagah par hain.</p>
-<p><b>Cost nikalne ka ek hi tarika:</b> recursion tree banao. Aadha-aadha karne se <b>log n levels</b> bante hain. Har level par O(n) kaam = <b>O(n log n)</b>. Bas dekho ki <b>upar bhaari hai ya neeche</b>, jo bhaari hai wahi answer hai. Master theorem isi observation ka formula hai, magic nahi.</p>
-<p><b>Ek taraf recurse karne se class hi badal jaati hai.</b> Binary search aadha karke sirf <b>ek</b> taraf jaata hai, isliye O(log n). Quickselect bhi partition ke baad sirf us taraf jaata hai jahan tumhara kth element hai, isliye average <b>O(n)</b>, poora sort nahi. Kth largest ke liye sort karna is bachat ko phenk dena hai.</p>
+<p><b>Cost nikalne ka ek hi tarika:</b> recursion tree banao. Aadha-aadha karne se <b>log <var>n</var> levels</b> bante hain. Har level par O(<var>n</var>) kaam = <b>O(<var>n</var> log <var>n</var>)</b>. Bas dekho ki <b>upar bhaari hai ya neeche</b>, jo bhaari hai wahi answer hai. Master theorem isi observation ka formula hai, magic nahi.</p>
+<p><b>Ek taraf recurse karne se class hi badal jaati hai.</b> Binary search aadha karke sirf <b>ek</b> taraf jaata hai, isliye O(log <var>n</var>). Quickselect bhi partition ke baad sirf us taraf jaata hai jahan tumhara <var>k</var>-th element hai, isliye average <b>O(<var>n</var>)</b>, poora sort nahi.</p>
 <p><b>Yeh sirf sorting ki cheez nahi hai.</b> Inversions ginna = merge sort mein ek counter. Fast exponentiation = exponent aadha karna. Closest pair, Karatsuba, Strassen, sab yahi shakal hain, bas jodne ka tarika alag hai.</p>
-<p><b>Aur yeh kahan khatam hota hai?</b> Divide and conquer maanta hai ki tukde <b>ek doosre se alag</b> hain. Jaise hi do branches ek hi sawaal poochne lagein, tum dobara kaam kar rahe ho, aur uska ilaaj cache hai, yaani <b>DP</b>. Isi independence ki wajah se divide and conquer aasaani se parallel chal jaata hai, aur DP nahi.</p>`,
+<p><b>Aur yeh kahan khatam hota hai?</b> Divide and conquer maanta hai ki tukde <b>ek doosre se alag</b> hain. Jaise hi do branches ek hi sawaal poochne lagein, tum dobara kaam kar rahe ho, aur uska ilaaj cache hai, yaani <b>DP</b>.</p>`,
 
-  viz: ["merge-sort"],
+  viz: ["inversions"],
   see: [["VA", "https://visualgo.net/en/sorting", "VisuAlgo, merge sort splitting and combining"]],
 
   math: [
-    { t: "Cost is levels multiplied by the work on each level", d: "Every divide and conquer analysis is this one table. Fill in three numbers and the total falls out without any theorem at all.", w:
+    { t: "4, 2, 1, 3, counted by the merge", d: "Each half reports its own count and comes back sorted. The merge then counts every cross pair without ever checking one individually.", w:
+`brute force: 6 pairs, 4 out of order:
+  (4,2) (4,1) (4,3) (2,1)
+
+split    [4, 2] | [1, 3]
+left     [4, 2]: 1 inversion, returned sorted as [2, 4]
+right    [1, 3]: 0 inversions, returned as [1, 3]
+
+merge [2, 4] with [1, 3]:
+  2 vs 1  take 1 from the right   2 and 4 still wait  +2
+  2 vs 3  take 2 from the left                        +0
+  4 vs 3  take 3 from the right   4 still waits       +1
+  copy 4
+cross = 3,   total = 1 + 0 + 3 = 4` },
+    { t: "Cost is levels multiplied by the work on each level", d: "Every divide and conquer analysis is this one table. Fill in three numbers, and the total falls out without any theorem.", w:
 `T(n) = a T(n/b) + f(n)
 
 depth of the recursion        log_b n
 subproblems at level i        a^i
-size of each at level i       n / b^i
 work done at level i          a^i x f(n / b^i)
 
-merge sort, a = 2, b = 2, f(n) = n:
-  level i:  2^i x (n / 2^i)  =  n
-  levels:   log2 n
-  total:    n log2 n` },
-    { t: "The master theorem is that table, formalised", d: "Compare the work at the leaves with the work at the root. Whichever dominates is the answer, and the middle case is when they tie.", w:
-`compare f(n) with n^(log_b a):
+inversions, merge combine:  a = 2, b = 2, f(n) = n
+  level i:  2^i x (n / 2^i)  =  n,    log2 n levels
+  total  n log2 n  =  2 x 10^7 at n = 10^6` },
+    { t: "The same split with a slow combine", d: "Checking every cross pair makes the top level quadratic, and the levels below add up to the same again. The split bought nothing.", w:
+`combine by checking all cross pairs:  f(n) = (n/2)^2
 
-  f smaller  ->  T = O(n^(log_b a))         leaves win
+level 0:   (n/2)^2           =  n^2 / 4
+level 1:   2 x (n/4)^2       =  n^2 / 8
+level 2:   4 x (n/8)^2       =  n^2 / 16
+total:     n^2/4 + n^2/8 + ...  ->  n^2 / 2
+
+n = 10^6:  5 x 10^11, the same as checking every pair` },
+    { t: "The master theorem is that table, formalised", d: "Compare the work at the leaves with the work at the root. Whichever is bigger is the answer, and a tie adds one log factor.", w:
+`compare f(n) with n^(log_b a):
+  f smaller  ->  T = O(n^(log_b a))         the leaves win
   f equal    ->  T = O(n^(log_b a) log n)   a tie
   f bigger   ->  T = O(f(n))                the root wins
 
@@ -11914,16 +12083,16 @@ binary search  a=1 b=2 f=1     n^0 = 1  tie   -> log n
 merge sort     a=2 b=2 f=n     n^1 = n  tie   -> n log n
 Karatsuba      a=3 b=2 f=n     n^1.585 > n    -> n^1.585
 Strassen       a=7 b=2 f=n^2   n^2.807 > n^2  -> n^2.807` },
-    { t: "Recursing into one side is a different class, not a saving", d: "Two branches visit everything. One branch throws half away at every level. The gap at n = 10^6 is five orders of magnitude.", w:
+    { t: "Recursing into one side is a different class", d: "Two branches visit everything. One branch throws half away at every level. At 10⁶ the gap is five orders of magnitude.", w:
 `T(n) = 2T(n/2) + 1   ->  2n - 1 calls     visits all
 T(n) =  T(n/2) + 1   ->  log2 n calls     binary search
 
 n = 10^6:   2,000,000   vs   20
 
-quickselect: T(n) = T(n/2) + n  ->  2n expected
-so the k-th smallest is linear on average, without
-sorting the other n - 1 elements first` },
-    { t: "Karatsuba, worked, because it shows where the saving comes from", d: "Four multiplications become three by spending an addition. That single removed branch is what moves the exponent off 2.", w:
+quickselect: T(n) = T(n/2) + n  ->  about 2n on average
+2nd smallest of 4, 2, 1, 3: pivot 3 -> [2, 1] 3 [4]
+the rank is on the left, so [4] is never touched` },
+    { t: "Karatsuba, because it shows where a saving comes from", d: "Four half-size multiplications become three by spending a few additions. That one removed branch moves the exponent off 2.", w:
 `x = a.B + b,  y = c.B + d       (each half n/2 digits)
 
 xy = ac.B^2 + (ad + bc).B + bd          4 multiplications
@@ -11931,34 +12100,34 @@ xy = ac.B^2 + (ad + bc).B + bd          4 multiplications
                                         3 multiplications
 
 T(n) = 3 T(n/2) + O(n)  ->  n^log2(3) = n^1.585
-
 n = 1024 digits:
-  schoolbook  1.05 x 10^6
-  Karatsuba   6.0 x 10^4` },
+  schoolbook  1024^2  =  1.05 x 10^6
+  Karatsuba   3^10    =  5.9 x 10^4` },
   ],
 
   costs: [
     ["general shape", "levels × work per level", "draw the tree and ask which end is heavier"],
     ["halve, O(n) combine", "O(n log n)", "merge sort, counting inversions"],
-    ["halve, O(1) combine, one side", "O(log n)", "binary search, fast exponentiation"],
-    ["halve, O(n) work, one side", "O(n) average", "quickselect, and why sorting for kth is wasteful"],
-    ["master theorem", "T(n) = a·T(n/b) + f(n)", "compare f(n) against n^(log_b a); the bigger one wins"],
+    ["halve, quadratic combine", "O(n²)", "the split saved nothing"],
+    ["halve, O(1) work, one side", "O(log n)", "binary search, fast exponentiation"],
+    ["halve, O(n) work, one side", "O(n) average", "quickselect, and why sorting for the k-th is wasteful"],
+    ["master theorem", "T(n) = a·T(n/b) + f(n)", "compare f(n) with n^(log_b a); the bigger one wins"],
     ["space", "O(depth) plus any buffer", "the call stack is O(log n) when the split is balanced"],
   ],
 
   traps: [
-    "<b>Assuming a balanced split.</b> Quicksort's O(n log n) needs the pivot to actually halve. Unbalanced splits give n levels, not log n, and the whole argument collapses.",
-    "<b>Recursing into both sides when one would do.</b> That is the difference between quickselect at O(n) and quicksort at O(n log n), and it is one <code>if</code>.",
-    "<b>Combining in more than linear time.</b> If your merge is O(n log n), the total becomes O(n log² n). The combine cost is the thing to protect.",
-    "<b>Using it where the subproblems overlap.</b> Naive Fibonacci is technically divide and conquer, and it is O(2ⁿ) because the branches ask the same questions. Cache and it becomes DP.",
-    "<b>Forgetting the base case is not always size one.</b> Real implementations switch to insertion sort below about sixteen elements, because the constants win there.",
+    "<b>Assuming the split is balanced.</b> Quicksort's O(<var>n</var> log <var>n</var>) needs the pivot to roughly halve. Lopsided splits give <var>n</var> levels, not log <var>n</var>, and the whole argument collapses.",
+    "<b>Recursing into both sides when one would do.</b> That is the difference between quickselect at O(<var>n</var>) and quicksort at O(<var>n</var> log <var>n</var>), and it is one <code>if</code>.",
+    "<b>A combine step slower than linear.</b> An O(<var>n</var> log <var>n</var>) merge makes the total O(<var>n</var> log² <var>n</var>). A quadratic one makes the split pointless. The combine cost is the thing to protect.",
+    "<b>Using it where the pieces overlap.</b> Plain recursive Fibonacci is divide and conquer, and it is O(2ⁿ) because branches ask the same questions. Cache the answers and it becomes DP.",
+    "<b>Assuming the base case must be size one.</b> Real sorts switch to insertion sort below about 16 items, because its small constants win there.",
   ],
 
   impl: [
-    ["Python", "recursion, or heapq/bisect for the built-in cases", "Recursion limit around 1000. A depth of log n is never the problem; unbalanced splits are."],
-    ["Java", "Arrays.sort, Collections.binarySearch", "Fork/Join exists for genuinely parallel divide and conquer, and is rarely worth it below large n."],
-    ["C++", "std::nth_element is quickselect, std::sort is introsort", "nth_element is O(n) average and exactly the right tool for a kth-element question."],
-    ["JavaScript", "no built-in select", "Recursion depth caps near 10k. Slicing arrays copies, so pass indices rather than sub-arrays."],
+    ["Python", "recursion, or heapq/bisect for the built-in cases", "Recursion limit around 1000. A depth of log n is never the problem; lopsided splits are."],
+    ["Java", "Arrays.sort, Collections.binarySearch", "Fork/Join exists for truly parallel divide and conquer, and rarely pays below large n."],
+    ["C++", "std::nth_element is quickselect, std::sort is introsort", "nth_element is O(n) average and exactly the tool for a k-th element question."],
+    ["JavaScript", "no built-in select", "Recursion depth caps near 10k. slice() copies, so pass indices rather than sub-arrays."],
   ],
 
   code: {
@@ -12097,7 +12266,7 @@ long long power(long long x, long long n, long long mod) {
     for (; n; n >>= 1, x = x * x % mod) if (n & 1) r = r * x % mod;
     return r;
 }`,
-    js: `// Pass indices, never slices: slicing copies and turns O(n log n) into O(n^2)
+    js: `// Pass indices, not slices: every slice is a copy, costing memory and time
 function quickselect(a, k) {
   let lo = 0, hi = a.length - 1;
   while (lo < hi) {
@@ -12130,15 +12299,15 @@ function power(x, n) {                 // O(log n)
   return result;
 }`,
   },
-  codecap: "Recurse into one side when you can, and protect the cost of the combine step. Those two choices decide the complexity class.",
+  codecap: "Recurse into one side when you can, and keep the combine step linear. Those two choices decide the complexity class.",
 
   q: [
-    ["Which of the three steps is the algorithm, and why?", "The combine. Splitting is usually a midpoint and conquering is a recursive call, neither of which needs insight. The combine is bespoke to the problem and is normally where the cost lives too."],
-    ["How do you get the complexity without the master theorem?", "Draw the recursion tree and multiply levels by the work per level. Halving gives log n levels; if each level does O(n) total work you get O(n log n). Then ask whether the top or the leaves dominate."],
+    ["Which of the three steps is the algorithm, and why?", "The combine. Splitting is usually a midpoint and conquering is a recursive call, neither of which needs insight. The combine is specific to the problem and is normally where the cost lives too."],
+    ["How do you get the complexity without the master theorem?", "Draw the recursion tree and multiply levels by the work per level. Halving gives log n levels; O(n) work per level gives O(n log n). Then ask whether the top or the bottom dominates."],
     ["Why is quickselect O(n) when quicksort is O(n log n)?", "It recurses into only the side containing the rank it wants, so the work halves each time: n + n/2 + n/4 and so on sums to 2n. Quicksort must handle both sides."],
-    ["How does merge sort count inversions?", "During the merge, whenever an element is taken from the right half, every element still remaining in the left half is greater than it, so add that count. One extra line inside the existing merge."],
-    ["When does divide and conquer stop being the right tool?", "When the subproblems overlap. Independent pieces are the assumption; once two branches ask the same question you are recomputing, and caching turns it into dynamic programming."],
-    ["Why does divide and conquer parallelise more easily than DP?", "Its subproblems are independent, so branches can run at the same time. DP's subproblems depend on each other by construction, which imposes an order."],
+    ["How does merge sort count inversions?", "During the merge, whenever an item is taken from the right half, every item still waiting in the left half is bigger than it, so add that count. One extra line inside the merge."],
+    ["When does divide and conquer stop being the right tool?", "When the pieces overlap. It assumes independent pieces; once two branches ask the same question you are recomputing, and caching turns it into dynamic programming."],
+    ["Why does divide and conquer run in parallel more easily than DP?", "Its pieces are independent, so branches can run at the same time. DP's subproblems depend on each other by construction, which forces an order."],
   ],
 
   p: [
@@ -12150,112 +12319,268 @@ function power(x, n) {                 // O(log n)
     [493, "reverse-pairs", "Reverse Pairs, counting during the merge", "H"],
     [240, "search-a-2d-matrix-ii", "Search a 2D Matrix II, discard a quadrant at a time", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek music app jaanna chahta hai ki do logon ka taste kitna milta hai. Dono same <b>10⁶ songs</b> rank karte hain, aur naap seedha hai: un song pairs ko gino jinhe dono ne ulte order mein rakha. Aise pairs ko <b>inversions</b> kehte hain.</p>
+<p>Chhota version: chaar films. Ek insaan unhe 1, 2, 3, 4 rank karta hai. Doosre ki ranking, pehle ki numbering mein likhi, hai <code>4, 2, 1, 3</code>. 6 pairs mein se 4 par woh asehmat hain.</p>`,
+      tries: [
+        ["Har pair check karo", "4 films ke liye theek: 6 pairs. 10⁶ songs ke liye <var>n</var>(<var>n</var> − 1) / 2 = 5 × 10¹¹ checks."],
+        ["Ek baar chalo, ab tak ki sabse badi value yaad rakhte hue", "Sabse badi value batati hai ki pehle koi bada aaya <i>ya nahi</i>, <i>kitne</i> nahi. 4, 2, 1, 3 par yeh 2, 1 aur 3 har ek ke liye 1 ginta hai, kul 3. Answer 4 hai: 1 dono 4 aur 2 ke peeche hai."],
+        ["Aadha karo, har half gino, phir halves ke paar har pair check karo", "Halves saste hain, par paar wale pairs nahi: sirf top level (<var>n</var>/2)² = 2.5 × 10¹¹ check karta hai. Todne se kuch nahi mila, kyunki jodna ab bhi quadratic hai."],
+      ],
+      so: `<p>To combine step sasta banao. Agar har half <b>sorted</b> wapas aaye, to paar wale pairs ek hi merge walk mein gine ja sakte hain. Right half se item lo, aur woh left mein intezaar kar rahe har item se chhota hai: utne ek saath jodo.</p>
+<p>Isse har level par jodna O(<var>n</var>) hota hai, log₂ <var>n</var> levels par: 5 × 10¹¹ ki jagah 2 × 10⁷ steps. Poori technique yahi seekh hai. <b>Todna muft hai, aur combine step cost tay karta hai.</b> Page poore mein <code>4, 2, 1, 3</code> ki 4 asehmatiyan ginta hai.</p>`,
+    },
+
+    one: "Tab tak todo jab tak tukde aasaan na hon, unhe hal karo, phir <b>jodo</b>. Todna bookkeeping hai. Combine step hi algorithm hai, aur wahi cost tay karta hai.",
+
+    plain: `<p>Teen kadam, hamesha wahi teen. Problem ko apni hi chhoti copies mein <b>baanto</b>. Unhe khud ko bula kar <b>hal karo</b>. Unke answers ko us answer mein <b>jodo</b> jo poocha gaya tha.</p>
+<p>Pehle do kadam mein sochna nahi padta. <code>4, 2, 1, 3</code> ko <code>4, 2</code> aur <code>1, 3</code> mein todna bas beech dhoondhna hai. Ek divide-and-conquer algorithm ko doosre se alag poori tarah teesra kadam banata hai.</p>
+<p>Yahan har half apni asehmatiyan batata hai: left par 1 (4 pehle 2 se) aur right par 0. Combine step beech ke paar wale pairs ginta hai, aur woh 3 hain. Har paar wala pair check karke yeh step original problem jitna slow hai. Sorted halves ke merge ke dauraan, yeh ek walk hai.</p>
+<p>Todna faayda kyun deta hai: aadha karne se sirf <b>log <var>n</var> levels</b> bante hain. 20 levels mein har ek par <var>n</var> steps ki walk das lakh items ke liye 2 × 10⁷ hai. Wahi walk <var>n</var> baar 10¹² hai.</p>
+<p><b>Analogy.</b> Stadium ki bheed ginna. Stands ko sections mein baanto, har ek kisi ko do, aur jo woh batayein jod lo. Jodna hi aap khud karte ho, aur sochne layak bhi wahi hai.</p>`,
+
+    why: [
+      { t: "Combine step hi algorithm hai",
+        d: "Baantna ek midpoint hai aur hal karna ek recursive call. Dono mein koi insight nahi. 4, 2, 1, 3 ke liye halves 1 aur 0 batate hain, aur saara sochna beech ke paar wale 3 pairs mein jaata hai. Algorithm <b>wahin</b> rehta hai, aur aksar cost bhi." },
+      { t: "Cost matlab levels guna har level ka kaam",
+        d: "Recursion tree banao. Aadha karne se <b>log <var>n</var> levels</b>. Har level kul O(<var>n</var>) kaam kare to O(<var>n</var> log <var>n</var>). Neeche jaate kaam ghate to top haavi. Badhe to neeche wala. Tree dekh kar poochna ki kaunsa sira bhaari hai lagbhag hamesha kaafi hai." },
+      { t: "Slow combine bachat phenk deta hai",
+        d: "Paar wale pairs ek ek check karke gino, to sirf top level (<var>n</var>/2)² kaam karta hai. Saare levels jodo to lagbhag <var>n</var>² / 2, theek utna jitna har pair check karne mein laga. Todna tabhi faayda deta hai jab combine problem se sasta ho." },
+      { t: "Master theorem yahi observation hai, formula ki shakal mein",
+        d: "<code>T(n) = a·T(n/b) + f(n)</code> ke liye top ka kaam, <code>f(n)</code>, neeche ke kaam, <code>n^(log_b a)</code>, se compare karo. Bada jeet-ta hai; tie ek log factor jodta hai. Inversions ginna a = 2, b = 2, f(<var>n</var>) = <var>n</var> hai: tie, to <var>n</var> log <var>n</var>. Ise quote karo, par pehle tree banao." },
+      { t: "Sirf ek taraf recurse karna class badal deta hai",
+        d: "Binary search todta hai, phir <b>ek</b> half rakhta hai, to kul O(log <var>n</var>). Quickselect partition karke sirf woh taraf rakhta hai jismein chahiye wala rank hai. 4, 2, 1, 3 ka 2nd smallest: 3 ke around partition 2, 1 | 3 | 4 deta hai, aur 4 ko phir dekha hi nahi jaata. Kaam <var>n</var> + <var>n</var>/2 + … jud kar 2<var>n</var>." },
+      { t: "Yeh ek shakal hai, sorting ki trick nahi",
+        d: "Inversions ginna counter wala merge sort hai. Fast powers exponent aadha karte hain. Closest pair of points x se todta hai aur jodte waqt ek patli strip check karta hai. Karatsuba bade numbers ko 4 ki jagah 3 half-size products se guna karta hai. Shakal saath chalti hai; combine step har baar naya." },
+      { t: "Yeh wahan khatam hota hai jahan tukde overlap karne lagein",
+        d: "Divide and conquer maanta hai ki tukde <b>alag</b> hain. Jaise hi do branches ek hi sawaal poochein, aap dobara ginti kar rahe ho, aur ilaaj cache hai: yahi dynamic programming hai. Isi alagpan se yeh lagbhag muft mein parallel chalta hai: koi branch doosri ka intezaar nahi karti." },
+    ],
+
+    variants: [
+      { n: "Binary search", cost: "O(log n)",
+        idea: "Baanto, phir sirf ek half rakho aur kuch mat jodo.",
+        when: "Search space ordered ho, ya haan/na answer uske paar theek ek baar palte.",
+        watch: "Ek taraf rakhna hi ise linear ki jagah logarithmic banata hai. Binary search page invariant samjhata hai." },
+      { n: "Merge sort", cost: "O(n log n), O(n) space",
+        idea: "Seedha sa todna, aur saara kaam merge mein.",
+        when: "Guaranteed worst case, stability chahiye, ya linked list sort kar rahe ho.",
+        watch: "Merge hi poora algorithm hai. Tie par left se lo aur yeh stable rehta hai." },
+      { n: "Quicksort", cost: "O(n log n) average, O(n²) worst",
+        idea: "Ulti tasveer: saara kaam partition mein, aur combine mein kuch bhi nahi.",
+        when: "Memory mein arrays, jahan in place sort extra buffer se behtar hai.",
+        watch: "Bura pivot ise barbaad karta hai. Randomise karo, ya depth cap karke heap sort par jao." },
+      { n: "Quickselect", cost: "O(n) average, O(n²) worst",
+        idea: "Partition karo, phir sirf us taraf recurse karo jismein chahiye wala rank hai.",
+        when: "<var>k</var>-th largest ya smallest, ya median, jab baaki sort na chahiye.",
+        watch: "Yeh sorting ko haraata hai, aur <var>k</var> bada ho to size-<var>k</var> heap ko bhi. C++ ise <code>nth_element</code> ke roop mein deta hai." },
+      { n: "Counting inversions", cost: "O(n log n)",
+        idea: "Counter wala merge sort. Jab bhi merge right half se le, left mein intezaar kar rahe items ki ginti jodo.",
+        when: "Galat order wale pairs ginna, ya ek ranking doosri se kitni door hai naapna.",
+        watch: "Merge ke dauraan gino, baad mein nahi. Baad mein bas saare pairs dobara compare karna bachta hai." },
+      { n: "Fast exponentiation", cost: "O(log n)",
+        idea: "<var>x</var>ⁿ = (<var>x</var>ⁿᐟ²)², to exponent aadha karna <var>n</var> multiplications ko log <var>n</var> bana deta hai.",
+        when: "Bade powers, aur jo bhi result kisi prime ke modulo maange.",
+        watch: "Odd exponents aur negative <var>n</var> sambhalo. Number theory page mein details hain." },
+    ],
+
+    math: [
+      { t: "4, 2, 1, 3, merge se gina hua", d: "Har half apni ginti batata hai aur sorted wapas aata hai. Phir merge har paar wala pair gin leta hai, bina kisi ko alag se check kiye." },
+      { t: "Cost matlab levels guna har level ka kaam", d: "Har divide and conquer analysis yahi ek table hai. Teen numbers bharo, aur bina theorem ke total nikal aata hai." },
+      { t: "Wahi todna, slow combine ke saath", d: "Har paar wala pair check karna top level ko quadratic banata hai, aur neeche ke levels phir utna hi jodte hain. Todne se kuch nahi mila." },
+      { t: "Master theorem wahi table hai, formal roop mein", d: "Leaves ka kaam root ke kaam se compare karo. Jo bada wahi answer, aur tie ek log factor jodta hai." },
+      { t: "Ek taraf recurse karna alag class hai", d: "Do branches sab dekhti hain. Ek branch har level par aadha phenk deti hai. 10⁶ par farak paanch orders of magnitude ka hai." },
+      { t: "Karatsuba, kyunki yeh dikhata hai bachat kahan se aati hai", d: "Chaar half-size multiplications kuch additions kharch karke teen ban jaati hain. Wahi ek hati hui branch exponent ko 2 se hataati hai." },
+    ],
+
+    costs: [
+      ["general shape", "levels × work per level", "tree banao aur poochho kaunsa sira bhaari hai"],
+      ["halve, O(n) combine", "O(n log n)", "merge sort, inversions ginna"],
+      ["halve, quadratic combine", "O(n²)", "todne se kuch nahi bacha"],
+      ["halve, O(1) work, one side", "O(log n)", "binary search, fast exponentiation"],
+      ["halve, O(n) work, one side", "O(n) average", "quickselect, aur k-th ke liye sort kyun bekaar hai"],
+      ["master theorem", "T(n) = a·T(n/b) + f(n)", "f(n) ko n^(log_b a) se compare karo; bada jeet-ta hai"],
+      ["space", "O(depth) plus any buffer", "balanced split par call stack O(log n)"],
+    ],
+
+    traps: [
+      "<b>Maan lena ki split balanced hai.</b> Quicksort ke O(<var>n</var> log <var>n</var>) ko pivot ka lagbhag aadha karna chahiye. Tedhe splits log <var>n</var> nahi, <var>n</var> levels dete hain, aur poora argument gir jaata hai.",
+      "<b>Jab ek taraf kaafi ho tab dono taraf recurse karna.</b> Yahi O(<var>n</var>) quickselect aur O(<var>n</var> log <var>n</var>) quicksort ka farak hai, aur yeh ek <code>if</code> hai.",
+      "<b>Linear se slow combine step.</b> O(<var>n</var> log <var>n</var>) merge total ko O(<var>n</var> log² <var>n</var>) bana deta hai. Quadratic wala todne ko bekaar bana deta hai. Combine ki cost hi bachaani hai.",
+      "<b>Jahan tukde overlap karein wahan use karna.</b> Seedha recursive Fibonacci divide and conquer hai, aur O(2ⁿ) hai kyunki branches wahi sawaal poochti hain. Answers cache karo aur yeh DP ban jaata hai.",
+      "<b>Maan lena ki base case size ek hi hona chahiye.</b> Asli sorts lagbhag 16 items se neeche insertion sort par jaate hain, kyunki wahan uske chhote constants jeet-te hain.",
+    ],
+
+    impl: [
+      ["Python", "recursion, or heapq/bisect for the built-in cases", "Recursion limit lagbhag 1000. log n depth kabhi dikkat nahi; tedhe splits hain."],
+      ["Java", "Arrays.sort, Collections.binarySearch", "Sach mein parallel divide and conquer ke liye Fork/Join hai, aur bade n ke neeche kam hi faayda deta hai."],
+      ["C++", "std::nth_element is quickselect, std::sort is introsort", "nth_element O(n) average hai aur k-th element sawaal ka theek tool."],
+      ["JavaScript", "no built-in select", "Recursion depth lagbhag 10k par rukti hai. slice() copy karta hai, to sub-arrays ki jagah indices bhejo."],
+    ],
+
+    codecap: "Jab ho sake ek taraf recurse karo, aur combine step linear rakho. Yahi do choices complexity class tay karti hain.",
+
+    q: [
+      ["Teen kadmon mein algorithm kaunsa hai, aur kyun?", "Combine. Todna aam taur par midpoint hai aur hal karna recursive call, dono mein insight nahi. Combine problem ke hisaab se hota hai aur aam taur par cost bhi wahin hoti hai."],
+      ["Master theorem ke bina complexity kaise nikaalte ho?", "Recursion tree banao aur levels ko har level ke kaam se guna karo. Aadha karne se log n levels; har level O(n) kaam se O(n log n). Phir poochho top haavi hai ya neeche."],
+      ["Quicksort O(n log n) hai to quickselect O(n) kyun?", "Yeh sirf us taraf recurse karta hai jismein chahiye wala rank hai, to kaam har baar aadha: n + n/2 + n/4 wagairah jud kar 2n. Quicksort ko dono taraf sambhalni padti hai."],
+      ["Merge sort inversions kaise ginta hai?", "Merge ke dauraan jab bhi right half se item liya jaaye, left half mein intezaar kar raha har item usse bada hai, to woh ginti jodo. Merge ke andar ek extra line."],
+      ["Divide and conquer kab sahi tool nahi rehta?", "Jab tukde overlap karein. Yeh alag tukde maanta hai; do branches ek hi sawaal poochein to aap dobara ginti kar rahe ho, aur caching ise dynamic programming bana deti hai."],
+      ["Divide and conquer DP se aasaani se parallel kyun chalta hai?", "Iske tukde alag hain, to branches saath chal sakti hain. DP ke subproblems banaawat se ek doosre par nirbhar hain, jo ek order thopta hai."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "backtracking",
   n: "Backtracking",
   group: "Algorithms",
-  one: "Walk the tree of decisions depth first: <b>choose, recurse, un-choose</b>. The undo is what lets a single path variable stand in for every branch.",
+  need: {
+    ask: `<p>A radio host has a gap of exactly 30 minutes and 40 songs to fill it with. The producer wants <b>every</b> set of songs that fills the gap exactly, to choose from. Not the best one: all of them.</p>
+<p>The small version: songs of 1, 2 and 3 minutes, and a 3-minute gap. There are two answers, <code>{1, 2}</code> and <code>{3}</code>.</p>`,
+    tries: [
+      ["One loop per song: take it or leave it", "For 3 songs that is 3 nested loops. But the song count comes from the input. You cannot write 40 nested loops, or a different number of them each day."],
+      ["Count through all 2ⁿ subsets as bit patterns, and keep the ones that add to 30", "Correct, and 2⁴⁰ = 1.1 × 10¹² subsets. Most are doomed after two picks: once two 20-minute songs are in, the set is over 30. Yet all 2³⁸ sets containing both still get built and summed."],
+    ],
+    so: `<p>So build a set <b>one decision at a time</b>, with recursion standing in for the nested loops. Add a song to one shared list, recurse, then <b>take it back out</b> and try the next song. That is <b>backtracking</b>: choose, recurse, un-choose.</p>
+<p>And check as you go. The moment the total passes 30, stop: the whole subtree below is never built. For the 3-minute gap, 8 possible sets shrink to 5 visited, and 3 are never entered.</p>`,
+  },
 
-  plain: `<p>Some questions do not want the best answer, they want <i>all</i> the answers: every subset, every permutation, every way to place eight queens. There is no clever formula waiting to be found. You have to look at the candidates, and backtracking is the tidy way to look at all of them exactly once.</p>
-<p>The idea is to build an answer one decision at a time. Pick a first element, then a second, and keep going until you either have a complete answer or you hit a rule that says this cannot work. Then step back one decision and try the next option instead.</p>
-<p>Stepping back is the whole trick, and it is literal: you <b>put the choice back</b> before trying the next one. One list is reused for the entire search, borrowed on the way down and returned on the way up. If you skip the return, the next branch starts wearing the last branch's clothes.</p>
-<p><b>Analogy.</b> A maze with chalk. At each junction you take a corridor and chalk a mark. Dead end? Walk back and <b>rub the mark out</b>, then take the next corridor. The chalk is your path, and rubbing out is the un-choose. Nobody ever solved a maze by leaving every wrong turn marked.</p>`,
+  one: "Walk the tree of decisions depth first: <b>choose, recurse, un-choose</b>. The undo lets one list stand in for every branch, and pruning is the only way to make it faster.",
+
+  plain: `<p>Some questions do not want the best answer. They want <i>all</i> of them: every subset, every order, every way to place eight queens. No formula skips the looking. Backtracking is the tidy way to look at each candidate once.</p>
+<p>Build an answer one decision at a time. With songs of 1, 2 and 3 minutes: take the 1, then the 2, and the total is 3. That fits, so record it. Then <b>put the 2 back</b>, and try the 3 instead.</p>
+<p>Putting it back is the whole trick, and it is literal. One list is reused for the entire search: borrowed on the way down, returned on the way up. Skip the return, and the next branch starts with the last branch's songs still in it.</p>
+<p>The second trick is stopping early. 1 + 3 is 4, already over the gap. Anything built on top of it is over too, so do not go down there at all. That is <b>pruning</b>.</p>
+<p><b>Analogy.</b> A maze with chalk. At each junction you take a corridor and chalk a mark. At a dead end, you walk back and <b>rub the mark out</b>, then take the next corridor. The chalk is your path, and rubbing it out is the un-choose.</p>`,
 
   why: [
     { t: "The question asks for all of them",
-      d: "\"Find one shortest path\" has room for cleverness. \"List every valid arrangement\" does not: if there are a million answers, you are printing a million answers. So the only sensible goal is to visit each candidate <b>once</b>, and never to visit a candidate that was doomed from the start." },
+      d: "“Find one shortest path” has room for cleverness. “List every valid arrangement” does not: a million answers means printing a million answers. So the only sensible goal is to visit each candidate <b>once</b>, and never to visit one that was doomed from the start." },
     { t: "Build the answer one decision at a time",
-      d: "Do not think about finished answers, think about <b>partial</b> ones. An empty list, then a list of one, then two. Every partial answer is a node, every choice you could add next is an edge, and the whole search space is a tree you never build in memory. Backtracking is just DFS on that tree, and the <code>recursion</code> concept already covers the DFS half." },
+      d: "Think about <b>partial</b> answers, not finished ones: {}, then {1}, then {1, 2}. Each partial answer is a node, each song you could add next is an edge, and the search space is a tree you never store. Backtracking is DFS on that tree, and the recursion page already covers the DFS half." },
     { t: "Choose, recurse, un-choose, and the undo is not optional",
-      d: "Going down the tree means appending your choice to the path. Coming back up means <b>popping it off again</b>. The path is one shared mutable object, so if a branch does not clean up, its sibling starts with leftovers and produces answers that were never valid. Every <code>push</code> needs its <code>pop</code> on <b>every</b> exit route, including the early return." },
+      d: "Going down means appending a choice to the path. Coming back up means <b>popping it off again</b>. The path is one shared list, so a branch that does not clean up leaves its choices for the next one. After {1, 2}, forgetting the pop would build {1, 2, 3} where {1, 3} was meant. Every push needs its pop on every exit." },
     { t: "Record a copy, not the path itself",
-      d: "When you reach a complete answer, the obvious line stores the path. The path then keeps mutating for the rest of the search, and since your results list only holds a reference, all of them mutate with it. You end up with N copies of the same empty list, which is at least consistent. Store <code>path[:]</code>, a snapshot." },
-    { t: "Duplicates in the input are handled at the level, not at the end",
-      d: "Given <code>[1, 2, 2]</code>, two different branches produce the same subset. De-duplicating the results afterwards works and is slow. Instead <b>sort the input</b> so equal values are neighbours, then inside the loop skip a value equal to the previous one <i>at the same level</i>. Equal values stacked on top of each other (ancestor and descendant) are fine, that is how <code>[2, 2]</code> gets built. Only equal <b>siblings</b> are the duplicate." },
+      d: "At an answer, the obvious line stores <code>path</code>. But the path keeps changing for the rest of the search, and the results list holds only a reference to it. Both answers end up as the same list, empty by the time the search finishes. Store <code>path[:]</code>, a snapshot." },
     { t: "The cost is the size of the tree, and pruning is the only lever",
-      d: "There are 2^n subsets and n! permutations. No implementation trick changes that, because the output is that big. What you <i>can</i> change is how much of the tree is doomed and still explored. Rejecting a choice at depth 3 removes the entire subtree beneath it, so a check that costs O(1) can delete millions of nodes. That is why N-Queens is tractable and brute force is not: same tree, one of them stops early." },
-    { t: "If the same state is reachable by many paths, you wanted DP",
-      d: "Backtracking assumes each node is a <b>distinct</b> partial answer worth exploring. Sometimes different decision orders land on the same state, and you only want a count or a best value rather than the arrangements themselves. Then you are re-solving identical subproblems, and the answer is memoisation. The tell: your recursion's state is small (an index and a remaining sum) but the tree is exponential." },
+      d: "<var>n</var> songs give 2<sup><var>n</var></sup> sets and <var>n</var> items give <var>n</var>! orders. No coding trick changes that when every answer is wanted. What you can change is how much doomed tree gets explored. Rejecting {1, 3} at a total of 4 removes everything below it, and on 40 songs a cut near the top removes 2³⁸ nodes." },
+    { t: "Duplicates in the input are handled at each level, not at the end",
+      d: "Given <code>[1, 2, 2]</code>, two branches build the same {1, 2}. Removing duplicates afterwards works, and is slow. Instead <b>sort the input</b> so equal values sit together, then skip a value equal to the previous one <i>at the same level</i>. One 2 under another is fine: that is how {2, 2} gets built. Only equal <b>siblings</b> repeat." },
+    { t: "If the same state is reached by many paths, you wanted DP",
+      d: "Backtracking assumes each node is a different partial answer worth listing. If you only want a <b>count</b> of the sets that fill the gap, many paths reach the same state: songs considered so far, minutes left. Then you are solving the same subproblem again and again, and the answer is to cache it. The tell: a small state driving an exponential tree." },
+  ],
+
+  variants: [
+    { n: "Subsets and combinations", cost: "O(2^n · n)",
+      idea: "Loop from a start index <var>i</var> to the end; each recursive call starts after the item just taken. Every node is a set.",
+      when: "Choose any group, or exactly <var>k</var> items, with order not mattering.",
+      watch: "The start index is what stops {1, 2} and {2, 1} from both appearing." },
+    { n: "Permutations", cost: "O(n! · n)",
+      idea: "Every position may take any item not already used, tracked by a <code>used[]</code> flag that is set on the way down and cleared on the way up.",
+      when: "Order matters: seatings, schedules, every arrangement of a string.",
+      watch: "The flag is state too, so it needs its own undo. 10! = 3.6 × 10⁶ is fine; 15! = 1.3 × 10¹² is not." },
+    { n: "Target sum with pruning", cost: "far less than 2^n in practice",
+      idea: "Carry the remaining total. Sort the input, and stop the loop the moment an item is bigger than what remains, since every later item is bigger still.",
+      when: "Combination sum, filling a gap, any budget.",
+      watch: "The <code>break</code> needs sorted input. Unsorted, a big item early does not mean the later ones are too big." },
+    { n: "Constraint placement", cost: "O(n!) bound, much less visited",
+      idea: "Place one piece per row, and keep sets of used columns and diagonals so each check is O(1).",
+      when: "N-Queens, Sudoku, graph colouring: any puzzle with local rules.",
+      watch: "Check when placing, not when the board is full. The early check is the entire speed-up." },
+    { n: "Grid search", cost: "O(cells · 3^L) for a word of length L",
+      idea: "DFS from each cell, marking the cell as used on the way in and unmarking it on the way out.",
+      when: "Word Search, and paths that may not revisit a cell.",
+      watch: "Unmark on every exit, including when the word is found. Otherwise a later start sees a cell as taken." },
   ],
 
   hing: `<p><b>Sabse pehle:</b> backtracking koi naya algorithm nahi hai, yeh <b>recursion + undo</b> hai. Ek decision tree par DFS, aur woh tree kabhi banate nahi, sirf uspar chalte hain.</p>
-<p><b>Skeleton teen line ka hai:</b> <code>choose</code>, <code>recurse</code>, <code>un-choose</code>. Aur teesri line hi asli hai. Path ek hi list hai jo poore search mein share hoti hai. Agar tumne pop nahi kiya, to agli branch pichhli branch ka kachra leke shuru hogi, aur output mein aise answers aayenge jo kabhi valid the hi nahi. Rule: har <code>push</code> ka <code>pop</code>, <b>har</b> exit path par, early return waale par bhi.</p>
-<p><b>Doosri classic galti:</b> <code>res.append(path)</code>. Yeh path ka <b>reference</b> store karta hai, aur path aage badalta rehta hai, to saare results ek saath badalte hain. Ant mein tumhare paas N khaali lists hoti hain. Hamesha <b>copy</b> daalo: Python <code>path[:]</code>, Java <code>new ArrayList&lt;&gt;(path)</code>, JS <code>[...path]</code>. C++ mein <code>push_back(path)</code> khud copy kar leta hai, wahan ulta problem hai: galti se poori vector by value pass kar doge.</p>
-<p><b>Duplicates ka funda saaf samajh lo.</b> Input mein <code>[1,2,2]</code> hai to do alag branches same subset bana dengi. Pehle <b>sort</b> karo taaki equal values paas-paas aa jaayein, phir loop ke andar: <code>if (j &gt; i && nums[j] == nums[j-1]) continue;</code>. Dhyaan do, yeh sirf <b>same level ke siblings</b> ko skip karta hai. Ek 2 ke upar doosra 2 rakhna bilkul allowed hai, warna <code>[2,2]</code> banega hi nahi. Yeh distinction interview mein poocha jaata hai.</p>
-<p><b>Complexity ka jawaab bina jhijhak do:</b> subsets O(2^n), permutations O(n!), aur har answer copy karne ka O(n) alag se. Interviewer "optimise karo" bole to yaad rakho: output hi itna bada hai, isliye asymptotic class nahi badlegi. Sirf ek cheez asli lever hai, <b>pruning</b>. Depth 3 par ek choice reject karna matlab uske neeche ka poora subtree gaya. Isiliye N-Queens chal jaata hai: same tree, bas jaldi ruk jaata hai.</p>
-<p><b>Aur last, sabse zyada marks wali baat:</b> maan lo alag-alag decision order se <b>same state</b> par pahunch rahe ho. Aur tumhein arrangements nahi, sirf count ya best value chahiye. To yeh backtracking ka kaam hai hi nahi. Wahan subproblems overlap kar rahe hain, aur jawaab <b>DP</b> hai. Pehchaan simple hai: state chhoti hai (ek index aur ek remaining sum), par tree exponential hai. Yeh line interview mein bol dena, kaafi log yahin fisalte hain.</p>`,
+<p><b>Skeleton teen line ka hai:</b> <code>choose</code>, <code>recurse</code>, <code>un-choose</code>. Aur teesri line hi asli hai. Path ek hi list hai jo poore search mein share hoti hai. Agar tumne pop nahi kiya, to agli branch pichhli branch ka kachra leke shuru hogi. Rule: har <code>push</code> ka <code>pop</code>, <b>har</b> exit path par, early return waale par bhi.</p>
+<p><b>Doosri classic galti:</b> <code>res.append(path)</code>. Yeh path ka <b>reference</b> store karta hai, aur path aage badalta rehta hai, to saare results ek saath badalte hain. Hamesha <b>copy</b> daalo: Python <code>path[:]</code>, Java <code>new ArrayList&lt;&gt;(path)</code>, JS <code>[...path]</code>.</p>
+<p><b>Duplicates ka funda:</b> input <code>[1,2,2]</code> hai to do alag branches same subset bana dengi. Pehle <b>sort</b> karo, phir loop mein <b>same level ke siblings</b> mein barabar value skip karo. Ek 2 ke upar doosra 2 rakhna allowed hai, warna <code>[2,2]</code> banega hi nahi.</p>
+<p><b>Complexity:</b> subsets O(2<sup><var>n</var></sup>), permutations O(<var>n</var>!), aur har answer copy karne ka O(<var>n</var>) alag se. Output hi itna bada hai, to class nahi badlegi. Asli lever sirf <b>pruning</b> hai: upar ek choice reject karna matlab uske neeche ka poora subtree gaya.</p>
+<p><b>Aur last:</b> alag decision order se <b>same state</b> par pahunch rahe ho, aur sirf count ya best value chahiye? To yeh backtracking ka kaam nahi, <b>DP</b> ka hai. Pehchaan: state chhoti hai, par tree exponential.</p>`,
 
   viz: ["backtracking"],
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, recursion tree, step it one frame at a time"]],
 
   math: [
-    { t: "The cost is the size of the tree, so count the tree", d: "Backtracking has no clever bound. You are enumerating, and what you can afford is decided before you write a line.", w:
+    { t: "Songs of 1, 2 and 3 minutes into a 3-minute gap", d: "Every node is a set, and each call only adds songs to the right of the last one taken. The loop stops at the first song that does not fit.", w:
+`sorted songs [1, 2, 3], gap 3, path starts empty
+
+{}            total 0
+  {1}         total 1
+    {1,2}     total 3   fits: record a copy of [1, 2], return
+                        so {1,2,3} is never built
+    +3        total 4   over: break, {1,3} never built
+  {2}         total 2
+    +3        total 5   over: break, {2,3} never built
+  {3}         total 3   fits: record a copy of [3]
+
+8 possible sets, 5 visited, 3 cut, 2 answers` },
+    { t: "The cost is the size of the tree, so count the tree", d: "Backtracking has no clever bound. You are listing, and what you can afford is decided before you write a line.", w:
 `subsets of n        2^n leaves, 2^(n+1) - 1 nodes
 permutations of n   n! leaves, about e x n! nodes
 combinations nCk    C(n, k) leaves
 
 n = 20, subsets        1.05 x 10^6     fine
+n = 40, subsets        1.1 x 10^12     no, unless pruned
 n = 10, permutations   3.6 x 10^6      fine
 n = 12, permutations   4.8 x 10^8      slow
 n = 15, permutations   1.3 x 10^12     no` },
-    { t: "The copy at the leaf, which nobody counts", d: "Recording an answer costs its length. For subsets that multiplies the leaf count by the average depth, and it dominates the recursion itself.", w:
+    { t: "The copy at the leaf, which nobody counts", d: "Recording an answer costs its length. For subsets that multiplies the leaf count by the average size, and it outweighs the recursion itself.", w:
 `all subsets of n = 20
-
-recursion nodes        2 x 10^6
 leaves                 2^20 = 1.05 x 10^6
 average subset length  n / 2 = 10
 element writes         1.05 x 10^6 x 10 = 10^7
 
 the output is bigger than the search. It has to be:
 the answer itself is that large.` },
-    { t: "Pruning is the only lever, and it multiplies", d: "Each constraint does not subtract work, it divides it. N-queens is the clean demonstration.", w:
-`8 queens on an 8x8 board
+    { t: "Pruning is the only lever, and it multiplies", d: "Each constraint does not subtract work, it divides it. Eight queens on a chessboard is the clean demonstration.", w:
+`8 queens on an 8x8 board, none attacking another
 
-every placement            8^8 = 16,777,216
-one per row                8!  =     40,320
-plus column and diagonal checks, nodes actually visited
-                                ~     2,057
-solutions found                        92
+one per square, any square   8^8 = 16,777,216
+one per row                  8!  =     40,320
+plus column and diagonal checks when placing,
+nodes actually visited                  2,057
+solutions found                            92
 
-three constraints, four orders of magnitude` },
-    { t: "Why the undo keeps space at O(depth)", d: "One shared path with a choose and an un-choose costs the depth. A fresh copy per branch costs the whole tree, which is the difference between 20 slots and 20 million.", w:
-`one shared path array, choose then un-choose:
+three rules, four orders of magnitude` },
+    { t: "Why the undo keeps space at O(depth)", d: "One shared path with a choose and an un-choose costs the depth. A fresh copy down every branch costs the whole tree.", w:
+`one shared path, choose then un-choose:
   space = depth = n
-
 a fresh copy down every branch:
   space = leaves x depth = 2^n x n
 
 n = 20:  20 slots  vs  2 x 10^7 slots
-
-the un-choose is one line and it is not optional` },
+the un-choose is one line, and it is not optional` },
   ],
 
   costs: [
-    ["all subsets of n items", "O(2^n * n)", "2^n nodes, and copying each finished path costs another n"],
-    ["all permutations of n items", "O(n! * n)", "n choices, then n-1, then n-2: the factorial is the tree, not the code"],
-    ["all combinations C(n, k)", "O(C(n,k) * k)", "the start index in the loop is what stops [1,2] and [2,1] both appearing"],
-    ["N-Queens on an n board", "O(n!) worst case, far less in practice", "column and diagonal checks kill a branch at depth 2 instead of depth n"],
+    ["all subsets of n items", "O(2^n · n)", "2^n nodes, and copying each finished set costs up to n"],
+    ["all permutations of n items", "O(n! · n)", "n choices, then n − 1, then n − 2: the factorial is the tree, not the code"],
+    ["all combinations C(n, k)", "O(C(n, k) · k)", "the start index stops [1,2] and [2,1] both appearing"],
+    ["N-Queens on an n board", "O(n!) bound, far less visited", "2,057 nodes for n = 8, against 40,320 row-by-row orders"],
     ["one choose plus one un-choose", "O(1)", "push and pop at the end of the list; removing from the front would be O(n)"],
-    ["extra space", "O(n) for the path plus O(n) stack", "the output itself is exponential, and is normally excluded by convention"],
+    ["extra space", "O(n) path plus O(n) stack", "the output itself is exponential, and is usually left out by convention"],
   ],
 
   traps: [
-    "<b>Storing the live path.</b> <code>res.append(path)</code> stores a reference that keeps changing under you, so every recorded answer ends up identical. Append <code>path[:]</code>.",
-    "<b>An un-choose that some branch skips.</b> A <code>continue</code>, a <code>return</code> or an exception between the push and the pop leaves the path dirty, and the bug shows up in a <i>later</i> answer, which is a wonderful way to lose forty minutes.",
-    "<b>Undoing only half the state.</b> If you set a <code>used[j]</code> flag or added to a visited set as well as the path, all of it comes back off. Undo in reverse order and it is hard to forget one.",
-    "<b>De-duplicating the results at the end.</b> Sorting the input and skipping equal siblings prunes the branch. Filtering afterwards means you paid for the whole doomed subtree first.",
-    "<b>Validating only at the leaf.</b> Checking a full board at depth n, when the conflict existed at depth 2, is the difference between finishing and timing out. Reject at the branch.",
-    "<b>Reaching for backtracking when the subproblems overlap.</b> If you want a count or a best value and the same state repeats, that is DP with a memo, and no amount of pruning will rescue the enumeration.",
+    "<b>Storing the live path.</b> <code>res.append(path)</code> stores a reference that keeps changing, so every recorded answer ends up identical. Append <code>path[:]</code>.",
+    "<b>An un-choose that some branch skips.</b> A <code>continue</code>, <code>return</code> or exception between the push and the pop leaves the path dirty. The bug then shows up in a <i>later</i> answer, far from its cause.",
+    "<b>Undoing only half the state.</b> If a <code>used[j]</code> flag or a visited set changed as well as the path, all of it comes back off. Undo in reverse order and it is hard to forget one.",
+    "<b>Removing duplicates at the end.</b> Sorting and skipping equal siblings cuts the branch. Filtering afterwards means the whole doomed subtree was paid for first.",
+    "<b>Checking only at the leaf.</b> Validating a full board at depth <var>n</var>, when the clash existed at depth 2, is the difference between finishing and timing out. Reject at the branch.",
+    "<b>Backtracking when the subproblems overlap.</b> If you want a count or a best value and the same state repeats, that is DP with a cache. No amount of pruning rescues the listing.",
   ],
 
   impl: [
-    ["Python", "list.append / list.pop, copy with path[:]", "Default recursion limit is about 1000 frames. @lru_cache cannot help here, the path is a mutable argument."],
-    ["Java", "ArrayList add / remove(size()-1), copy with new ArrayList<>(path)", "On a List<Integer>, remove(int) deletes by index and remove(Integer) by value. Guess which one you meant."],
-    ["C++", "vector push_back / pop_back", "res.push_back(path) already copies. Pass path and res by reference or you copy the whole vector at every node."],
-    ["JavaScript", "Array push / pop, copy with [...path]", "V8 caps at roughly 10k frames and throws RangeError. Closures over path avoid threading it through every call."],
+    ["Python", "list.append / list.pop, copy with path[:]", "Default recursion limit is about 1000 frames. @lru_cache cannot help: the path is shared, mutable state."],
+    ["Java", "ArrayList add / remove(size()-1), copy with new ArrayList<>(path)", "On a List<Integer>, remove(int) deletes by index and remove(Integer) by value. Know which you called."],
+    ["C++", "vector push_back / pop_back", "res.push_back(path) already copies. Pass path and res by reference, or you copy the whole vector at every node."],
+    ["JavaScript", "Array push / pop, copy with [...path]", "V8 caps at roughly 10k frames and throws RangeError. A closure over path avoids passing it to every call."],
   ],
 
   code: {
@@ -12335,8 +12660,8 @@ def combination_sum(nums, target):
             res.append(path[:]); return
         for j in range(i, len(nums)):
             if nums[j] > left: break   # PRUNE: every later value is bigger too
-            path.append(nums[j]); dfs(j, left - nums[j]); path.pop()
-    dfs(0, target)
+            path.append(nums[j]); dfs(j + 1, left - nums[j]); path.pop()
+    dfs(0, target)                     # j + 1: each item once; dfs(j, ...) allows reuse
     return res`,
     java: `// Same three lines. The copy is new ArrayList<>(path), the undo is remove(last).
 
@@ -12422,12 +12747,12 @@ function solveNQueens(n) {
   codecap: "One shared path, one loop over the options, and a pop that always runs. Change options() and you have changed the problem, not the algorithm.",
 
   q: [
-    ["Why must a backtracking function undo its choice?", "Because the path is one mutable object shared by the entire search. Without the pop, the sibling branch starts with the previous branch's choices still on it, and produces answers that were never valid."],
-    ["Why does res.append(path) give you a list of identical results?", "It stores a reference, not a snapshot. The path keeps mutating for the rest of the search, so every stored result changes with it. Append a copy, path[:]."],
-    ["What is the time complexity of generating all subsets, and can it be improved?", "O(2^n * n): 2^n nodes plus O(n) to copy each answer. It cannot be improved, because the output alone is that big. Only the constant and the pruning are yours to change."],
-    ["What is the only thing that actually makes a backtracking search faster?", "Pruning. Rejecting a choice at depth d removes the entire subtree below it, so an O(1) feasibility check can delete millions of nodes. Validating at the leaf instead does all the work first."],
-    ["How do you avoid duplicate answers when the input has repeated values?", "Sort the input so equal values are adjacent, then inside the loop skip a value equal to its predecessor at the same level (j > i and nums[j] == nums[j-1]). Equal values stacked as ancestor and descendant are legitimate, only equal siblings duplicate."],
-    ["When is backtracking the wrong tool?", "When different decision orders reach the same state and you only want a count or an optimum rather than the arrangements. The subproblems overlap, so it is DP with a memo. The tell is a small state, like an index plus a remaining sum, driving an exponential tree."],
+    ["Why must a backtracking function undo its choice?", "Because the path is one mutable list shared by the whole search. Without the pop, the next branch starts with the previous branch's choices still in it, and produces answers that were never valid."],
+    ["Why does res.append(path) give a list of identical results?", "It stores a reference, not a snapshot. The path keeps changing for the rest of the search, so every stored result changes with it. Append a copy, path[:]."],
+    ["What does generating all subsets cost, and can it be improved?", "O(2^n · n): 2^n nodes plus up to n to copy each answer. It cannot be improved, because the output alone is that big. Only the constant and the pruning are yours to change."],
+    ["What actually makes a backtracking search faster?", "Pruning. Rejecting a choice at depth d removes the whole subtree below it, so an O(1) check can remove millions of nodes. Checking at the leaf does all the work first."],
+    ["How do you avoid duplicate answers when the input has repeated values?", "Sort so equal values are adjacent, then skip a value equal to the one before it at the same level (j > i and nums[j] == nums[j-1]). Equal values stacked as parent and child are fine; only equal siblings repeat."],
+    ["When is backtracking the wrong tool?", "When different decision orders reach the same state and you only want a count or a best value. The subproblems overlap, so it is DP with a cache. The tell is a small state, like an index plus a remaining sum, driving an exponential tree."],
   ],
 
   p: [
@@ -12439,175 +12764,289 @@ function solveNQueens(n) {
     [79, "word-search", "Word Search, backtracking on a grid, mark and unmark the cell", "M"],
     [51, "n-queens", "N-Queens, where pruning is the whole algorithm", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek radio host ke paas theek 30 minute ka gap hai aur bharne ke liye 40 songs. Producer ko woh <b>har</b> songs ka set chahiye jo gap theek bhar de, taaki chun sake. Sabse achha nahi: saare.</p>
+<p>Chhota version: 1, 2 aur 3 minute ke songs, aur 3 minute ka gap. Do answers hain, <code>{1, 2}</code> aur <code>{3}</code>.</p>`,
+      tries: [
+        ["Har song ke liye ek loop: lo ya chhodo", "3 songs ke liye 3 nested loops. Par songs ki ginti input se aati hai. 40 nested loops nahi likh sakte, na har din alag ginti."],
+        ["Saare 2ⁿ subsets bit patterns ki tarah gino, aur jo 30 banayein woh rakho", "Sahi, aur 2⁴⁰ = 1.1 × 10¹² subsets. Zyadatar do picks ke baad hi bekaar: do 20-minute songs andar aate hi set 30 se upar. Phir bhi dono wale saare 2³⁸ sets bante aur jude jaate hain."],
+      ],
+      so: `<p>To set <b>ek ek decision</b> karke banao, nested loops ki jagah recursion se. Ek shared list mein song daalo, recurse karo, phir <b>use wapas nikaalo</b> aur agla song try karo. Yahi <b>backtracking</b> hai: choose, recurse, un-choose.</p>
+<p>Aur chalte chalte check karo. Jaise hi total 30 paar kare, ruko: neeche ka poora subtree kabhi nahi banta. 3 minute ke gap ke liye 8 possible sets mein se 5 dekhe jaate hain, aur 3 mein kabhi ghusa hi nahi jaata.</p>`,
+    },
+
+    one: "Decisions ke tree par depth first chalo: <b>choose, recurse, un-choose</b>. Undo se ek list har branch ka kaam karti hai, aur pruning hi ise tez karne ka ek raasta hai.",
+
+    plain: `<p>Kuch sawaal sabse achha answer nahi chahte. Unhe <i>saare</i> chahiye: har subset, har order, aath queens rakhne ka har tareeka. Koi formula dekhna nahi bachata. Backtracking har candidate ko ek baar dekhne ka saaf tareeka hai.</p>
+<p>Answer ek ek decision karke banao. 1, 2 aur 3 minute ke songs ke saath: 1 lo, phir 2, aur total 3. Fit hai, to record karo. Phir <b>2 wapas rakho</b>, aur uski jagah 3 try karo.</p>
+<p>Wapas rakhna hi poori trick hai, aur sach mein. Poore search mein ek hi list chalti hai: neeche jaate udhaar, upar aate wapas. Wapas na karo, to agli branch pichhli branch ke songs ke saath shuru hoti hai.</p>
+<p>Doosri trick jaldi rukna hai. 1 + 3 = 4, gap se pehle hi upar. Uske upar jo bhi bane woh bhi upar hoga, to wahan jao hi mat. Yahi <b>pruning</b> hai.</p>
+<p><b>Analogy.</b> Chalk ke saath bhool-bhulaiya. Har mod par ek gali lo aur chalk ka nishaan lagao. Band gali par wapas aao aur <b>nishaan mita do</b>, phir agli gali lo. Chalk aapka path hai, aur mitana un-choose.</p>`,
+
+    why: [
+      { t: "Sawaal saare answers maangta hai",
+        d: "“Ek shortest path dhoondho” mein hoshiyaari ki jagah hai. “Har valid arrangement batao” mein nahi: das lakh answers matlab das lakh answers print karna. To ek hi samajhdaar goal hai har candidate ko <b>ek baar</b> dekhna, aur shuru se bekaar wale ko kabhi nahi." },
+      { t: "Answer ek ek decision karke banao",
+        d: "Poore answers nahi, <b>adhoore</b> socho: {}, phir {1}, phir {1, 2}. Har adhoora answer ek node, har song jo aage jod sakte ho ek edge, aur search space ek tree jo kabhi store nahi hota. Backtracking us tree par DFS hai, aur recursion page DFS wala hissa pehle hi samjhata hai." },
+      { t: "Choose, recurse, un-choose, aur undo zaroori hai",
+        d: "Neeche jaana matlab path mein choice jodna. Upar aana matlab <b>use wapas pop karna</b>. Path ek shared list hai, to jo branch saaf nahi karti woh agli ke liye apni choices chhod jaati hai. {1, 2} ke baad pop bhoole to {1, 3} ki jagah {1, 2, 3} banega. Har push ka pop har exit par." },
+      { t: "Copy record karo, path khud nahi",
+        d: "Answer par seedhi line <code>path</code> store karti hai. Par path baaki search mein badalta rehta hai, aur results list mein sirf uska reference hai. Dono answers ek hi list ban jaate hain, search khatam hone tak khaali. <code>path[:]</code> store karo, ek snapshot." },
+      { t: "Cost tree ka size hai, aur pruning hi ek lever",
+        d: "<var>n</var> songs 2<sup><var>n</var></sup> sets dete hain aur <var>n</var> items <var>n</var>! orders. Jab har answer chahiye, koi coding trick yeh nahi badalti. Badal sakte ho ki kitna bekaar tree dekha jaaye. {1, 3} ko 4 total par reject karna neeche sab hata deta hai, aur 40 songs par upar ki ek kaat 2³⁸ nodes hataati hai." },
+      { t: "Input ke duplicates har level par sambhalo, end mein nahi",
+        d: "<code>[1, 2, 2]</code> diya ho to do branches same {1, 2} banati hain. Baad mein duplicates hataana chalta hai, aur slow hai. Iski jagah <b>input sort karo</b> taaki barabar values saath baithein, phir <i>usi level par</i> pichhli ke barabar value skip karo. Ek 2 ke neeche doosra 2 theek hai: {2, 2} aise hi banta hai. Sirf barabar <b>siblings</b> dohraate hain." },
+      { t: "Agar ek state kai raaston se aaye, to DP chahiye tha",
+        d: "Backtracking maanta hai ki har node ek alag adhoora answer hai jo list karne layak hai. Agar sirf gap bharne wale sets ki <b>ginti</b> chahiye, to kai raaste ek hi state par pahunchte hain: ab tak dekhe songs, bache minutes. Tab aap wahi subproblem baar baar hal kar rahe ho, aur answer cache karna hai. Pehchaan: chhoti state, exponential tree." },
+    ],
+
+    variants: [
+      { n: "Subsets and combinations", cost: "O(2^n · n)",
+        idea: "Start index <var>i</var> se end tak loop; har recursive call abhi liye item ke baad se shuru. Har node ek set hai.",
+        when: "Koi bhi group, ya theek <var>k</var> items chuno, order maayne nahi.",
+        watch: "Start index hi {1, 2} aur {2, 1} dono ko aane se rokta hai." },
+      { n: "Permutations", cost: "O(n! · n)",
+        idea: "Har position koi bhi item le sakti hai jo abhi use na hua ho, <code>used[]</code> flag se track, neeche jaate set aur upar aate clear.",
+        when: "Order maayne rakhta hai: seating, schedules, string ka har arrangement.",
+        watch: "Flag bhi state hai, to uska bhi undo chahiye. 10! = 3.6 × 10⁶ theek; 15! = 1.3 × 10¹² nahi." },
+      { n: "Target sum with pruning", cost: "far less than 2^n in practice",
+        idea: "Bacha total saath le chalo. Input sort karo, aur jaise hi koi item bache se bada ho loop rok do, kyunki baad wale aur bade hain.",
+        when: "Combination sum, gap bharna, koi bhi budget.",
+        watch: "<code>break</code> ko sorted input chahiye. Unsorted mein pehle bada item hone ka matlab yeh nahi ki baad wale bhi bade hain." },
+      { n: "Constraint placement", cost: "O(n!) bound, much less visited",
+        idea: "Har row mein ek piece rakho, aur used columns aur diagonals ke sets rakho taaki har check O(1) ho.",
+        when: "N-Queens, Sudoku, graph colouring: local rules wali koi bhi puzzle.",
+        watch: "Rakhte waqt check karo, board bharne par nahi. Jaldi check hi poori speed-up hai." },
+      { n: "Grid search", cost: "O(cells · 3^L) for a word of length L",
+        idea: "Har cell se DFS, andar jaate cell ko used mark karo aur bahar aate unmark.",
+        when: "Word Search, aur aise paths jo cell dobara na le sakein.",
+        watch: "Har exit par unmark karo, word milne par bhi. Warna baad ka start cell ko liya hua dekhta hai." },
+    ],
+
+    math: [
+      { t: "1, 2 aur 3 minute ke songs, 3 minute ke gap mein", d: "Har node ek set hai, aur har call sirf aakhri liye song ke right wale songs jodti hai. Loop pehle na fit hone wale song par ruk jaata hai." },
+      { t: "Cost tree ka size hai, to tree gino", d: "Backtracking ka koi hoshiyaar bound nahi. Aap list kar rahe ho, aur kya afford hai woh ek line likhne se pehle tay hai." },
+      { t: "Leaf par copy, jise koi nahi ginta", d: "Answer record karne ki cost uski lambai hai. Subsets ke liye yeh leaves ko average size se guna karti hai, aur recursion se bhi bhaari padti hai." },
+      { t: "Pruning hi ek lever hai, aur yeh guna karta hai", d: "Har constraint kaam ghataata nahi, bhaag deta hai. Chessboard par aath queens saaf misaal hai." },
+      { t: "Undo space ko O(depth) kyun rakhta hai", d: "Choose aur un-choose ke saath ek shared path ki cost depth hai. Har branch mein nayi copy poore tree ki cost hai." },
+    ],
+
+    costs: [
+      ["all subsets of n items", "O(2^n · n)", "2^n nodes, aur har poora set copy karna n tak"],
+      ["all permutations of n items", "O(n! · n)", "n choices, phir n − 1, phir n − 2: factorial tree hai, code nahi"],
+      ["all combinations C(n, k)", "O(C(n, k) · k)", "start index [1,2] aur [2,1] dono ko aane se rokta hai"],
+      ["N-Queens on an n board", "O(n!) bound, far less visited", "n = 8 par 2,057 nodes, 40,320 row-by-row orders ke saamne"],
+      ["one choose plus one un-choose", "O(1)", "list ke end par push aur pop; aage se hataana O(n) hota"],
+      ["extra space", "O(n) path plus O(n) stack", "output khud exponential hai, aur convention se aam taur par nahi gina jaata"],
+    ],
+
+    traps: [
+      "<b>Live path store karna.</b> <code>res.append(path)</code> ek badalta reference store karta hai, to har recorded answer same ban jaata hai. <code>path[:]</code> append karo.",
+      "<b>Un-choose jo koi branch chhod de.</b> Push aur pop ke beech <code>continue</code>, <code>return</code> ya exception path ganda chhod deta hai. Bug phir <i>baad ke</i> answer mein dikhta hai, wajah se door.",
+      "<b>Aadhi state ka undo.</b> Path ke saath <code>used[j]</code> flag ya visited set bhi badla, to sab wapas hata do. Ulte order mein undo karo to koi bhoolna mushkil.",
+      "<b>End mein duplicates hataana.</b> Sort karke barabar siblings skip karna branch kaat deta hai. Baad mein filter matlab poora bekaar subtree pehle chuka diya.",
+      "<b>Sirf leaf par check.</b> Depth <var>n</var> par poora board check karna, jab takraav depth 2 par tha, khatam hone aur timeout ka farak hai. Branch par reject karo.",
+      "<b>Subproblems overlap karein tab backtracking.</b> Ginti ya best value chahiye aur same state dohraati hai, to yeh cache wala DP hai. Koi pruning listing ko nahi bachayegi.",
+    ],
+
+    impl: [
+      ["Python", "list.append / list.pop, copy with path[:]", "Default recursion limit lagbhag 1000 frames. @lru_cache madad nahi karta: path shared, mutable state hai."],
+      ["Java", "ArrayList add / remove(size()-1), copy with new ArrayList<>(path)", "List<Integer> par remove(int) index se hataata hai aur remove(Integer) value se. Jaano kaunsa bulaya."],
+      ["C++", "vector push_back / pop_back", "res.push_back(path) pehle hi copy karta hai. path aur res reference se bhejo, warna har node par poora vector copy."],
+      ["JavaScript", "Array push / pop, copy with [...path]", "V8 lagbhag 10k frames par ruk kar RangeError deta hai. path par closure use har call mein bhejne se bachata hai."],
+    ],
+
+    codecap: "Ek shared path, options par ek loop, aur ek pop jo hamesha chale. options() badlo aur aapne problem badli, algorithm nahi.",
+
+    q: [
+      ["Backtracking function ko apni choice undo kyun karni chahiye?", "Kyunki path poore search mein shared ek mutable list hai. Pop ke bina agli branch pichhli branch ki choices ke saath shuru hoti hai, aur aise answers banati hai jo kabhi valid nahi the."],
+      ["res.append(path) same results ki list kyun deta hai?", "Yeh reference store karta hai, snapshot nahi. Path baaki search mein badalta rehta hai, to har stored result uske saath badalta hai. Copy append karo, path[:]."],
+      ["Saare subsets banane ki cost kya hai, aur kya behtar ho sakti hai?", "O(2^n · n): 2^n nodes aur har answer copy karne mein n tak. Behtar nahi ho sakti, kyunki akela output itna bada hai. Sirf constant aur pruning aapke haath mein hain."],
+      ["Backtracking search ko sach mein tez kya banata hai?", "Pruning. Depth d par choice reject karna uske neeche ka poora subtree hataata hai, to ek O(1) check lakhon nodes hata sakta hai. Leaf par check pehle saara kaam karta hai."],
+      ["Input mein dohraayi values hon to duplicate answers kaise roko?", "Sort karo taaki barabar values saath hon, phir usi level par pichhli ke barabar value skip karo (j > i and nums[j] == nums[j-1]). Parent aur child ki tarah barabar values theek hain; sirf barabar siblings dohraate hain."],
+      ["Backtracking galat tool kab hai?", "Jab alag decision orders same state par pahunchein aur sirf ginti ya best value chahiye. Subproblems overlap karte hain, to yeh cache wala DP hai. Pehchaan: index aur bache sum jaisi chhoti state jo exponential tree chalaaye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "dp",
   n: "Dynamic programming",
   group: "Algorithms",
-  one: "DP is recursion that stops repeating itself. Name the <b>state</b>, write the recurrence, then either cache the recursion or fill a table in an order where everything you read is already final.",
+  need: {
+    ask: `<p>How many ways are there to climb <b>50 stairs</b>, taking 1 or 2 steps per move? The same shape counts ways to decode a message, tile a strip, or pay an amount with coins.</p>
+<p>The small version: 5 stairs. The climbs are 1+1+1+1+1, four orders of 2+1+1+1, and three orders of 2+2+1. That is 8.</p>`,
+    tries: [
+      ["List every climb and count them", "The answer for 50 stairs is 2.0 × 10¹⁰. Listing that many climbs takes at least that many steps."],
+      ["Recurse: the last move was a 1 or a 2, so ways(n) = ways(n − 1) + ways(n − 2)", "Correct, and 4.1 × 10¹⁰ calls for 50 stairs. Yet there are only 51 different questions, ways(0) to ways(50). For 5 stairs it is 15 calls, and ways(2) alone is worked out 3 times."],
+    ],
+    so: `<p>So write each answer down the first time it is found, and look it up after that. The recursion collapses from 4.1 × 10¹⁰ calls to 49 additions. That is <b>dynamic programming</b>: a correct recursion that stops repeating itself.</p>
+<p>The hard part is not the caching. It is choosing what the answers are filed under, the <b>state</b>. The page climbs 5 stairs throughout, then adds one rule that makes “which stair” no longer enough.</p>`,
+  },
 
-  plain: `<p>The recursion page ended on a promise: the subproblems overlap, so cache the answers and the exponential tree collapses to a line. This is that page, and the promise is the entire idea.</p>
-<p>Dynamic programming is not a new algorithm. It is a bookkeeping repair applied to a recursion that was already correct and merely wasteful. You do not invent a DP solution. You write the honest recursion first, notice it recomputes the same things, and stop it.</p>
-<p>Which means the hard part is not the caching. The hard part is deciding <b>what to cache by</b>, and that is the state: the smallest set of facts that fully determines the rest of the answer. Everything after that is mechanical, and everything before it is where people get stuck.</p>
-<p>There are two directions to fill the same table. Write the recursion and add a cache (<b>top-down</b>), or work out the order in which values become available and fill them yourself (<b>bottom-up</b>). Same numbers, same table, opposite direction of travel.</p>
-<p><b>Analogy.</b> Working through a problem set where question 14 needs the answer to question 9. You can either flip back and redo 9 every time it comes up, or write your answers in the margin as you go. DP is the margin.</p>`,
+  one: "DP is recursion that stops repeating itself. Name the <b>state</b>, write the recurrence, then cache the recursion or fill a table in an order where everything you read is already final.",
+
+  plain: `<p>The recursion page ended on a promise: the subproblems overlap, so cache the answers and the exponential tree collapses to a line. This page keeps that promise, and the promise is the whole idea.</p>
+<p>Dynamic programming is not a new algorithm. It is a repair to a recursion that was already correct and merely wasteful. Climbing 5 stairs, the last move was a 1 or a 2, so ways(5) = ways(4) + ways(3). That recursion is right. It just works out ways(3) twice and ways(2) three times.</p>
+<p>So the hard part is not the caching. It is deciding <b>what to file the answers under</b>: the state, the smallest set of facts that decides the rest of the answer. Here, “which stair am I on” is enough. Add a rule like “never two 2-steps in a row”, and it no longer is.</p>
+<p>There are two ways to fill the same table. Write the recursion and add a cache: <b>top-down</b>. Or work out the order in which answers become available and fill them yourself: <b>bottom-up</b>. Same numbers, opposite direction.</p>
+<p><b>Analogy.</b> A problem set where question 14 needs the answer to question 9. You can redo 9 every time it comes up, or write your answers in the margin as you go. DP is the margin.</p>`,
 
   why: [
-    { t: "The tell is a repeated subproblem, not a hard problem", d: "Draw the call tree for the honest recursion. If the same node appears in two different places, you have <b>overlapping subproblems</b> and DP applies. If every branch reaches a different state, there is nothing to cache and you are looking at backtracking. This one check decides which page you are on, and it takes ten seconds." },
-    { t: "The state is the whole difficulty", d: "State is the smallest set of facts that determines everything still to come. \"Which index am I at\" is often enough. Sometimes you need \"which index, and how much capacity is left\", or \"which index, and did I take the previous one\". Choose too little and different situations collide in the same cell, giving confidently wrong answers. Choose too much and the table stops fitting in memory. Everything else on this page is mechanical; this part is the job." },
-    { t: "The recurrence is the same honest step as recursion", d: "Express the answer for a state in terms of strictly smaller states, plus the base cases you can answer with no work at all. It is the identical leap of faith from the recursion page: assume the smaller answers are correct, and combine them. If you can say the recurrence in one English sentence, you can write it." },
-    { t: "Two directions, one table", d: "<b>Top-down</b> is the recursion with a cache bolted on: easiest to derive, because the recursion tells you the order. <b>Bottom-up</b> fills the table in an order you choose, which is faster (no call overhead, no stack depth limit) and is what makes space reduction possible. Derive top-down, convert to bottom-up when it matters, and say so out loud in an interview." },
-    { t: "The cost is states multiplied by transitions", d: "Count the distinct states, multiply by the work at each one. n states with O(1) transitions is O(n). An n by m grid with O(1) transitions is O(nm). n by n states each scanning O(n) options is O(n³). This single formula tells you whether an approach fits the constraints <b>before</b> you write it, which is what the constraints were there to tell you." },
-    { t: "Space reduction falls out of reading the recurrence", d: "Look at what a cell actually reads. If <code>dp[i]</code> only ever touches <code>dp[i-1]</code> and <code>dp[i-2]</code>, the rest of the table is dead weight and two variables will do. If a row only reads the row above, keep one row. This is the standard follow-up question and it needs no cleverness, only rereading the line you already wrote." },
-    { t: "Know when it is the wrong tool", d: "No overlap means backtracking. A provably safe local choice means greedy, which is cheaper. A state space too large to enumerate means DP is not available at any price, and you are looking for a different formulation. DP sits precisely between brute force and greedy: more expensive than a greedy proof, enormously cheaper than exploring everything twice." },
+    { t: "The tell is a repeated subproblem, not a hard problem",
+      d: "Draw the call tree of the plain recursion. For 5 stairs, ways(3) appears twice and ways(2) three times: the subproblems <b>overlap</b>, and DP applies. If every branch reaches a different state, there is nothing to cache, and you are on the backtracking page." },
+    { t: "The state is the whole difficulty",
+      d: "The state is the smallest set of facts that decides everything still to come. For plain stairs, the stair number is enough. Ban two 2-steps in a row, and it is not: from stair 3, a 2-step is allowed after 2+1 but not after 1+2. The state must become (stair, last move). Too little state gives wrong answers with no error; too much will not fit in memory." },
+    { t: "The recurrence is the same honest step as recursion",
+      d: "Write the answer for a state using strictly smaller states, plus base cases that need no work: ways(0) = 1 and ways(1) = 1. It is the same leap of faith as the recursion page: assume the smaller answers are right, and combine them. If you can say the recurrence in one English sentence, you can write it." },
+    { t: "Two directions, one table",
+      d: "<b>Top-down</b> is the recursion with a cache added. It is the easiest to derive, because the recursion supplies the order. <b>Bottom-up</b> fills the table in an order you choose, here left to right. It has no call overhead and no stack limit, and it makes space reduction possible. Derive top-down, and convert when it matters." },
+    { t: "The cost is states multiplied by transitions",
+      d: "Count the distinct states, and multiply by the work at each. Stairs: 51 states, at most one addition each. An <var>n</var> × <var>m</var> grid with O(1) work per cell is O(<var>nm</var>). This formula says whether an approach fits the limits <b>before</b> you write it, which is what the limits were there to tell you." },
+    { t: "Space reduction falls out of reading the recurrence",
+      d: "Look at what a cell actually reads. ways(<var>i</var>) touches only ways(<var>i</var> − 1) and ways(<var>i</var> − 2), so the rest of the table is dead weight and two variables will do. If a row reads only the row above, keep one row. This is the standard follow-up question, and it needs only a reread of the line you already wrote." },
+    { t: "Know when it is the wrong tool",
+      d: "No overlap means backtracking. A provably safe local choice means greedy, which is cheaper. A state space too large to list means DP is out at any price, and you need a different formulation. DP sits between brute force and greedy: dearer than a greedy proof, far cheaper than exploring everything twice." },
   ],
 
   variants: [
     { n: "One dimension over an index", cost: "O(n) states, usually O(1) transitions",
-      idea: "State is a single position. <code>dp[i]</code> depends on a fixed number of earlier cells. Climbing stairs, house robber, decode ways, and maximum subarray, which is this case reduced so far that the table becomes one variable. It has its own page.",
+      idea: "The state is one position, and <code>dp[i]</code> reads a fixed number of earlier cells. Climbing stairs, house robber, decode ways. Maximum subarray is this case shrunk to one variable, and has its own page.",
       when: "The answer at each position depends only on a bounded window of earlier positions.",
-      watch: "Almost always reducible to a couple of variables. If you leave the whole array allocated, expect to be asked why." },
-
+      watch: "Almost always reducible to a couple of variables. Leave the whole array allocated, and expect to be asked why." },
     { n: "One dimension with a scan", cost: "O(n²) time, O(n) space",
-      idea: "State is still one index, but computing it scans every earlier index. Longest increasing subsequence is the archetype.",
-      when: "The transition genuinely has to consider all previous positions.",
-      watch: "LIS has an O(n log n) solution using patience sorting and binary search. Know that it exists, because the O(n squared) version is often not the expected answer." },
-
+      idea: "The state is still one index, but computing it scans every earlier index. Longest increasing subsequence is the standard example.",
+      when: "The transition really has to consider all earlier positions.",
+      watch: "LIS also has an O(<var>n</var> log <var>n</var>) solution using binary search. Know it exists, because the O(<var>n</var>²) version is often not the expected answer." },
     { n: "Grid DP", cost: "O(rows × cols)",
-      idea: "State is a cell, and it reads the cells it can be reached from, typically above and left. Unique paths, minimum path sum, longest common subsequence.",
-      when: "Two sequences compared position by position, or a literal grid.",
-      watch: "The boundary is the base case, and getting the first row and column wrong is the usual bug. Only the previous row is ever read, so O(cols) space." },
-
+      idea: "The state is a cell, and it reads the cells it can be reached from, usually above and left. Unique paths, minimum path sum.",
+      when: "A literal grid, or anything shaped like one.",
+      watch: "The boundary is the base case, and a wrong first row or column is the usual bug. Only the previous row is read, so O(cols) space." },
     { n: "Knapsack, 0/1", cost: "O(n × capacity)",
-      idea: "State is (item index, capacity left) and each item is taken or skipped. Subset sum and partition are the same table with the values discarded.",
+      idea: "The state is (item index, capacity left), and each item is taken or skipped. Subset sum and partition are the same table without the values.",
       when: "Choose a subset under a numeric budget.",
-      watch: "Rolling to one dimension works, but the capacity loop must run <b>backwards</b> or you will reuse an item within the same pass and quietly solve unbounded knapsack instead." },
-
+      watch: "Rolling it to one dimension works, but the capacity loop must run <b>backwards</b>. Forwards, an item gets reused within one pass, and you quietly solve unbounded knapsack." },
     { n: "Knapsack, unbounded", cost: "O(n × target)",
       idea: "The same table with items reusable. Coin change, rod cutting.",
       when: "Unlimited copies of each item are allowed.",
-      watch: "Loop order decides the meaning: coins outside and target inside counts <b>combinations</b>, the other way round counts <b>permutations</b>. Swapping them silently answers a different question." },
-
+      watch: "Loop order decides the meaning. Coins outside and target inside counts <b>combinations</b>; the other way round counts <b>orders</b>. Swapping them answers a different question." },
     { n: "Two sequences", cost: "O(n × m)",
-      idea: "State is a pair of positions, one in each string. Edit distance, longest common subsequence, regular expression matching.",
+      idea: "The state is a pair of positions, one in each string. Edit distance, longest common subsequence, regular expression matching.",
       when: "Comparing, aligning or transforming two sequences.",
-      watch: "Decide precisely whether an index means \"the first i characters\" or \"the character at i\". Mixing the two is the source of nearly every off-by-one here." },
-
+      watch: "Decide whether an index means “the first <var>i</var> characters” or “the character at <var>i</var>”. Mixing the two causes nearly every off-by-one here." },
     { n: "Interval DP", cost: "O(n³) typically",
-      idea: "State is a range <code>(l, r)</code>, built from shorter ranges by choosing a split point. Burst balloons, matrix chain multiplication, palindrome partitioning.",
-      when: "The answer for a range depends on merging or splitting sub-ranges.",
-      watch: "Iterate by increasing <b>length</b>, not by l or r, or you will read cells that have not been filled yet." },
-
-    { n: "Bitmask DP", cost: "O(2ⁿ × n)",
-      idea: "State includes a set, encoded as the bits of one integer. Travelling salesman on small inputs, assignment problems.",
-      when: "You must remember <i>which</i> items were used, not just how many, and n is around 20 or less.",
-      watch: "The constraint gives it away: n ≤ 20 with a subset flavour is practically an instruction. See the bit manipulation page for the mechanics." },
+      idea: "The state is a range (<var>l</var>, <var>r</var>), built from shorter ranges by choosing a split point. Burst balloons, matrix chain multiplication.",
+      when: "The answer for a range depends on merging or splitting smaller ranges.",
+      watch: "Loop by increasing <b>length</b>, not by <var>l</var> or <var>r</var>, or you read cells that are not filled yet." },
+    { n: "Bitmask DP", cost: "O(2ⁿ × n²)",
+      idea: "The state includes a set, stored as the bits of one integer. Travelling salesman on small inputs, assignment problems.",
+      when: "You must remember <i>which</i> items were used, not just how many, and <var>n</var> is about 20 or less.",
+      watch: "The limits give it away: <var>n</var> ≤ 20 with a subset flavour is practically an instruction. The bits page has the mechanics." },
   ],
 
   hing: `<p><b>Sabse pehle yeh saaf kar lein:</b> DP koi naya algorithm nahi hai. Yeh <b>recursion hi hai, bas repeat karna band kar diya</b>. Recursion wale page par yahi promise tha, aur yeh page wahi promise poora kar raha hai.</p>
-<p><b>Pehchaan kaise ho ki DP lagega?</b> Honest recursion likho aur uska call tree banao. Agar <b>ek hi subproblem do jagah</b> dikh raha hai, to overlap hai aur DP lagega. Agar har branch alag state par jaa rahi hai, to cache karne ko kuch hai hi nahi, woh backtracking hai. Yeh check das second ka hai aur poora raasta tay kar deta hai.</p>
-<p><b>Ab asli mushkil: STATE.</b> State matlab woh <b>sabse chhoti jaankari</b> jisse aage ka poora answer tay ho jaaye. Kabhi sirf "kaunsa index" kaafi hota hai. Kabhi "index + kitni capacity bachi hai". Kabhi "index + pichhla element liya tha ya nahi".</p>
-<p><b>State galat chuna to?</b> Agar bahut kam rakha, to do alag situations ek hi cell mein takra jaayengi aur answer galat aayega, bina kisi error ke. Agar bahut zyada rakha, to table memory mein hi nahi samayegi. <b>Poora DP isi ek decision par tika hai</b>, baaki sab mechanical hai.</p>
-<p><b>Do raaste, ek hi table:</b><br>
-<b>Top-down (memoisation)</b>: recursion likho, upar se cache laga do. Sabse aasaan, kyunki order recursion khud sambhal leta hai.<br>
-<b>Bottom-up (tabulation)</b>: khud tay karo ki kis order mein bharna hai, taaki jo padho woh pehle se ready ho. Tez hai (na function call ka kharcha, na stack limit) aur <b>space optimisation sirf yahin possible</b> hai.<br>
-Interview mein: top-down se derive karo, phir bolo "isse bottom-up mein convert kar sakte hain aur space O(1) kar sakte hain".</p>
-<p><b>Cost ka formula ek hi hai: states × transitions.</b> n states aur har state par O(1) kaam = O(n). n×m grid = O(nm). n² states jahan har state n options scan kare = O(n³). Yeh <b>likhne se pehle</b> bata deta hai ki solution constraints mein fit hoga ya nahi.</p>
-<p><b>Space kam karna:</b> dekho ki ek cell asal mein <b>padhta kya hai</b>. Agar <code>dp[i]</code> sirf <code>dp[i-1]</code> aur <code>dp[i-2]</code> padh raha hai, to poori array bekaar hai, do variables kaafi hain. Agar ek row sirf upar wali row padh rahi hai, to ek row kaafi hai. Yeh follow-up question hamesha aata hai.</p>
-<p><b>Aur ek chetavani:</b> 0/1 knapsack ko ek dimension mein rolling karte waqt capacity ka loop <b>ulta (backwards)</b> chalana padta hai. Seedha chalaoge to ek hi item dobara use ho jaayega aur tum chupchaap unbounded knapsack solve kar doge. Answer aayega, galat aayega.</p>`,
+<p><b>Pehchaan kaise ho ki DP lagega?</b> Honest recursion likho aur uska call tree banao. Agar <b>ek hi subproblem do jagah</b> dikh raha hai, to overlap hai aur DP lagega. Agar har branch alag state par jaa rahi hai, to cache karne ko kuch hai hi nahi, woh backtracking hai.</p>
+<p><b>Ab asli mushkil: STATE.</b> State matlab woh <b>sabse chhoti jaankari</b> jisse aage ka poora answer tay ho jaaye. Kabhi sirf "kaunsa index" kaafi hota hai. Kabhi "index + kitni capacity bachi hai". Kabhi "index + pichhla move kya tha".</p>
+<p><b>State galat chuna to?</b> Bahut kam rakha, to do alag situations ek hi cell mein takra jaayengi aur answer galat aayega, bina kisi error ke. Bahut zyada rakha, to table memory mein nahi samayegi. <b>Poora DP isi ek decision par tika hai</b>, baaki sab mechanical hai.</p>
+<p><b>Do raaste, ek hi table:</b> <b>top-down</b> matlab recursion likho, upar se cache laga do. <b>Bottom-up</b> matlab khud order tay karo, taaki jo padho woh pehle se ready ho. Bottom-up tez hai aur space optimisation sirf yahin possible hai.</p>
+<p><b>Cost ka formula ek hi hai: states × transitions.</b> <var>n</var> states aur har state par O(1) kaam = O(<var>n</var>). <var>n</var>×<var>m</var> grid = O(<var>nm</var>). Yeh <b>likhne se pehle</b> bata deta hai ki solution fit hoga ya nahi.</p>
+<p><b>Space kam karna:</b> dekho ek cell asal mein <b>padhta kya hai</b>. <code>dp[i]</code> sirf <code>dp[i-1]</code> aur <code>dp[i-2]</code> padhe, to do variables kaafi hain.</p>
+<p><b>Ek chetavani:</b> 0/1 knapsack ko ek dimension mein rolling karte waqt capacity ka loop <b>ulta</b> chalao. Seedha chalaoge to ek item dobara use hoga, aur chupchaap unbounded knapsack solve ho jaayega.</p>`,
 
   viz: ["dp-fill", "dp-grid"],
   see: [["VA", "https://visualgo.net/en/recursion", "VisuAlgo, the recursion tree that DP collapses"]],
 
   math: [
-    { t: "Fill a tiny table by hand, left to right", d: "Climbing stairs, 1 or 2 at a time: each step is reached from one or two below, so ways(i) = ways(i-1) + ways(i-2).", w:
-`ways(i) = ways to climb i stairs, taking 1 or 2 each move
-base:  ways(0) = 1        ways(1) = 1
+    { t: "Fill the table for 5 stairs, left to right", d: "Each stair is reached from one or two below, so each cell is the sum of the two before it. Every cell read is already final.", w:
+`ways(i) = ways to climb i stairs, taking 1 or 2 per move
 
+base:  ways(0) = 1        ways(1) = 1
 ways(2) = ways(1) + ways(0) = 1 + 1 = 2
 ways(3) = ways(2) + ways(1) = 2 + 1 = 3
 ways(4) = ways(3) + ways(2) = 3 + 2 = 5
 ways(5) = ways(4) + ways(3) = 5 + 3 = 8
 
-every cell reads two cells already final: one pass, O(n)` },
-    { t: "Why memoising works: count the labels on the tree", d: "The recursion tree is exponential and the set of distinct arguments is tiny. Everything past that set is a repeat, and a repeat can be looked up.", w:
-`naive fib(n):  2 fib(n+1) - 1 calls,  growth ~ 1.618^n
-distinct subproblems:  n + 1
+one pass, one addition per cell: O(n)` },
+    { t: "Why caching works: count the labels on the tree", d: "The plain recursion's tree is exponential, but the set of different questions in it is tiny. Everything past that set is a repeat.", w:
+`calls made by the plain recursion:  2 x ways(n) - 1
 
-n = 50:   4.0 x 10^10 calls   vs   51 states
+n = 5:    15 calls        6 different questions
+          ways(3) twice, ways(2) three times
+n = 50:   4.1 x 10^10     51 different questions
 
-so the tree has 10^10 nodes carrying 51 different labels.
-Memoising is not an optimisation of the recursion, it is
-the observation that 10^10 - 51 of those calls were
-answering a question already answered.` },
-    { t: "The cost formula, applied to the standard problems", d: "Two numbers decide everything: how many states there are, and how much work each state does. Every DP complexity below is that product.", w:
-`time = states x work per state,  space = states
+so the big tree carries only 51 different labels.
+Caching is noticing that all the other calls were
+asking something already answered.` },
+    { t: "When the state is missing a fact", d: "Ban two 2-steps in a row. The stair number alone cannot tell whether a 2-step is allowed next, so the state becomes (stair, last move).", w:
+`one[i] = climbs to i ending with a 1-step
+two[i] = climbs to i ending with a 2-step
 
-0/1 knapsack   n x W states     2 transitions  O(nW)
-LCS            n x m states     3 transitions  O(nm)
-coin change    amount states    C transitions  O(aC)
-edit distance  n x m states     3 transitions  O(nm)
-TSP bitmask    2^n x n states   n transitions  O(2^n n^2)
+one[i] = one[i-1] + two[i-1]     a 1-step follows anything
+two[i] = one[i-2]                a 2-step never follows a 2
+start:  one[0] = 1, two[0] = 0
+
+i       0   1   2   3   4   5
+one     1   1   1   2   3   4
+two     0   0   1   1   1   2
+
+stair 5:  4 + 2 = 6, the 8 climbs minus 2+2+1 and 1+2+2` },
+    { t: "The cost formula, applied to the standard problems", d: "Two numbers decide everything: how many states there are, and how much work each does. Every DP cost below is that product.", w:
+`time = states x work per state,   space = states
+
+stairs         n states         2 reads        O(n)
+0/1 knapsack   n x W states     2 choices      O(nW)
+LCS            n x m states     3 choices      O(nm)
+edit distance  n x m states     3 choices      O(nm)
+TSP bitmask    2^n x n states   n choices      O(2^n n^2)
 
 n = 20 TSP:  2^20 x 20 x 20 = 4 x 10^8, the ceiling` },
-    { t: "Pseudo-polynomial, which is why knapsack is still hard", d: "O(nW) looks polynomial and is not, because W is a value written in binary, not a count of things.", w:
+    { t: "Pseudo-polynomial, which is why knapsack is still hard", d: "O(<var>nW</var>) looks polynomial and is not, because <var>W</var> is a value written in binary, not a count of things.", w:
 `knapsack, n = 100 items, capacity W = 10^9
 table: 100 x 10^9 = 10^11 cells
 
-W appears in the input as log2(W) = 30 bits
-so the table is exponential in the LENGTH of the input
-
-that is what pseudo-polynomial means, and it is why
-O(nW) does not settle the P versus NP question` },
-    { t: "Space reduction is read straight off the recurrence", d: "Look at which cells the formula touches. If it only reaches one row back, the rest of the table is history nobody consults.", w:
-`dp[i][j] reads dp[i-1][*]            ->  keep 2 rows
-dp[i][j] reads dp[i-1][j], dp[i][j-1] -> 1 row, left to right
-dp[i] reads dp[i-1], dp[i-2]          -> 2 variables
+W takes log2(10^9) = 30 bits of the input
+so the table is exponential in the LENGTH of the input.
+That is what pseudo-polynomial means, and why O(nW)
+does not settle P versus NP.` },
+    { t: "Space reduction is read straight off the recurrence", d: "Look at which cells the formula touches. If it reaches only one row back, the rest of the table is history nobody reads.", w:
+`dp[i] reads dp[i-1], dp[i-2]           ->  2 variables
+dp[i][j] reads dp[i-1][*]              ->  keep 2 rows
+dp[i][j] reads dp[i-1][j], dp[i][j-1]  ->  1 row
 
 LCS of two strings of 10^4:
   full table  10^8 cells x 4 bytes  =  400 MB
   two rows    2 x 10^4 cells        =   80 KB
-
-the value survives, the reconstruction does not` },
-    { t: "Top-down or bottom-up, chosen by how much of the table is reachable", d: "Tabulation computes every state. Memoised recursion computes the ones you actually reach, and on a sparse state space that is a real difference.", w:
-`coin change, amount = 10^4, coins {7, 11}
-
-reachable amounts: combinations of 7 and 11 only,
-far fewer than 10^4
-  memoised recursion visits those, plus stack frames
-  a full table computes all 10^4 entries regardless
-
-dense and fully reachable -> tabulate: no frames, no
-recursion limit, better cache behaviour` },
+the value survives; rebuilding the path does not` },
   ],
 
   costs: [
     ["general rule", "states × transitions", "count the distinct states, multiply by the work at each"],
-    ["1-D over an index", "O(n)", "climbing stairs, house robber, maximum subarray"],
-    ["1-D with a scan", "O(n²)", "longest increasing subsequence, the O(n squared) version"],
+    ["1-D over an index", "O(n)", "climbing stairs, house robber, decode ways"],
+    ["1-D with a scan", "O(n²)", "longest increasing subsequence, the simple version"],
     ["grid or two sequences", "O(n × m)", "unique paths, edit distance, LCS"],
-    ["knapsack", "O(n × capacity)", "pseudo-polynomial: it scales with the NUMBER, not its digit count"],
+    ["knapsack", "O(n × capacity)", "pseudo-polynomial: it scales with the number, not its digit count"],
     ["interval DP", "O(n³)", "n² ranges, each trying O(n) split points"],
-    ["bitmask DP", "O(2ⁿ × n)", "practical to about n = 20, which the constraints will tell you"],
+    ["bitmask DP", "O(2ⁿ × n²)", "practical to about n = 20, which the limits will tell you"],
     ["memoised recursion space", "O(states + depth)", "the table plus the call stack, which people forget to count"],
   ],
 
   traps: [
-    "<b>Reaching for a table before writing the recursion.</b> Derive the recurrence honestly first. Nobody has ever guessed a correct table.",
-    "<b>A state that is missing a fact.</b> Two different situations map to one cell and the answer is wrong with no error anywhere. If your DP is mysteriously off, suspect the state before you suspect the arithmetic.",
-    "<b>Rolling 0/1 knapsack to one dimension with the capacity loop going forwards.</b> You reuse an item inside the same pass and solve a different problem.",
-    "<b>Interval DP iterated by l and r instead of by length.</b> You read cells that have not been filled, and they contain whatever your language uses for empty.",
+    "<b>Reaching for a table before writing the recursion.</b> Derive the recurrence honestly first. Nobody guesses a correct table.",
+    "<b>A state that is missing a fact.</b> Two different situations share one cell, and the answer is wrong with no error anywhere. With the no-two-2-steps rule, ways(<var>i</var>) alone counts both banned climbs. If a DP is mysteriously off, suspect the state before the arithmetic.",
+    "<b>Rolling 0/1 knapsack to one dimension with the capacity loop running forwards.</b> An item gets reused inside one pass, and you solve a different problem.",
+    "<b>Interval DP looped by <var>l</var> and <var>r</var> instead of by length.</b> You read cells that are not filled yet, holding whatever your language uses for empty.",
     "<b>Forgetting the call stack in a memoised solution.</b> Depth can reach 10⁵ and overflow, even though the table itself is small.",
-    "<b>Caching on a mutable key.</b> Memoising a function whose argument is a list means the key changes underneath the cache. Convert to a tuple, or index by position.",
+    "<b>Caching on a mutable key.</b> Memoising a function that takes a list means the key can change under the cache. Convert to a tuple, or index by position.",
   ],
 
   impl: [
     ["Python", "@lru_cache / @cache, or a dict", "Arguments must be hashable, so pass tuples, not lists. Watch the recursion limit on deep states."],
     ["Java", "int[] / int[][] filled with -1, or a HashMap", "Arrays.fill for the sentinel. Boxing in a HashMap is slow enough to matter on tight limits."],
-    ["C++", "vector filled with -1, or unordered_map", "vector<vector<int>> dp(n, vector<int>(m, -1)). Pick a sentinel the answer can never legitimately be."],
-    ["JavaScript", "Array.fill(-1) or a Map", "Object and array keys compare by reference, so build a string key or index numerically."],
+    ["C++", "vector filled with -1, or unordered_map", "vector<vector<int>> dp(n, vector<int>(m, -1)). Pick a sentinel the answer can never be."],
+    ["JavaScript", "Array.fill(-1) or a Map", "Object and array keys compare by reference, so build a string key or index by number."],
   ],
 
   code: {
@@ -12680,26 +13119,26 @@ def knapsack(weights, values, cap):
             dp[c] = max(dp[c], dp[c - w] + v)
     return dp[cap]`,
     java: `// TOP-DOWN with an explicit memo array, sentinel -1 for "not computed"
-static int[] memo;
-static int climb(int n) {
+static long[] memo;
+static long climb(int n) {
     if (n <= 2) return Math.max(n, 1);
     if (memo[n] != -1) return memo[n];
     return memo[n] = climb(n - 1) + climb(n - 2);
 }
-// memo = new int[n + 1]; Arrays.fill(memo, -1);
+// memo = new long[n + 1]; Arrays.fill(memo, -1);   long: ways(50) > 2^31
 
 // BOTTOM-UP
-static int climbTable(int n) {
-    int[] dp = new int[n + 1];
+static long climbTable(int n) {
+    long[] dp = new long[n + 1];
     dp[0] = dp[1] = 1;
     for (int i = 2; i <= n; i++) dp[i] = dp[i - 1] + dp[i - 2];
     return dp[n];
 }
 
 // SPACE REDUCED
-static int climbO1(int n) {
-    int a = 1, b = 1;
-    for (int i = 1; i < n; i++) { int t = a + b; a = b; b = t; }
+static long climbO1(int n) {
+    long a = 1, b = 1;
+    for (int i = 1; i < n; i++) { long t = a + b; a = b; b = t; }
     return b;
 }
 
@@ -12717,8 +13156,8 @@ static int editDistance(String s, String t) {
     return dp[n][m];
 }`,
     cpp: `// TOP-DOWN, sentinel -1 for "not computed yet"
-vector<int> memo;
-int climb(int n) {
+vector<long long> memo;                  // long long: ways(50) > 2^31
+long long climb(int n) {
     if (n <= 2) return max(n, 1);
     if (memo[n] != -1) return memo[n];
     return memo[n] = climb(n - 1) + climb(n - 2);
@@ -12726,9 +13165,9 @@ int climb(int n) {
 // memo.assign(n + 1, -1);
 
 // BOTTOM-UP, space reduced in one step
-int climbO1(int n) {
-    int a = 1, b = 1;
-    for (int i = 1; i < n; ++i) { int t = a + b; a = b; b = t; }
+long long climbO1(int n) {
+    long long a = 1, b = 1;
+    for (int i = 1; i < n; ++i) { long long t = a + b; a = b; b = t; }
     return b;
 }
 
@@ -12786,15 +13225,15 @@ function knapsack(weights, values, cap) {
   return dp[cap];
 }`,
   },
-  codecap: "Recursion first, cache second, table third, space last. Skipping to the table is how people get stuck.",
+  codecap: "Recursion first, cache second, table third, space last. Skipping straight to the table is how people get stuck.",
 
   q: [
-    ["How do you tell in ten seconds whether a problem is DP?", "Sketch the honest recursion's call tree. If the same subproblem appears in more than one place, the subproblems overlap and DP applies. If every branch reaches a distinct state, there is nothing to cache and it is backtracking."],
-    ["What is the state, and why is it the hard part?", "The smallest set of facts that fully determines the rest of the answer. Too little and different situations collide in one cell, producing wrong answers with no error. Too much and the table does not fit. The recurrence and the code follow mechanically once the state is right."],
-    ["Top-down or bottom-up?", "Top-down is the recursion plus a cache and is easiest to derive because the recursion supplies the order. Bottom-up is faster, has no stack limit, and is what makes space reduction possible. Derive top-down, convert when it matters."],
-    ["How do you predict the cost before writing anything?", "States multiplied by transitions. n states with O(1) transitions is O(n); an n by m table is O(nm); n squared states each scanning n options is O(n cubed). Compare that to the constraints before committing."],
-    ["Why must the capacity loop run backwards in a one-dimensional 0/1 knapsack?", "Going forwards, dp[c - w] has already been updated in this same pass, so the item gets used more than once and you have silently solved unbounded knapsack instead."],
-    ["When is DP the wrong tool?", "When subproblems do not overlap, which is backtracking; when a local choice is provably safe, which is greedy and cheaper; or when the state space is too large to enumerate, in which case you need a different formulation entirely."],
+    ["How do you tell in ten seconds whether a problem is DP?", "Sketch the plain recursion's call tree. If the same subproblem appears in more than one place, the subproblems overlap and DP applies. If every branch reaches a different state, there is nothing to cache and it is backtracking."],
+    ["What is the state, and why is it the hard part?", "The smallest set of facts that decides the rest of the answer. Too little, and different situations share one cell, giving wrong answers with no error. Too much, and the table does not fit. The recurrence and code follow once the state is right."],
+    ["Top-down or bottom-up?", "Top-down is the recursion plus a cache, and is easiest to derive because the recursion supplies the order. Bottom-up is faster, has no stack limit, and makes space reduction possible. Derive top-down, convert when it matters."],
+    ["How do you predict the cost before writing anything?", "States multiplied by transitions. n states with O(1) work each is O(n); an n by m table is O(nm); n² states each scanning n options is O(n³). Compare that with the limits before committing."],
+    ["Why must the capacity loop run backwards in a one-dimensional 0/1 knapsack?", "Going forwards, dp[c - w] has already been updated in the same pass, so the item is used more than once. You have silently solved unbounded knapsack."],
+    ["When is DP the wrong tool?", "No overlap means backtracking. A provably safe local choice means greedy, which is cheaper. A state space too large to list needs a different formulation."],
   ],
 
   p: [
@@ -12806,158 +13245,282 @@ function knapsack(weights, values, cap) {
     [300, "longest-increasing-subsequence", "LIS, then find the O(n log n) version", "M"],
     [72, "edit-distance", "Edit Distance, the interview favourite", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p><b>50 stairs</b> chadhne ke kitne tareeke hain, har move mein 1 ya 2 steps? Yahi shakal message decode karne, patti tile karne, ya coins se amount dene ke tareeke ginti hai.</p>
+<p>Chhota version: 5 stairs. Climbs hain 1+1+1+1+1, 2+1+1+1 ke chaar order, aur 2+2+1 ke teen order. Kul 8.</p>`,
+      tries: [
+        ["Har climb list karo aur gino", "50 stairs ka answer 2.0 × 10¹⁰ hai. Itne climbs list karne mein kam se kam itne steps lagte hain."],
+        ["Recurse: aakhri move 1 tha ya 2, to ways(n) = ways(n − 1) + ways(n − 2)", "Sahi, aur 50 stairs ke liye 4.1 × 10¹⁰ calls. Jabki alag sawaal sirf 51 hain, ways(0) se ways(50). 5 stairs par 15 calls, aur akela ways(2) 3 baar nikaala jaata hai."],
+      ],
+      so: `<p>To har answer pehli baar milte hi likh lo, aur uske baad dekh lo. Recursion 4.1 × 10¹⁰ calls se 49 additions par aa jaata hai. Yahi <b>dynamic programming</b> hai: sahi recursion jo khud ko dohraana band kar de.</p>
+<p>Mushkil caching nahi. Mushkil yeh chunna hai ki answers kis naam se file hon, yaani <b>state</b>. Page poore mein 5 stairs chadhta hai, phir ek rule jodta hai jisse “kaunsi stair” kaafi nahi rehta.</p>`,
+    },
+
+    one: "DP woh recursion hai jo dohraana band kar de. <b>State</b> ka naam do, recurrence likho, phir recursion cache karo ya table us order mein bharo jahan jo padho woh pehle se final ho.",
+
+    plain: `<p>Recursion page ek vaade par khatam hua tha: subproblems overlap karte hain, to answers cache karo aur exponential tree ek line ban jaata hai. Yeh page woh vaada nibhaata hai, aur vaada hi poora idea hai.</p>
+<p>Dynamic programming naya algorithm nahi hai. Yeh ek aise recursion ki marammat hai jo pehle se sahi tha, bas fizool-kharch. 5 stairs chadhte hue aakhri move 1 ya 2 tha, to ways(5) = ways(4) + ways(3). Recursion sahi hai. Bas ways(3) do baar aur ways(2) teen baar nikaalta hai.</p>
+<p>To mushkil caching nahi. Mushkil yeh tay karna hai ki <b>answers kis naam se file hon</b>: state, woh sabse chhoti jaankari jo baaki answer tay kare. Yahan “main kaunsi stair par hoon” kaafi hai. “Kabhi do 2-steps lagataar nahi” jaisa rule jodo, aur kaafi nahi rehta.</p>
+<p>Ek hi table bharne ke do tareeke. Recursion likho aur cache jodo: <b>top-down</b>. Ya khud tay karo ki answers kis order mein milte hain aur khud bharo: <b>bottom-up</b>. Wahi numbers, ulti disha.</p>
+<p><b>Analogy.</b> Ek problem set jahan sawaal 14 ko sawaal 9 ka answer chahiye. Har baar 9 dobara karo, ya chalte chalte answers margin mein likho. DP margin hai.</p>`,
+
+    why: [
+      { t: "Pehchaan dohraaya subproblem hai, mushkil problem nahi",
+        d: "Seedhe recursion ka call tree banao. 5 stairs ke liye ways(3) do baar aur ways(2) teen baar aata hai: subproblems <b>overlap</b> karte hain, aur DP lagta hai. Agar har branch alag state par pahunche, to cache karne ko kuch nahi, aur aap backtracking page par ho." },
+      { t: "State hi poori mushkil hai",
+        d: "State woh sabse chhoti jaankari hai jo aage ka sab tay kare. Seedhi stairs ke liye stair number kaafi hai. Do 2-steps lagataar ban karo, aur nahi: stair 3 se 2-step 2+1 ke baad allowed hai par 1+2 ke baad nahi. State (stair, aakhri move) banni chahiye. Kam state bina error ke galat answers deti hai; zyada memory mein nahi samaati." },
+      { t: "Recurrence wahi imaandaar kadam hai jo recursion mein tha",
+        d: "State ka answer sakhti se chhoti states se likho, aur aise base cases jo bina kaam ke hain: ways(0) = 1 aur ways(1) = 1. Recursion page wala wahi bharosa: maano chhote answers sahi hain, aur unhe jodo. Recurrence ek English sentence mein bol sako, to likh bhi sakte ho." },
+      { t: "Do dishaayein, ek table",
+        d: "<b>Top-down</b> recursion mein cache jodna hai. Derive karna sabse aasaan, kyunki order recursion deta hai. <b>Bottom-up</b> table aapke chune order mein bharta hai, yahan left se right. Na call ka kharcha, na stack limit, aur space kam karna possible. Top-down se derive karo, zaroorat ho to convert." },
+      { t: "Cost matlab states guna transitions",
+        d: "Alag states gino, aur har ek ke kaam se guna karo. Stairs: 51 states, har ek mein zyada se zyada ek addition. <var>n</var> × <var>m</var> grid har cell O(1) kaam ke saath O(<var>nm</var>). Yeh formula likhne se <b>pehle</b> batata hai ki approach limits mein fit hogi, limits isiliye di jaati hain." },
+      { t: "Space kam karna recurrence padhne se nikalta hai",
+        d: "Dekho cell asal mein kya padhta hai. ways(<var>i</var>) sirf ways(<var>i</var> − 1) aur ways(<var>i</var> − 2) chhoota hai, to baaki table bekaar bojh hai aur do variables kaafi. Row sirf upar wali row padhe, to ek row rakho. Yeh standard follow-up hai, aur bas likhi line dobara padhni hai." },
+      { t: "Jaano kab yeh galat tool hai",
+        d: "Overlap nahi matlab backtracking. Saabit safe local choice matlab greedy, jo sasta hai. State space list karne se bada matlab DP kisi keemat par nahi, aur alag formulation chahiye. DP brute force aur greedy ke beech baitha hai: greedy proof se mehenga, sab kuch do baar dekhne se bahut sasta." },
+    ],
+
+    variants: [
+      { n: "One dimension over an index", cost: "O(n) states, usually O(1) transitions",
+        idea: "State ek position hai, aur <code>dp[i]</code> pehle ke tay ginti ke cells padhta hai. Climbing stairs, house robber, decode ways. Maximum subarray yahi case ek variable tak chhota hua hai, aur uska apna page hai.",
+        when: "Har position ka answer sirf pehle ki ek seemit window par nirbhar ho.",
+        watch: "Lagbhag hamesha do variables tak ghat sakta hai. Poori array rakhi, to poochhe jaane ki ummeed rakho kyun." },
+      { n: "One dimension with a scan", cost: "O(n²) time, O(n) space",
+        idea: "State ab bhi ek index, par use nikaalne mein har pichhla index scan hota hai. Longest increasing subsequence standard misaal hai.",
+        when: "Transition ko sach mein saari pichhli positions dekhni hon.",
+        watch: "LIS ka binary search wala O(<var>n</var> log <var>n</var>) solution bhi hai. Jaano ki hai, kyunki O(<var>n</var>²) version aksar expected answer nahi." },
+      { n: "Grid DP", cost: "O(rows × cols)",
+        idea: "State ek cell hai, aur woh un cells ko padhta hai jahan se pahuncha ja sake, aam taur par upar aur left. Unique paths, minimum path sum.",
+        when: "Asli grid, ya grid jaisi koi cheez.",
+        watch: "Boundary base case hai, aur galat pehli row ya column aam bug. Sirf pichhli row padhi jaati hai, to O(cols) space." },
+      { n: "Knapsack, 0/1", cost: "O(n × capacity)",
+        idea: "State (item index, bachi capacity) hai, aur har item liya ya chhoda jaata hai. Subset sum aur partition bina values ke wahi table hain.",
+        when: "Numeric budget ke andar subset chunna.",
+        watch: "Ek dimension mein rolling chalta hai, par capacity loop <b>ulta</b> chalna chahiye. Seedha chalao to ek pass mein item dobara use hota hai, aur chupchaap unbounded knapsack hal hota hai." },
+      { n: "Knapsack, unbounded", cost: "O(n × target)",
+        idea: "Wahi table, items dobara use ho sakte hain. Coin change, rod cutting.",
+        when: "Har item ki unlimited copies allowed hon.",
+        watch: "Loop order matlab tay karta hai. Coins bahar aur target andar <b>combinations</b> ginta hai; ulta <b>orders</b> ginta hai. Adla-badli ek alag sawaal ka answer deti hai." },
+      { n: "Two sequences", cost: "O(n × m)",
+        idea: "State positions ka pair hai, har string mein ek. Edit distance, longest common subsequence, regular expression matching.",
+        when: "Do sequences compare, align ya transform karna.",
+        watch: "Tay karo ki index matlab “pehle <var>i</var> characters” hai ya “<var>i</var> par character”. Dono milaana yahan lagbhag har off-by-one ki wajah hai." },
+      { n: "Interval DP", cost: "O(n³) typically",
+        idea: "State ek range (<var>l</var>, <var>r</var>) hai, chhoti ranges se split point chun kar bani. Burst balloons, matrix chain multiplication.",
+        when: "Range ka answer chhoti ranges jodne ya todne par nirbhar ho.",
+        watch: "Badhti <b>length</b> se loop karo, <var>l</var> ya <var>r</var> se nahi, warna aise cells padhoge jo abhi bhare nahi." },
+      { n: "Bitmask DP", cost: "O(2ⁿ × n²)",
+        idea: "State mein ek set hai, ek integer ke bits ki tarah rakha. Chhote inputs par travelling salesman, assignment problems.",
+        when: "Yaad rakhna ho ki <i>kaunse</i> items use hue, sirf kitne nahi, aur <var>n</var> lagbhag 20 ya kam ho.",
+        watch: "Limits bata deti hain: <var>n</var> ≤ 20 aur subset ka flavour lagbhag ek instruction hai. Bits page mein mechanics hain." },
+    ],
+
+    math: [
+      { t: "5 stairs ki table bharo, left se right", d: "Har stair ek ya do neeche se pahunchi jaati hai, to har cell pichhle do ka jod hai. Har padha cell pehle se final hai." },
+      { t: "Caching kyun chalti hai: tree ke labels gino", d: "Seedhe recursion ka tree exponential hai, par usme alag sawaalon ka set chhota. Us set ke baahar sab dohraav hai." },
+      { t: "Jab state mein ek baat kam ho", d: "Do 2-steps lagataar ban karo. Akela stair number nahi bata sakta ki agla 2-step allowed hai ya nahi, to state (stair, aakhri move) banti hai." },
+      { t: "Cost formula, standard problems par", d: "Do numbers sab tay karte hain: kitni states hain, aur har ek kitna kaam karti hai. Neeche har DP cost wahi guna hai." },
+      { t: "Pseudo-polynomial, isiliye knapsack ab bhi mushkil hai", d: "O(<var>nW</var>) polynomial lagta hai par nahi hai, kyunki <var>W</var> binary mein likhi value hai, cheezon ki ginti nahi." },
+      { t: "Space kam karna seedha recurrence se padha jaata hai", d: "Dekho formula kaunse cells chhoota hai. Sirf ek row peeche jaaye, to baaki table woh itihaas hai jo koi nahi padhta." },
+    ],
+
+    costs: [
+      ["general rule", "states × transitions", "alag states gino, har ek ke kaam se guna karo"],
+      ["1-D over an index", "O(n)", "climbing stairs, house robber, decode ways"],
+      ["1-D with a scan", "O(n²)", "longest increasing subsequence, seedha version"],
+      ["grid or two sequences", "O(n × m)", "unique paths, edit distance, LCS"],
+      ["knapsack", "O(n × capacity)", "pseudo-polynomial: number ke saath badhta hai, uske digits ke saath nahi"],
+      ["interval DP", "O(n³)", "n² ranges, har ek O(n) split points try karti"],
+      ["bitmask DP", "O(2ⁿ × n²)", "lagbhag n = 20 tak practical, limits bata dengi"],
+      ["memoised recursion space", "O(states + depth)", "table aur call stack, jise log ginna bhoolte hain"],
+    ],
+
+    traps: [
+      "<b>Recursion likhne se pehle table pakadna.</b> Pehle recurrence imaandaari se nikaalo. Sahi table koi guess nahi karta.",
+      "<b>State jismein ek baat kam ho.</b> Do alag situations ek cell baantti hain, aur answer kahin bhi error ke bina galat. No-two-2-steps rule ke saath akela ways(<var>i</var>) dono banned climbs gin leta hai. DP ajeeb tarah galat ho to arithmetic se pehle state par shak karo.",
+      "<b>0/1 knapsack ko ek dimension mein seedhe chalte capacity loop ke saath rolling.</b> Ek pass mein item dobara use hota hai, aur aap alag problem hal karte ho.",
+      "<b>Interval DP ko length ki jagah <var>l</var> aur <var>r</var> se loop karna.</b> Aise cells padhte ho jo abhi bhare nahi, jismein wahi jo aapki language khaali ke liye rakhti hai.",
+      "<b>Memoised solution mein call stack bhoolna.</b> Depth 10⁵ tak jaakar overflow kar sakti hai, bhale table chhoti ho.",
+      "<b>Mutable key par caching.</b> List lene wale function ko memoise karna matlab key cache ke neeche badal sakti hai. Tuple mein badlo, ya position se index karo.",
+    ],
+
+    impl: [
+      ["Python", "@lru_cache / @cache, or a dict", "Arguments hashable hone chahiye, to lists nahi tuples bhejo. Gehri states par recursion limit dekho."],
+      ["Java", "int[] / int[][] filled with -1, or a HashMap", "Sentinel ke liye Arrays.fill. HashMap mein boxing tight limits par farak daalne jitni slow hai."],
+      ["C++", "vector filled with -1, or unordered_map", "vector<vector<int>> dp(n, vector<int>(m, -1)). Aisa sentinel chuno jo answer kabhi na ho sake."],
+      ["JavaScript", "Array.fill(-1) or a Map", "Object aur array keys reference se compare hoti hain, to string key banao ya number se index karo."],
+    ],
+
+    codecap: "Pehle recursion, phir cache, phir table, aakhir mein space. Seedha table par koodna hi logon ko atkaata hai.",
+
+    q: [
+      ["Das second mein kaise pata karo ki problem DP hai?", "Seedhe recursion ka call tree sketch karo. Ek hi subproblem ek se zyada jagah aaye, to subproblems overlap karte hain aur DP lagta hai. Har branch alag state par pahunche, to cache karne ko kuch nahi aur yeh backtracking hai."],
+      ["State kya hai, aur yeh mushkil hissa kyun hai?", "Woh sabse chhoti jaankari jo baaki answer tay kare. Kam ho to alag situations ek cell baantti hain, bina error ke galat answers. Zyada ho to table fit nahi hoti. State sahi ho to recurrence aur code apne aap aate hain."],
+      ["Top-down ya bottom-up?", "Top-down recursion plus cache hai, aur derive karna sabse aasaan kyunki order recursion deta hai. Bottom-up tez hai, stack limit nahi, aur space kam karna possible banata hai. Top-down se derive karo, zaroorat ho to convert."],
+      ["Kuch likhne se pehle cost kaise andaaza karo?", "States guna transitions. n states har ek O(1) kaam ke saath O(n); n by m table O(nm); n² states har ek n options scan karti O(n³). Commit karne se pehle ise limits se milao."],
+      ["Ek-dimensional 0/1 knapsack mein capacity loop ulta kyun chalna chahiye?", "Seedha chalne par dp[c - w] usi pass mein update ho chuka hota hai, to item ek se zyada baar use hota hai. Aapne chupchaap unbounded knapsack hal kar diya."],
+      ["DP galat tool kab hai?", "Overlap nahi matlab backtracking. Saabit safe local choice matlab greedy, jo sasta hai. List karne se badi state space ko alag formulation chahiye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "greedy",
   n: "Greedy algorithms",
   group: "Algorithms",
+  need: {
+    ask: `<p>One meeting room, and a day of booking requests, each with a start and an end time. Accept <b>as many as possible</b> with no two overlapping. A busy office sends 10⁵ requests.</p>
+<p>The small version: five requests. A 0–6, B 1–3, C 3–5, D 2–7, E 6–8. A meeting ending at 3 and one starting at 3 do not clash. The best possible is 3: B, C and E.</p>`,
+    tries: [
+      ["Try every subset of requests, keep the largest with no clash", "Correct, and 2ⁿ subsets: 32 for five requests, 1.1 × 10¹² for just 40."],
+      ["Take whichever starts earliest", "A starts first, at 0, and holds the room until 6. That blocks B, C and D, leaving A and E: 2 bookings, where 3 fit."],
+      ["Take the shortest first", "Requests 0–4, 3–5 and 4–8. The shortest, 3–5, clashes with both others: 1 booking. Taking 0–4 and 4–8 gives 2."],
+    ],
+    so: `<p>So take whichever <b>finishes earliest</b>, then the next that starts after it ends, and so on. Finishing early leaves the room free soonest, for everything after. On A to E it picks B, C and E.</p>
+<p>That is a <b>greedy algorithm</b>: sort, then one pass, never reconsidering. For 10⁵ requests it is about 1.7 × 10⁶ steps. The catch is in the tries above: two rules that sounded just as sensible were wrong. The code is easy; <b>the proof that the rule is safe</b> is the whole job.</p>`,
+  },
+
   one: "Take the best-looking option now and never reconsider it. The code is five lines; the difficulty is entirely in <b>proving the local choice is safe</b>.",
 
-  plain: `<p>A greedy algorithm makes the choice that looks best right now, commits to it, and moves on. No memo table, no recursion, no going back. Most of them sort the input by some key and then walk it once. That is why greedy solutions are short enough to write on a whiteboard in under a minute.</p>
-<p>That shortness is a trap. Writing a greedy algorithm is easy, and writing a <i>wrong</i> greedy algorithm is exactly as easy, because nothing about the code tells you which one you have. It runs, it produces an answer, it passes the examples in the problem statement. The honest position is that <b>most greedy ideas you have are simply wrong</b>. The work is finding out which kind you are holding, before you commit to it.</p>
-<p>So the real skill here is not the loop. It is the argument: why does taking this item first never cost you the optimum? There is a standard shape for that argument. If you cannot make it, you do not have a greedy problem. You have an enumeration problem wearing a disguise.</p>
-<p><b>Analogy.</b> Climbing a hill in thick fog by always stepping in whatever direction goes up. You will certainly reach a summit. Whether it is the tallest summit depends entirely on the shape of the landscape, and from inside the fog you cannot tell the difference.</p>`,
+  plain: `<p>A greedy algorithm makes the choice that looks best right now, commits to it, and moves on. No table, no recursion, no going back. Most sort the input by some key and walk it once, which is why they fit on a whiteboard.</p>
+<p>That shortness is a trap. A wrong greedy algorithm is exactly as easy to write as a right one, and nothing in the code tells you which you have. “Earliest start” and “earliest finish” are the same loop with a different sort key. One is optimal for room bookings; the other loses a booking on five requests.</p>
+<p>So the real skill is the argument: why does taking this item first never cost you the best answer? There is a standard shape for it, the <b>exchange argument</b>. If you cannot make it, you do not have a greedy problem. You have a search problem in disguise.</p>
+<p><b>Analogy.</b> Climbing a hill in thick fog by always stepping uphill. You will reach a summit. Whether it is the highest one depends on the landscape, and from inside the fog you cannot tell.</p>`,
 
   why: [
     { t: "Start from the cost of doing it properly",
-      d: "For most optimisation problems the honest method is to try the possibilities: n! orderings, 2^n subsets, or a DP table over every state. That is correct and slow. So the question worth asking is whether there is a rule that lets you decide one piece of the answer <b>immediately</b>, with no lookahead, and be right." },
-    { t: "The greedy hypothesis, and why it is so cheap",
-      d: "Suppose such a rule exists. Then the algorithm writes itself: order the items by the rule, walk them once, take each one that is still compatible with what you have. That is a sort plus a sweep, <b>O(n log n)</b>, O(1) extra space. Compare that with an O(n * target) DP table and the appeal is obvious." },
+      d: "The honest method is to try the possibilities: 2<sup><var>n</var></sup> subsets of requests, or a DP table over every state. Correct and slow. So ask whether some rule decides one piece of the answer <b>immediately</b>, with no lookahead, and is still right." },
+    { t: "Why a greedy rule is so cheap",
+      d: "If such a rule exists, the algorithm writes itself: sort by the rule, walk once, take each item that still fits with what you have. A sort plus a sweep: <b>O(<var>n</var> log <var>n</var>)</b>, and nothing kept to reconsider. For 10⁵ requests, about 1.7 × 10⁶ steps." },
     { t: "Cheap is not the same as correct",
-      d: "Coins <code>{1, 3, 4}</code>, target 6. Take the biggest that fits: 4, then 1, then 1, three coins. The optimum is <code>3 + 3</code>, two coins. Nothing in the code misbehaved. The rule was just false, and the program has no way to notice, because a greedy algorithm never looks at the answer it did not take." },
-    { t: "The reason this particular trap is dangerous",
-      d: "Run the same greedy on <code>{1, 5, 10, 25}</code> and it is <b>correct</b>, for every target, provably. Real currencies are designed so that it is. So your intuition, built from handling actual money, agrees with the algorithm, and your test cases will too. The counterexample lives in coin systems you have never used, which is a much worse place for it to live than in your test file." },
+      d: "Sort A to E by start time and the same loop takes A, then E: 2 bookings. Nothing in the code misbehaved. The rule was false, and the program cannot notice, because a greedy algorithm never looks at the choice it did not make. Coins {1, 3, 4} and target 6 fail the same way: biggest first gives 4 + 1 + 1, where 3 + 3 uses two coins." },
+    { t: "Why that trap is dangerous",
+      d: "Biggest-coin-first is <b>correct</b> for {1, 5, 10, 25}, for every amount. Real currencies are designed that way. So your intuition, trained on real money, agrees with the algorithm, and so do your tests. The counterexample lives in cases you never thought to try." },
     { t: "The two properties a problem must have",
-      d: "First, the <b>greedy choice property</b>: the choice your rule makes first appears in <i>some</i> optimal solution. Not in every one, just one, which is enough. Second, <b>optimal substructure</b>: once you commit to that choice, what remains is the same problem on a smaller input, so you can repeat the argument. With both, induction finishes it: the first choice is safe, and the rest is the same problem." },
-    { t: "The exchange argument is how you prove the first one",
-      d: "Take <b>any</b> optimal solution OPT and let g be the item your rule picks first. If OPT already contains g, there is nothing to prove. Otherwise, swap g into OPT in place of whatever OPT took instead, and show two things: the result is still valid, and it is <b>no worse</b>. Then an optimal solution containing g exists. Note the shape: you never argue that greedy beats OPT, only that it ties it. Ties are all you need." },
-    { t: "When the exchange fails, you enumerate, and that is DP or backtracking",
-      d: "If swapping your choice in can make a solution worse, the choice is not safe, and you cannot commit without looking ahead. Looking ahead means trying both branches. If the same state is reached many ways and you want a count or a best value, that is DP with a memo. If you want the arrangements themselves, that is the <code>backtracking</code> page. Greedy is not a weaker DP, it is a claim you failed to prove." },
+      d: "First, the <b>greedy choice property</b>: the rule's first pick appears in <i>some</i> best solution. Second, <b>optimal substructure</b>: after committing to it, what is left is the same problem, only smaller. Here, after taking B (ends at 3), what is left is the same scheduling problem on requests starting at 3 or later." },
+    { t: "The exchange argument proves the first property",
+      d: "Take <b>any</b> best schedule, and look at its first meeting. Swap it for B, the earliest finisher. B ends no later, so every other meeting in that schedule still fits. The swap keeps the count, so a best schedule containing B exists. You never show greedy beats the optimum, only that it ties." },
+    { t: "When the exchange fails, you search",
+      d: "If swapping your choice in can make a solution worse, the choice is not safe, and you must look ahead. Looking ahead means trying both branches. If many paths reach the same state and you want a count or a best value, that is DP. If you want the arrangements themselves, it is backtracking. Greedy is not a weaker DP: it is a claim you failed to prove." },
   ],
 
   variants: [
     { n: "Activity selection", cost: "O(n log n), sort by finish time",
-      idea: "Among overlapping activities, always keep the one that <b>finishes earliest</b>, then take the next one that starts after it.",
-      when: "Maximise the count of non-overlapping intervals: meeting rooms, non-overlapping intervals, bursting balloons with arrows.",
-      watch: "The exchange argument: replace OPT's first activity with the earliest-finishing one. It frees the room no later, so nothing that fitted before stops fitting. Sort by <b>start</b> or by <b>duration</b> instead and both are wrong, with easy counterexamples." },
-
+      idea: "Keep the request that <b>finishes earliest</b>, then take the next that starts after it ends.",
+      when: "Most non-overlapping intervals: meeting rooms, non-overlapping intervals, bursting balloons with arrows.",
+      watch: "Sorting by <b>start</b> or by <b>length</b> both look reasonable and both are wrong, as the tries at the top show." },
     { n: "Fractional knapsack", cost: "O(n log n), sort by value per unit weight",
-      idea: "Take items in decreasing value/weight order, and cut the last one to fit exactly.",
-      when: "The items are divisible: fuel, ore, time, anything continuous.",
-      watch: "The exchange: if OPT carries a unit of a worse ratio while a better one is left behind, swap that unit and the value does not fall. This breaks completely for <b>0/1 knapsack</b>, where you cannot cut an item, and that problem is DP. The two are one word apart and nothing alike." },
-
+      idea: "Take items in decreasing value-per-weight order, and cut the last one to fit exactly.",
+      when: "Items can be divided: fuel, ore, time, anything continuous.",
+      watch: "The exchange: a unit of a worse ratio can be swapped for a unit of a better one without lowering the value. It breaks for <b>0/1 knapsack</b>, where items cannot be cut, and that problem is DP." },
     { n: "Huffman coding", cost: "O(n log n) with a heap",
-      idea: "Repeatedly merge the <b>two least frequent</b> symbols into one node. The tree you build is an optimal prefix code.",
-      when: "Building a minimum weighted-depth tree: compression, and the merge-cost family of problems.",
-      watch: "The exchange: in any optimal tree, the two deepest siblings can be swapped for the two rarest symbols without increasing the total cost, because rare symbols pay less for depth. The greedy step here changes the input as it goes, so it needs a heap rather than one sort." },
-
+      idea: "Repeatedly merge the <b>two least frequent</b> symbols into one node. The tree built is an optimal prefix code.",
+      when: "Compression, and the family of “merge at least total cost” problems.",
+      watch: "Merging changes the input as you go, so a single sort is not enough: it needs a heap." },
     { n: "Scheduling to minimise lateness", cost: "O(n log n), sort by deadline",
-      idea: "Run jobs in <b>earliest deadline first</b> order, back to back, ignoring how long each one takes.",
-      when: "One machine, every job must run, and you are minimising the worst lateness.",
-      watch: "The exchange is an <b>inversion</b> argument: any schedule with an adjacent pair out of deadline order can have that pair swapped without increasing the maximum lateness, and repeated swaps turn any optimum into the greedy order. Change the objective to total completion time and the correct key changes to shortest job first." },
-
-    { n: "Interval covering and jump games", cost: "O(n), one sweep",
-      idea: "Track the <b>furthest point reachable</b> so far, and only commit to a jump when you are forced to, at the edge of the current reach.",
-      when: "Minimum jumps, minimum intervals to cover a range, gas station style circuits.",
-      watch: "The exchange: any solution's k-th choice can be replaced by the one reaching furthest, and every later choice still has at least as much room. The bug people write is committing at every index instead of at the boundary of the current reach, which counts jumps that were never made." },
-
-    { n: "Dijkstra and Prim, greedy in disguise",
-      cost: "O(E log V) with a heap",
-      idea: "Repeatedly settle the closest unsettled node (Dijkstra) or add the cheapest edge leaving the built tree (Prim).",
-      when: "Shortest paths and minimum spanning trees, covered properly on their own pages.",
-      watch: "Both rest on a genuine exchange argument (the cut property for Prim), and both have a stated precondition. Dijkstra needs <b>non-negative weights</b>: with a negative edge the closest node is no longer safe to settle, the greedy choice property fails, and the algorithm returns a confident wrong answer." },
+      idea: "Run jobs in <b>earliest deadline first</b> order, back to back, whatever their lengths.",
+      when: "One machine, every job must run, and the worst lateness should be as small as possible.",
+      watch: "The proof swaps any adjacent pair out of deadline order without raising the worst lateness. Change the goal to total completion time, and the key becomes shortest job first." },
+    { n: "Jump games and interval covering", cost: "O(n), one sweep",
+      idea: "Track the <b>furthest point reachable</b> so far, and commit to a jump only at the edge of the current reach.",
+      when: "Fewest jumps, fewest intervals to cover a range, gas-station circuits.",
+      watch: "Committing at every index, instead of at the edge of the reach, counts jumps that were never made." },
+    { n: "Dijkstra and Prim, greedy in disguise", cost: "O(E log V) with a heap",
+      idea: "Settle the nearest unsettled node (Dijkstra), or add the cheapest edge leaving the tree (Prim).",
+      when: "Shortest paths and minimum spanning trees, covered on their own pages.",
+      watch: "Both rest on a real exchange argument, with a stated condition. Dijkstra needs <b>non-negative weights</b>: with a negative edge, the nearest node is no longer safe to settle." },
   ],
 
-  hing: `<p><b>Ek line mein:</b> greedy matlab abhi jo best dikh raha hai woh utha lo, aur peeche mud kar mat dekho. Likhna aasaan hai, itna aasaan ki <b>galat</b> greedy bhi utni hi aasaani se likh jaati hai. Interview mein marks code par nahi, us <b>proof</b> par milte hain jo bataata hai ki local choice safe kyun hai.</p>
-<p><b>Pehle counterexample dhoondo, phir code likho.</b> Coins <code>{1, 3, 4}</code>, target 6. Bada coin pehle: 4, phir 1, phir 1, matlab teen coins. Sahi jawaab hai <code>3 + 3</code>, do coins. Code mein koi bug nahi tha, rule hi jhootha tha. Aur greedy algorithm ko kabhi pata nahi chalega, kyunki woh us raaste ko dekhta hi nahi jo usne nahi liya.</p>
-<p><b>Ab asli khatra samjho.</b> Wahi greedy <code>{1, 5, 10, 25}</code> par bilkul <b>sahi</b> hai, har target ke liye. Asli currency isi tarah design ki jaati hai. Iska matlab tumhara dimaag, jo asli paise handle kar ke bana hai, algorithm se sehmat hoga, aur tumhare test cases bhi pass ho jaayenge. Galti tab dikhegi jab coin system ajeeb ho. Isiliye "maine do example par check kar liya" koi proof nahi hai.</p>
-<p><b>Do property yaad rakho.</b> Ek, <b>greedy choice property</b>: tumhara rule jo pehli choice karta hai, woh <i>kisi ek</i> optimal solution mein maujood hai. Sabhi mein nahi, ek mein kaafi hai. Do, <b>optimal substructure</b>: us choice ko commit karne ke baad jo bacha, woh wahi problem hai chhote input par. Dono mil gaye to induction se poora proof ban jaata hai.</p>
-<p><b>Exchange argument, yeh sabse zaroori move hai.</b> Koi bhi optimal solution OPT lo. Tumhari pehli choice g hai. Agar g already OPT mein hai, baat khatam. Warna OPT mein jo choice thi uski jagah g <b>swap</b> kar do, aur do cheezein dikhao: solution abhi bhi valid hai, aur <b>kharab nahi hua</b>. Bas. Dhyaan do, tumhein yeh sabit nahi karna ki greedy OPT se behtar hai, sirf yeh ki barabar hai. Barabari hi kaafi hai.</p>
-<p><b>Practical shakal:</b> zyadatar greedy solutions asal mein "<b>sahi key se sort karo, phir ek sweep</b>" hote hain. Aur asli algorithm wahi key hai. Activity selection mein <b>finish time</b> se sort karna sahi hai, start time ya duration se galat. Sort key chunna hi problem solve karna hai; baaki loop to formality hai.</p>
-<p><b>Aur agar exchange argument ban hi nahi raha?</b> Matlab commit karna safe nahi hai, matlab aage dekhna padega, matlab dono branch try karni padengi. Wahan se ya to <b>DP</b> (same state baar baar aata hai, aur tumhein count ya best value chahiye) ya <b>backtracking</b> (tumhein arrangements khud chahiye). Greedy DP ka chhota bhai nahi hai, greedy ek <b>daava</b> hai jo tumne sabit nahi kiya.</p>`,
+  hing: `<p><b>Greedy ka matlab:</b> abhi jo sabse achha dikh raha hai, woh le lo, aur <b>kabhi peeche mat dekho</b>. Koi table nahi, koi recursion nahi. Zyaadatar greedy solutions bas itne hain: kisi key par sort karo, phir ek baar loop chalao.</p>
+<p><b>Isiliye yeh itna aakarshak hai.</b> Paanch line ka code, O(<var>n</var> log <var>n</var>). DP table ya poori search ke muqaable bahut sasta.</p>
+<p><b>Par asli baat yahi hai:</b> galat greedy likhna utna hi aasaan hai jitna sahi. Code dekh kar pata nahi chalta ki tumhara wala kaunsa hai. "Sabse pehle shuru" aur "sabse pehle khatam" ek hi loop hai, bas sort key alag. Room bookings par ek optimal hai, doosra paanch requests par ek booking kho deta hai.</p>
+<p><b>Sabse famous jaal: coin change.</b> Coins <code>{1, 3, 4}</code>, target 6. Greedy: 4 + 1 + 1 = 3 coins. Sahi jawaab: 3 + 3 = 2 coins. Aur yahi greedy <code>{1, 5, 10, 25}</code> par <b>bilkul sahi</b> chalta hai. Isliye tumhara intuition aur tumhare test cases dono dhokha dete hain.</p>
+<p><b>Greedy tabhi sahi hai jab do cheezein hon.</b> Pehli, <b>greedy choice property</b>: tumhara pehla choice <i>kisi</i> optimal solution mein hota hai. Doosri, <b>optimal substructure</b>: choice lene ke baad jo bachta hai, woh wahi problem hai, bas chhoti.</p>
+<p><b>Pehli property ko saabit karne ka tarika: exchange argument.</b> Koi bhi optimal schedule lo. Uski pehli meeting ko sabse pehle khatam hone wali se badal do. Woh pehle khatam hoti hai, to baaki sab ab bhi fit. Ginti wahi rahi, matlab greedy ki choice wala optimal solution bhi exist karta hai.</p>
+<p><b>Aur agar exchange argument ban hi na raha ho?</b> To greedy chhod do. Agar same state baar-baar aa rahi hai aur count ya best value chahiye, to woh <b>DP</b> hai. Agar saari arrangements chahiye, to <b>backtracking</b>. Greedy DP ka kamzor roop nahi hai, yeh ek daava hai jo tum saabit nahi kar paaye.</p>`,
 
   viz: ["greedy"],
 
   math: [
-    { t: "What greedy is being compared against", d: "The gap is the temptation. Five lines that run in n log n against a table or an exponential search is why greedy gets guessed far more often than it gets proved.", w:
-`n items
+    { t: "Five bookings, sorted by finish time", d: "Sort once, then take each request that starts no earlier than the last accepted one ended. No lookahead, and nothing is revisited.", w:
+`requests    A 0-6   B 1-3   C 3-5   D 2-7   E 6-8
+by finish   B 3,  C 5,  A 6,  D 7,  E 8
 
-every subset          2^n
-DP over states        n x W
-greedy: sort + scan   n log2 n + n
+B  1-3   room free from 0    take      free from 3
+C  3-5   starts 3 >= 3       take      free from 5
+A  0-6   starts 0 <  5       skip
+D  2-7   starts 2 <  5       skip
+E  6-8   starts 6 >= 5       take      free from 8
 
-n = 40:  1.1 x 10^12   |   n x W   |   40 x 6 = 240
+accepted B, C, E: 3 bookings
+by START instead: A (0-6), then only E fits: 2` },
+    { t: "What greedy is being compared against", d: "The gap is the temptation. A sort and a scan against an exponential search is why greedy gets guessed far more often than it gets proved.", w:
+`n booking requests
+every subset             2^n
+sort by finish, scan     n log2 n + n
 
-three lines of code, and the only hard part is knowing
-whether the answer is right` },
-    { t: "The counterexample is usually one line away", d: "Greedy being correct is a property of the specific problem, never of the technique. Coins are the fastest way to see that.", w:
-`coins {1, 3, 4}, target 6
+n = 40:     1.1 x 10^12   vs   about 250
+n = 10^5:   impossible    vs   1.7 x 10^6 + 10^5
 
-greedy takes the largest first:  4 + 1 + 1  =  3 coins
-optimal:                         3 + 3      =  2 coins
+the only hard part is knowing whether the answer is right` },
+    { t: "The counterexample is usually one line away", d: "Greedy being correct is a property of the specific problem, never of the technique. Two small cases show it.", w:
+`shortest first, requests 0-4, 3-5, 4-8
+  takes 3-5, which clashes with both others:  1
+  optimal 0-4 and 4-8:                        2
 
-with {1, 5, 10, 25} greedy IS optimal
-so the coin system decides it, not the algorithm
-
-"it passed my examples" is not evidence of anything` },
+coins {1, 3, 4}, target 6
+  largest first:  4 + 1 + 1  =  3 coins
+  optimal:        3 + 3      =  2 coins
+with {1, 5, 10, 25}, largest first IS optimal` },
     { t: "The two properties a problem must have", d: "Both are needed. With only the second you have a DP. With neither you have a search, and no amount of sorting will fix it.", w:
 `greedy choice property
   some optimal solution contains the greedy first pick
 optimal substructure
-  after fixing that pick, what remains is the same problem
+  after fixing that pick, what is left is the same problem
 
-both      -> greedy, and it can be proved
-second    -> dynamic programming
-neither   -> backtracking with pruning` },
-    { t: "The exchange argument, in the shape you actually write", d: "This is the proof for interval scheduling and it is the template for all of them: take any optimal answer, swap your choice in, show nothing got worse.", w:
-`pick the interval with the earliest finishing time
+both       ->  greedy, and it can be proved
+second     ->  dynamic programming
+neither    ->  backtracking with pruning` },
+    { t: "The exchange argument, in the shape you actually write", d: "This is the proof for room bookings, and the template for all the others: take any best answer, swap your choice in, show nothing got worse.", w:
+`G = the request that finishes first    (B, ends at 3)
+O = any best schedule,  X = O's first meeting
+finish(G) <= finish(X), since G finishes first of all
 
-let G be greedy's pick, O any optimal solution,
-X the first interval in O.  finish(G) <= finish(X),
-because G had the earliest finish of all candidates.
+swap X for G in O: every other meeting in O starts at
+or after finish(X) >= finish(G), so nothing clashes.
+|O| is unchanged, so it is still a best schedule.
 
-swap X for G in O: everything else in O starts after
-finish(X) >= finish(G), so nothing now conflicts.
-|O| is unchanged, so it is still optimal.
-
-an optimal solution containing G exists. Induct on the rest.` },
-    { t: "Interval scheduling, priced", d: "The sort is the algorithm and the scan is bookkeeping, which is the usual shape once a greedy rule has been proved safe.", w:
-`n = 10^5 intervals
-
-check every subset      2^n x n          impossible
-sort by finish, scan    n log2 n + n
-                        1.7 x 10^6 + 10^5
-
-sorting by START instead answers a different question:
-[1,10], [2,3], [4,5] gives 1 interval, not 2` },
+a best schedule containing G exists. Induct on the rest.` },
   ],
 
   costs: [
-    ["sort by the chosen key", "O(n log n)", "the sort is the algorithm's real cost; the decision loop is trivial"],
+    ["sort by the chosen key", "O(n log n)", "the sort is the real cost; the decision loop is trivial"],
     ["the sweep itself", "O(n)", "each item is looked at once and decided once, with no lookahead"],
     ["greedy driven by a heap", "O(n log n)", "for rules where the best next choice changes as you go, as in Huffman"],
-    ["input already ordered", "O(n)", "no table, no recursion stack, nothing kept to reconsider later"],
-    ["extra space", "O(1) beyond the sort", "keeping nothing is the speed and also exactly the risk"],
-    ["the DP you fall back to", "often O(n * target)", "the price of a local choice you could not justify"],
-    ["proving it correct", "not a runtime cost", "and the only part of this an interviewer is actually testing"],
+    ["input already ordered", "O(n)", "no table, no recursion stack, nothing kept to reconsider"],
+    ["extra space", "O(1) beyond the sort", "keeping nothing is the speed, and exactly the risk"],
+    ["the DP you fall back to", "often O(n × target)", "the price of a local choice you could not justify"],
+    ["proving it correct", "not a runtime cost", "and the only part an interviewer is really testing"],
   ],
 
   traps: [
-    "<b>Treating three passing examples as a proof.</b> A wrong greedy passes small hand-made cases routinely, because you built those cases from the same intuition that produced the rule.",
-    "<b>Sorting by the wrong key.</b> For non-overlapping intervals, sorting by start time or by duration both look reasonable and both are wrong. Finish time is the one with an exchange argument behind it.",
-    "<b>Carrying fractional knapsack over to 0/1 knapsack.</b> Value per weight is optimal only when you may cut an item. When you cannot, it is DP, and the greedy answer can be arbitrarily bad.",
-    "<b>Comparing ratios with floating point.</b> Sorting by <code>v / w</code> loses ties and precision. Compare <code>a.v * b.w</code> against <code>b.v * a.w</code> in integers instead.",
-    "<b>Deciding at every step when the rule only fires at a boundary.</b> In jump-game style problems you commit at the edge of the current reach, not at each index, or you count jumps nobody made.",
-    "<b>Assuming a greedy stays correct after the objective changes.</b> Earliest deadline first minimises maximum lateness; shortest job first minimises total completion time. Same jobs, same machine, different key.",
+    "<b>Treating three passing examples as a proof.</b> A wrong greedy passes small hand-made cases routinely, because those cases came from the same intuition as the rule.",
+    "<b>Sorting by the wrong key.</b> For room bookings, start time and length both look reasonable, and both lose bookings. Finish time is the one with an exchange argument behind it.",
+    "<b>Carrying fractional knapsack over to 0/1 knapsack.</b> Value per weight is optimal only when items can be cut. When they cannot, it is DP, and the greedy answer can be arbitrarily bad.",
+    "<b>Comparing ratios in floating point.</b> Sorting by <code>v / w</code> loses ties and precision. Compare <code>a.v * b.w</code> with <code>b.v * a.w</code> in integers instead.",
+    "<b>Deciding at every step when the rule only fires at a boundary.</b> In jump games you commit at the edge of the current reach, not at each index, or you count jumps nobody made.",
+    "<b>Assuming a greedy stays correct when the goal changes.</b> Earliest deadline first minimises the worst lateness; shortest job first minimises total completion time. Same jobs, different key.",
   ],
 
   impl: [
     ["Python", "sorted(key=...), heapq for rolling choices", "heapq is min-heap only: push negatives, or tuples, to get a max-heap."],
     ["Java", "Arrays.sort(comparator), PriorityQueue", "Never write (a, b) -> a - b for ints; it overflows. Use Integer.compare."],
     ["C++", "std::sort, std::priority_queue", "priority_queue is a MAX-heap by default, the opposite of most languages."],
-    ["JavaScript", "Array.sort(comparator)", "No built-in heap. sort() without a comparator compares as text and sorts in place."],
+    ["JavaScript", "Array.sort(comparator)", "No built-in heap. sort() without a comparator compares as text, and sorts in place."],
   ],
 
   code: {
@@ -13123,15 +13686,15 @@ function coinChangeGreedy(coins, target) {
 // coinChangeGreedy([1, 5, 10, 25], 30) === 2   correct
 // coinChangeGreedy([1, 3, 4], 6)       === 3   wrong; 3 + 3 is 2 coins`,
   },
-  codecap: "Sort by the right key, then sweep once. The loop is never the hard part, the sentence justifying the key is.",
+  codecap: "Sort by the right key, then sweep once. The loop is never the hard part; the sentence justifying the key is.",
 
   q: [
-    ["What two properties must a problem have before greedy is correct?", "The greedy choice property, meaning the first choice your rule makes appears in some optimal solution, and optimal substructure, meaning that after committing to it the remainder is the same problem on a smaller input. Together they let induction finish the proof."],
-    ["What is an exchange argument, exactly?", "Take any optimal solution, and let g be the first choice your greedy rule makes. If g is already in it, done. Otherwise swap g in for whatever that solution chose there, and show the result is still valid and no worse. That proves an optimal solution containing g exists. You only ever need to tie with the optimum, never to beat it."],
-    ["Give a concrete case where the obvious greedy fails.", "Coin change with coins {1, 3, 4} and target 6. Taking the largest coin that fits gives 4 + 1 + 1, three coins, while 3 + 3 uses two. The rule was false, and the algorithm cannot detect it because it never examines the branch it did not take."],
-    ["Why is that coin change failure dangerous rather than merely wrong?", "Because the same greedy is provably correct for real currency systems like {1, 5, 10, 25}. Your intuition and your hand-written test cases both come from money you have actually used, so they agree with the algorithm. The counterexample only appears in coin systems you would never think to try."],
-    ["What do you do when you cannot construct an exchange argument?", "Stop committing and start enumerating. If the same state is reachable many ways and you want a count or an optimum, that is DP with a memo. If you want the arrangements themselves, that is backtracking. Greedy is a claim, and failing to prove it means you do not have one."],
-    ["What shape do most greedy solutions actually take?", "Sort by a key, then sweep once, taking whatever is still compatible. The loop is boilerplate, so choosing the sort key is the algorithm: for non-overlapping intervals it is finish time, for fractional knapsack it is value per weight, for lateness it is deadline."],
+    ["What two properties must a problem have before greedy is correct?", "The greedy choice property: the rule's first pick appears in some optimal solution. And optimal substructure: after committing to it, the rest is the same problem on a smaller input. Together they let induction finish the proof."],
+    ["What is an exchange argument, exactly?", "Take any optimal solution, and let g be your rule's first pick. If g is already in it, done. Otherwise swap g in for what that solution chose there, and show the result is still valid and no worse. You only need to tie the optimum, never beat it."],
+    ["Give a concrete case where the obvious greedy fails.", "Room bookings 0–6, 1–3, 3–5, 2–7, 6–8, taken by earliest start: 0–6 then 6–8, two bookings. Earliest finish takes 1–3, 3–5, 6–8: three. Or coins {1, 3, 4} with target 6: 4 + 1 + 1 against 3 + 3."],
+    ["Why is the coin change failure dangerous rather than merely wrong?", "Because the same greedy is provably correct for real currencies like {1, 5, 10, 25}. Your intuition and your test cases both come from real money, so they agree with the algorithm. The counterexample only appears in coin systems you would never think to try."],
+    ["What do you do when you cannot build an exchange argument?", "Stop committing and start searching. If the same state is reached many ways and you want a count or a best value, that is DP. If you want the arrangements themselves, that is backtracking."],
+    ["What shape do most greedy solutions take?", "Sort by a key, then sweep once, taking whatever still fits. The loop is boilerplate, so choosing the key is the algorithm: finish time for bookings, value per weight for fractional knapsack, deadline for lateness."],
   ],
 
   p: [
@@ -13143,37 +13706,192 @@ function coinChangeGreedy(coins, target) {
     [134, "gas-station", "Gas Station, the greedy that needs an actual proof", "M"],
     [621, "task-scheduler", "Task Scheduler, greedy driven by a count, not a sort", "M"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>Ek meeting room, aur din bhar ki booking requests, har ek ka start aur end time. <b>Jitni ho sake utni</b> accept karo, bina do ke takraaye. Ek busy office 10⁵ requests bhejta hai.</p>
+<p>Chhota version: paanch requests. A 0–6, B 1–3, C 3–5, D 2–7, E 6–8. 3 par khatam hone wali meeting aur 3 par shuru hone wali nahi takraatin. Sabse achha possible 3 hai: B, C aur E.</p>`,
+      tries: [
+        ["Requests ka har subset try karo, sabse bada bina takraav wala rakho", "Sahi, aur 2ⁿ subsets: paanch requests par 32, sirf 40 par 1.1 × 10¹²."],
+        ["Jo sabse pehle shuru ho woh lo", "A sabse pehle, 0 par, shuru hota hai aur room 6 tak rakhta hai. Yeh B, C aur D ko rok deta hai, bachte A aur E: 2 bookings, jahan 3 fit hoti hain."],
+        ["Sabse chhoti pehle lo", "Requests 0–4, 3–5 aur 4–8. Sabse chhoti, 3–5, baaki dono se takraati hai: 1 booking. 0–4 aur 4–8 lene se 2."],
+      ],
+      so: `<p>To woh lo jo <b>sabse pehle khatam</b> ho, phir agli jo uske khatam hone ke baad shuru ho, aur aise hi. Jaldi khatam hona room sabse jaldi khaali karta hai, baad wali sab ke liye. A se E par yeh B, C aur E chunta hai.</p>
+<p>Yahi <b>greedy algorithm</b> hai: sort, phir ek pass, kabhi dobara nahi sochna. 10⁵ requests ke liye lagbhag 1.7 × 10⁶ steps. Pakad upar ki koshishon mein hai: do utne hi samajhdaar lagne wale rules galat the. Code aasaan hai; <b>rule safe hai iska proof</b> hi poora kaam hai.</p>`,
+    },
+
+    one: "Abhi sabse achha dikhne wala option lo aur kabhi dobara mat socho. Code paanch line ka hai; mushkil poori tarah <b>local choice ko safe saabit karne</b> mein hai.",
+
+    plain: `<p>Greedy algorithm woh choice karta hai jo abhi sabse achhi dikhe, us par tik jaata hai, aur aage badhta hai. Na table, na recursion, na peeche jaana. Zyadatar input ko kisi key se sort karke ek baar chalte hain, isiliye whiteboard par aa jaate hain.</p>
+<p>Yahi chhotapan jaal hai. Galat greedy algorithm likhna bilkul utna hi aasaan hai jitna sahi, aur code mein kuch nahi batata ki aapke paas kaunsa hai. “Sabse pehle shuru” aur “sabse pehle khatam” ek hi loop hai, alag sort key ke saath. Room bookings par ek optimal hai; doosra paanch requests par ek booking kho deta hai.</p>
+<p>To asli hunar argument hai: yeh item pehle lene se sabse achha answer kabhi kyun nahi jaata? Iski ek standard shakal hai, <b>exchange argument</b>. Ise na bana sako, to aapke paas greedy problem nahi. Bhes badli hui search problem hai.</p>
+<p><b>Analogy.</b> Ghane kohre mein pahaad chadhna, hamesha upar ki taraf kadam rakh kar. Kisi chot par pahunchoge. Sabse oonchi hogi ya nahi, yeh zameen ki shakal par hai, aur kohre ke andar se pata nahi chalta.</p>`,
+
+    why: [
+      { t: "Sahi tareeke ki keemat se shuru karo",
+        d: "Imaandaar tareeka possibilities try karna hai: requests ke 2<sup><var>n</var></sup> subsets, ya har state par DP table. Sahi aur slow. To poochho ki kya koi rule answer ka ek hissa <b>turant</b>, bina aage dekhe, tay karta hai aur phir bhi sahi rehta hai." },
+      { t: "Greedy rule itna sasta kyun hai",
+        d: "Aisa rule ho, to algorithm khud likh jaata hai: rule se sort karo, ek baar chalo, har woh item lo jo ab tak liye ke saath fit ho. Ek sort aur ek sweep: <b>O(<var>n</var> log <var>n</var>)</b>, aur dobara sochne ko kuch nahi rakha. 10⁵ requests ke liye lagbhag 1.7 × 10⁶ steps." },
+      { t: "Sasta hona sahi hona nahi",
+        d: "A se E ko start time se sort karo aur wahi loop A leta hai, phir E: 2 bookings. Code mein kuch galat nahi hua. Rule jhootha tha, aur program pakad nahi sakta, kyunki greedy algorithm na li gayi choice ko kabhi dekhta hi nahi. Coins {1, 3, 4} aur target 6 aise hi fail: sabse bada pehle 4 + 1 + 1 deta hai, jahan 3 + 3 do coins hain." },
+      { t: "Yeh jaal khatarnaak kyun hai",
+        d: "Sabse-bada-coin-pehle {1, 5, 10, 25} ke liye har amount par <b>sahi</b> hai. Asli currencies aise hi banayi jaati hain. To asli paison par bana aapka intuition algorithm se sehmat hai, aur aapke tests bhi. Counterexample un cases mein rehta hai jo aapne kabhi try karne ki nahi sochi." },
+      { t: "Problem mein do properties honi chahiye",
+        d: "Pehli, <b>greedy choice property</b>: rule ki pehli pick <i>kisi</i> best solution mein hai. Doosri, <b>optimal substructure</b>: us par tikne ke baad jo bacha woh wahi problem hai, bas chhoti. Yahan B (3 par khatam) lene ke baad, bacha hai 3 ya baad shuru hone wali requests par wahi scheduling problem." },
+      { t: "Exchange argument pehli property saabit karta hai",
+        d: "<b>Koi bhi</b> best schedule lo, aur uski pehli meeting dekho. Use B se badlo, jo sabse pehle khatam hoti hai. B kisi se baad mein khatam nahi hoti, to schedule ki baaki har meeting ab bhi fit. Badli ginti nahi badalti, to B wala best schedule exist karta hai. Aap kabhi nahi dikhaate ki greedy optimum ko haraata hai, sirf ki barabar hai." },
+      { t: "Jab exchange fail ho, to search karo",
+        d: "Agar apni choice andar badalne se solution bigad sakta hai, to choice safe nahi, aur aage dekhna padega. Aage dekhna matlab dono branches try karna. Kai raaste ek state par pahunchein aur ginti ya best value chahiye, to DP. Arrangements khud chahiye, to backtracking. Greedy kamzor DP nahi: yeh ek daava hai jo aap saabit nahi kar paaye." },
+    ],
+
+    variants: [
+      { n: "Activity selection", cost: "O(n log n), sort by finish time",
+        idea: "Woh request rakho jo <b>sabse pehle khatam</b> ho, phir agli lo jo uske khatam hone ke baad shuru ho.",
+        when: "Sabse zyada na takraane wale intervals: meeting rooms, non-overlapping intervals, arrows se balloons phodna.",
+        watch: "<b>Start</b> ya <b>length</b> se sort karna dono samajhdaar lagte hain aur dono galat, jaisa upar ki koshishein dikhaati hain." },
+      { n: "Fractional knapsack", cost: "O(n log n), sort by value per unit weight",
+        idea: "Items ko ghat-te value-per-weight order mein lo, aur aakhri ko theek fit hone tak kaato.",
+        when: "Items baante ja sakte hon: fuel, ore, time, kuch bhi continuous.",
+        watch: "Exchange: kharab ratio ki ek unit behtar ratio ki unit se badli ja sakti hai bina value ghataaye. <b>0/1 knapsack</b> mein, jahan items kat nahi sakte, yeh toot jaata hai, aur woh problem DP hai." },
+      { n: "Huffman coding", cost: "O(n log n) with a heap",
+        idea: "Baar baar <b>do sabse kam frequent</b> symbols ko ek node mein jodo. Bana tree optimal prefix code hai.",
+        when: "Compression, aur “sabse kam kul keemat par jodo” wali problems.",
+        watch: "Jodna chalte chalte input badalta hai, to ek sort kaafi nahi: heap chahiye." },
+      { n: "Scheduling to minimise lateness", cost: "O(n log n), sort by deadline",
+        idea: "Jobs ko <b>earliest deadline first</b> order mein, ek ke baad ek chalao, lambai chahe jo ho.",
+        when: "Ek machine, har job chalni hai, aur sabse buri lateness jitni ho sake chhoti.",
+        watch: "Proof deadline order se bahar ke kisi bhi padosi pair ko sabse buri lateness badhaaye bina swap karta hai. Goal kul completion time karo, to key shortest job first ban jaati hai." },
+      { n: "Jump games and interval covering", cost: "O(n), one sweep",
+        idea: "Ab tak ka <b>sabse door pahunch sakne wala point</b> track karo, aur jump sirf current reach ke kinaare par tay karo.",
+        when: "Sabse kam jumps, range dhakne ko sabse kam intervals, gas-station circuits.",
+        watch: "Reach ke kinaare ki jagah har index par tay karna aise jumps ginta hai jo kabhi hue hi nahi." },
+      { n: "Dijkstra and Prim, greedy in disguise", cost: "O(E log V) with a heap",
+        idea: "Sabse paas ka unsettled node settle karo (Dijkstra), ya tree se bahar jaane wala sabse sasta edge jodo (Prim).",
+        when: "Shortest paths aur minimum spanning trees, apne pages par samjhaaye.",
+        watch: "Dono ek asli exchange argument par tike hain, ek likhi shart ke saath. Dijkstra ko <b>non-negative weights</b> chahiye: negative edge ke saath sabse paas ka node settle karna safe nahi rehta." },
+    ],
+
+    math: [
+      { t: "Paanch bookings, finish time se sorted", d: "Ek baar sort karo, phir har woh request lo jo aakhri accepted ke khatam hone se pehle shuru na ho. Na aage dekhna, na kuch dobara." },
+      { t: "Greedy ka muqaabla kisse hai", d: "Farak hi lalach hai. Exponential search ke saamne ek sort aur ek scan, isiliye greedy saabit kam aur guess zyada hota hai." },
+      { t: "Counterexample aam taur par ek line door hai", d: "Greedy ka sahi hona khaas problem ki property hai, technique ki kabhi nahi. Do chhote cases yeh dikhaate hain." },
+      { t: "Problem mein do properties honi chahiye", d: "Dono chahiye. Sirf doosri ho to DP hai. Koi na ho to search hai, aur koi sorting ise theek nahi karegi." },
+      { t: "Exchange argument, us shakal mein jaise aap likhte ho", d: "Yeh room bookings ka proof hai, aur baaki sab ka template: koi best answer lo, apni choice andar badlo, dikhaao kuch bigda nahi." },
+    ],
+
+    costs: [
+      ["sort by the chosen key", "O(n log n)", "sort asli cost hai; decision loop mamooli"],
+      ["the sweep itself", "O(n)", "har item ek baar dekha aur ek baar tay, bina aage dekhe"],
+      ["greedy driven by a heap", "O(n log n)", "un rules ke liye jahan agli best choice chalte chalte badle, jaise Huffman"],
+      ["input already ordered", "O(n)", "na table, na recursion stack, dobara sochne ko kuch nahi rakha"],
+      ["extra space", "O(1) beyond the sort", "kuch na rakhna hi speed hai, aur theek wahi risk"],
+      ["the DP you fall back to", "often O(n × target)", "us local choice ki keemat jise aap saabit nahi kar paaye"],
+      ["proving it correct", "not a runtime cost", "aur interviewer sach mein sirf yahi hissa test kar raha hai"],
+    ],
+
+    traps: [
+      "<b>Teen pass hote examples ko proof maanna.</b> Galat greedy chhote haath ke bane cases aaram se pass karta hai, kyunki woh cases usi intuition se bane jisse rule.",
+      "<b>Galat key se sort karna.</b> Room bookings ke liye start time aur length dono samajhdaar lagte hain, aur dono bookings kho dete hain. Finish time ke peeche exchange argument hai.",
+      "<b>Fractional knapsack ko 0/1 knapsack par le jaana.</b> Value per weight tabhi optimal hai jab items kaate ja sakein. Na kaate ja sakein to DP hai, aur greedy answer kitna bhi bura ho sakta hai.",
+      "<b>Floating point mein ratios compare karna.</b> <code>v / w</code> se sort karna ties aur precision khota hai. Integers mein <code>a.v * b.w</code> ko <code>b.v * a.w</code> se compare karo.",
+      "<b>Har step par tay karna jab rule sirf kinaare par chalta hai.</b> Jump games mein current reach ke kinaare par tay karo, har index par nahi, warna aise jumps ginoge jo kisi ne nahi kiye.",
+      "<b>Goal badalne par greedy ko sahi maan lena.</b> Earliest deadline first sabse buri lateness ghataata hai; shortest job first kul completion time. Wahi jobs, alag key.",
+    ],
+
+    impl: [
+      ["Python", "sorted(key=...), heapq for rolling choices", "heapq sirf min-heap hai: max-heap ke liye negatives ya tuples push karo."],
+      ["Java", "Arrays.sort(comparator), PriorityQueue", "Ints ke liye (a, b) -> a - b kabhi mat likho; overflow hota hai. Integer.compare use karo."],
+      ["C++", "std::sort, std::priority_queue", "priority_queue default mein MAX-heap hai, zyadatar languages ka ulta."],
+      ["JavaScript", "Array.sort(comparator)", "Built-in heap nahi. Comparator ke bina sort() text ki tarah compare karta hai, aur in place sort karta hai."],
+    ],
+
+    codecap: "Sahi key se sort karo, phir ek baar sweep. Loop kabhi mushkil nahi; key ko sahi thehraane wala sentence hai.",
+
+    q: [
+      ["Greedy sahi ho, isse pehle problem mein kaunsi do properties honi chahiye?", "Greedy choice property: rule ki pehli pick kisi optimal solution mein hai. Aur optimal substructure: us par tikne ke baad baaki wahi problem chhote input par hai. Dono milkar induction se proof poora karti hain."],
+      ["Exchange argument theek-theek kya hai?", "Koi bhi optimal solution lo, aur g ko apne rule ki pehli pick maano. g pehle se usme hai, to ho gaya. Warna us solution ki wahan ki choice ki jagah g daalo, aur dikhaao result ab bhi valid aur bura nahi. Optimum ki barabari kaafi hai, haraana kabhi nahi."],
+      ["Ek pakka case do jahan obvious greedy fail ho.", "Room bookings 0–6, 1–3, 3–5, 2–7, 6–8 earliest start se: 0–6 phir 6–8, do bookings. Earliest finish 1–3, 3–5, 6–8 leta hai: teen. Ya coins {1, 3, 4} target 6 ke saath: 4 + 1 + 1 vs 3 + 3."],
+      ["Coin change ka fail sirf galat nahi, khatarnaak kyun hai?", "Kyunki wahi greedy {1, 5, 10, 25} jaisi asli currencies ke liye saabit sahi hai. Aapka intuition aur test cases dono asli paison se aate hain, to algorithm se sehmat hain. Counterexample sirf un coin systems mein dikhta hai jo aap try karne ki kabhi nahi sochte."],
+      ["Exchange argument na ban paaye to kya karo?", "Tikna band karo aur search shuru karo. Same state kai tarah se aaye aur ginti ya best value chahiye, to DP. Arrangements khud chahiye, to backtracking."],
+      ["Zyadatar greedy solutions ki shakal kya hoti hai?", "Ek key se sort, phir ek sweep, jo ab bhi fit ho woh lo. Loop boilerplate hai, to key chunna hi algorithm hai: bookings ke liye finish time, fractional knapsack ke liye value per weight, lateness ke liye deadline."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "string-search",
   n: "String search and KMP",
   group: "Algorithms",
-  one: "The naive scan throws away every character it just matched. <b>Precompute how much of a failed match is still usable</b> and the text pointer never has to go backwards.",
+  need: {
+    ask: `<p>Find every place a pattern of 1,000 characters occurs in a text of <b>10⁶</b> characters: a gene in a genome, a signature in a log. The answer has to be fast even when the text is chosen to hurt.</p>
+<p>The small version: pattern <code>ababc</code> in text <code>abababca</code>. It occurs once, starting at index 2.</p>`,
+    tries: [
+      ["Line up at each position, compare until a mismatch, slide one place", "On <code>abababca</code>, the attempt at 0 matches <code>abab</code>, then fails, then goes back to index 1, and the next starts read those letters again. On a text of all a's, searched for 999 a's then a b, each of 10⁶ starts compares 1,000 characters: 10⁹."],
+      ["After a mismatch, jump past everything that just matched", "No re-reading, but it misses matches. After <code>abab</code> matches at 0 and fails at 4, jumping to index 4 skips the real match at 2, which begins inside the part already matched."],
+    ],
+    so: `<p>So slide by exactly as much as is safe. The 4 matched characters were the pattern's own first four, <code>abab</code>, known before the text arrived. <code>abab</code> ends with <code>ab</code>, which is also how the pattern starts. Slide by 4 − 2 = 2, and those two letters are already known to match.</p>
+<p>Work out that overlap once for every prefix of the pattern, a table called <b>lps</b>. Then the text pointer never moves backwards, and the search is O(<var>n</var> + <var>m</var>): about 10⁶ steps instead of 10⁹. That is <b>KMP</b>, after Knuth, Morris and Pratt.</p>`,
+  },
 
-  plain: `<p>Find every place a pattern occurs inside a longer text. The obvious method lines the pattern up at position 0, compares left to right, and on the first mismatch slides one place right and starts over. It is correct and it is three lines. On the wrong sort of text, where the pattern nearly matches everywhere, it is O(n·m).</p>
-<p>Look at what a failed attempt actually learns. If four characters matched before the fifth failed, those four are not a mystery. They are the pattern's own first four, and you knew them before the text arrived. So you can work out, in advance and from the pattern alone, how far you are allowed to slide without skipping a possible match.</p>
-<p>The answer is the longest piece that is both a <b>prefix and a suffix</b> of what matched. If "abab" matched, it starts and ends with "ab", so sliding by two keeps that "ab" aligned and you resume comparing from the third character. Precompute that number for every prefix of the pattern and the text pointer never moves backwards again, which makes the scan O(n + m).</p>
-<p><b>Analogy.</b> Losing your place while reading a phone number aloud. You do not go back to the first digit; you notice the last few you said are also how it starts, and pick up from there.</p>`,
+  one: "The naive scan throws away every character it just matched. <b>Precompute how much of a failed match is still usable</b>, and the text pointer never has to go backwards.",
+
+  plain: `<p>Find every place a pattern occurs inside a longer text. The obvious method lines the pattern up at position 0, compares left to right, and on the first mismatch slides one place right and starts over. It is correct, and three lines long. On the wrong text, where the pattern nearly matches everywhere, it costs O(<var>n</var>·<var>m</var>).</p>
+<p>Look at what a failed attempt learned. Searching <code>abababca</code> for <code>ababc</code>, four characters matched before the fifth failed. Those four are not a mystery: they are the pattern's own first four, <code>abab</code>. So how far you may slide can be worked out in advance, from the pattern alone.</p>
+<p>The answer is the longest piece that is both a <b>prefix and a suffix</b> of what matched. <code>abab</code> starts and ends with <code>ab</code>, so slide by two, keep that <code>ab</code> lined up, and carry on from the third pattern character. Work this number out for every prefix of the pattern, and the text pointer never goes back. The scan becomes O(<var>n</var> + <var>m</var>).</p>
+<p><b>Analogy.</b> Losing your place while reading a phone number aloud. You do not go back to the first digit. You notice the last few you said are also how it starts, and carry on from there.</p>`,
 
   why: [
-    { t: "The naive scan is fine until it is not", d: "Try every starting position and compare until a mismatch. On ordinary English it is nearly linear, because mismatches come almost immediately. On <b>aaaaaaaaab</b> searched for <b>aaab</b>, every position matches most of the pattern before failing, and the cost is the full <b>O(n·m)</b>. Interview constraints are set to produce exactly that input." },
-    { t: "Ask what a failed attempt already told you", d: "When the match dies at offset j, the previous j characters of the text are known: they are <b>the pattern's own first j characters</b>. Sliding by one throws that away and re-reads them. Any algorithm that re-reads what it has already confirmed is leaving work on the table." },
-    { t: "The right question is about the pattern, not the text", d: "How far can the pattern slide without skipping a match? Far enough that the part still under it lines up. That means the longest piece of the matched prefix that is <b>also a suffix</b> of it. For \"abab\" that is \"ab\", length 2. This depends only on the pattern, so it can be computed once, before the text is even read." },
-    { t: "That table is the prefix function", d: "lps[i] is the length of the longest proper prefix of pattern[0..i] that is also a suffix of it. Proper means not the whole thing, or the answer would always be trivial. On a mismatch after j matched characters, fall back to <b>lps[j-1]</b>: that many characters are still known good, so keep them and resume." },
-    { t: "The table is built by the same trick, on itself", d: "Building lps is the pattern searched inside the pattern, with the same fall-back rule. That sounds circular and is not: computing lps[i] only ever reads entries before i, which are already final. It is <b>O(m)</b>, and it is the part people cannot reconstruct under pressure." },
-    { t: "Why the total is linear, said properly", d: "The text index only ever increases, at most n times. The pattern index increases at most once per text step, so across the whole run it can only <b>decrease</b> n times in total. The fall-back loop looks nested and is paid for by forward progress already made. This is the same amortised argument as the monotonic stack." },
-    { t: "There is a second route to the same bound", d: "Rabin-Karp hashes each window of the text with a rolling hash, so sliding one place costs one multiply and one subtract. Equal hashes mean a <b>probable</b> match, so you still compare the characters to confirm. Same O(n + m) expected, and it generalises to many patterns at once, which KMP does not." },
-    { t: "Be honest about when you need any of this", d: "The built-in <code>find</code> or <code>indexOf</code> is a naive scan with tricks and beats KMP on almost every real input. What KMP buys is the <b>worst-case guarantee</b>, and the prefix function itself, which is what problems about repeated substrings and shortest palindromes actually want." },
+    { t: "The naive scan is fine until it is not",
+      d: "Try every starting position and compare until a mismatch. On ordinary English it is nearly linear, because mismatches come almost at once. Search <code>aaaaaaaaab</code> for <code>aaab</code>, and every position matches most of the pattern before failing: the full <b>O(<var>n</var>·<var>m</var>)</b>. Interview limits are set to produce exactly that input." },
+    { t: "Ask what a failed attempt already told you",
+      d: "When the match dies after <var>j</var> characters, those <var>j</var> text characters are known: they are <b>the pattern's own first <var>j</var></b>. At index 0 of <code>abababca</code>, that is <code>abab</code>. Sliding by one throws this away and reads it again. Re-reading what is already confirmed is wasted work." },
+    { t: "The right question is about the pattern, not the text",
+      d: "How far can the pattern slide without skipping a match? Far enough that the part still under it lines up. That is the longest piece of the matched prefix that is <b>also a suffix</b> of it. For <code>abab</code> it is <code>ab</code>, length 2. It depends only on the pattern, so it can be worked out before the text is read." },
+    { t: "That table is the prefix function",
+      d: "lps[<var>i</var>] is the length of the longest proper prefix of pattern[0..<var>i</var>] that is also its suffix. Proper means not the whole thing, which would trivially match itself. For <code>ababc</code> it is 0, 0, 1, 2, 0. After a mismatch with <var>j</var> matched, fall back to <b>lps[<var>j</var> − 1]</b>: that many characters are still good." },
+    { t: "The table is built by the same trick, on itself",
+      d: "Building lps is the pattern searched inside the pattern, with the same fall-back rule. That sounds circular and is not: working out lps[<var>i</var>] only reads entries before <var>i</var>, which are already final. It is <b>O(<var>m</var>)</b>, and it is the part people cannot rebuild under pressure." },
+    { t: "Why the total is linear, said properly",
+      d: "The text index only moves forward, at most <var>n</var> times. The matched count <var>j</var> rises at most once per text step, so over the whole run it can <b>fall</b> at most <var>n</var> times. The fall-back loop looks nested, but it is paid for by progress already made: the same argument as the monotonic stack." },
+    { t: "There is a second route to the same bound",
+      d: "Rabin-Karp gives each window of the text a rolling hash, so sliding one place costs one multiply and one subtract. Equal hashes mean a <b>probable</b> match, so you still compare the characters. Same O(<var>n</var> + <var>m</var>) expected, and it extends to many patterns at once, which KMP does not." },
+    { t: "Be honest about when you need any of this",
+      d: "The built-in <code>find</code> or <code>indexOf</code> is a naive scan with tricks, and beats KMP on almost every real input. What KMP buys is the <b>worst-case guarantee</b>, and the lps table itself, which is what problems about repeated substrings and shortest palindromes really want." },
   ],
 
-  viz: ["kmp"],
+  variants: [
+    { n: "Naive scan", cost: "O(n·m) worst, about O(n) typical",
+      idea: "Try every start, compare until a mismatch, slide by one.",
+      when: "Almost always, through the built-in. Name it first in an interview.",
+      watch: "Say out loud that the worst case is O(<var>n</var>·<var>m</var>), on text that nearly matches everywhere." },
+    { n: "KMP", cost: "O(n + m) guaranteed",
+      idea: "Precompute lps on the pattern, then scan the text once, falling back through lps on a mismatch.",
+      when: "The worst case matters, or the question is really about lps.",
+      watch: "Fall back to lps[<var>j</var> − 1], not lps[<var>j</var>], and never advance the text index during a fall-back." },
+    { n: "Z-algorithm", cost: "O(n + m)",
+      idea: "For each position, the length of the longest substring starting there that matches a prefix. Run it on pattern + separator + text.",
+      when: "The same information as lps in another shape. Often shorter to write correctly.",
+      watch: "The separator must be a character that appears in neither string." },
+    { n: "Rabin-Karp", cost: "O(n + m) expected",
+      idea: "A rolling hash over each window of length <var>m</var>, updated in O(1) per slide, with the characters checked on a hash hit.",
+      when: "Many patterns of one length, or a fixed-window repeat such as Repeated DNA Sequences.",
+      watch: "Always verify a hit. Unverified, it is a guess." },
+    { n: "Aho-Corasick", cost: "O(n + total pattern length + matches)",
+      idea: "A trie of all patterns, with KMP-style fall-back links between trie nodes.",
+      when: "Many patterns searched at once: word filters, virus signatures.",
+      watch: "Rarely asked to write, often worth naming as the many-pattern answer." },
+  ],
 
-  hing: `<p><b>Naive tareeka:</b> pattern ko index 0 par rakho, compare karo, mismatch hote hi ek jagah aage sarka kar dobara shuru. Sahi hai, teen line hai, aur <b>aaaaaaaaab</b> mein <b>aaab</b> dhoondo to har position par poora pattern lagbhag match hota hai phir fail hota hai. Yahi <b>O(n·m)</b> hai, aur interview ke constraints theek yahi input banane ke liye set kiye jaate hain.</p>
-<p><b>Ab socho ki fail hone se kya pata chala.</b> Agar mismatch offset j par hua, to pichhle j characters koi rahasya nahi hain. Woh <b>pattern ke hi pehle j characters</b> hain. Matlab woh tumhein text dekhne se pehle hi maloom the. Ek jagah sarakna un sab ko phenk dena hai.</p>
-<p><b>Asli sawaal pattern ke baare mein hai, text ke baare mein nahi.</b> Kitna sarak sakte ho bina kisi match ko chhode? Utna, jitna neeche wala hissa phir se line mein aa jaaye. Matlab: jo hissa match hua, uska sabse bada <b>prefix jo suffix bhi ho</b>. "abab" ka jawaab "ab" hai, length 2. Yeh sirf pattern par depend karta hai, isliye ek baar pehle hi nikal lo. Yahi <code>lps</code> table hai.</p>
-<p><b>Linear kyun hai, yeh line bolna:</b> text ka index kabhi peeche nahi jaata, zyada se zyada n baar aage badhta hai. Pattern ka index har step mein ek baar hi badhta hai, isliye poore run mein woh kul milakar n baar hi <b>ghat</b> sakta hai. Andar wala while loop dikhne mein nested hai, par uska paisa pehle hi bhara ja chuka hai. Aur haan, interview mein pehle <code>indexOf</code> bol dena, phir KMP: usse pata chalta hai ki tumhe worst case aur practice ka farak samajh aata hai.</p>`,
+  hing: `<p><b>Naive scan kya karta hai?</b> Pattern ko har position par rakho, left se right match karo, pehla mismatch aaya to ek jagah aage khisko aur phir se shuru. Normal text par yeh lagbhag O(<var>n</var>) chalta hai. Par agar text ho <code>aaaaaaaaab</code> aur pattern <code>aaab</code>, to har position par lagbhag poora pattern match hota hai, phir fail. Total <b>O(<var>n</var>·<var>m</var>)</b>.</p>
+<p><b>Asli sawaal yeh hai:</b> jab <var>j</var> characters match ho chuke the aur phir fail hua, to un <var>j</var> characters ke baare mein hum kya jaante hain? Sab kuch! Woh pattern ke hi pehle <var>j</var> characters hain. Naive scan yeh jaankari phenk deta hai aur dobara padhta hai.</p>
+<p><b>To kitna khiskaana safe hai?</b> Jo match hua, uska sabse lamba hissa jo <b>prefix bhi ho aur suffix bhi</b>. <code>abab</code> match hua tha, woh <code>ab</code> se shuru hota hai aur <code>ab</code> par hi khatam. To 2 khiskao, aur <code>ab</code> pehle se match hai.</p>
+<p><b>Yahi hai lps table.</b> lps[<var>i</var>] = pattern[0..<var>i</var>] ka sabse lamba proper prefix jo suffix bhi ho. Mismatch aaye jab <var>j</var> match the, to <var>j</var> ko <b>lps[<var>j</var> − 1]</b> par le aao. Text ka pointer <b>kabhi peeche nahi jaata</b>.</p>
+<p><b>Loop ke andar loop hai, phir bhi O(<var>n</var>) kyun?</b> <var>j</var> har text character par zyada se zyada ek baar badhta hai, to poore run mein kul <var>n</var> baar. Andar ka while sirf <var>j</var> ko ghataata hai. Jitna badha, usse zyada ghat hi nahi sakta. Monotonic stack wala hi amortised argument.</p>
+<p><b>Aam galtiyan:</b> fall-back par text index bhi aage badha dena; <code>lps[j]</code> likhna jab <code>lps[j-1]</code> chahiye; aur match milne ke baad <var>j</var> ko 0 kar dena. Wahan <code>lps[m-1]</code> chahiye, warna overlapping matches chhoot jaate hain.</p>
+<p><b>Interview mein honest raho.</b> Pehle bolo ki built-in <code>indexOf</code> / <code>find</code> use karunga, aur uska worst case O(<var>n</var>·<var>m</var>) hai. KMP ki asli value worst-case guarantee hai, aur lps table khud, jo repeated substring aur shortest palindrome jaise sawaalon ka asli jawab hai.</p>`,
+
+  viz: ["kmp"],
 
   math: [
     { t: "The naive scan, and the input that kills it", d: "On ordinary text it behaves like a single pass, which is exactly why the quadratic case reaches production instead of being caught.", w:
@@ -13186,7 +13904,7 @@ every start matches 999 characters, then fails
   10^6 x 10^3 = 10^9 comparisons
 
 on random text: about n. Your test data is random text.` },
-    { t: "The lps table, built by hand", d: "One number per position: how much of what you just matched is still usable. Everything else about KMP is a consequence of this table.", w:
+    { t: "The lps table, built by hand", d: "One number per position: how much of what you just matched is still usable. Everything else about KMP follows from this table.", w:
 `pattern   a  b  a  b  c
 index     0  1  2  3  4
 lps       0  0  1  2  0
@@ -13197,26 +13915,39 @@ lps[i] = longest proper prefix of pattern[0..i] that is
 lps[3] = 2 because "abab" begins and ends with "ab"
 so after matching 4 and failing, 2 are still matched:
 shift by 4 - 2 = 2, and resume at pattern index 2` },
-    { t: "Why the total is linear, argued on the match counter", d: "The honest proof is not about the shifts. It is about j, the number of characters currently matched, which can only fall as often as it rose.", w:
+    { t: "KMP on abababca, step by step", d: "The text index i only moves forward. On the one mismatch, only the matched count j falls back, through the table.", w:
+`text     a b a b a b c a        pattern a b a b c
+
+i = 0..3   a b a b match               j = 4
+i = 4      text a vs pattern c: fail   j = lps[3] = 2
+i = 4      text a vs pattern a         j = 3
+i = 5      text b vs pattern b         j = 4
+i = 6      text c vs pattern c         j = 5 = m
+           match at 6 - 5 + 1 = 2,     j = lps[4] = 0
+i = 7      text a vs pattern a         j = 1
+
+text index went 0 to 7 once. Index 4 was compared twice.` },
+    { t: "Why the total is linear, argued on the match counter", d: "The honest proof is not about the shifts. It is about <var>j</var>, the number of characters currently matched, which can only fall as often as it rose.", w:
 `let j = how many characters currently match
 
-i advances once per text character:   at most n times
-j rises by at most 1 per advance:      at most n rises
+i advances once per text character:  at most n times
+j rises by at most 1 per advance:     at most n rises
 j never goes below 0, so total falls <= total rises <= n
 
 comparisons <= 2n. The table is built by the same argument
 against the pattern: <= 2m. Total O(n + m).` },
-    { t: "Rabin-Karp: rolling the hash, and the odds of a lie", d: "The other route to linear. It compares numbers instead of characters, which is O(1) per shift but only probably correct, so every hit is verified.", w:
+    { t: "Rabin-Karp: rolling the hash, and the odds of a lie", d: "The other route to linear. It compares numbers instead of characters, which is O(1) per slide but only probably correct, so every hit is checked.", w:
 `roll one position:
   h = (h - s[i] x B^(m-1)) x B + s[i+m]      O(1)
 
-false positive chance per window ~ m / M
+with B chosen at random, a window falsely matches
+with chance at most m / M
 M = 10^9 + 7, m = 1000, windows n = 10^6:
-  expected false hits = 10^6 x 10^3 / 10^9 = 1
-
-so verify on a hit: O(m) once, not per window.
+  expected false hits <= 10^6 x 10^3 / 10^9 = 1
+a fixed B, like the code's 257, promises nothing on
+hostile input, so verify every hit: O(m) each.
 Skip the verification and it is a guess, not an algorithm.` },
-    { t: "What the table gives you besides searching", d: "The single most likely place KMP appears in an interview is not string search at all, it is this one identity about repetition.", w:
+    { t: "What the table gives you besides searching", d: "The most likely place KMP appears in an interview is not string search at all. It is this one fact about repetition.", w:
 `s of length n, lps built on s itself
 
 k = n - lps[n-1]  is the length of the smallest block
@@ -13228,30 +13959,30 @@ if n mod k == 0, s is that block repeated n/k times
   ],
 
   costs: [
-    ["naive scan", "O(n·m) worst, O(n) typical", "each start compares until a mismatch, and on random text that happens within a character or two"],
-    ["build the lps table", "O(m) time, O(m) space", "the pattern matched against itself, with the same fall-back rule and no text involved"],
-    ["KMP scan", "O(n) time", "each text index is entered once, and the fall-back loop is paid for by forward progress already made"],
-    ["KMP total", "O(n + m)", "the guarantee, not the average: this is the number that matters when the input is chosen to hurt"],
-    ["Rabin-Karp", "O(n + m) expected", "one multiply and one subtract per slide, plus an O(m) verification on every hash hit"],
-    ["Rabin-Karp, worst case", "O(n·m)", "if the hash collides at every position, every window is verified character by character"],
-    ["Z-algorithm", "O(n + m) time and space", "the same information in a different table, often shorter to write and easier to get right"],
-    ["many patterns at once", "O(n + total pattern length)", "Aho-Corasick, a trie with KMP fall-back links, and the reason KMP is worth understanding"],
+    ["naive scan", "O(n·m) worst, O(n) typical", "on random text a mismatch comes within a character or two"],
+    ["build the lps table", "O(m) time, O(m) space", "the pattern matched against itself, with the same fall-back rule"],
+    ["KMP scan", "O(n) time", "each text index is entered once; the fall-back is paid for by progress already made"],
+    ["KMP total", "O(n + m)", "the guarantee, not the average: the number that matters when the input is chosen to hurt"],
+    ["Rabin-Karp", "O(n + m) expected", "one multiply and one subtract per slide, plus an O(m) check on every hash hit"],
+    ["Rabin-Karp, worst case", "O(n·m)", "if the hash collides at every position, every window is checked character by character"],
+    ["Z-algorithm", "O(n + m) time and space", "the same information in a different table, often shorter to write"],
+    ["many patterns at once", "O(n + total pattern length)", "Aho-Corasick, a trie with KMP fall-back links"],
   ],
 
   traps: [
-    "<b>Advancing the text index after a fall-back.</b> The fall-back moves only the pattern index. Advancing both skips the character that just failed, and it will be re-compared against the wrong pattern position.",
-    "<b>Falling back to lps[j] instead of lps[j-1].</b> j is the count of matched characters, so the last matched index is j-1. Off by one here still finds most matches, which is worse than finding none.",
-    "<b>Not resetting after a full match.</b> On a match, set j to lps[m-1] rather than 0, or overlapping occurrences are missed. Searching \"aaa\" in \"aaaa\" must find two, not one.",
-    "<b>Forgetting to verify a Rabin-Karp hit.</b> Equal hashes mean probably equal. Skipping the character comparison gives an algorithm that is right on your tests and wrong in production.",
-    "<b>Building a regex out of the pattern string.</b> A dot, a bracket or a plus sign in the input becomes syntax, and the search silently matches the wrong thing.",
-    "<b>Reaching for KMP when the built-in would do.</b> Say indexOf first and say why it is O(n·m) in the worst case. Writing KMP unprompted answers a question nobody asked.",
+    "<b>Advancing the text index after a fall-back.</b> The fall-back moves only the pattern index. Advancing both skips the character that just failed; at index 4 of <code>abababca</code>, that loses the match at 2.",
+    "<b>Falling back to lps[<var>j</var>] instead of lps[<var>j</var> − 1].</b> <var>j</var> counts matched characters, so the last matched index is <var>j</var> − 1. This bug still finds most matches, which is worse than finding none.",
+    "<b>Resetting to 0 after a full match.</b> Set <var>j</var> to lps[<var>m</var> − 1] instead, or overlapping matches are missed. Searching <code>aaa</code> in <code>aaaa</code> must find two, not one.",
+    "<b>Not verifying a Rabin-Karp hit.</b> Equal hashes mean probably equal. Skipping the character check gives code that is right on your tests and wrong in production.",
+    "<b>Building a regex out of the pattern string.</b> A dot, bracket or plus sign in the input becomes syntax, and the search quietly matches the wrong thing.",
+    "<b>Reaching for KMP when the built-in would do.</b> Say indexOf first, and why its worst case is O(<var>n</var>·<var>m</var>). Writing KMP unprompted answers a question nobody asked.",
   ],
 
   impl: [
-    ["Python", "str.find / str.index", "A naive scan with a two-way fallback, so linear in practice. find returns -1 and index raises, which is the only difference."],
-    ["Java", "String.indexOf", "Naive with a small optimisation, O(n·m) in the worst case. charAt in a loop is fine; toCharArray once is faster in a hot loop."],
-    ["C++", "std::search", "Since C++17 it takes a searcher, and boyer_moore_searcher from <functional> beats anything you will write under time pressure."],
-    ["JavaScript", "String.indexOf / includes", "Engine-dependent, usually a naive scan with a memchr-style skip. Never build a RegExp from an untrusted pattern string."],
+    ["Python", "str.find / str.index", "A tuned scan with a two-way fallback, so linear in practice. find returns -1 and index raises; that is the only difference."],
+    ["Java", "String.indexOf", "Naive with a small optimisation, O(n·m) at worst. toCharArray once is faster than charAt in a hot loop."],
+    ["C++", "std::search", "Since C++17 it takes a searcher; boyer_moore_searcher from <functional> beats anything written under time pressure."],
+    ["JavaScript", "String.indexOf / includes", "Engine-dependent, usually a naive scan with a fast skip. Never build a RegExp from an untrusted pattern string."],
   ],
 
   code: {
@@ -13416,17 +14147,17 @@ function kmp(text, p) {                // every match index
 // search quietly matches something else entirely.
 text.indexOf(p);`,
   },
-  codecap: "The scan is eight lines and the table is six, and the table is the one nobody can reconstruct cold. Learn build_lps first: it is the same fall-back rule as the search, which is why the two functions look like each other.",
+  codecap: "The scan is eight lines and the table is six, and the table is the one nobody can rebuild cold. Learn build_lps first: it uses the same fall-back rule as the search, which is why the two functions look alike.",
 
   q: [
-    ["What exactly does the naive scan waste?", "Everything it just confirmed. When the match fails at offset j, the previous j characters of the text are known to equal the pattern's first j characters, and sliding by one re-reads them from scratch. On input like aaaa...aab that repeats at every position, giving O(n·m)."],
-    ["What does lps[i] mean, and why must the prefix be proper?", "The length of the longest prefix of pattern[0..i] that is also a suffix of it. Proper means it cannot be the whole string, because the whole string is trivially both, and the table would say nothing."],
-    ["On a mismatch after j matched characters, why fall back to lps[j-1]?", "j counts matched characters, so the last matched index is j-1. lps[j-1] is how much of that match is still aligned after the slide, so those characters are known good and comparison resumes at pattern index lps[j-1]."],
-    ["Why does the text index never move backwards?", "Because the slide is done by moving the pattern index down, not by rewinding the text. Everything the fall-back keeps was already verified, so there is nothing behind the current text position left to check."],
-    ["The search has a while loop inside a for loop. Why is it still O(n)?", "The pattern index rises at most once per text character, so at most n times in total, and the inner loop only ever lowers it. It cannot fall more often than it rose. The same amortised argument as the monotonic stack."],
-    ["Why must Rabin-Karp compare characters after the hashes match?", "Because a hash maps many strings to one value, so equal hashes mean probably equal, not equal. Skipping the check produces an algorithm that passes every test you write and reports false matches on real data."],
-    ["After finding a match, why set j to lps[m-1] rather than 0?", "Because occurrences can overlap. Searching for aaa in aaaa must report two matches, and resetting to 0 throws away the overlap that produces the second one."],
-    ["When should you actually reach for KMP?", "When the worst case matters, or when the prefix function itself is the answer. Repeated substring patterns, shortest palindrome and longest happy prefix are all lps questions wearing different titles. For plain substring search, the built-in is faster in practice and should be named first."],
+    ["What exactly does the naive scan waste?", "Everything it just confirmed. When the match fails after j characters, those j text characters equal the pattern's first j, and sliding by one reads them again. On input like aaaa...aab that repeats at every position, giving O(n·m)."],
+    ["What does lps[i] mean, and why must the prefix be proper?", "The length of the longest prefix of pattern[0..i] that is also a suffix of it. Proper means it cannot be the whole string, which is trivially both, so the table would say nothing."],
+    ["On a mismatch after j matched characters, why fall back to lps[j-1]?", "j counts matched characters, so the last matched index is j-1. lps[j-1] is how much of that match still lines up after the slide, so comparison resumes at pattern index lps[j-1]."],
+    ["Why does the text index never move backwards?", "Because the slide is done by lowering the pattern index, not by rewinding the text. Everything the fall-back keeps was already checked, so nothing behind the current text position is left to check."],
+    ["The search has a while loop inside a for loop. Why is it still O(n)?", "The pattern index rises at most once per text character, so at most n times in total, and the inner loop only lowers it. It cannot fall more often than it rose: the same amortised argument as the monotonic stack."],
+    ["Why must Rabin-Karp compare characters after the hashes match?", "A hash maps many strings to one value, so equal hashes mean probably equal, not equal. Skipping the check passes every test you write and reports false matches on real data."],
+    ["After finding a match, why set j to lps[m-1] rather than 0?", "Because matches can overlap. Searching for aaa in aaaa must report two, and resetting to 0 throws away the overlap that produces the second."],
+    ["When should you actually reach for KMP?", "When the worst case matters, or when lps itself is the answer. Repeated substring pattern, shortest palindrome and longest happy prefix are all lps questions. For plain search, the built-in is faster in practice and should be named first."],
   ],
 
   p: [
@@ -13438,8 +14169,119 @@ text.indexOf(p);`,
     [1392, "longest-happy-prefix", "Longest Happy Prefix, literally the last lps entry", "H"],
     [1044, "longest-duplicate-substring", "Longest Duplicate Substring, binary search plus rolling hash", "H"],
   ],
-},
 
+  // the whole page again in Hinglish, shown by the reading-language switch
+  hi: {
+    need: {
+      ask: `<p>1,000 characters ka pattern <b>10⁶</b> characters ke text mein har jagah dhoondho: genome mein gene, log mein signature. Answer tez hona chahiye, tab bhi jab text chot pahunchaane ke liye chuna gaya ho.</p>
+<p>Chhota version: text <code>abababca</code> mein pattern <code>ababc</code>. Yeh ek baar aata hai, index 2 se.</p>`,
+      tries: [
+        ["Har position par line up karo, mismatch tak compare karo, ek jagah khisko", "<code>abababca</code> par 0 wali koshish <code>abab</code> match karti hai, phir fail, phir index 1 par lautti hai, aur agle starts wahi letters dobara padhte hain. Sirf a's wale text mein 999 a's aur ek b dhoondho, to 10⁶ starts mein har ek 1,000 characters compare karta hai: 10⁹."],
+        ["Mismatch ke baad jo match hua uske paar kood jao", "Dobara padhna nahi, par matches chhoot jaate hain. 0 par <code>abab</code> match hokar 4 par fail hua. Ab index 4 par koodna 2 wala asli match chhod deta hai, jo match hue hisse ke andar shuru hota hai."],
+      ],
+      so: `<p>To utna hi khiskao jitna safe hai. 4 match hue characters pattern ke hi pehle chaar the, <code>abab</code>, text aane se pehle pata. <code>abab</code> <code>ab</code> par khatam hota hai, jo pattern ki shuruaat bhi hai. 4 − 2 = 2 khiskao, aur woh do letters pehle se match hain.</p>
+<p>Yeh overlap pattern ke har prefix ke liye ek baar nikaalo, ek table jise <b>lps</b> kehte hain. Phir text pointer kabhi peeche nahi jaata, aur search O(<var>n</var> + <var>m</var>) hai: 10⁹ ki jagah lagbhag 10⁶ steps. Yahi <b>KMP</b> hai, Knuth, Morris aur Pratt ke naam par.</p>`,
+    },
+
+    one: "Naive scan abhi match hua har character phenk deta hai. <b>Pehle se nikaalo ki fail hue match ka kitna ab bhi kaam ka hai</b>, aur text pointer ko kabhi peeche nahi jaana padta.",
+
+    plain: `<p>Lambe text mein pattern ki har jagah dhoondho. Seedha tareeka pattern ko position 0 par rakhta hai, left se right compare karta hai, aur pehle mismatch par ek jagah right khisak kar phir shuru. Sahi hai, aur teen line ka. Galat text par, jahan pattern lagbhag har jagah match ho, cost O(<var>n</var>·<var>m</var>).</p>
+<p>Dekho fail hui koshish ne kya seekha. <code>abababca</code> mein <code>ababc</code> dhoondhte hue paanchwe ke fail hone se pehle chaar characters match hue. Woh chaar koi rahasya nahi: pattern ke apne pehle chaar hain, <code>abab</code>. To kitna khisak sakte ho, yeh pehle se, sirf pattern se nikal sakta hai.</p>
+<p>Answer woh sabse lamba hissa hai jo match hue ka <b>prefix bhi ho aur suffix bhi</b>. <code>abab</code> <code>ab</code> se shuru aur khatam hota hai, to do khisko, woh <code>ab</code> line mein rakho, aur pattern ke teesre character se aage chalo. Yeh number pattern ke har prefix ke liye nikaalo, aur text pointer kabhi peeche nahi jaata. Scan O(<var>n</var> + <var>m</var>) ho jaata hai.</p>
+<p><b>Analogy.</b> Phone number zor se padhte hue jagah kho dena. Aap pehle digit par wapas nahi jaate. Dekhte ho ki aakhri kuch jo bole woh shuruaat bhi hain, aur wahin se aage chalte ho.</p>`,
+
+    why: [
+      { t: "Naive scan tab tak theek hai jab tak nahi",
+        d: "Har starting position try karo aur mismatch tak compare karo. Aam English par yeh lagbhag linear hai, kyunki mismatch turant aata hai. <code>aaaaaaaaab</code> mein <code>aaab</code> dhoondho, aur har position fail hone se pehle pattern ka zyadatar hissa match karti hai: poora <b>O(<var>n</var>·<var>m</var>)</b>. Interview limits theek aisa hi input banane ke liye rakhi jaati hain." },
+      { t: "Poochho fail hui koshish ne pehle hi kya bataya",
+        d: "Jab match <var>j</var> characters ke baad marta hai, woh <var>j</var> text characters pata hain: <b>pattern ke apne pehle <var>j</var></b>. <code>abababca</code> ke index 0 par woh <code>abab</code> hai. Ek khisakna yeh phenk kar dobara padhta hai. Pakki cheez dobara padhna bekaar kaam hai." },
+      { t: "Sahi sawaal pattern ke baare mein hai, text ke nahi",
+        d: "Pattern bina match chhode kitna khisak sakta hai? Itna ki uske neeche bacha hissa line mein rahe. Yeh match hue prefix ka sabse lamba hissa hai jo <b>suffix bhi</b> ho. <code>abab</code> ke liye <code>ab</code>, length 2. Yeh sirf pattern par nirbhar hai, to text padhne se pehle nikal sakta hai." },
+      { t: "Wahi table prefix function hai",
+        d: "lps[<var>i</var>] pattern[0..<var>i</var>] ka sabse lamba proper prefix hai jo uska suffix bhi ho. Proper matlab poora nahi, jo apne aap se hamesha match karega. <code>ababc</code> ke liye 0, 0, 1, 2, 0. <var>j</var> match ke baad mismatch par <b>lps[<var>j</var> − 1]</b> par lauto: utne characters ab bhi sahi hain." },
+      { t: "Table usi trick se, khud par, banti hai",
+        d: "lps banana pattern ke andar pattern dhoondhna hai, usi fall-back rule ke saath. Chakkar jaisa lagta hai par nahi: lps[<var>i</var>] nikaalna sirf <var>i</var> se pehle ki entries padhta hai, jo final hain. Yeh <b>O(<var>m</var>)</b> hai, aur yahi hissa log dabaav mein dobara nahi bana paate." },
+      { t: "Total linear kyun hai, theek se",
+        d: "Text index sirf aage badhta hai, zyada se zyada <var>n</var> baar. Match count <var>j</var> har text step par zyada se zyada ek baar badhta hai, to poore run mein zyada se zyada <var>n</var> baar <b>gir</b> sakta hai. Fall-back loop nested dikhta hai, par pehle ki progress se chukaaya jaata hai: monotonic stack wala argument." },
+      { t: "Usi bound tak ek doosra raasta bhi hai",
+        d: "Rabin-Karp text ki har window ko rolling hash deta hai, to ek jagah khisakna ek multiply aur ek subtract. Barabar hash matlab <b>shaayad</b> match, to characters phir bhi compare karo. Wahi expected O(<var>n</var> + <var>m</var>), aur ek saath kai patterns tak badhta hai, jo KMP nahi karta." },
+      { t: "Imaandaar raho ki iski zaroorat kab hai",
+        d: "Built-in <code>find</code> ya <code>indexOf</code> tricks wala naive scan hai, aur lagbhag har asli input par KMP ko haraata hai. KMP <b>worst-case guarantee</b> deta hai, aur khud lps table, jo repeated substrings aur shortest palindromes wale sawaal sach mein chahte hain." },
+    ],
+
+    variants: [
+      { n: "Naive scan", cost: "O(n·m) worst, about O(n) typical",
+        idea: "Har start try karo, mismatch tak compare, ek se khisko.",
+        when: "Lagbhag hamesha, built-in ke zariye. Interview mein pehle iska naam lo.",
+        watch: "Zor se bolo ki worst case O(<var>n</var>·<var>m</var>) hai, aise text par jo lagbhag har jagah match kare." },
+      { n: "KMP", cost: "O(n + m) guaranteed",
+        idea: "Pattern par lps pehle se nikaalo, phir text ek baar scan karo, mismatch par lps se lautte hue.",
+        when: "Worst case maayne rakhe, ya sawaal asal mein lps ke baare mein ho.",
+        watch: "lps[<var>j</var> − 1] par lauto, lps[<var>j</var>] par nahi, aur fall-back mein text index kabhi aage mat badhao." },
+      { n: "Z-algorithm", cost: "O(n + m)",
+        idea: "Har position ke liye, wahan se shuru sabse lamba substring jo prefix se match kare. Pattern + separator + text par chalao.",
+        when: "lps wali hi jaankari alag shakal mein. Aksar sahi likhna chhota.",
+        watch: "Separator aisa character ho jo dono strings mein na ho." },
+      { n: "Rabin-Karp", cost: "O(n + m) expected",
+        idea: "Length <var>m</var> ki har window par rolling hash, har khisakne par O(1) mein update, hash hit par characters check.",
+        when: "Ek length ke kai patterns, ya Repeated DNA Sequences jaisa fixed-window dohraav.",
+        watch: "Hit hamesha verify karo. Bina verify, yeh guess hai." },
+      { n: "Aho-Corasick", cost: "O(n + total pattern length + matches)",
+        idea: "Saare patterns ki trie, trie nodes ke beech KMP jaise fall-back links ke saath.",
+        when: "Ek saath kai patterns dhoondhna: word filters, virus signatures.",
+        watch: "Likhne ko kam kaha jaata hai, par kai-patterns wale answer ki tarah naam lena aksar faydemand." },
+    ],
+
+    math: [
+      { t: "Naive scan, aur woh input jo ise maarta hai", d: "Aam text par yeh ek pass jaisa chalta hai, isiliye quadratic case pakda jaane ki jagah production tak pahunchta hai." },
+      { t: "lps table, haath se banayi", d: "Har position ka ek number: abhi match hue ka kitna ab bhi kaam ka. KMP ki baaki har baat is table se nikalti hai." },
+      { t: "abababca par KMP, step by step", d: "Text index i sirf aage badhta hai. Ek mismatch par sirf match count j table se peeche aata hai." },
+      { t: "Total linear kyun hai, match counter par argument", d: "Imaandaar proof shifts ke baare mein nahi. Yeh <var>j</var> ke baare mein hai, abhi match characters ki ginti, jo utni hi baar gir sakti hai jitni badhi." },
+      { t: "Rabin-Karp: hash rolling, aur jhooth ke chances", d: "Linear tak doosra raasta. Characters ki jagah numbers compare karta hai, jo har khisakne par O(1) par sirf shaayad sahi, to har hit check hota hai." },
+      { t: "Search ke alaawa table kya deti hai", d: "Interview mein KMP sabse zyada string search mein nahi aata. Dohraav ke baare mein is ek baat mein aata hai." },
+    ],
+
+    costs: [
+      ["naive scan", "O(n·m) worst, O(n) typical", "random text par mismatch ek do character mein aata hai"],
+      ["build the lps table", "O(m) time, O(m) space", "pattern khud se match, usi fall-back rule ke saath"],
+      ["KMP scan", "O(n) time", "har text index ek baar; fall-back pehle ki progress se chukta hai"],
+      ["KMP total", "O(n + m)", "guarantee, average nahi: jab input chot ke liye chuna ho tab yahi number maayne rakhta hai"],
+      ["Rabin-Karp", "O(n + m) expected", "har khisakne par ek multiply aur ek subtract, aur har hash hit par O(m) check"],
+      ["Rabin-Karp, worst case", "O(n·m)", "hash har position par takraaye, to har window character by character check"],
+      ["Z-algorithm", "O(n + m) time and space", "wahi jaankari alag table mein, aksar likhne mein chhoti"],
+      ["many patterns at once", "O(n + total pattern length)", "Aho-Corasick, KMP fall-back links wali trie"],
+    ],
+
+    traps: [
+      "<b>Fall-back ke baad text index aage badhana.</b> Fall-back sirf pattern index hilata hai. Dono badhaana abhi fail hua character chhod deta hai; <code>abababca</code> ke index 4 par isse 2 wala match chhootta hai.",
+      "<b>lps[<var>j</var> − 1] ki jagah lps[<var>j</var>] par lautna.</b> <var>j</var> match characters ginta hai, to aakhri match index <var>j</var> − 1 hai. Yeh bug ab bhi zyadatar matches dhoondhta hai, jo ek bhi na dhoondhne se bura hai.",
+      "<b>Poore match ke baad 0 par reset.</b> <var>j</var> ko lps[<var>m</var> − 1] karo, warna overlapping matches chhootte hain. <code>aaaa</code> mein <code>aaa</code> dhoondhna do dega, ek nahi.",
+      "<b>Rabin-Karp hit verify na karna.</b> Barabar hash matlab shaayad barabar. Character check chhodna aapke tests par sahi aur production mein galat code deta hai.",
+      "<b>Pattern string se regex banana.</b> Input ka dot, bracket ya plus syntax ban jaata hai, aur search chupchaap galat cheez match karti hai.",
+      "<b>Built-in chal jaaye tab KMP pakadna.</b> Pehle indexOf bolo, aur kyun uska worst case O(<var>n</var>·<var>m</var>) hai. Bina maange KMP likhna aise sawaal ka answer hai jo kisi ne poocha nahi.",
+    ],
+
+    impl: [
+      ["Python", "str.find / str.index", "Two-way fallback wala tuned scan, to practice mein linear. find -1 lautata hai aur index raise karta hai; bas yahi farak."],
+      ["Java", "String.indexOf", "Chhote optimisation wala naive, worst mein O(n·m). Hot loop mein ek baar toCharArray, charAt se tez."],
+      ["C++", "std::search", "C++17 se yeh searcher leta hai; <functional> ka boyer_moore_searcher dabaav mein likhi kisi bhi cheez ko haraata hai."],
+      ["JavaScript", "String.indexOf / includes", "Engine par nirbhar, aam taur par fast skip wala naive scan. Untrusted pattern string se kabhi RegExp mat banao."],
+    ],
+
+    codecap: "Scan aath line ka hai aur table chhe ki, aur table woh hai jo koi seedhe nahi bana paata. Pehle build_lps seekho: search wala hi fall-back rule use karta hai, isiliye dono functions ek jaise dikhte hain.",
+
+    q: [
+      ["Naive scan theek-theek kya barbaad karta hai?", "Jo abhi pakka kiya woh sab. j characters ke baad match fail ho, to woh j text characters pattern ke pehle j ke barabar hain, aur ek khisakna unhe dobara padhta hai. aaaa...aab jaise input par yeh har position par dohraata hai, O(n·m)."],
+      ["lps[i] ka matlab kya, aur prefix proper kyun hona chahiye?", "pattern[0..i] ka sabse lamba prefix jo uska suffix bhi ho, uski length. Proper matlab poori string nahi ho sakti, jo apne aap dono hai, to table kuch nahi batati."],
+      ["j match ke baad mismatch par lps[j-1] par kyun lautna?", "j match characters ginta hai, to aakhri match index j-1. lps[j-1] batata hai khisakne ke baad us match ka kitna line mein hai, to compare pattern index lps[j-1] se chalta hai."],
+      ["Text index kabhi peeche kyun nahi jaata?", "Kyunki khisakna pattern index ghata kar hota hai, text rewind karke nahi. Fall-back jo rakhta hai woh pehle se check hai, to current text position ke peeche check karne ko kuch nahi bachta."],
+      ["Search mein for loop ke andar while loop hai. Phir bhi O(n) kyun?", "Pattern index har text character par zyada se zyada ek baar badhta hai, to kul n baar, aur andar ka loop sirf ghataata hai. Jitna badha usse zyada nahi gir sakta: monotonic stack wala amortised argument."],
+      ["Hash match hone ke baad Rabin-Karp ko characters compare kyun karne chahiye?", "Hash kai strings ko ek value par le jaata hai, to barabar hash matlab shaayad barabar, barabar nahi. Check chhodna aapke har test par pass aur asli data par jhoothe matches deta hai."],
+      ["Match milne ke baad j ko 0 ki jagah lps[m-1] kyun?", "Kyunki matches overlap kar sakte hain. aaaa mein aaa dhoondhna do batana chahiye, aur 0 par reset doosre wala overlap phenk deta hai."],
+      ["KMP sach mein kab pakadna chahiye?", "Jab worst case maayne rakhe, ya lps khud answer ho. Repeated substring pattern, shortest palindrome aur longest happy prefix sab lps sawaal hain. Seedhe search ke liye built-in practice mein tez hai aur pehle uska naam lena chahiye."],
+    ],
+  },
+},
 /* ==================================================================== */
 {
   id: "prefix-sums",
@@ -13788,7 +14630,6 @@ function applyUpdates(n, updates) {
     [1109, "corporate-flight-bookings", "Corporate Flight Bookings, difference array", "M"],
   ],
 },
-
 /* ==================================================================== */
 {
   id: "kadane",
