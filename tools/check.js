@@ -393,5 +393,59 @@ if (!JSDOM) {
     entries + " entries, " + qs + " questions, all open on demand");
 }
 
+/* ---------- 8. the tags a search engine reads ----------
+   Every page carries a canonical, a description and an Open Graph card, and
+   every indexable page is in the sitemap. These rot silently: nothing on screen
+   changes when a page ships without them, and nobody notices until it is
+   missing from a search or shares as a bare link. */
+{
+  const { ORIGIN, PAGES } = require("./pages.js");
+  const problems = [];
+  for (const page of PAGES) {
+    const f = P + page.file;
+    if (!fs.existsSync(f)) { problems.push(page.file + " is in pages.js but not on disk"); continue; }
+    const h = fs.readFileSync(f, "utf8");
+    // a stub's canonical names where it forwards to; a 404 has none at all
+    const want = page.canonical === null ? null
+               : ORIGIN + (page.canonical || page.path);
+    const canon = (h.match(/<link rel="canonical" href="([^"]+)"/) || [])[1];
+    if (canon !== want && !(want === null && canon === undefined))
+      problems.push(page.file + " canonical is " + (canon || "missing") + ", expected " + (want || "none"));
+    if (!/<title>.+<\/title>/.test(h)) problems.push(page.file + " has no title");
+    if (page.index) {
+      if (!/<meta name="description" content=".{50,}?"/.test(h))
+        problems.push(page.file + " description is missing or too short to be useful");
+      for (const tag of ["og:title", "og:description", "og:image", "og:url", "twitter:card"])
+        if (!h.includes(tag)) problems.push(page.file + " is missing " + tag);
+    } else if (!/<meta name="robots" content="noindex/.test(h)) {
+      problems.push(page.file + " is out of the sitemap but not marked noindex");
+    }
+  }
+  for (const f of fs.readdirSync(P).filter(f => f.endsWith(".html")))
+    if (!PAGES.some(p => p.file === f)) problems.push(f + " exists but is not in pages.js");
+
+  for (const f of ["robots.txt", "sitemap.xml", "404.html"])
+    if (!fs.existsSync(P + f)) problems.push(f + " is missing");
+
+  const rob = fs.existsSync(P + "robots.txt") ? fs.readFileSync(P + "robots.txt", "utf8") : "";
+  if (!rob.includes(ORIGIN + "/sitemap.xml")) problems.push("robots.txt does not point at the sitemap");
+
+  test("seo tags", problems.length === 0,
+    PAGES.length + " pages, " + PAGES.filter(p => p.index).length + " indexable, canonical and cards on each" +
+    (problems.length ? "   <-- " + problems.slice(0, 4).join("; ") : ""));
+}
+
+/* ---------- 9. the sitemap still matches the page table ---------- */
+{
+  try {
+    const out = require("child_process")
+      .execSync("node " + JSON.stringify(path.join(__dirname, "sitemap.js")) + " --check",
+                { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+    test("sitemap", true, out.replace(/^sitemap\.xml /, ""));
+  } catch (e) {
+    test("sitemap", false, "out of date, run: node tools/sitemap.js");
+  }
+}
+
 console.log(fails ? "\n" + fails + " FAILED" : "\nall checks passed");
 process.exit(fails ? 1 : 0);

@@ -51,8 +51,10 @@ jobs:
       # A new top-level directory that the pages load has to be added here.
       - name: Stage the public files
         run: |
+          set -euo pipefail
           mkdir -p _site
-          cp ./*.html _site/
+          cp ./*.html _site/            # includes 404.html, which Pages serves
+          cp robots.txt sitemap.xml _site/
           cp -r assets data _site/
           echo "staged $(find _site -type f | wc -l) files"
 
