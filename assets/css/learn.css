@@ -522,42 +522,78 @@ pre.code::-webkit-scrollbar-thumb:hover{background:#55565c}
   .pager a.next{text-align:left}
 }
 
-/* ---------------- revision page ---------------- */
-.reading{max-width:760px;margin:0 auto;padding:44px 22px 90px}
-.reading h1{font-size:2rem;font-weight:600;letter-spacing:-.024em;margin-bottom:12px}
+/* ---------------- revision page ----------------
+   Laid out like the landing page: a wide column, a hero line, and each concept
+   as a card in a two-column grid. A card whose questions are open takes the
+   whole row, so the answers are read at a comfortable measure, not squeezed. */
+.reading{max-width:1080px;margin:0 auto;padding:56px 22px 90px}
+.rev-kicker{
+  font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-ink);margin-bottom:14px;
+}
+.reading h1{font-size:clamp(2.1rem,4.4vw,3.1rem);font-weight:700;letter-spacing:-.035em;line-height:1.05;margin-bottom:16px}
+.reading h1 span{display:block;color:var(--accent-ink)}
 .lede{
   font-family:"Source Serif 4","Source Serif Fallback","Iowan Old Style",Georgia,serif;
   font-size:1.1rem;line-height:1.7;color:var(--muted);max-width:62ch;
 }
-.tools{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin:32px 0 0;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:34px 0 0}
 .tools input{
-  flex:1;min-width:150px;padding:6px 0;border:0;background:none;color:var(--text);
-  font-family:inherit;font-size:.9rem;outline:none;
+  flex:1;min-width:180px;max-width:420px;padding:11px 16px;border:1px solid var(--rule-2);border-radius:999px;
+  background:var(--card);color:var(--text);font-family:inherit;font-size:.92rem;outline:none;
+  transition:border-color var(--t-fast) var(--ease);
 }
+.tools input:focus{border-color:var(--accent)}
 .tools input::placeholder{color:var(--faint)}
-.tools button{background:none;border:0;padding:0;font-family:inherit;font-size:.82rem;color:var(--muted);cursor:pointer}
-.tools button:hover{color:var(--text)}
-
-.grp{
-  line-height:1.6;font-size:.7rem;text-transform:uppercase;letter-spacing:.11em;color:var(--faint);
-  font-weight:600;margin:40px 0 4px;
+.tools button{
+  padding:10px 18px;border:1px solid var(--rule-2);border-radius:999px;background:var(--card);
+  font-family:inherit;font-size:.86rem;font-weight:500;color:var(--text);cursor:pointer;
+  transition:border-color var(--t-fast) var(--ease);
 }
-.entry{padding:24px 0;border-bottom:1px solid var(--rule)}
+.tools button:hover{border-color:var(--accent)}
+
+.grpsec{margin-top:46px}
+.grp{
+  display:flex;align-items:baseline;gap:10px;
+  font-size:.8rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;
+}
+.grp .gn{font-weight:500;letter-spacing:0;text-transform:none;color:var(--faint)}
+.rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+
+.entry{
+  display:flex;flex-direction:column;padding:22px 22px 18px;border:1px solid var(--rule);border-radius:var(--radius);
+  background:var(--card);transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease),box-shadow var(--t-mid) var(--ease);
+}
+.entry:hover{border-color:var(--accent);transform:translateY(-2px)}
+.entry.open{grid-column:1 / -1;border-color:var(--rule-2);box-shadow:var(--shadow);transform:none}
 .entry.hidden{display:none}
-.entry h3{font-size:1.02rem;font-weight:600;margin-bottom:8px}
+.entry .ehead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.entry .enum{font-family:"JetBrains Mono","JetBrains Mono Fallback",ui-monospace,monospace;font-size:.74rem;color:var(--accent-ink);flex-shrink:0}
+.entry h3{font-size:1.06rem;font-weight:600;line-height:1.35}
 .entry h3 a{color:var(--text);text-decoration:none}
+.entry h3 a::after{content:"\00a0→";color:var(--faint);transition:color var(--t-fast) var(--ease)}
 .entry h3 a:hover{color:var(--accent-ink)}
+.entry h3 a:hover::after{color:var(--accent)}
 .entry .one{
   font-family:"Source Serif 4","Source Serif Fallback","Iowan Old Style",Georgia,serif;
-  font-size:1.06rem;line-height:1.7;color:var(--text-2);max-width:64ch;
+  font-size:1.02rem;line-height:1.65;color:var(--text-2);max-width:64ch;flex:1;
 }
 .entry .one b{font-weight:600;color:var(--text)}
 .entry .one code{font-family:"JetBrains Mono","JetBrains Mono Fallback",ui-monospace,monospace;font-size:.82em;background:var(--bg-soft);padding:1px 5px;border-radius:3px;white-space:nowrap}
-.entry .more{background:none;border:0;padding:0;margin-top:12px;font-family:inherit;font-size:.8rem;color:var(--muted);cursor:pointer}
-.entry .more:hover{color:var(--text)}
-.entry .cards{margin-top:14px}
+.entry .more{
+  align-self:flex-start;margin-top:16px;padding:5px 12px;border:0;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent-ink);font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;
+}
+.entry .more:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.entry .cards{margin-top:16px;max-width:none}
 .entry .cards.hidden{display:none}
+.entry .qa{max-width:72ch}
 .empty{padding:48px 0;color:var(--muted);font-size:.95rem}
+@media(max-width:760px){
+  .rgrid{grid-template-columns:1fr}
+  .reading{padding-top:40px}
+  .tools input{max-width:none}
+}
 
 footer{max-width:1120px;margin:0 auto;padding:24px 22px 44px;border-top:1px solid var(--rule);color:var(--faint);font-size:.8rem}
 footer a{color:var(--muted);text-decoration:none}

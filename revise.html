@@ -32,7 +32,7 @@
   <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
   <link rel="stylesheet" href="assets/css/fonts.css" />
   <link rel="stylesheet" href="assets/css/brand.css" />
-  <link rel="stylesheet" href="assets/css/learn.css?v=5" />
+  <link rel="stylesheet" href="assets/css/learn.css?v=6" />
 </head>
 <body>
   <header class="bar">
@@ -48,7 +48,8 @@
   </header>
 
   <div class="reading" role="main">
-    <h1>Revision</h1>
+    <p class="rev-kicker" id="kicker"></p>
+    <h1 id="title">Rapid Revision.<span>Say it before you check.</span></h1>
     <p class="lede" id="lede">Every concept reduced to the one sentence worth remembering. Read a line, then answer its questions <em>out loud</em> before you open them, anything you fumble is a concept to reopen in full, not to re-read here.</p>
 
     <div class="tools">
@@ -75,10 +76,13 @@
     let L = "en";
     try { if (localStorage.getItem("ms-read") === "hi") L = "hi"; } catch (e) {}
     const UI = {
-      en: { lede: $("#lede").innerHTML, find: "Filter concepts", qs: n => n + " questions", hide: "Hide questions",
+      en: { lede: $("#lede").innerHTML, title: $("#title").innerHTML,
+            kicker: (c, q) => `${c} concepts · ${q} questions · one line each`, find: "Filter concepts", qs: n => n + " questions", hide: "Hide questions",
             openAll: "Open all questions", closeAll: "Close all questions", empty: "Nothing matches that.",
             toggle: "Hinglish", toggleLabel: "Switch explanations to Hinglish" },
-      hi: { lede: "Har concept woh ek sentence jo yaad rakhne layak hai. Ek line padho, phir uske sawaalon ka answer kholne se pehle <em>zor se</em> do. Jisme atko, woh concept poora dobara kholo, yahan dobara mat padho.",
+      hi: { title: "Rapid Revision.<span>Check se pehle bolo.</span>",
+            kicker: (c, q) => `${c} concepts · ${q} sawaal · har ek ki ek line`,
+            lede: "Har concept woh ek sentence jo yaad rakhne layak hai. Ek line padho, phir uske sawaalon ka answer kholne se pehle <em>zor se</em> do. Jisme atko, woh concept poora dobara kholo, yahan dobara mat padho.",
             find: "Concepts filter karo", qs: n => n + " sawaal", hide: "Sawaal chhupao",
             openAll: "Saare sawaal kholo", closeAll: "Saare sawaal band karo", empty: "Kuch match nahi hua.",
             toggle: "English", toggleLabel: "Switch explanations to English" },
@@ -90,6 +94,8 @@
       const u = UI[L];
       document.documentElement.lang = L === "hi" ? "hi-Latn" : "en";
       $("#lede").innerHTML = u.lede;
+      $("#title").innerHTML = u.title;
+      $("#kicker").textContent = u.kicker(CONCEPTS.length, CONCEPTS.reduce((t, c) => t + c.q.length, 0));
       $("#find").placeholder = u.find;
       $("#find").setAttribute("aria-label", u.find);
       $("#empty").textContent = u.empty;
@@ -99,18 +105,23 @@
       lt.setAttribute("aria-label", u.toggleLabel);
       list.innerHTML = "";
 
+      // one section per group: its heading, then its concepts as a grid of cards
       [...new Set(CONCEPTS.map(c => c.group))].forEach(g => {
-        const h = document.createElement("h2");
-        h.className = "grp"; h.textContent = g; h.dataset.grp = g;
-        list.appendChild(h);
+        const members = CONCEPTS.filter(c => c.group === g);
+        const sec = document.createElement("section");
+        sec.className = "grpsec";
+        sec.innerHTML = `<h2 class="grp">${esc(g)} <span class="gn">${members.length}</span></h2><div class="rgrid"></div>`;
+        const grid = sec.querySelector(".rgrid");
+        list.appendChild(sec);
 
-        CONCEPTS.filter(c => c.group === g).forEach(c => {
+        members.forEach(c => {
           const entry = document.createElement("div");
-          entry.className = "entry";
+          entry.className = "entry" + (allOpen ? " open" : "");
           entry.dataset.id = c.id;
           entry.dataset.hay = (c.n + " " + c.group + " " + one(c).replace(/<[^>]+>/g, "")).toLowerCase();
           entry.innerHTML =
-            `<h3><a href="concept.html?c=${c.id}">${esc(c.n)}</a></h3>` +
+            `<div class="ehead"><span class="enum">${String(CONCEPTS.indexOf(c) + 1).padStart(2, "0")}</span>` +
+            `<h3><a href="concept.html?c=${c.id}">${esc(c.n)}</a></h3></div>` +
             `<div class="one">${one(c)}</div>` +
             `<button class="more">${allOpen ? u.hide : u.qs(c.q.length)}</button>` +
             `<div class="cards${allOpen ? "" : " hidden"}"></div>`;
@@ -129,10 +140,11 @@
           const more = entry.querySelector(".more");
           more.addEventListener("click", () => {
             cards.classList.toggle("hidden");
+            entry.classList.toggle("open", !cards.classList.contains("hidden"));
             more.textContent = cards.classList.contains("hidden") ? UI[L].qs(c.q.length) : UI[L].hide;
           });
 
-          list.appendChild(entry);
+          grid.appendChild(entry);
         });
       });
       filter();
@@ -146,11 +158,8 @@
         en.classList.toggle("hidden", !ok);
         if (ok) shown++;
       });
-      list.querySelectorAll(".grp").forEach(h => {
-        const any = [...list.querySelectorAll(`.entry`)].some(en =>
-          !en.classList.contains("hidden") &&
-          CONCEPTS.find(c => c.id === en.dataset.id).group === h.dataset.grp);
-        h.style.display = any ? "" : "none";
+      list.querySelectorAll(".grpsec").forEach(sec => {
+        sec.style.display = sec.querySelector(".entry:not(.hidden)") ? "" : "none";
       });
       $("#empty").style.display = shown ? "none" : "";
     };
@@ -166,6 +175,7 @@
     $("#toggleAll").addEventListener("click", () => {
       allOpen = !allOpen;
       list.querySelectorAll(".cards").forEach(c => c.classList.toggle("hidden", !allOpen));
+      list.querySelectorAll(".entry").forEach(en => en.classList.toggle("open", allOpen));
       list.querySelectorAll(".qa").forEach(q => q.classList.toggle("open", allOpen));
       list.querySelectorAll(".entry").forEach(en => {
         const n = CONCEPTS.find(c => c.id === en.dataset.id).q.length;
