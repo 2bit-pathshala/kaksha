@@ -11,7 +11,7 @@
       if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
         document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
   </script>
-  <title>DSA one-day sheet — Deep Revision Notes</title>
+  <title>DSA one-day sheet: Deep Revision Notes</title>
   <meta name="description" content="In-depth DSA revision: key properties, sub-topics, Python templates, diagrams, and must-know algorithms." />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css" />
@@ -118,7 +118,7 @@
 
   <main>
     <div class="hero">
-      <h1>DSA Cheat Sheet — Deep Notes</h1>
+      <h1>DSA Cheat Sheet: Deep Notes</h1>
       <p>Every block: <b>when to use → key properties → sub-topics → Python template → diagram</b>. Skim before an interview; jump via the tabs above.</p>
     </div>
 
@@ -143,10 +143,10 @@
           <table class="cx">
             <tr><th>DS</th><th>Access</th><th>Ins/Del</th><th>Search</th></tr>
             <tr><td>Dynamic array</td><td>O(1)</td><td>O(n) / O(1)*</td><td>O(n)</td></tr>
-            <tr><td>Hash map/set</td><td>—</td><td>O(1)</td><td>O(1)</td></tr>
+            <tr><td>Hash map/set</td><td>n/a</td><td>O(1)</td><td>O(1)</td></tr>
             <tr><td>Balanced BST</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td></tr>
             <tr><td>Heap</td><td>O(1) top</td><td>O(log n)</td><td>O(n)</td></tr>
-            <tr><td>Trie</td><td>—</td><td>O(L)</td><td>O(L)</td></tr>
+            <tr><td>Trie</td><td>n/a</td><td>O(L)</td><td>O(L)</td></tr>
           </table>
           <div class="tip">*append amortized O(1). Recursion adds O(depth) stack space. Set <code class="k">sys.setrecursionlimit(10**6)</code> for deep trees.</div>
         </div>
@@ -167,7 +167,7 @@
             <li><b>Dutch flag:</b> 3-way partition (sort colors) with low/mid/high.</li>
             <li><b>Boyer–Moore voting:</b> majority element (n/2) in O(1) space.</li>
             <li><b>Next Permutation:</b> find first a[i]&lt;a[i+1] from right, swap w/ next larger, reverse suffix.</li>
-            <li><b>Kadane:</b> max subarray — reset running sum at 0.</li>
+            <li><b>Kadane:</b> max subarray, reset running sum at 0.</li>
           </ul>
         </div>
         <div>
@@ -231,7 +231,7 @@ Dutch flag:  [0..low) 0s | [low..mid) 1s | mid..high ? | (high..] 2s</pre>
           <ul class="pts">
             <li><b>On index:</b> classic, first/last occurrence, rotated search, peak element.</li>
             <li><b>On answer:</b> Koko bananas, ship in D days, split array, allocate books, aggressive cows.</li>
-            <li><b>On floats:</b> nth root — iterate ~100× or until precision.</li>
+            <li><b>On floats:</b> nth root, iterate ~100× or until precision.</li>
             <li><b>2D matrix:</b> treat as flattened sorted array, or staircase from top-right.</li>
           </ul>
         </div>
@@ -281,7 +281,7 @@ for x in nums:
             <li>Longest consecutive: only start counting at nums without n-1 present → O(n).</li>
             <li>Index-as-hash: put value v at index v (cyclic sort) for 1..n problems.</li>
           </ul>
-          <div class="tip"><code class="k">Counter</code>, <code class="k">defaultdict(list)</code>, <code class="k">set</code> — memorize these.</div>
+          <div class="tip"><code class="k">Counter</code>, <code class="k">defaultdict(list)</code>, <code class="k">set</code>: memorize these.</div>
         </div>
       </div>
     </section>
@@ -678,7 +678,7 @@ def lis(a):
             <li><b>Modular:</b> (a+b)%m, (a*b)%m; use <code class="k">pow(a,b,m)</code> for modular power.</li>
             <li><b>Primes:</b> sieve up to n; a number n is prime if no divisor ≤ √n.</li>
             <li><b>Combinatorics:</b> nCr = n!/(r!(n−r)!); Pascal for small n.</li>
-            <li>Overflow: Python ints are arbitrary precision (no overflow) — but state it in other languages.</li>
+            <li>Overflow: Python ints are arbitrary precision (no overflow), but state it in other languages.</li>
           </ul>
         </div>
         <pre>def sieve(n):
@@ -709,7 +709,7 @@ def power(a, b, mod):
         <tr><td>Radix</td><td>O(d·(n+b))</td><td>O(n+b)</td><td>Yes</td><td>fixed-width keys</td></tr>
         <tr><td>Cyclic sort</td><td>O(n)</td><td>O(1)</td><td>No</td><td>values in 1..n</td></tr>
       </table>
-      <div class="tip"><b>Quickselect</b> finds the Kth element in avg O(n) — partition, recurse into one side only.</div>
+      <div class="tip"><b>Quickselect</b> finds the Kth element in avg O(n), partition, recurse into one side only.</div>
     </section>
 
     <!-- PLAYBOOK -->

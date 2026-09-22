@@ -11,7 +11,7 @@
       if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
         document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
   </script>
-  <title>DSA Notes — Topic Notes + Practice</title>
+  <title>DSA Notes: Topic Notes + Practice</title>
   <meta name="description" content="Study one DSA topic at a time: brief pattern notes, short code, and practice questions to test yourself." />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css" />
@@ -99,7 +99,7 @@
     .note b{color:var(--text);font-weight:650}
     .note code,.inl{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;background:var(--surface2);padding:2px 6px;border-radius:5px;color:var(--primary-ink);font-size:.85rem}
 
-    /* Code block — editor style */
+    /* Code block: editor style */
     .codewrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:12px 0 14px;box-shadow:var(--shadow-sm)}
     .codebar{display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--code-bar);border-bottom:1px solid #21262d}
     .codebar .dot{width:11px;height:11px;border-radius:50%}
@@ -294,7 +294,7 @@
       }
       if (node.p) {
         const w=document.createElement("div"); w.className="qwrap";
-        const hd=document.createElement("div"); hd.className="qhead"; hd.textContent="Practice — test yourself"; w.appendChild(hd);
+        const hd=document.createElement("div"); hd.className="qhead"; hd.textContent="Practice: test yourself"; w.appendChild(hd);
         const pr=document.createElement("div"); pr.className="probs";
         node.p.forEach(p=>pr.appendChild(problemEl(p))); w.appendChild(pr); host.appendChild(w);
       }

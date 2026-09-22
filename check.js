@@ -179,10 +179,14 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
 /* ---------- 5. house style: no em-dashes anywhere we author ---------- */
 {
   const DASH = String.fromCharCode(0x2014);   // written this way so this file passes its own test
-  const OURS = ["data/concept-data.js","js/viz.js","concept.html","revise.html","css/learn.css",
-                "docs/CONTENT-GUIDE.md","README.md","index.html","ai.html","check.js",
-                "design.html","data/design-data.js"];
-  const guilty = OURS.filter(f => fs.existsSync(P + f) && fs.readFileSync(P + f, "utf8").includes(DASH));
+  // every file we author, found rather than listed: the old hand-kept list left the
+  // section notes out, and that is exactly where the em-dashes had collected
+  const OURS = [".", "css", "js", "data", "docs"].flatMap(dir =>
+    fs.readdirSync(P + dir)
+      .filter(f => /\.(html|css|js|md)$/.test(f))
+      .map(f => (dir === "." ? f : dir + "/" + f)))
+    .filter(f => fs.statSync(P + f).isFile());
+  const guilty = OURS.filter(f => fs.readFileSync(P + f, "utf8").includes(DASH));
   test("house style", guilty.length === 0,
     "no em-dashes across " + OURS.length + " files" +
     (guilty.length ? "   <-- " + guilty.join(", ") : ""));

@@ -7,7 +7,7 @@
 const DSA = [
 
   /* ===================== FUNDAMENTALS ===================== */
-  { n: "Fundamentals (Python) — Start Here", h: "Master these building blocks first; every pattern below reuses them.", c: [
+  { n: "Fundamentals (Python): Start Here", h: "Master these building blocks first; every pattern below reuses them.", c: [
     { n: "Big-O Complexity", note: "Judge an algorithm by how it <b>scales</b>, not raw speed. Aim: reduce a brute-force <code>O(n²)</code> to <code>O(n log n)</code> or <code>O(n)</code>.<br><b>Common orders:</b> O(1) &lt; O(log n) &lt; O(n) &lt; O(n log n) &lt; O(n²) &lt; O(2ⁿ) &lt; O(n!).<br><b>Space</b> counts recursion stack + extra structures." },
     { n: "Arrays & Lists", note: "Python <code>list</code> = dynamic array. Index/append are O(1); insert/pop at front are O(n).", code: {
         pseudo:
@@ -47,7 +47,7 @@ nums.sort((a, b) => b - a);               // custom / reverse
 const last = nums.at(-1);                 // negative indexing
 const sub = nums.slice(1, 3);             // copy of [1, 3)
 nums.forEach((v, i) => { /* index + value */ });` } },
-    { n: "Strings", note: "Strings are <b>immutable</b> — building with <code>+=</code> in a loop is O(n²). Collect into a list and <code>\"\".join(...)</code>.", code: {
+    { n: "Strings", note: "Strings are <b>immutable</b>: building with <code>+=</code> in a loop is O(n²). Collect into a list and <code>\"\".join(...)</code>.", code: {
         pseudo:
 `the same string moves in each language:
   reverse, sort the characters (an anagram key), char <-> int code,
@@ -80,7 +80,7 @@ for (char x : s) freq[x]++;               // {char: count}`,
 const code = "a".charCodeAt(0), ch = String.fromCharCode(97);
 const freq = new Map();
 for (const x of s) freq.set(x, (freq.get(x) || 0) + 1);` } },
-    { n: "Hashing — dict & set", h: "When you see \"find/seen before\", \"count\", or \"pair sums to target\" → reach for a hash map/set for O(1) lookup.", code: {
+    { n: "Hashing: dict & set", h: "When you see \"find/seen before\", \"count\", or \"pair sums to target\" → reach for a hash map/set for O(1) lookup.", code: {
         pseudo:
 `the three hashing staples in each language:
   a frequency map (value -> count), a set for O(1) membership,
@@ -221,7 +221,7 @@ pairs.sort((a, b) => a[0] - b[0] || b[1] - a[1]);     // multi-key
 
   /* ===================== ARRAYS (Striver Arrays I–IV) ===================== */
   { n: "Array", h: "The workhorse topic. Prefer O(1) extra space: two-pointers, prefix sums, and in-place tricks over hash maps when possible.", c: [
-    { n: "Easy / Classics (Striver)", h: "Warm-ups — get comfortable with in-place scans and single passes.", c: [
+    { n: "Easy / Classics (Striver)", h: "Warm-ups: get comfortable with in-place scans and single passes.", c: [
       { n: "Fundamental array ops", h: "Do these in ONE pass. Watch edge cases: empty array, all same, single element.", p: [
         [485, "max-consecutive-ones", "Max Consecutive Ones", "E"],
         [26, "remove-duplicates-from-sorted-array", "Remove Duplicates (Sorted)", "E"],
@@ -332,7 +332,7 @@ pairs.sort((a, b) => a[0] - b[0] || b[1] - a[1]);     // multi-key
   ]},
 
   /* ===================== STRING (Striver String I–II) ===================== */
-  { n: "String", h: "Immutable in Python — build with lists. Frequency counting + two pointers solve most. Learn KMP/rolling-hash for matching.", c: [
+  { n: "String", h: "Immutable in Python: build with lists. Frequency counting + two pointers solve most. Learn KMP/rolling-hash for matching.", c: [
     { n: "Two Pointers", h: "Palindrome: compare ends moving inward. Reverse words: split/strip/join or in-place reverse.", p: [
       [125, "valid-palindrome", "Valid Palindrome", "E"],
       [151, "reverse-words-in-a-string", "Reverse Words in a String", "M"],
@@ -348,7 +348,7 @@ pairs.sort((a, b) => a[0] - b[0] || b[1] - a[1]);     // multi-key
       [459, "repeated-substring-pattern", "Repeated Substring Pattern", "E"],
       [214, "shortest-palindrome", "Shortest Palindrome", "H"],
     ]},
-    { n: "Compression & Misc (Striver)", h: "Roman numerals, atoi, count-and-say, version compare — careful, methodical parsing & edge cases.", p: [
+    { n: "Compression & Misc (Striver)", h: "Roman numerals, atoi, count-and-say, version compare, careful, methodical parsing & edge cases.", p: [
       [13, "roman-to-integer", "Roman to Integer", "E"],
       [14, "longest-common-prefix", "Longest Common Prefix", "E"],
       [38, "count-and-say", "Count and Say", "M"],
@@ -381,7 +381,7 @@ pairs.sort((a, b) => a[0] - b[0] || b[1] - a[1]);     // multi-key
 
   /* ===================== STACK & QUEUE (Striver I–II) ===================== */
   { n: "Stack & Queue", h: "Stack = LIFO (matching, undo, monotonic). Queue/Deque = FIFO / sliding-window extremes.", c: [
-    { n: "Monotonic Stack", h: "Keep stack increasing/decreasing; pop while the new element breaks the order — that pop resolves an answer (next greater/smaller, spans).", c: [
+    { n: "Monotonic Stack", h: "Keep stack increasing/decreasing; pop while the new element breaks the order, that pop resolves an answer (next greater/smaller, spans).", c: [
       { n: "Next Greater / Smaller", h: "Iterate; while stack top < current, top's answer = current. Use %len for circular.", p: [
         [496, "next-greater-element-i", "Next Greater Element I", "E"],
         [503, "next-greater-element-ii", "Next Greater Element II", "M"],
@@ -585,7 +585,7 @@ const parent = i => (i - 1) >> 1;` } },
       [144, "binary-tree-preorder-traversal", "Preorder Traversal", "E"],
       [145, "binary-tree-postorder-traversal", "Postorder Traversal", "E"],
     ]},
-    { n: "Morris, Views & Boundary (Striver)", h: "<b>Morris</b> traversal gives O(1) space using temporary <i>threads</i> (link each node's inorder-predecessor.right back to it). <b>Two types:</b> (1) <b>Inorder</b> — visit when you <i>remove</i> the thread; (2) <b>Preorder</b> — visit when you <i>create</i> the thread. <b>Views</b> (top/bottom) sort by horizontal distance via BFS; <b>Vertical order</b> sorts by (column, row, value). Top/Bottom View &amp; Boundary have no free LeetCode problem — practice on GFG; Vertical Order is LC 987.",
+    { n: "Morris, Views & Boundary (Striver)", h: "<b>Morris</b> traversal gives O(1) space using temporary <i>threads</i> (link each node's inorder-predecessor.right back to it). <b>Two types:</b> (1) <b>Inorder</b>: visit when you <i>remove</i> the thread; (2) <b>Preorder</b>: visit when you <i>create</i> the thread. <b>Views</b> (top/bottom) sort by horizontal distance via BFS; <b>Vertical order</b> sorts by (column, row, value). Top/Bottom View &amp; Boundary have no free LeetCode problem, practice on GFG; Vertical Order is LC 987.",
       code: {
         pseudo:
 `Morris traversal: O(1) space using temporary "threads".
@@ -1021,7 +1021,7 @@ function boundary(root) {
       [116, "populating-next-right-pointers-in-each-node", "Populate Next Right Pointers", "M"],
     ]},
     { n: "Construction & Serialize (Striver)", h: "Preorder gives the root; inorder splits left/right. Inorder+postorder: root is the last of postorder. Serialize with preorder + null markers.",
-      note: "<b>Concept — Build Tree from Preorder + Inorder (LC 105):</b><br>" +
+      note: "<b>Concept: Build Tree from Preorder + Inorder (LC 105):</b><br>" +
         "• <b>Preorder</b> visits <i>Root → Left → Right</i>, so <code>preorder[0]</code> is always the <b>root</b> of the current subtree.<br>" +
         "• <b>Inorder</b> visits <i>Left → Root → Right</i>. Find the root's position <code>i</code> in inorder: everything <b>left of i</b> is the <b>left subtree</b>, everything <b>right of i</b> is the <b>right subtree</b>.<br>" +
         "• That split count also tells you how to slice preorder (the next <code>i</code> values after the root belong to the left subtree). <b>Recurse</b> on both halves.<br>" +
@@ -1156,7 +1156,7 @@ function buildTreeFast(preorder, inorder) {
       [297, "serialize-and-deserialize-binary-tree", "Serialize & Deserialize", "H"],
     ]},
     { n: "Misc (distance-K, width, complete count)", h: "Convert tree to graph (parent pointers) for distance-K BFS. Count complete tree nodes in O(log²n).",
-      note: "<b>Max Width of Binary Tree (LC 662):</b> Give each node a position index like a <b>heap</b> — root = 0, and a node at index <code>i</code> has children <code>2·i</code> (left) and <code>2·i+1</code> (right). The width of a level = <code>lastIndex − firstIndex + 1</code>; the answer is the max over all levels. Both DFS and BFS work — BFS is the natural fit (process level by level; the first node's index is the level's leftmost, the last dequeued is the rightmost). <br><b>Overflow tip:</b> in fixed-int languages, subtract the level's first index from every index to keep numbers small (Python big-ints don't overflow, so it's optional).",
+      note: "<b>Max Width of Binary Tree (LC 662):</b> Give each node a position index like a <b>heap</b>: root = 0, and a node at index <code>i</code> has children <code>2·i</code> (left) and <code>2·i+1</code> (right). The width of a level = <code>lastIndex − firstIndex + 1</code>; the answer is the max over all levels. Both DFS and BFS work: BFS is the natural fit (process level by level; the first node's index is the level's leftmost, the last dequeued is the rightmost). <br><b>Overflow tip:</b> in fixed-int languages, subtract the level's first index from every index to keep numbers small (Python big-ints don't overflow, so it's optional).",
       code: {
         pseudo:
 `max width of a binary tree, and counting a complete tree.
@@ -1172,11 +1172,11 @@ function buildTreeFast(preorder, inorder) {
         py:
 `from collections import deque
 
-# LC 662 — Maximum Width of Binary Tree
+# LC 662: Maximum Width of Binary Tree
 # Index nodes like a heap: node i -> left = 2*i, right = 2*i + 1.
 # Level width = last index - first index + 1.
 
-# ---- BFS (level by level) — recommended ----
+# ---- BFS (level by level), recommended ----
 def width_bfs(root):
     if not root: return 0
     q = deque([(root, 0)]); best = 0
@@ -1202,7 +1202,7 @@ def width_dfs(root):
     dfs(root, 0, 0)
     return best
 
-# ---- Count nodes in a COMPLETE tree — O(log^2 n) ----
+# ---- Count nodes in a COMPLETE tree, O(log^2 n) ----
 def count_nodes(root):
     if not root: return 0
     def h(n, left):
@@ -1360,7 +1360,7 @@ function countNodes(root) {
   ]},
 
   /* ===================== BINARY SEARCH TREE (Striver BST I–II) ===================== */
-  { n: "Binary Search Tree", h: "BST invariant: left < node < right. Inorder traversal gives sorted order — exploit it everywhere.", c: [
+  { n: "Binary Search Tree", h: "BST invariant: left < node < right. Inorder traversal gives sorted order: exploit it everywhere.", c: [
     { n: "Search / Insert / Delete", h: "Compare with node and go left/right (O(height)). Delete has 3 cases: leaf → remove; one child → return that child; two children → replace value with the <b>inorder successor</b> (smallest node in the right subtree), then delete that successor.", p: [
       [700, "search-in-a-binary-search-tree", "Search in a BST", "E"],
       [701, "insert-into-a-binary-search-tree", "Insert into a BST", "M"],
@@ -1501,14 +1501,14 @@ function deleteNode(root, key) {
       ["GFG", "https://www.geeksforgeeks.org/problems/floor-in-bst/1", "Floor in BST", "M"],
       ["GFG", "https://www.geeksforgeeks.org/problems/largest-bst/1", "Largest BST in a Binary Tree", "H"],
     ]},
-    { n: "Self-Balancing BSTs (AVL / Red-Black)", h: "A plain BST can degrade to a linked list (O(n)) if inserts come sorted. Self-balancing trees keep height <b>O(log n)</b> via rotations, so search/insert/delete stay O(log n). Rarely coded in interviews — but a common <b>theory / system-design</b> question.",
-      note: "<b>AVL tree</b> — <i>balance factor</i> = height(left) − height(right) must stay in {−1, 0, 1}. After an insert, if a node becomes unbalanced there are 4 cases:<br>" +
+    { n: "Self-Balancing BSTs (AVL / Red-Black)", h: "A plain BST can degrade to a linked list (O(n)) if inserts come sorted. Self-balancing trees keep height <b>O(log n)</b> via rotations, so search/insert/delete stay O(log n). Rarely coded in interviews: but a common <b>theory / system-design</b> question.",
+      note: "<b>AVL tree</b>: <i>balance factor</i> = height(left) − height(right) must stay in {−1, 0, 1}. After an insert, if a node becomes unbalanced there are 4 cases:<br>" +
         "• <b>LL</b> (left-heavy, inserted in left-left) → single <b>right rotation</b><br>" +
         "• <b>RR</b> (right-heavy, right-right) → single <b>left rotation</b><br>" +
         "• <b>LR</b> (left-right) → <b>left</b> rotate child, then <b>right</b> rotate node<br>" +
         "• <b>RL</b> (right-left) → <b>right</b> rotate child, then <b>left</b> rotate node<br>" +
         "AVL is <b>strictly balanced</b> → fastest lookups, but more rotations on insert/delete.<br><br>" +
-        "<b>Red-Black tree</b> — nodes are colored red/black with rules: (1) root is black, (2) a red node's children are black (no two reds in a row), (3) every root→null path has the same number of black nodes. This guarantees height ≤ 2·log₂(n+1). <b>Fewer rotations</b> than AVL on insert/delete → better for write-heavy workloads.<br><br>" +
+        "<b>Red-Black tree</b>: nodes are colored red/black with rules: (1) root is black, (2) a red node's children are black (no two reds in a row), (3) every root→null path has the same number of black nodes. This guarantees height ≤ 2·log₂(n+1). <b>Fewer rotations</b> than AVL on insert/delete → better for write-heavy workloads.<br><br>" +
         "<b>AVL vs Red-Black:</b> AVL = more balanced → faster reads; Red-Black = fewer rotations → faster writes. <b>Used in:</b> Java <code>TreeMap</code>/<code>TreeSet</code>, C++ <code>std::map</code>/<code>std::set</code>, and the Linux CFS scheduler (all Red-Black). Database indexes typically use <b>B/B+ trees</b> (a related idea for disk).",
       code: {
         pseudo:
@@ -1670,10 +1670,10 @@ function insert(root, key) {
   return root;
 }` } },
     { n: "B-Tree / B+ Tree (disk-based)", h: "Balanced trees built for <b>disk/SSD</b>, not RAM. A node holds <b>many keys</b> (= one disk page), so the tree is very <b>shallow</b> → far fewer disk reads than a BST/AVL. This is what powers <b>database indexes</b>.",
-      note: "<b>Why not a BST/AVL for a database?</b> A BST stores one key per node, so its height is ~log₂(n) — for a billion rows that's ~30 levels = ~30 disk seeks. A B-tree packs hundreds of keys per node (one disk page), so height is ~log₍ₘ₎(n) — often just <b>3–4 levels</b> = 3–4 disk reads. Disk I/O dominates, so fewer, larger nodes win.<br><br>" +
+      note: "<b>Why not a BST/AVL for a database?</b> A BST stores one key per node, so its height is ~log₂(n), for a billion rows that's ~30 levels = ~30 disk seeks. A B-tree packs hundreds of keys per node (one disk page), so height is ~log₍ₘ₎(n), often just <b>3–4 levels</b> = 3–4 disk reads. Disk I/O dominates, so fewer, larger nodes win.<br><br>" +
         "<b>B-tree properties (order m):</b> each internal node has up to <code>m</code> children and <code>m−1</code> sorted keys; <b>all leaves are at the same depth</b>; it stays balanced by <b>splitting</b> a node on overflow and <b>borrowing/merging</b> on underflow. Search/insert/delete are O(log n) with a tiny constant.<br><br>" +
         "<b>B+ tree (what most DBs actually use):</b> all <b>data lives in the leaves</b>; internal nodes hold only routing keys; and the <b>leaves are linked together</b>. This makes <b>range scans</b> and ordered/sequential reads very fast (walk the leaf linked-list). Used by MySQL <b>InnoDB</b>, PostgreSQL, and many filesystems.<br><br>" +
-        "<b>B-tree vs B+ tree:</b> B-tree can store data in internal nodes (point lookups may end early higher up); B+ tree keeps all data in leaves (uniform lookups + fast ranges). No standard LeetCode/GFG problem — this is a <b>system-design / theory</b> topic.",
+        "<b>B-tree vs B+ tree:</b> B-tree can store data in internal nodes (point lookups may end early higher up); B+ tree keeps all data in leaves (uniform lookups + fast ranges). No standard LeetCode/GFG problem: this is a <b>system-design / theory</b> topic.",
       code: {
         pseudo:
 `a B-tree node holds sorted keys with child pointers between them.
@@ -1841,7 +1841,7 @@ function search(node, key) {
       [994, "rotting-oranges", "Rotting Oranges (multi-source BFS)", "M"],
       [417, "pacific-atlantic-water-flow", "Pacific Atlantic Water Flow", "M"],
     ]},
-    { n: "Cycle Detection", h: "<b>Undirected:</b> DFS/BFS tracking the <b>parent</b> — a visited neighbor that isn't the parent = cycle (or use DSU). <b>Directed:</b> DFS with <b>visited + rec_stack</b> — an edge back to a node in the current path = cycle (or Kahn's: if processed ≠ V, there's a cycle).",
+    { n: "Cycle Detection", h: "<b>Undirected:</b> DFS/BFS tracking the <b>parent</b>: a visited neighbor that isn't the parent = cycle (or use DSU). <b>Directed:</b> DFS with <b>visited + rec_stack</b>: an edge back to a node in the current path = cycle (or Kahn's: if processed ≠ V, there's a cycle).",
       code: {
         pseudo:
 `UNDIRECTED (visited + parent): a visited neighbor that is not the
@@ -1863,7 +1863,7 @@ DIRECTED (visited + recursion-stack):
 # ============ UNDIRECTED ============
 # Hint: use visited + parent. A visited neighbor that isn't the parent = cycle.
 
-# Undirected — DFS
+# Undirected: DFS
 def cyc_undirected_dfs(n, adj):
     seen = [False] * n
     def dfs(u, parent):
@@ -1876,7 +1876,7 @@ def cyc_undirected_dfs(n, adj):
         return False
     return any(not seen[i] and dfs(i, -1) for i in range(n))
 
-# Undirected — BFS (queue stores (node, parent))
+# Undirected: BFS (queue stores (node, parent))
 def cyc_undirected_bfs(n, adj):
     seen = [False] * n
     for s in range(n):
@@ -1891,7 +1891,7 @@ def cyc_undirected_bfs(n, adj):
                     return True
     return False
 
-# Undirected — Union-Find (edge whose ends are already joined = cycle)
+# Undirected: Union-Find (edge whose ends are already joined = cycle)
 def cyc_undirected_dsu(n, edges):
     parent = list(range(n))
     def find(x):
@@ -1907,7 +1907,7 @@ def cyc_undirected_dsu(n, edges):
 # ============ DIRECTED ============
 # Hint (DFS): visited + rec_stack (nodes on the current path).
 
-# Directed — DFS
+# Directed: DFS
 def cyc_directed_dfs(n, adj):
     visited = [False] * n; rec = [False] * n     # rec = in current path
     def dfs(u):
@@ -1919,7 +1919,7 @@ def cyc_directed_dfs(n, adj):
         return False
     return any(not visited[i] and dfs(i) for i in range(n))
 
-# Directed — DFS (alternative: 3-color  0=unseen, 1=in path, 2=done)
+# Directed: DFS (alternative: 3-color  0=unseen, 1=in path, 2=done)
 def cyc_directed_dfs_color(n, adj):
     state = [0] * n                              # same idea, one array
     def dfs(u):
@@ -1931,7 +1931,7 @@ def cyc_directed_dfs_color(n, adj):
         return False
     return any(state[i] == 0 and dfs(i) for i in range(n))
 
-# Directed — BFS / Kahn's (hint: in-degree; if processed != V -> cycle)
+# Directed: BFS / Kahn's (hint: in-degree; if processed != V -> cycle)
 def cyc_directed_bfs(n, adj):
     indeg = [0] * n
     for u in range(n):
@@ -2232,7 +2232,7 @@ function cycDirectedBfs(n, adj) {
       [684, "redundant-connection", "Redundant Connection (undirected)", "M"],
       [802, "find-eventual-safe-states", "Find Eventual Safe States", "M"],
     ]},
-    { n: "Topological Sort", h: "Only for DAGs. Two ways: <b>Kahn's (BFS)</b> — repeatedly remove 0 in-degree nodes; <b>DFS</b> — push a node after visiting all its children, then reverse.",
+    { n: "Topological Sort", h: "Only for DAGs. Two ways: <b>Kahn's (BFS)</b>: repeatedly remove 0 in-degree nodes; <b>DFS</b>: push a node after visiting all its children, then reverse.",
       code: {
         pseudo:
 `topological order of a DAG (every edge points forward).
@@ -2246,7 +2246,7 @@ function cycDirectedBfs(n, adj) {
         py:
 `from collections import deque, defaultdict
 
-# Topological Sort — Kahn's (BFS on in-degree)
+# Topological Sort: Kahn's (BFS on in-degree)
 def topo_bfs(n, adj):
     indeg = [0] * n
     for u in range(n):
@@ -2259,7 +2259,7 @@ def topo_bfs(n, adj):
             if indeg[v] == 0: q.append(v)
     return order if len(order) == n else []      # [] => cycle (not a DAG)
 
-# Topological Sort — DFS (reverse post-order)
+# Topological Sort: DFS (reverse post-order)
 def topo_dfs(n, adj):
     seen = [False] * n; stack = []
     def dfs(u):
@@ -2586,7 +2586,7 @@ Kosaraju's SCC (two DFS passes):
         py:
 `from collections import deque
 
-# ---- Bipartite check — BFS (2-coloring) ----
+# ---- Bipartite check: BFS (2-coloring) ----
 def is_bipartite_bfs(n, adj):
     color = [0] * n
     for s in range(n):
@@ -2599,7 +2599,7 @@ def is_bipartite_bfs(n, adj):
                 if not color[v]: color[v] = -color[u]; q.append(v)
     return True
 
-# ---- Bipartite check — DFS (2-coloring) ----
+# ---- Bipartite check: DFS (2-coloring) ----
 def is_bipartite_dfs(n, adj):
     color = [0] * n
     def dfs(u, c):
@@ -2821,7 +2821,7 @@ function kosaraju(n, adj) {
   ]},
 
   /* ===================== TRIE (Striver) ===================== */
-  { n: "Trie", h: "Tree of characters. Each node has children map + isEnd flag. O(word length) insert/search — great for prefixes.", c: [
+  { n: "Trie", h: "Tree of characters. Each node has children map + isEnd flag. O(word length) insert/search: great for prefixes.", c: [
     { n: "Insert / Search / Prefix", h: "Walk char by char creating nodes. Prefix search stops without needing isEnd. Longest word buildable = all prefixes are words.", p: [
       [208, "implement-trie-prefix-tree", "Implement Trie", "M"],
       [211, "design-add-and-search-words-data-structure", "Add & Search Word (wildcard)", "M"],
@@ -2879,7 +2879,7 @@ function kosaraju(n, adj) {
 
   /* ===================== BIT MANIPULATION ===================== */
   { n: "Bit Manipulation", h: "x&1 tests last bit; x>>1 halves; x&(x-1) clears lowest set bit; a^a=0. XOR cancels pairs.", c: [
-    { n: "XOR tricks", h: "Missing/single number: XOR everything — pairs cancel, the odd one remains.", p: [
+    { n: "XOR tricks", h: "Missing/single number: XOR everything: pairs cancel, the odd one remains.", p: [
       [136, "single-number", "Single Number", "E"],
       [137, "single-number-ii", "Single Number II", "M"],
       [260, "single-number-iii", "Single Number III", "M"],
