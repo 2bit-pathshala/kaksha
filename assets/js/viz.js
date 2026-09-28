@@ -3387,3 +3387,402 @@ Object.assign(VIZ, {
 ]},
 
 });
+
+/* ============================ AI concept visuals ============================
+   Same VIZ object, same DRAW renderers. These back ai-concept.html's entries in
+   data/ai-concept-data.js; kept here rather than in that data file because a
+   visual has to exist before ai-concept.html's script references it, and
+   ai-revise.html never loads this file at all, so nothing outside viz.js may
+   assume VIZ exists. */
+
+VIZ["next-token-loop"] = {
+  kind: "cells",
+  arr: ["The", "cat", "sat", "on", "the"],
+  frames: [
+    { arr: ["The", "cat", "sat", "on", "the"], on: [4],
+      out: "model scores every vocab word for what comes next",
+      cap: "Feed in the tokens so far. The model does not retrieve an answer, it scores its entire vocabulary for what could come next." },
+    { arr: ["The", "cat", "sat", "on", "the"], hot: [4],
+      out: "cat 57% . mat 21% . dog 13% . sat 9%",
+      cap: "Those scores are a probability distribution, one number per vocabulary word, not a lookup of the right answer." },
+    { arr: ["The", "cat", "sat", "on", "the", "mat"], on: [5],
+      out: "sampled: mat",
+      cap: "Something outside the model, greedy pick or random draw, turns that distribution into one actual token." },
+    { arr: ["The", "cat", "sat", "on", "the", "mat", "."], on: [6], dim: [0],
+      out: "context now 7 tokens long",
+      cap: "The chosen token is appended to the input, and the whole thing is run through the model again." },
+    { arr: ["The", "cat", "sat", "on", "the", "mat", "."], band: [0, 6],
+      out: "same function, called seven times so far",
+      cap: "A whole reply is this identical step, repeated hundreds of times, nothing more exotic happens underneath." },
+    { arr: ["The", "cat", "sat", "on", "the", "mat", "."], bad: [6],
+      out: "model never checks 'mat' against reality",
+      cap: "Notice what never happens: the model does not verify its guess against the world, it only continues a plausible string." },
+  ],
+};
+
+VIZ["bpe-merge"] = {
+  kind: "cells",
+  arr: ["u", "n", "b", "e", "l", "i", "e", "v", "a", "b", "l", "e"],
+  frames: [
+    { arr: ["u", "n", "b", "e", "l", "i", "e", "v", "a", "b", "l", "e"],
+      out: "12 characters, before any merge",
+      cap: "Byte-pair encoding starts every word broken into single characters, the smallest possible vocabulary." },
+    { arr: ["un", "b", "e", "l", "i", "e", "v", "a", "b", "l", "e"], on: [0],
+      out: "11 chunks, first merge applied",
+      cap: "The most frequent adjacent pair across the whole training corpus gets merged first, here u+n became un." },
+    { arr: ["un", "be", "l", "i", "e", "v", "a", "b", "l", "e"], on: [1],
+      out: "10 chunks",
+      cap: "Merging repeats, always picking whatever pair is most common in the corpus, not just in this one word." },
+    { arr: ["un", "be", "liev", "a", "b", "l", "e"], on: [2],
+      out: "7 chunks",
+      cap: "After enough rounds, long common fragments like liev survive as one token because they recur often enough." },
+    { arr: ["un", "be", "liev", "able"], on: [0, 1, 2, 3],
+      out: "4 tokens: un + be + liev + able",
+      cap: "This word's final split into four tokens is set by training-corpus frequency, not by a dictionary of word parts." },
+    { arr: ["the"], on: [0],
+      out: "1 token: the",
+      cap: "Compare a common word: \"the\" merges all the way down to one single token because it appears constantly in training." },
+    { arr: ["b1", "b2", "b3", "b4", "b5"], bad: [0, 1, 2, 3, 4],
+      out: "5 tokens for one Devanagari word",
+      cap: "A word from a script the merges rarely saw stays split into many small byte-level pieces, the tokenization tax." },
+  ],
+};
+
+VIZ["attention-pairs"] = {
+  kind: "tree", w: 620, h: 220, arrows: true,
+  nodes: {
+    t1: { x: 60,  y: 150, t: "The" },
+    t2: { x: 200, y: 60,  t: "cat" },
+    t3: { x: 340, y: 150, t: "sat" },
+    t4: { x: 480, y: 60,  t: "on" },
+    t5: { x: 600, y: 150, t: "mat" },
+  },
+  edges: [["t1", "t2"], ["t1", "t3"], ["t2", "t3"], ["t1", "t4"], ["t2", "t4"], ["t3", "t4"],
+          ["t1", "t5"], ["t2", "t5"], ["t3", "t5"], ["t4", "t5"]],
+  frames: [
+    { edges: [], on: ["t1", "t2", "t3", "t4", "t5"],
+      cap: "Five tokens sit in the context. Nothing has been compared yet." },
+    { edges: [["t1", "t2"]], edge: [["t1", "t2"]], on: ["t2"], dim: ["t3", "t4", "t5"],
+      out: "1 comparison for token 2",
+      cap: "Token 2, cat, attends back to The. One earlier token, one comparison." },
+    { edges: [["t1", "t3"], ["t2", "t3"]], edge: [["t1", "t3"], ["t2", "t3"]], on: ["t3"], dim: ["t4", "t5"],
+      out: "2 comparisons for token 3",
+      cap: "Token 3, sat, compares against two keys and blends both values by weight." },
+    { edges: [["t1", "t4"], ["t2", "t4"], ["t3", "t4"]],
+      edge: [["t1", "t4"], ["t2", "t4"], ["t3", "t4"]], on: ["t4"], dim: ["t5"],
+      out: "3 comparisons for token 4",
+      cap: "Token 4 already needs three comparisons, one more than the token before it." },
+    { edges: [["t1", "t5"], ["t2", "t5"], ["t3", "t5"], ["t4", "t5"]],
+      edge: [["t1", "t5"], ["t2", "t5"], ["t3", "t5"], ["t4", "t5"]], on: ["t5"],
+      out: "4 comparisons for token 5",
+      cap: "Token 5 needs four. The last token in a run of n costs n minus one comparisons alone." },
+    { edges: [["t1", "t2"], ["t1", "t3"], ["t2", "t3"], ["t1", "t4"], ["t2", "t4"], ["t3", "t4"],
+              ["t1", "t5"], ["t2", "t5"], ["t3", "t5"], ["t4", "t5"]],
+      on: ["t1", "t2", "t3", "t4", "t5"],
+      out: "1+2+3+4 = 10 comparisons total",
+      cap: "Sum one plus two plus three plus four: ten comparisons for five tokens, order n squared." },
+  ],
+};
+
+VIZ["attention-quadratic"] = {
+  kind: "curve",
+  frames: [
+    { show: ["O(n)"],
+      cap: "A linear operation over the same tokens, one step per token, this is the curve attention has to beat." },
+    { show: ["O(n)", "O(n²)"],
+      cap: "Attention itself is this curve, O(n squared). At small n the two look close, then they stop looking close." },
+    { show: ["O(n)", "O(n²)"],
+      cap: "n = 4,000: about 16 million pairs. Still fast, still easy to ignore as a cost." },
+    { show: ["O(n)", "O(n²)"],
+      cap: "n = 128,000: about 16.4 billion pairs, 1,024x more than 4,000 tokens, not 32x." },
+    { show: ["O(n)", "O(n²)"],
+      cap: "This is the whole reason long-context requests are priced higher: the curve, not a policy choice." },
+  ],
+};
+
+VIZ["sampling-reshape"] = {
+  kind: "cells",
+  arr: ["yes", "no", "maybe"],
+  frames: [
+    { on: [0, 1, 2], out: "T = 1: .67 .25 .09",
+      cap: "This is the distribution the model computed, nothing has reshaped it yet." },
+    { hot: [0], dim: [1, 2], out: "T = 0.5: .87 .12 .02",
+      cap: "Lower temperature stretches the logits apart before softmax, yes becomes nearly certain." },
+    { on: [0, 1, 2], out: "T = 2.0: .51 .31 .19",
+      cap: "Higher temperature shrinks the logits together, all three become genuinely plausible." },
+    { on: [0, 1], bad: [2], out: "top-k = 2 drops maybe",
+      cap: "Top-k deletes the tail outright, maybe is gone regardless of how close .09 was to .25." },
+    { on: [0], dim: [1, 2], out: "top-p = 0.7 keeps only yes",
+      cap: "Top-p adds tokens until the running total passes 0.7, here that is yes alone." },
+    { on: [0], dim: [1, 2], out: "T -> 0: argmax",
+      cap: "As temperature approaches zero the distribution collapses to one token, this is greedy decoding." },
+  ],
+};
+
+VIZ["prompt-assembly"] = { kind: "cells", arr: ["SYS"], frames: [
+  { arr: ["SYS"], on: [0], out: "no input yet", cap: "Every call is one string. There is no side channel for intent, whatever should guide the answer has to be typed into this same sequence." },
+  { arr: ["SYS", "IN"], on: [0, 1], out: "zero-shot call", cap: "Zero-shot: instructions plus the input, concatenated. The model must infer the task from wording and pretraining alone." },
+  { arr: ["SYS", "IN"], hot: [1], out: "guess: positive (wrong)", cap: "Ambiguous input, no examples to anchor it. Slightly different wording here could easily have flipped this guess." },
+  { arr: ["SYS", "EX1", "EX2", "IN"], on: [0, 1, 2], out: "few-shot call", cap: "Few-shot: two worked examples inserted before the input. Still one string, just more of it is examples now." },
+  { arr: ["SYS", "EX1", "EX2", "IN"], hot: [3], out: "guess: negative (correct)", cap: "Same input, same weights, different text before it. The examples moved the implicit decision boundary, not the model." },
+  { arr: ["SYS", "EX1", "EX2", "IN"], bad: [1, 2], out: "model B: guess wrong again", cap: "Trap: swap in a smaller model and the same examples may not transfer, they leaned on a capability this model lacks." },
+]};
+
+VIZ["context-window"] = { kind: "cells", arr: ["SYS", "Q"], frames: [
+  { arr: ["SYS", "Q"], on: [0, 1], out: "budget: 8,000 tokens", cap: "The context window is one shared, ordered budget. System prompt, retrieved docs, tool schemas and history compete for the same slots." },
+  { arr: ["FACT", "D", "D", "D", "D", "D"], on: [0], out: "fact at position 1 of 6", cap: "Put the fact the model needs right at the start of the context." },
+  { arr: ["FACT", "D", "D", "D", "D", "D"], hot: [0], out: "recall: strong", cap: "Recall near the start of a long context stays close to a short-context baseline." },
+  { arr: ["D", "D", "D", "FACT", "D", "D"], hot: [3], dim: [0, 1, 2, 4, 5], out: "position 4 of 6, recall: weak", cap: "Same fact, same tokens, buried in the middle: the lost-in-the-middle effect (arXiv 2307.03172)." },
+  { arr: ["D", "D", "D", "D", "D", "FACT"], on: [5], out: "position 6 of 6, recall: strong again", cap: "Move it to the end and recall recovers, a U-shaped curve across position, not a flat one." },
+  { arr: ["SYS", "D1", "D2", "D3", "D4", "D5", "D6", "D7"], bad: [1, 2, 3, 4, 5, 6, 7], out: "tokens used: 40,000, mostly noise", cap: "Trap: dumping the entire retrieved corpus in \"to be safe\" burns tokens and buries the one chunk that matters." },
+]};
+
+VIZ["prompt-cache-slots"] = { kind: "hash", buckets: 3, fn: "slot = hash(pfx) % 3", frames: [
+  { k: "pfx (t1)", b: 0, cap: "Turn 1: the prefix (system prompt + tool schemas) is hashed and its state is written to a slot. Full price." },
+  { k: "pfx (t2)", b: 0, cap: "Turn 2: identical prefix bytes hash to the same slot. The cached state is reused, only the new input is fresh." },
+  { k: "pfx (t3)", b: 0, cap: "Turn 3: same story. Every call with this exact prefix keeps landing in the same slot." },
+  { k: "pfx+date", b: 2, cap: "Turn 4: a request adds today's date BEFORE the prefix. The bytes changed, so this hashes to a new slot." },
+  { k: "pfx+date", b: 2, cap: "Every later call still carries that date up front, so every call now misses the old slot and pays full price." },
+]};
+
+VIZ["harness-cost"] = { kind: "curve", frames: [
+  { show: ["O(1)"], cap: "A harness that prunes stale tool output before the next call: history stays about 1,500 tokens, turn 1 or turn 50." },
+  { show: ["O(1)", "O(n)"], cap: "A harness that resends the full tool-output history every turn: the O(n) curve, same model, worse code around it." },
+  { show: ["O(1)", "O(n)"], cap: "Turn 10: pruned sends about 1,500 tokens of history. Resend-everything sends about 4,000, most of it already acted on." },
+  { show: ["O(1)", "O(n)"], cap: "Turn 50: pruned is still about 1,500 tokens. Resend-everything is near 20,000, and the growth has not stopped." },
+  { show: ["O(1)", "O(n)"], cap: "Around turn 320 the resend-everything harness's history alone crosses a 128k window. The pruned harness never nears that wall." },
+]};
+
+VIZ["model-cost-crossover"] = {
+  kind: "curve",
+  frames: [
+    { show: ["O(1)"], cap: "The flat line is a <b>rented GPU</b>: two H100s at $2.50/hr each cost $120 a day whether they serve ten requests or a million." },
+    { show: ["O(1)", "O(n)"], cap: "The rising line is a <b>pay-per-token API</b> for a similar open model, around $0.90 per million output tokens: no fixed cost, but it climbs with volume." },
+    { show: ["O(1)", "O(n)"], cap: "The lines cross around <b>133 million tokens a day</b>, about 266,000 requests at 500 tokens each, roughly 3 requests every second, all day." },
+    { show: ["O(1)", "O(n)"], cap: "Below that line the flat cost is a <b>trap</b>: at 10,000 requests a day the API bill is $4.50, the idle GPU still bills $120." },
+    { show: ["O(1)", "O(n)"], cap: "Request volume decides self-host vs API. It says nothing about the <b>other two axes</b>, open vs closed weights, or big vs small model." },
+  ],
+};
+
+VIZ["kv-cache-growth"] = {
+  kind: "cells",
+  arr: ["t1"],
+  frames: [
+    { arr: ["t1"], on: [0], out: "naive: attention over 1 token", cap: "Generating the next token means running attention over everything so far, just 1 token right now." },
+    { arr: ["t1", "t2"], hot: [0, 1], out: "naive: recompute over 2 tokens", cap: "Naive decoding recomputes attention over the WHOLE prefix for every new token, both cells redone." },
+    { arr: ["t1", "t2", "t3", "t4"], hot: [0, 1, 2, 3], out: "naive: recompute over 4 tokens, again", cap: "By token 5 that is 4 tokens of work, thrown away and redone a step later." },
+    { arr: ["t1", "t2", "t3", "t4", "..", "t1k"], hot: [0, 1, 2, 3, 4, 5], out: "naive @ 1000 tok: O(n^2) total work", cap: "Per-step cost grows with position, so the naive total cost is O(n squared) over a reply." },
+    { arr: ["t1"], on: [0], out: "KV cache: store key/value for t1 once", cap: "Cache the attention key and value for each token the moment it is first computed." },
+    { arr: ["t1", "t2"], on: [0], hot: [1], out: "KV cache: reuse t1, compute only t2", cap: "Token 2 reuses t1's cached key/value and computes attention for itself only, one token of work." },
+    { arr: ["t1", "t2", "t3", "t4"], on: [0, 1, 2], hot: [3], out: "KV cache: reuse 3, compute 1 new", cap: "By token 4 three tokens are pure cache reads, only the newest token does any attention math." },
+    { arr: ["t1", "t2", "t3", "t4", "..", "t1k"], on: [0, 1, 2, 3, 4], hot: [5], out: "KV cache @ 1000 tok: ~1 token of work per step", cap: "Per-step cost stays flat, so total cost is O(n). Cache size: ~500MB per 1,000 tokens on a 7B model." },
+  ],
+};
+
+VIZ["finetune-vs-lora"] = {
+  kind: "tree",
+  w: 620, h: 300,
+  nodes: {
+    base:   { x: 310, y: 40,  t: "Base model", w: 120 },
+    prompt: { x: 130, y: 150, t: "Prompting",  w: 100 },
+    rag:    { x: 310, y: 150, t: "RAG",        w: 70 },
+    ft:     { x: 500, y: 150, t: "Fine-tune",  w: 100 },
+    full:   { x: 415, y: 250, t: "Full FT",    w: 132 },
+    lora:   { x: 570, y: 250, t: "LoRA",       w: 100 },
+  },
+  edges: [["base", "prompt"], ["base", "rag"], ["base", "ft"], ["ft", "full"], ["ft", "lora"]],
+  frames: [
+    { on: ["base"], cap: "Start from one <b>base model</b>. Three different tools change its behaviour in three different ways." },
+    { on: ["base", "prompt"], edge: [["base", "prompt"]], cap: "<b>Prompting</b> changes nothing about the weights, only the instructions for this one call. Cheapest, and forgotten after." },
+    { on: ["base", "rag"], edge: [["base", "rag"]], dim: ["prompt"], cap: "<b>RAG</b> also leaves the weights untouched, it changes what the model can see: fresh documents, retrieved per call." },
+    { on: ["base", "ft"], edge: [["base", "ft"]], dim: ["prompt", "rag"], cap: "<b>Fine-tuning</b> is the odd one out: it edits the weights themselves, so new behaviour needs no prompt or retrieval." },
+    { on: ["ft", "full"], edge: [["ft", "full"]], t: { full: "Full FT: 100%" }, dim: ["prompt", "rag"], out: "7B params, all trainable", cap: "<b>Full fine-tuning</b> makes every parameter trainable, and its optimiser state alone needs several times that in memory." },
+    { on: ["ft", "lora"], edge: [["ft", "lora"]], t: { full: "Full FT: 100%", lora: "LoRA: ~0.2%" }, dim: ["prompt", "rag", "full"], out: "7B params, ~15M trainable", cap: "<b>LoRA</b> freezes the base weights and trains a small adapter alongside them, well under 1% of the parameters." },
+    { on: ["full", "lora"], dim: ["base", "prompt", "rag"], t: { full: "Full FT: 100%", lora: "LoRA: ~0.2%" }, out: "full FT: multi-GPU node, LoRA: one consumer GPU", cap: "That gap in trainable parameters is the gap between a multi-GPU node and fine-tuning overnight on one card." },
+  ],
+};
+
+VIZ["image-token-burst"] = {
+  kind: "cells",
+  arr: ["w1"],
+  frames: [
+    { arr: ["w1"], on: [0], out: "~1-2 tokens per word", cap: "Plain text tokenizes small: a short paragraph of a few hundred words costs a few hundred tokens." },
+    { arr: ["w1", "w2", "w3", "w4", "w5"], on: [0, 1, 2, 3, 4], out: "150-word paragraph ~= 200 tokens", cap: "A full paragraph of prose still stays cheap, on the order of a few hundred tokens for a few hundred words." },
+    { arr: ["w1", "w2", "w3", "w4", "w5", "im"], on: [0, 1, 2, 3, 4], hot: [5], out: "one 1024x1024 image lands next", cap: "Now one screenshot joins the context. It looks like a single attachment, one file." },
+    { arr: ["w1", "w2", "w3", "w4", "w5", "p1", "p2", "p3", "p4"], dim: [0, 1, 2, 3, 4], hot: [5, 6, 7, 8], out: "~765 tokens for ONE image", cap: "The image encoder slices it into patches and each patch becomes tokens: one 1024px image can cost 700-1,500+ tokens." },
+    { arr: ["w1", "w2", "w3", "w4", "w5", "p1", "p2", "p3", "p4"], on: [0, 1, 2, 3, 4], hot: [5, 6, 7, 8], out: "paragraph ~200 tok vs image ~765 tok", cap: "One image can already outweigh a paragraph of text, despite feeling like a single upload in the chat window." },
+    { arr: ["w1", "w2", "w3", "w4", "w5", "p1", "p2", "p3", "p4"], on: [0, 1, 2, 3, 4], hot: [5, 6, 7, 8], out: "5 screenshots ~= 3,825 tokens", cap: "Five screenshots in one conversation can burn thousands of tokens of budget before the model writes a single reply word." },
+  ],
+};
+
+VIZ["embeddings-hash"] = {
+  title: "Text to embedding model to region",
+  kind: "hash", buckets: 5, fn: "embed -> region",
+  frames: [
+    { k: "'cat'", b: 1, cap: "The model reads 'cat' and places it in region 1, the animal neighbourhood of the space." },
+    { k: "'kitten'", b: 1, cap: "'kitten' lands in the same region. Training pulled these two meanings close together." },
+    { k: "'puppy'", b: 1, cap: "'puppy' is close enough to share the region too, similar meaning, similar address." },
+    { k: "'stocks'", b: 4, cap: "'stocks' lands far away, in region 4. Nothing about animals is anywhere nearby." },
+    { k: "'shares'", b: 4, cap: "'shares' shares no letters with 'stocks' but lands in the same region anyway, same topic." },
+    { k: "'cat' v2", b: 3, cap: "Re-embed 'cat' with a newer model version: a different region. Old vectors are now incomparable." },
+  ],
+};
+
+VIZ["ann-curve"] = {
+  title: "Brute force versus an ANN index",
+  kind: "curve",
+  frames: [
+    { show: ["O(n)"], cap: "Brute force compares the query to every stored vector. Work grows in a straight line with n." },
+    { show: ["O(n)"], cap: "n = 10,000,000, dim = 768: about 7.7 x 10^9 multiply-adds, roughly 7.7 seconds per query." },
+    { show: ["O(n)", "O(log n)"], cap: "An ANN index like HNSW instead touches a slice that grows like log n, not n." },
+    { show: ["O(log n)"], cap: "Drop the brute-force line: at the same n, HNSW visits hundreds of nodes, not millions." },
+    { show: ["O(log n)"], cap: "That gap is the whole pitch: sublinear search, in exchange for occasionally missing the single best match." },
+  ],
+};
+
+VIZ["rag-chunks"] = {
+  title: "Retrieval and the dilution trap",
+  kind: "cells", arr: ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"],
+  frames: [
+    { cap: "A 50-page document becomes 8 chunks, each embedded once at ingest time." },
+    { on: [2, 5], out: "query embedded", cap: "The query embeds too. Chunks C3 and C6 are the ones that actually answer it." },
+    { on: [1, 2, 4, 5, 6], out: "top-5 by similarity", cap: "Vector search returns 5 candidates by similarity, only 2 of them are actually relevant." },
+    { on: [2, 5], dim: [1, 4, 6], out: "reranked: keep 2 of 5", cap: "A reranker rescores those 5 and demotes the three that only looked close." },
+    { on: [2, 5], out: "prompt: C3 + C6 only", cap: "Only C3 and C6 go into the prompt. No noise left to explain away." },
+    { on: [2, 5], hot: [1, 4, 6], out: "prompt: all 5, unreranked", cap: "Skip the rerank step and all 5 go in. The right chunk is there, and the model can still answer wrong." },
+  ],
+};
+
+VIZ["memory-cells"] = {
+  title: "Context grows until it gets compacted",
+  kind: "cells", arr: ["T1"],
+  frames: [
+    { arr: ["T1"], on: [0], out: "300 tok", cap: "Turn 1 lands in context, 300 tokens, well under budget." },
+    { arr: ["T1", "T2"], on: [0, 1], out: "750 tok", cap: "Turn 2 arrives. Running total is now 750 tokens, still fine." },
+    { arr: ["T1", "T2", "T3"], on: [0, 1, 2], out: "1,250 tok", cap: "Turn 3 pushes it further. Nothing has left context yet." },
+    { arr: ["T1", "T2", "T3", "T4"], on: [0, 1, 2, 3], out: "1,850 tok", cap: "Turn 4. Every new turn still resends everything before it." },
+    { arr: ["T1", "T2", "T3", "T4", "T5"], hot: [0, 1, 2, 3], out: "2,400 tok, over budget", cap: "Turn 5 crosses the budget. Something must be compacted before turn 6." },
+    { arr: ["Sum", "T5"], on: [0, 1], out: "730 tok, 70% smaller", cap: "Turns 1 to 4 collapse into a 180-token summary. Turn 5 stays verbatim." },
+    { arr: ["Sum", "T5"], bad: [0], out: "the dropped detail", cap: "If turn 2 held a constraint the summary skipped, it is gone until something breaks." },
+  ],
+};
+
+VIZ["agent-loop-cells"] = {
+  title: "One agent loop, step by step",
+  kind: "cells", arr: ["S1", "S2", "S3", "S4", "S5"],
+  frames: [
+    { on: [0], ptr: { cur: 0 }, out: "propose: search(topic)", cap: "Step 1: the model proposes a tool call, a guess at what to do next, not an answer." },
+    { on: [0], ptr: { cur: 0 }, out: "execute -> observe: 3 results", cap: "Code actually runs it. The observation is a real result, not something imagined." },
+    { on: [0, 1], ptr: { cur: 1 }, out: "propose: read(result_2)", cap: "That observation joins the context. Step 2 proposes the next action from it." },
+    { on: [0, 1], ptr: { cur: 1 }, out: "execute -> observe: page text", cap: "Execute, observe, feed back in, same pattern every step. This is the whole loop." },
+    { on: [0, 1, 2], ptr: { cur: 2 }, out: "propose: final_answer(...)", cap: "Step 3 has enough information, so it proposes final_answer instead of another tool." },
+    { on: [0, 1, 2], out: "stop: final_answer returned", cap: "The loop ends because a stop condition fired, not because anything forced it to." },
+    { on: [2], hot: [3, 4], bad: [3, 4], ptr: { cur: 4 }, out: "search(topic) again, same args", cap: "Without a repeat check, a stuck run keeps calling the same failing tool through steps 4 and 5." },
+  ],
+};
+
+VIZ["mcp-tree"] = {
+  title: "Host, client, and server",
+  kind: "tree", w: 560, h: 300, arrows: true,
+  nodes: {
+    h:  { x: 80,  y: 150, t: "Host app", w: 96 },
+    c:  { x: 250, y: 150, t: "Client",   w: 80 },
+    s1: { x: 440, y: 60,  t: "Server: files",  w: 120 },
+    s2: { x: 440, y: 150, t: "Server: DB",     w: 110 },
+    s3: { x: 445, y: 240, t: "Server: search", w: 132 },
+  },
+  edges: [["h", "c"], ["c", "s1"], ["c", "s2"], ["c", "s3"]],
+  frames: [
+    { on: ["h"], dim: ["c", "s1", "s2", "s3"], cap: "The host is the application a person actually uses: a chat app, an IDE, anything model-facing." },
+    { on: ["h", "c"], dim: ["s1", "s2", "s3"], cap: "The client lives inside the host and speaks one fixed wire protocol, MCP, on the host's behalf." },
+    { on: ["h", "c", "s1"], edge: [["c", "s1"]], dim: ["s2", "s3"], cap: "The client also talks to a files server, exactly the way it would talk to any other MCP server." },
+    { on: ["h", "c", "s2"], edge: [["c", "s2"]], dim: ["s1", "s3"], cap: "Same client, a database server this time. No new code in the host for the switch." },
+    { on: ["h", "c", "s3"], edge: [["c", "s3"]], dim: ["s1"], cap: "And a search server. The host still only ever talks to its one client." },
+    { on: ["h", "c", "s1", "s2", "s3"], edge: [["c", "s1"], ["c", "s2"], ["c", "s3"]], cap: "Three servers, one client, zero bespoke bridges: this is the whole payoff." },
+    { on: ["h", "c", "s2"], hot: ["s2"], t: { s2: "run_any_sql" }, cap: "A server exposing one tool like run_any_sql is still dangerous. MCP standardised the wire, not the safety." },
+  ],
+};
+
+VIZ["eval-noise-band"] = {
+  title: "Sample size and the noise band",
+  kind: "cells",
+  arr: ["n=10", "n=100", "n=400"],
+  frames: [
+    { out: "true pass rate: 80%, unknown to us",
+      cap: "The same underlying 80% pass rate, tested at three sample sizes." },
+    { hot: [0], out: "n=10: noise band +/-25 points",
+      cap: "At 10 examples, luck alone can print anywhere from 55% to 100%." },
+    { dim: [0], hot: [1], out: "n=100: noise band +/-8 points",
+      cap: "At 100 examples the band shrinks, but an 80 vs 85 gap is still shaky." },
+    { dim: [0, 1], hot: [2], out: "n=400: noise band +/-4 points",
+      cap: "At 400 examples the band finally sits under a real 5-point regression." },
+    { on: [0], out: "run A: 60%   run B: 95%",
+      cap: "Two runs of the identical system at n=10: this 35-point gap is pure luck." },
+    { on: [2], out: "run A: 79%   run B: 84%",
+      cap: "The same size gap at n=400 would have to be a real change, not luck." },
+  ],
+};
+
+VIZ["llm-trace-tree"] = {
+  title: "One request, three spans",
+  kind: "tree",
+  w: 640, h: 240,
+  nodes: {
+    req: { x: 320, y: 40, t: "request", w: 125 },
+    ret: { x: 130, y: 160, t: "retrieve", w: 125 },
+    llm: { x: 320, y: 160, t: "model call", w: 155 },
+    tool: { x: 510, y: 160, t: "tool call", w: 130 },
+  },
+  edges: [["req", "ret"], ["req", "llm"], ["req", "tool"]],
+  frames: [
+    { cap: "A trace is a tree: one root span for the request, one child per step." },
+    { on: ["ret"], t: { ret: "retrieve 40ms" },
+      cap: "Retrieval finishes first and is cheap, 40ms for the vector lookup." },
+    { on: ["llm"], t: { llm: "model call 540ms" },
+      cap: "The model call dominates the trace, 540ms of the 620ms total." },
+    { on: ["tool"], t: { tool: "tool call 30ms" },
+      cap: "A tool call closes the loop, another 30ms." },
+    { on: ["req"], t: { req: "request 620ms" }, out: "620ms total, 87% inside the model call",
+      cap: "Sum the children and the root, and you know exactly where the time went." },
+    { dim: ["ret", "tool"], on: ["llm"], out: "p50 540ms vs p99 3,800ms, same code path",
+      cap: "Same trace shape, different run: sampling can make the model call itself 7x slower." },
+  ],
+};
+
+VIZ["tool-call-allowlist"] = {
+  title: "Every tool call through one allow-list",
+  kind: "hash",
+  fn: "allow-listed?",
+  buckets: 2,
+  frames: [
+    { cap: "Every tool call passes through one allow-list check before it runs." },
+    { k: "search", b: 1,
+      cap: "search(url) is on the list: bucket 1, the call is executed." },
+    { k: "read", b: 1,
+      cap: "read_file(report.pdf) is also allowed: bucket 1, executed." },
+    { k: "email", b: 0,
+      cap: "A webpage's hidden text asks the model to email(x@evil) the API key. email is not allow-listed." },
+    { k: "email", b: 0,
+      cap: "Bucket 0 is blocked: the call never reaches the network, whatever the model wanted." },
+  ],
+};
+
+VIZ["regression-gate-runs"] = {
+  title: "A CI gate over five runs",
+  kind: "cells",
+  arr: ["run1", "run2", "run3", "run4", "run5"],
+  frames: [
+    { on: [0], out: "baseline: 322/400 pass, 80.5%",
+      cap: "Run 1 sets the baseline: 322 of 400 cases pass." },
+    { on: [0, 1], band: [0, 1], out: "run2: 79.8%, inside the noise band",
+      cap: "Run 2 drifts half a point, well inside the +/-4 point noise band." },
+    { on: [0, 1, 2], band: [0, 2], out: "run3: 81.2%, inside the noise band",
+      cap: "Run 3 drifts the other way, still just noise." },
+    { dim: [0, 1, 2], bad: [3], out: "run4: 73.75%, a 6.75-point drop",
+      cap: "Run 4 drops 6.75 points, past the 4-point threshold." },
+    { dim: [0, 1, 2], hot: [3], out: "gate: FAIL, drop exceeds 2xSE",
+      cap: "The suite blocks the deploy here: the distribution moved, not one case." },
+    { dim: [0, 1, 2, 3], on: [4], out: "run5: prompt reverted, 80.6%",
+      cap: "After reverting the prompt change, run 5 lands back inside the noise band." },
+  ],
+};

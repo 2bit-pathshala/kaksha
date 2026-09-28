@@ -46,6 +46,11 @@ jobs:
       - name: Check
         run: node tools/check.js
 
+      # Same guard rails, pointed at the AI concept and design data instead,
+      # since those live in their own files and check.js does not see them.
+      - name: Check AI content
+        run: node tools/check-ai.js
+
       # Only what the site serves. README, docs and tools are part of the repo,
       # not part of the site, and there is no reason to publish them twice.
       # A new top-level directory that the pages load has to be added here.

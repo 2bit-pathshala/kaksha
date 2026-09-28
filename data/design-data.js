@@ -22,9 +22,27 @@
        schema?: {n,note,code?,lang?},
        deep?: [{n,note,code?,lang?}],
        tradeoffsIntro, tradeoffs:[{a:[n,d],b:[n,d],pick:"a"|"b",flip}],
-       next:[html], p:[[src,href,title,diff]] }
+       next:[html], p:[[src,href,title,diff]],
+       hi?: { one, brief:{why,functional:[html],out:[str],nfr:[[prop,target,why]],
+                          numbers:[[what,answer,how]],numbersNote},
+              stagesIntro, stages:[{t,pressure,say,breaks?}],
+              boxesIntro, boxes:[{job,why,forced,alts:[[name,whyNot]],pros:[],cons:[],cost,fails,say?}],
+              patternsIntro?, patterns?:[{what,varies,without,cost}],
+              flowsIntro, flows:[{n,note?,steps:[[html]]}],
+              apiNote?, api?:[[call,returns,decision]], schema?:{n,note},
+              deep?:[{n,note}],
+              tradeoffsIntro, tradeoffs:[{a:[n,d],b:[n,d],flip}], next:[html] } }
 
    Roles paint the box: client, edge, svc, store, cache, queue, work, ext.
+
+   `hi` is the whole page again in Hinglish, shown by the reading-language
+   switch in the header (shared with the concept pages, same "ms-read" key).
+   It mirrors the English structure positionally: `stages[i]` is the Hinglish
+   for `stages[i]`, `boxes[i]` for `boxes[i]`, and so on, same index, same
+   array length. Node labels (`l`, `s`), ids, roles, numbers and the diagrams
+   themselves are never translated, only the prose around them. Anything
+   missing falls back to English, so a project can be translated one field at
+   a time without ever showing a gap.
 */
 
 const DESIGN = [
@@ -405,7 +423,225 @@ const DESIGN = [
     ["DG", "https://www.designgurus.io/course-play/grokking-the-system-design-interview/doc/design-a-url-shortening-service-like-tinyurl", "Design Gurus, TinyURL", "M"],
     ["GH", "https://github.com/donnemartin/system-design-primer#design-pastebin-com-or-bit-ly", "System Design Primer, Pastebin and Bitly", "M"],
     ["BB", "https://blog.bytebytego.com/p/ep141-a-cheatsheet-on-system-design", "ByteByteGo, the HLD cheatsheet", "E"]
-  ]
+  ],
+
+  hi: {
+    one: "Yahan har decision teen facts se nikalta hai jo aap ninety seconds mein establish kar sakte ho: reads writes se lagbhag 100 guna zyada hain, ek record 500 bytes se chhota hai, aur koi bhi query ko doosri table ki zaroorat nahi padti. Yeh teen baatein bol do, phir round ka baaki hissa bas consequences samjhana hai.",
+
+    brief: {
+      why: "Yeh problem trivial dikhti hai aur hai nahi, isiliye itne interviews isse shuru hote hain. Ek galti hai minute two mein hi Kafka draw kar dena. Doosri galti hai <b>Redis</b> naam ka box bana dena bina yeh bataye ki woh stale kyun ho sakta hai. Dono se bacna aasaan hai, agar pehle boring kaam kar lo: system ko kya karna hai, kya galat karne ki ijazat hai, aur numbers kitne bade hain, yeh pin down karo.",
+      functional: [
+        "<b>Shorten.</b> Ek long URL POST karo, ek short code wapas milta hai. Optionally custom alias, optionally expiry.",
+        "<b>Redirect.</b> Short code par GET karo, original par HTTP redirect mil jaata hai. Yeh ek endpoint hi <i>product hai</i>. Yeh down to aap down.",
+        "<b>Count.</b> Jisne link banaya woh dekh sakta hai ki link lagbhag kitni baar khula. Is sentence mein <i>lagbhag</i> bahut kaam kar raha hai, aur yeh jaan-boojhkar hai."
+      ],
+      out: ["user accounts aur billing", "link preview scraping", "malware aur phishing scanning", "per click geography dashboards", "link banne ke baad usse edit karna"],
+      nfr: [
+        ["Redirect latency", "p99 under 50 ms", "Redirect kisi aur ke page load par chipka hua pure overhead hai. Koi shukriya nahi kehta aur har koi notice karta hai. Yeh number, traffic nahi, aapko bade database ki jagah cache lagane par majboor karta hai."],
+        ["Redirect availability", "99.99%", "Mahine mein lagbhag chaar minute ka downtime. Short links printed posters aur aath saal purane tweets mein pahunch jaate hain, to outage aise content ko tod deta hai jo ab aapke control mein nahi aur jise aap fix nahi kar sakte."],
+        ["Create availability", "99.9%", "Jaan-boojhkar poora ek nine kam. Shortening ek minute ke liye down ho to kuch log button dobara daba denge. Yahi asymmetry poori wajah hai ki aage chalkar dono paths alag services ban jaate hain."],
+        ["Uniqueness", "one code, one URL, forever", "Ek code do baar de diya to koi anjaan insaan galat site par pahunch jaata hai, jo ek attack se alag dikhta hi nahi. Poore design mein yeh ek jagah hai jahan strong consistency negotiable nahi hai."],
+        ["Click counts", "eventually right, minutes late", "Ise jaan-boojhkar weak requirement likha gaya hai. Isi se aapko haq milta hai ki counting ko redirect path se poori tarah bahar rakho."]
+      ],
+      numbers: [
+        ["New links", "100M per month", "Public shortener ke liye yeh generous hai. Agar koi numbers na mile, to jo number aap assume kar rahe ho woh zor se bolo aur usi ke liye design karo. Interviewer us assumption se behes nahi kar sakta jo usne aapko bolte suna."],
+        ["Write rate", "about 40 per second, peak 120", "100M ko mahine ke 2.6M seconds se divide karo, phir daily peak ke liye lagbhag 3 se multiply. Yeh rounding error hai. Ek database node ko iska pata bhi nahi chalega."],
+        ["Read rate", "about 4,000 per second, peak 12,000", "100 to 1 ratio ko write rate par lagao. Poora design isi number ko serve karta hai."],
+        ["Storage after 5 years", "about 3 TB", "6 billion rows, har ek lagbhag 500 bytes. Itna bada ki ek disk uncomfortable ho jaaye, itna chhota ki dus machines poora jawab hain."],
+        ["Hot working set", "about 10 GB", "Clicks Zipf curve follow karte hain: kuch percent links lagbhag saara traffic le jaate hain. 20 million hot rows, 500 bytes each, ek cache node ki memory mein aaraam se fit ho jaati hain."],
+        ["Code length", "7 base62 characters", "62 ki 7th power 3.5 trillion hai. Paanch saal ke links sirf 0.17% use karte hain, isliye random generation mein collision lagbhag hota hi nahi. Chhe characters se 57 billion milte hain, yaani 10% fill, aur aisa collision rate jiska aapko defense dena padega."],
+        ["Egress", "about 6 MB per second", "Redirect response ek header hai, page nahi. Yeh zor se bolna zaroori hai kyunki isse bandwidth ke liye CDN lagane ki aadat khatam hoti hai. Yahan edge par jaane ki ekmaatra wajah latency hai."]
+      ],
+      numbersNote: "Inme se do numbers saara kaam karte hain. <b>100 to 1</b> kehta hai cache lagao. <b>3 TB</b> kehta hai shard karna hai, ek din, aaj nahi. Aur dhyan do ki kya missing hai: is table mein kuch bhi message queue ko justify nahi karta, jab tak stage 5 mein clicks nahi aate."
+    },
+
+    stagesIntro: "Chhe stages. Stage 0 woh version hai jo sach mein chalta hai, lagbhag ek din ke liye. Uske baad har stage isliye hai ki ek specific cheez toot gayi, aur jo box aata hai woh us specific cheez ki sabse sasti repair hai. Agar aap pressure ka naam le sakte ho, to box aapne kamaya. Agar nahi, to use whiteboard se hata do.",
+
+    stages: [
+      { pressure: "Abhi tak kuch galat nahi hua, aur yahi point hai. Interviewer ko complicated cheez draw karte dekhne se zyada seekhne ko milta hai jab aap simple cheez ko todte ho, aur jo design complicated shuru hota hai uske paas sunane ke liye koi kahani nahi hoti.",
+        say: "Main sabse chhoti cheez se shuru karta hoon jo dono verbs satisfy kare, phir use todunga. Ek process, code se URL ka ek map, naye codes ke liye ek counter. Is size par redirect RAM mein ek hash lookup hai, jo is product ki sabse tez speed hai. Yahan se jo bhi add karunga woh ise slow karega, aur use khud ko justify karna padega.",
+        breaks: "Process restart hota hai. Ab jitne bhi links kabhi bane, sab 404 dete hain, jisme pichhle saal conference badge par chhapa link bhi hai. Is product ka koi aisa version nahi jisme mapping sirf memory mein rehti ho." },
+
+      { pressure: "Durability. Short link aapne kisi aur ke content ke baare mein kiya hua promise hai, isliye mapping ko process, deploy aur machine, teeno se zyada jeena hoga.",
+        say: "Mapping ab ek store mein jaati hai. Product ka naam lene se pehle access ka shape dekho: 7 character string par primary key lookup, ek chhoti row wapas, kabhi koi join nahi, aur row likhne ke baad immutable. Isi shape ki wajah se main SQL versus NoSQL par paanch minute nahi lagaunga. Jo matter karta hai woh yeh hai ki yeh ek point read hai.",
+        breaks: "Ek app process aur ek database, yaani do single points of failure. Requirement ne redirect par four nines maange the, aur ek process uske kareeb bhi nahi pahunch sakta, kam se kam isliye ki koi na koi ise Tuesday ko deploy karega." },
+
+      { pressure: "Availability. Four nines ka matlab hai ki redirect path ek machine ke marne aur ek deploy hone, dono ko survive kare, aur kisi ko pata bhi na chale.",
+        say: "Load balancer ke peeche kai identical redirect processes. Iski keemat hai statelessness: koi sessions nahi, koi local counters nahi, process memory mein kuch bhi nahi jiska sahi hona kisi ke liye zaroori ho. Koi bhi request kisi bhi box par land kar sakti hai. Yeh keemat main jaan-boojhkar de raha hoon, kyunki isi se yeh tier baaki design mein addition se scale hota hai.",
+        breaks: "Ab saare 12,000 peak redirects per second ek 500 byte row ke liye database tak ek network round trip hain. Database yeh kaam achhe se karta hai, aur yahi trap hai: woh karta rahega, dheere aur dheere, aur aapka p99 connection pools aur disk seeks ka function ban jaayega." },
+
+      { pressure: "100 to 1, upar se Zipf. Lagbhag saare reads codes ke ek chhote set ke liye hain, baar baar maange jaate hain, aur jawab kabhi nahi badalta. Yahi textbook definition hai us cheez ki jise recompute karne ki jagah yaad rakhna chahiye.",
+        say: "Store ke aage Redis, cache aside. Miss par service row padhti hai aur cache fill karti hai; hit par database ko chhuta tak nahi. Is product ka sabse lucky fact yeh hai: code se URL ka mapping banne ke baad immutable hai, isliye invalidation ka koi problem hi nahi. TTL correctness ke liye nahi, cold tail ko evict karne ke liye hai. Agar main yeh sentence nahi bol sakta, to mujhe yeh box draw karne ki ijazat nahi honi chahiye.",
+        breaks: "Write path abhi tak actually design hi nahi hua. 7 character ka code aata kahan se hai, aur jab do log ek hi millisecond mein same custom alias claim karein to kya hota hai? Yahi sawaal interview hai." },
+
+      { pressure: "Reads aur writes ab alag machines chahte hain. Reads chahte hain cache ke paas baithe bahut saare sasti stateless boxes. Writes chahte hain ek coordinated, collision free identifier, aur woh primary ko touch karte hain. Upar se dono ke availability targets mein poora ek nine ka fark hai, aur jab aapne do likhe hain to do cheezon ko ek SLA kabhi nahi dena chahiye.",
+        say: "Ek ki jagah do services, kyunki woh alag tarah se scale hoti hain aur alag tarah se fail hoti hain. Shorten service allocator se ek million IDs ka block leti hai, unhe locally base62 encode karti hai, aur block khatam hone tak kisi se coordinate nahi karti. Isse unique ID generation ek per request distributed problem se ek hourly problem ban jaata hai, jo is design ki sabse high leverage move hai.",
+        breaks: "Ab jisne link banaya woh jaanna chahta hai ki kitne logon ne click kiya. Obvious implementation, redirect path par counter column increment karna, har read mein ek write jodta hai, har viral link ke peeche ek jalti hui hot row banata hai, aur aapke sabse important endpoint ki availability ko aapke sabse kam important feature se jod deta hai." },
+
+      { pressure: "Analytics ek aisa feature hai jiski correctness requirement weak hai, aur aap use apni sabse strong availability requirement se jodne wale ho. Redirect path par jo bhi hai woh redirect path ka SLA inherit karta hai, isliye counting ko us path se turant bahar jaana hoga.",
+        say: "Redirect service ek event fire karti hai aur wait kiye bina return kar deti hai. Agar woh event drop ho jaaye to redirect phir bhi sahi tha, aur isi wajah se arrow dashed hai aur main yahan at-most-once se comfortable hoon. Stream burst absorb karti hai, aggregator use five minute buckets mein fold karta hai, aur ek column store dashboard query ka jawab deta hai. Approximate aur minutes late, bilkul waise jaisa requirement ne allow kiya tha." }
+    ],
+
+    boxesIntro: "Das components. Har ek ke liye: kis pressure ne ise banaya, kaun argument haara, aap kya keemat chukate ho, aur teen baje raat ko yeh kaise fail hota hai. Agar sirf ek column yaad rakh sakte ho, to aakhri wala yaad rakho. Apne hi failure modes ka naam lena us insaan ki tarah sunai dene ka sabse tez tareeka hai jisne system chalaya hai, sirf padha nahi.",
+
+    boxes: [
+      { job: "Request bhejta hai aur jo bhi redirect wapas aaye use follow karta hai.",
+        why: "Yeh diagram par isliye hai kyunki yeh ek participant hai, scenery nahi. Yeh redirects cache karta hai, retry karta hai, aur 301 versus 302 ka decision actually yahin land karta hai.",
+        forced: "Ise kisi ne force nahi kiya. Yeh isliye draw hua hai ki is system ka pehla asli trade-off isi boundary par rehta hai, aur us par ungli rakhne mein kuch kharcha nahi.",
+        alts: [["Leaving the client off the diagram", "common choice hai, aur chupchaap 301 versus 302 wali baat ka nuksaan karti hai, jo yeh dikhane ka sabse sasta tareeka hai ki aap consequences ke baare mein sochte ho."]],
+        pros: ["301 se browser repeat visits par aapke servers ko poori tarah skip kar deta hai: free latency, free capacity, koi code nahi."],
+        cons: ["301 bahut hard cache hota hai, kabhi kabhi hamesha ke liye, isliye aap us user ke liye us link ko kabhi revoke ya repoint nahi kar sakte.", "Jab browser redirect cache kar raha ho, to aapke click counts utna undercount karte hain jo aap na naap sakte ho na kisi customer ko samjha sakte ho."],
+        cost: "Zero infrastructure. Ek decision, ek baar liya hua, palatna bahut mushkil.",
+        fails: "Aap latency ke fayde ke liye 301 ship karte ho. Mahino baad ek shortened link aise page par point karta hai jo phishing site ban chuka hai, aur pata chalta hai ki aadhe internet ne aapka redirect cache kar rakha hai aur aap use wapas nahi le sakte.",
+        say: "Default 302. Har visit par ek round trip lagta hai aur badle mein revocation aur honest analytics milte hain. 301 main sirf un links par offer karunga jinhe customer explicitly permanent mark kare, aur unhe revocation wala sentence pehle padhwaunga." },
+
+      { job: "Duniya ke liye ek stable address, identical processes mein spread, aur jo mar gaye unhe automatically hata deta hai.",
+        why: "Jaise hi ek se zyada redirect process hain, kisi ko decide karna padta hai ki request kise mile, aur kisi ko notice karna padta hai ki koi process jawab dena band kar gaya.",
+        forced: "Stage 2 ka 99.99% redirect target. Ek process four nines ke kareeb nahi pahunch sakta, aur akela deploy hi budget ud dega.",
+        alts: [["DNS round robin", "free hai aur pehle se maujood, par clients DNS ko minutes tak cache karte hain aur use pata hi nahi ki box zinda hai ya nahi. Aapka failover time kisi aur ka TTL ban jaata hai."], ["Client side load balancing", "datacentre ke andar excellent hai jahan callers aapke control mein hain. Yahan bekaar hai, jahan callers duniya ka har browser hain."], ["An API gateway doing the same job", "wahi box, zyada features aur zyada latency ke saath. Tab worth hai jab auth, rate limiting aur routing ek jagah chahiye; stage 2 mein worth nahi."]],
+        pros: ["Health checks ek dead machine ko outage ki jagah non event bana dete hain.", "TLS ek baar terminate karta hai, isliye peeche ki services plain aur sasti rehti hain.", "Baad mein rate limiting lagane ki natural jagah, aur ek public redirect endpoint DDoS magnet hota hai."],
+        cons: ["Ab yeh har ek request ke path mein hai, isliye iski apni availability ke baare mein sochna padega.", "Layer 7 balancing ek do millisecond leta hai, aur us se zyada important, ek operational surface."],
+        cost: "Managed wala sasta aur boring hai. Asli keemat yeh hai ki connection draining ke liye ise sahi configure karna padta hai, warna har deploy in flight requests gira deta hai.",
+        fails: "Health checks aise path ko hit karte hain jo sirf check karta hai ki process zinda hai, yeh nahi ki woh Redis aur database tak pahunch sakta hai. Box apna check pass kar deta hai, real users ko 500 serve karta hai, aur rotation mein bana rehta hai kyunki kisi ne use koi aisa sawaal poocha hi nahi jo matter karta.",
+        say: "Layer 7, TLS yahin terminate, aise health checks jo dependencies ko actually touch karein, aur deploy par connection draining. Rate limiter bhi yahin rakhunga, kyunki abusive traffic edge par marna chahiye, database par nahi." },
+
+      { job: "Saat characters ko ek Location header mein badalna. Yeh ek endpoint hi product hai.",
+        why: "Yeh apna alag deployable ban paata hai kyunki system mein iske latency aur availability targets sabse strict hain aur logic sabse simple. Small aur boring hi ise fast rakhta hai, aur baaki sab kuch ka blast radius isse door rakhta hai.",
+        forced: "Stage 2 mein redirects par four nines, phir stage 4 ka split, jahan shortening ya analytics code ka bura deploy redirects ko gira nahi sakta.",
+        alts: [["One service handling both verbs", "operate karna simple aur stage 3 tak bilkul theek. Theek tab nahi rehta jab write path ka incident read path ko saath le doobe, aur aisa sabse bure din hota hai."], ["Serving redirects from an edge function or the CDN itself", "faster, sasta, aur production mein real shorteners yahi karte hain. Yahan sirf isliye reject kiya ki yeh us mechanism ko chhupa deta hai jiske baare mein interview hai. Ise agli optimisation ke roop mein zor se bol do, credit mil jaayega aur explanation bhi nahi khoyegi."]],
+        pros: ["Stateless hai, isliye identical boxes jodkar scale hota hai aur iski apni koi failover kahani nahi chahiye.", "Iski dependency list do items ki hai. Aisa system jise aap aadhi neend mein bhi samajh sako.", "Apni cadence par deploy hota hai, isliye risky code kahin aur ship hota hai."],
+        cons: ["Doosri service matlab doosri cheez monitor karne, deploy karne aur jiske liye page aane ki.", "Shorten service ke saath shared code ko ab library chahiye, ya duplication, aur dono ki keemat hai."],
+        cost: "12,000 peak requests per second par har request pe kuch milliseconds ka kaam. Single digit machines, aur design ka sabse sasta tier.",
+        fails: "Redis failover hota hai ya deploy ke baad flush ho jaata hai. Har request ek hi instant mein miss karti hai aur us database par gir jaati hai jo traffic ke ek percent ke liye size kiya tha. Yeh cache stampede hai, aur yahi woh outage hai jo is design mein sabse zyada actually hoga.",
+        say: "Stateless, do dependencies, aur cache call par hard timeout, taaki slow Redis stuck threads ki queue ki jagah ek slower redirect mein degrade ho." },
+
+      { job: "99% redirects ka jawab memory se dena, taaki database unhe kabhi dekhe hi nahi.",
+        why: "Reads writes se 100 to 1 zyada hain aur Zipf distribution follow karte hain, isliye codes ka ek chhota set lagataar maanga jaata hai aur ek code ka jawab kabhi nahi badalta. Use yaad rakhna lagbhag free hai.",
+        forced: "Stage 3 ka p99 under 50 ms target. Database 12,000 point reads per second serve kar sakta hai, par latency budget bachaye bina nahi, aur bill ke bina nahi.",
+        alts: [["More database read replicas", "chalta hai, par har read serve karne par kaafi zyada kharcha. Aap phir bhi ek network hop, ek connection, ek query parser aur ek disk cache ki keemat de rahe ho ek aisi value ke liye jo aap pehle se jaante the."], ["A CDN or edge cache holding the redirect", "latency ke liye sach mein behtar, aur global scale par yahi lena chahiye. Yeh invalidation problem ko aisi jagah le jaata hai jo aapke control mein kam hai, jo yahan tab theek hai jab mapping immutable ho."], ["An in process LRU in each redirect box", "sabse fast option aur wahi jo chupchaap statelessness tod deta hai. Redis ke aage second tier ke roop mein defensible hai, aur akele tier ke roop mein galti: N boxes matlab N cold caches aur deploy par N guna miss traffic."]],
+        pros: ["Database load ko 12,000 reads per second se kuch sau tak le aata hai.", "Mapping immutable hai, isliye galat karne layak koi invalidation logic nahi. Yahi fact is box ko safe banata hai.", "Poora cache kho dena ek performance incident hai, correctness ka nahi."],
+        cons: ["Ek poora extra system run, size, monitor aur failover karne ke liye.", "Restart ke baad cold start sach mein khatarnak hai, kyunki miss path kabhi full traffic ke liye size hua hi nahi.", "Yeh database ki problems tab tak chhupata hai jab tak woh chhupana band nahi kar deta."],
+        cost: "20 million hot entries, 500 bytes each, lagbhag 10 GB. Ek node aur ek replica, aaraam se.",
+        fails: "Ek hot code usi moment expire hota hai jab ek hazaar requests use maang rahi hain, sab miss karti hain, aur ek hazaar identical queries ek saath database par girti hain. Fix: per key lock taaki ek caller fill kare aur baaki wait karein, ya jittered TTLs taaki keys lockstep mein expire na hon.",
+        say: "Cache aside, key code, value URL, ek din ka TTL sirf cold tail evict karne ke liye. Kyunki mapping immutable hai, invalidate karne ko kuch nahi, aur yahi ekmaatra wajah hai ki main system ke sabse important endpoint ke hot path mein cache se comfortable hoon." },
+
+      { job: "Durable record: code, long URL, owner, created_at, expires_at. Jab cache khaali ya galat ho, tab authority yahi hai.",
+        why: "Kuch to restart survive karega, aur kuch to hona chahiye jo 'nahi' bol sake jab do log same custom alias maangein.",
+        forced: "Stage 1 mein durability, phir stage 4 mein uniqueness requirement. Code par unique index hi alias race ko resolvable banata hai, warna yeh ek aisi cheez hoti jiske na hone ki aap umeed karte.",
+        alts: [["Postgres or MySQL", "poori tarah defensible jawab aur woh jo main actually pehle ship karunga. Unique index aur transaction free milte hain, aur 3 TB ek well tuned primary aur replicas ki pahunch mein hai."], ["DynamoDB or Cassandra", "is scale se dus guna par sahi jawab. Partitioning trivial hai kyunki code hi ekmaatra key hai jisse koi query karta hai, aur join karne ko kuch nahi."], ["Redis as the system of record", "lubhavna hai, kyunki working set memory mein fit hota hai, aur galat hai. Yeh woh copy hai jisse har cache node ek saath kho jaane par bhi bachna hai."]],
+        pros: ["Primary key par point read, jisme duniya ka har store achha hai.", "Koi joins nahi, isliye jab row count demand kare to code se sharding mechanical hai.", "Insert ke baad rows immutable hain, jo concurrency bugs ki ek poori category hata deta hai."],
+        cons: ["Yeh ekmaatra component hai jisme real state hai, isliye failover, backup aur migration ki kahaniyan akele isi ke sar hain.", "Analytics query pattern isme bilkul fit nahi hota, aur isiliye stage 5 mein column store aata hai."],
+        cost: "Paanch saal baad lagbhag 3 TB, har row lagbhag 500 bytes. Cache ke baad read load kuch sau per second, write load 200 se kam.",
+        fails: "Primary write ke beech mein mar jaata hai. Redirects cache aur replicas se chalte rehte hain, jabki shortening replica promote hone tak 503 deti hai. Yeh asymmetry accident nahi hai, yeh woh cheez hai jo do alag availability targets ne aapko kharid kar di, aur yeh zor se bolna diagram se zyada value rakhta hai.",
+        say: "Shuru mein Postgres, code primary key ke roop mein, kyunki write rate trivial hai aur mujhe unique index chahiye. Key value store par tab jaunga jab row count ek primary ko uncomfortable kar de, ek din pehle nahi." },
+
+      { job: "Ek long URL lo, aisa code banao jo kisi aur ke paas nahi, ek row likho, return karo.",
+        why: "Yeh traffic ka ek percent handle karti hai, iska availability target kam hai, aur system mein yahi ekmaatra jagah hai jise coordinate karna padta hai. Yeh teeno wajah hain ki ise redirect path se door rakha jaaye.",
+        forced: "Stage 4. Requirements mein do alag availability targets ka matlab tha do alag deployables, ya ek deployable jise bina fayde ke dono mein se strict wale ke standard par rakhna padta.",
+        alts: [["Keeping both verbs in one service", "tab tak theek jab tak nahi hai. Jis din aap alias validation mein change deploy karke redirect path bhi gira denge, aap chahenge ki split kar diya hota."], ["Doing the write straight from an edge function", "write path ko transaction aur unique index chahiye; edge dono ke liye galat jagah hai."]],
+        pros: ["Iske incidents redirect path tak nahi pahunch sakte.", "Ise bilkul alag rules par scale aur rate limit kiya ja sakta hai, jo matter karta hai kyunki abuse creation mein hota hai.", "Yahan slow hona acceptable hai. Yeh azaadi bahut kaam ki hai: yeh validation, normalisation aur synchronous unique check kar sakti hai."],
+        cons: ["Ek doosra deployable, aur uske saath aane wala duplication.", "System ka ekmaatra genuinely mushkil logic, yaani alias race, isi ke paas hai."],
+        cost: "Peak par 120 writes per second. Yeh ek chhoti machine aur proportion ki achhi samajh hai.",
+        fails: "Automated link creation ka burst, jo shortener attract karta hai, ID block ko allocator ke expect se tez khatam kar deta hai. Isse handle karo next block zero par nahi, 20% remaining par fetch karke.",
+        say: "URL normalise karo, custom alias ko read-then-write se nahi balki transaction ke andar unique index se check karo, aur local block se next id lo. Create ko block kar sakne wali ekmaatra network call insert khud hai." },
+
+      { job: "Har shorten process ko ek million integers ka block do jo kisi aur ko kabhi nahi milega.",
+        why: "Kai machines mein unique codes ek coordination problem hai, aur per request coordination mehenga hai. Har million requests mein ek baar coordinate karna nahi.",
+        forced: "Stage 4, jaise hi ek se zyada shorten process hue. Ek process ke saath local counter kaafi hai; do ke saath woh collide karenge, pehle din hi hoga, aur blame kisi aur cheez par jaayega.",
+        alts: [["Hash the URL and retry on collision", "jo jawab log sabse pehle uthate hain. Collision detect karne ke liye har write se pehle read chahiye, yaani write path par ek database round trip, aur table bharne ke saath retry rate badhta hai. Iska matlab yeh bhi hai ki same URL same code par shorten hota hai, jo kuch products chahte hain aur zyadatar nahi."], ["Random 7 characters, insert, catch the unique violation", "is fill factor par sach mein achha: 0.17% used matlab collision lagbhag chhe sau mein ek hai, aur database pehle se uniqueness enforce kar raha hai. Allocator se simple. Main dono ko khushi se defend karunga."], ["A Snowflake style ID with machine and timestamp bits", "sahi aur coordination free, par ids lambe hain aur time mein sequential, isliye base62 codes guessable aur lambe ho jaate hain. Sequence chhupane ke liye scramble step jodna padta hai, jo aisi complexity hai jiski zaroorat nahi thi."], ["A single auto increment column on the primary", "sahi hai aur har create ke aage ek machine par synchronous write rakh deta hai. 120 writes per second par chalta hai, aur yahi sabse pehle chalna band hota hai."]],
+        pros: ["Har id ke liye ek nahi, har million ids par ek coordination round trip.", "Codes dense hain, isliye saat characters sach mein kaafi hain.", "Allocator lagbhag kuch bhi ho sakta hai: ek row jisme ek integer ho, transaction mein update hota hua."],
+        cons: ["Jab process unused ids ke saath mar jaata hai to blocks kho jaate hain, isliye sequence mein holes hote hain. Yeh theek hai, aur koi poochhe usse pehle aap yeh bolo.", "Yeh aisa component hai jiska failure saari creation block kar deta hai, isliye boring aur replicated hona chahiye.", "Block ke andar sequential ids lagbhag yeh leak karte hain ki aapne kitne links banaye, agar koi dekhna chahe."],
+        cost: "Har process ke liye har ghante ek row aur ek transaction. Yeh diagram ka sabse sasta box hai, kai orders of magnitude se.",
+        fails: "Allocator unreachable hai aur har shorten process apna block phoonk deta hai. Creation ruk jaati hai. Mitigate karo ek second block reserve mein rakhkar aur jaldi fetch karke, taaki allocator outage seconds ki jagah ghanton ke headroom mein naapa jaaye.",
+        say: "Ek million ke blocks, 20% remaining par fetch, locally base62 encode. Agar interviewer simplicity chahta hai, to random plus unique index is fill factor par poora respectable jawab hai, aur main bataunga kyun, yeh dikhawa kiye bina ki sirf ek hi option hai." },
+
+      { job: "Redirect path se ek click event absorb karo aur aggregator ke ready hone tak use hold karo.",
+        why: "Barah hazaar click events per second individually bekaar hain aur aggregate mein keemti. Ek log fast producer ko slower consumer ko hand off karne deta hai, bina dono ko ek doosre ke baare mein jaane.",
+        forced: "Stage 5, aur sirf stage 5. Dhyan do ki is point se pehle kisi ko queue ki zaroorat nahi thi. Ise pehle add karna decoration hota.",
+        alts: [["Writing the click straight to the analytics store", "redirect path ki availability ko ek dashboard ki availability se jod deta hai. Aapke sabse important endpoint ke liye galat dependency direction."], ["Incrementing a counter in Redis", "agar sirf total chahiye to actually achha jawab. Jaise hi koi clicks per hour, ya per country maange, ya bug ke baad recompute karna chahe, yeh kaam karna band kar deta hai."], ["Batching in the redirect process and flushing every few seconds", "sasta, aur har deploy aur crash par aakhri kuch seconds ke events kho deta hai. Counting ke liye acceptable, aur aisi aadat jo tab kaategi jab wahi code kisi zaroori cheez ke liye copy ho jaaye."]],
+        pros: ["Producer fire and forget hai, isliye slow ya dead consumer redirect ko slow nahi kar sakta.", "Replayable: aggregator ka bug fix karo aur pura din khone ki jagah window reprocess karo.", "Code se partition karne par ek link ke saare events ek partition par jaate hain, jisse per link counting ek local operation ban jaati hai."],
+        cons: ["Aapke sabse kam important feature ko support karne ke liye ek poora distributed system joda gaya. Yeh honest description hai aur aapko yeh bolna chahiye.", "Code se partition karne ka matlab viral link ek hot partition banata hai.", "Retention ek asli keemat aur ek asli decision hai."],
+        cost: "Lagbhag 100 bytes per event, 12,000 per second par lagbhag 1 MB per second, yaani ek din ki retention par 100 GB. Modest, aur free nahi.",
+        fails: "Ek link viral ho jaata hai aur uska partition peeche reh jaata hai jabki baaki har partition idle hai. Mitigate karo code plus ek chhote random suffix par key karke aur end mein sum karke, jo hot key ki standard trick hai.",
+        say: "At-most-once yahan sahi delivery guarantee hai, aur main yeh explicitly bolna chahta hoon, aadat se exactly-once tak pahunchne ki jagah. Ek dropped click event ki keemat hai dashboard ka number thoda kam. Exactly-once ki keemat hoti system ke sabse hot path par coordination." },
+
+      { job: "Individual clicks ki firehose ko per code per time bucket counts mein fold karna.",
+        why: "Koi bhi ek akela click query nahi karta. Har sawaal ek window par count hai, isliye useful kaam hai lakhon rows ko hazaaron mein collapse karna, kisi ke poochne se pehle.",
+        forced: "Stage 5. Raw clicks store karke query time par count chalana ka matlab hota billions rows scan karna, ek aisi dashboard ka jawab dene ke liye jo har page view par load hota hai.",
+        alts: [["Querying raw events at read time", "flexible aur slow, aur dashboard ki cost link ki popularity ke proportional ho jaati hai, jo bilkul ulta hai."], ["Materialised views inside the analytics store", "achha jawab agar store unhe achhe se support kare, aur yeh is box ko hatane ki jagah ek doosre box ke andar le jaata hai."]],
+        pros: ["Store karne se pehle data ko teen ya chaar orders of magnitude kam kar deta hai.", "Window ek knob hai: freshness ke liye paanch minute, cost ke liye ek ghanta.", "Agar output (code, bucket) se keyed ho to idempotent hai, isliye replay double count karne ki jagah overwrite karta hai."],
+        cons: ["Windowing mein fiddly bugs rehte hain: late events, clock skew, aur woh event jo window close hone ke baad aaye uska kya karein.", "Yeh minutes ka lag jodta hai, jo tabhi acceptable hai kyunki requirement ne yahi kaha tha."],
+        cost: "Kuch stream processing tasks. Kaam ek group by hai, jo sasta hai; operational bojh checkpointing aur restarts ka hai.",
+        fails: "Deploy consumer offset reset kar deta hai aur pichhla ghanta do baar count ho jaata hai. Isiliye output (code, bucket) se keyed hai aur increment ki jagah upsert se likha jaata hai: replay tab doubling ki jagah wahi jawab deta hai.",
+        say: "Five minute tumbling windows, output (code, bucket) par upsert. Write ko idempotent banana hi mujhe stream se at-least-once delivery ke baare mein relaxed rehne deta hai, aur ismein kuch kharcha nahi." },
+
+      { job: "Aise sawaalon ka jawab dena jaise pichhle tees dinon mein is link par har ghante kitne clicks.",
+        why: "Query ka shape redirect se poori tarah alag hai: ek key ke liye time par range scan, chalte chalte aggregate karte hue. Yeh column store ka ghar hai aur key value store ka worst case.",
+        forced: "Stage 5, aur yeh sach mein doosra store hai, aalas nahi. Main store ek immutable row ke point read ke liye optimised hai; time range aggregation ke liye usme kuch fit nahi hota.",
+        alts: [["Keeping the counts in the main database", "is size par workable, aur matlab analytics queries usi connections aur buffer pool ke liye compete karti hain jo redirect fallback path ke hain. Aap ek dashboard ko product slow karne de rahe ho."], ["Counters in Redis", "instant, aur durable tabhi jab aap ise banao, aur yeh history ki jagah sirf ek number deta hai."], ["A full data warehouse", "company ke liye sahi, feature ke liye oversized. Ise yeh bolo ki aage yahan jaayenge, yeh nahi ki yahan se shuru karenge."]],
+        pros: ["Column layout ka matlab tees din ka scan ek column padhta hai, poori rows nahi.", "Aggregates bahut achhe se compress hote hain, kyunki zyadatar links ka zyadatar ghanton mein count zero hota hai.", "Yeh redirect path se poori tarah bahar hai, isliye yeh down ho to bhi koi link nahi khota."],
+        cons: ["Teesri storage technology jise run, backup aur samajhna hai.", "Iski consistency construction se eventual hai, jo aapko product managers ko baar baar bolna padta hai."],
+        cost: "Har link ke liye mahine mein lakhon events ki jagah hazaaron rows. Itna chhota ki retention product decision hai, infrastructure decision nahi.",
+        fails: "Yeh peeche reh jaata hai, ya gir jaata hai, aur dashboards stale numbers dikhate hain. Product mein kuch nahi tootta. Yahi poori wajah hai ki yeh dashed arrow ki is taraf rehta hai.",
+        say: "ClickHouse ya uske jaisa, primary key (code, hour). Agar interviewer dashboard ki jagah exact billing numbers chahta hai, to main raw stream par ek nightly batch job source of truth ke roop mein jodunga aur ise fast approximate view rakhunga." }
+    ],
+
+    flowsIntro: "Boxes draw karo, phir do paths zor se narrate karo. Interviewers yahi hissa score karte hain, kyunki yahin hand waving dikh jaati hai. Har step ke liye jaano ki user wait kar raha hai ya nahi.",
+
+    flows: [
+      { n: "Read path, ek redirect",
+        note: "Yeh 99% traffic hai aur woh path jiske baare mein aapka SLA likha gaya hai. Chaar steps, aur unme se sirf ek slow ho sakta hai.",
+        steps: [
+          ["Browser <code>GET /aX9k2Qm</code> bhejta hai. Load balancer TLS terminate karta hai aur koi bhi healthy redirect box chunta hai.", "sync"],
+          ["Service Redis mein <code>url:aX9k2Qm</code> dhoondhti hai. Sau mein lagbhag 99 baar hit hota hai aur request basically khatam.", "sync"],
+          ["Miss par woh store se primary key se row padhti hai, use cache mein wapas likhti hai, aur aage badhti hai. Yeh path 1% traffic ke liye size hua hai, aur yahi woh risk hai jo poora design uthata hai.", "sync"],
+          ["Woh <code>302 Location: https://...</code> return karti hai. User ab kisi aur ki problem hai, 50 ms se kam mein.", "sync"],
+          ["Response likhne ke baad hi woh stream ko click event emit karti hai, acknowledgement ka wait kiye bina. Agar yeh fail ho, to redirect phir bhi sahi tha.", "async"]
+        ] },
+      { n: "Write path, shortening",
+        note: "1% traffic, sau guna slow hone ki ijazat, aur ekmaatra jagah jahan kuch coordinate karna padta hai.",
+        steps: [
+          ["Client long URL aur, optionally, custom alias ke saath <code>POST /v1/links</code> bhejta hai.", "sync"],
+          ["Shorten service URL normalise karti hai aur scheme validate karti hai, taaki ek hi address ke do forms do rows aur redirect loop na ban jaayein.", "sync"],
+          ["Alias nahi: local block se next integer lo aur base62 encode karo. Koi network call nahi, koi coordination nahi, koi collision nahi, kyunki yeh block kisi aur ke paas nahi.", "sync"],
+          ["Custom alias: use insert karo aur unique index ko haarne wale ko reject karne do. Pehle read karke phir write mat karo, kyunki do requests dono <i>free</i> padh sakti hain aur dono phir write kar deti hain.", "sync"],
+          ["Row insert karo. Cache mein mat likho. Us link ke click hone ki sambhavna kam hai, aur ek aisa cache jo aise links se bhara ho jinhe koi nahi chahta, khaali cache se bura hai.", "sync"],
+          ["201 ke saath short URL return karo. Agar block 20% remaining se neeche tha, to next abhi fetch karo, request path se bahar.", "async"]
+        ] },
+      { n: "Counting path",
+        note: "Yahan sab kuch late, lossy aur sasta ho sakta hai, aur yahi ise aapke sabse busy endpoint se jodna safe banata hai.",
+        steps: [
+          ["Ek click event, lagbhag 100 bytes, code se partition karke stream mein produce hota hai.", "async"],
+          ["Aggregator partition consume karta hai aur memory mein per (code, five minute bucket) ek running count rakhta hai.", "async"],
+          ["Har window ke end par woh analytics store mein har code ke liye ek row upsert karta hai. Increment nahi, upsert, taaki replay harmless ho.", "async"],
+          ["Dashboard query ek code ke liye time range padhti hai aur milliseconds mein jawab paati hai, kyunki woh billions events ki jagah hazaaron pre aggregated rows padh rahi hai.", "sync"]
+        ] }
+    ],
+
+    tradeoffsIntro: "Pair bolo, ek side chuno, phir bolo ki aapka mind kya badlega. Aakhri hissa hi opinion ko preference se alag karta hai.",
+
+    tradeoffs: [
+      { a: ["302 Found", "Har visit aapke servers tak aata hai. Aap link ko revoke ya repoint karne ki ability rakhte ho, aur click counts real hain."],
+        b: ["301 Moved Permanently", "Browser redirect cache kar leta hai aur poochna band kar deta hai. Free latency aur free capacity, is keemat par ki us user ke liye woh link phir kabhi badal nahi sakta."],
+        flip: "link explicitly permanent ho aur customer latency ke liye paisa de raha ho, jaise ek CDN asset alias. Tab 301, revocation caveat aisi jagah likhke jahan woh padhein." },
+      { a: ["Pre allocated id blocks", "Har million codes par ek coordination round trip. Dense, short codes aur koi per request cost nahi."],
+        b: ["Random code plus a unique index", "Koi allocator nahi. Is fill factor par lagbhag chhe sau mein ek retry, aur database pehle se uniqueness enforce karta hai."],
+        flip: "table key space ke kuch percent se upar bhar jaaye, jahan retry rate badhna shuru hota hai, ya aap chahte ho ki codes ek saath unguessable aur short hon. Sach kahun to brief ke numbers par dono jawab sahi hain, aur kaam ki baat yeh jaanna hai ki kaunsa pressure har ek ko todega." },
+      { a: ["A relational primary with the code as PK", "Unique index aur transactions free. 3 TB aur 120 writes per second replicas ke saath ek node ke andar aaraam se hain."],
+        b: ["A distributed key value store", "Sharding aur replication kisi aur ki problem. Koi transaction nahi, isliye alias uniqueness ke liye conditional write chahiye."],
+        flip: "write rate ek order of magnitude badh jaaye, ya row count ek single primary ka failover time unacceptable bana de. Migration yahan asaadharan roop se aasaan hai kyunki kuch bhi join nahi hota." },
+      { a: ["Count clicks off the path, through a stream", "Redirect kabhi wait nahi karta. Analytics down ho sakta hai, replay ya rebuild ho sakta hai, bina kisi ka link khoye."],
+        b: ["Increment a counter in Redis on the redirect", "Ek extra memory operation, ek live number, aur chalane ko koi stream nahi."],
+        flip: "ekmaatra requirement lifetime total hai aur koi dashboard nahi. Tab Redis counter honestly sahi size ka solution hai, aur stream jodna yeh maanne se bachne ke liye infrastructure banana hoga ki feature chhota hai." }
+    ],
+
+    next: [
+      "<b>Redirect ko edge par le jaao.</b> Available sabse bada latency win, aur yeh ek cache hai jiski invalidation kahani ab aap samjha sakte ho.",
+      "<b>Abuse aur safety.</b> Shorteners destinations chhupane ke liye use hote hain. Isi click stream se ek scanning pipeline, aur create time par check hone wali blocklist, ek real product ko sabse pehle chahiye.",
+      "<b>Expiry aur cleanup.</b> Design mein kuch bhi kuch delete nahi karta. Ek background job jo expired links ko tombstone kare, 3 TB estimate ko honest rakhta hai.",
+      "<b>Per link rate limiting.</b> Abhi ek viral link ek cache node aur ek stream partition par haavi ho sakta hai. Whales ko isolate karna is page ke har doosre system jaisa hi fix hai."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -807,7 +1043,234 @@ const DESIGN = [
     ["GFG", "https://www.geeksforgeeks.org/system-design/design-facebook-messenger-system-design-interview/", "GFG, Facebook Messenger", "H"],
     ["DG", "https://www.designgurus.io/course-play/grokking-the-system-design-interview/doc/design-facebook-messenger", "Design Gurus, Messenger", "H"],
     ["BB", "https://blog.bytebytego.com/p/ep141-a-cheatsheet-on-system-design", "ByteByteGo, the HLD cheatsheet", "E"]
-  ]
+  ],
+
+  hi: {
+    one: "Chat database ki problem nahi hai, connection ki problem hai. Poora design teen sawaalon par tika hai: is user ka socket kahan hai, jab socket hi na ho to message ka kya hota hai, aur ek hi message do baar dikhane ya kho dene se kaise bachein.",
+
+    brief: {
+      why: "Lagbhag har koi is problem ko database draw karke shuru karta hai, aur lagbhag har koi phir atak jaata hai, kyunki jo state matter karti hai woh disk par nahi hai. Woh 100 million khule TCP connections hain, aur asli sawaal yeh hai ki jo connection aapko chahiye use kaunsa process hold kar raha hai. Yeh clear ho jaaye to baaki, storage, ordering, groups, apne aap follow karta hai. Ek aur baat jo shuru mein establish karni chahiye, kyunki woh numbers ko do orders of magnitude badal deti hai: kya server aapki history rakhta hai, ya har message deliver hote hi delete kar deta hai?",
+      functional: [
+        "<b>One to one send aur receive.</b> Message doosre insaan ke device tak pahunchta hai, aur sender ko sent, delivered aur read states dikhte hain.",
+        "<b>Offline hone ko survive karna.</b> Band phone ko bheja gaya message phone wapas on hone par sahi order mein, bina duplicates ke, pahunchna chahiye.",
+        "<b>Group chat</b> 256 members tak, jo wahi problem hai jo multiply ho gayi, aur yahin write amplification rehti hai.",
+        "<b>Presence.</b> Online aur last seen, jo trivial lagta hai aur agar naively implement karo to system ka sabse zyada write rate wala hissa hai."
+      ],
+      out: ["voice aur video calls", "stories", "payments", "key exchange protocol khud", "spam aur abuse tooling"],
+      nfr: [
+        ["Delivery latency", "p99 under 500 ms", "Dono parties online. Log bursts mein type karte hain aur turant padhte hain; isse slow ho to lagta hai app kharab hai, network nahi."],
+        ["Durability", "never lose an accepted message", "Server ne message acknowledge kar diya, to use kho dena messaging product ka ekmaatra unrecoverable bug hai. Yahi dono sockets ke beech ek store rakhne par majboor karta hai."],
+        ["Ordering", "per conversation, same on every device", "Messages out of order aayein to behes bakwaas ban jaati hai. Dhyan do ki yeh per conversation hai, global nahi, isi wajah se achievable hai."],
+        ["Duplicates", "never shown to the user", "Network zyada se zyada at-least-once deta hai, isliye exactly once ko edges par manufacture karna padta hai, ek aise id se jo client ne khud chuna ho."],
+        ["Confidentiality", "the server never sees plaintext", "End to end encryption koi bolt-on feature nahi, ek constraint hai jo diagram se poore boxes delete kar deta hai: koi server side search nahi, koi server side previews nahi, koi content based spam filtering nahi."]
+      ],
+      numbers: [
+        ["Daily actives", "500M", "Asli cheez ka scaled down par honest version. Apna assumption bolo, phir usi ke liye design karo."],
+        ["Concurrent connections", "about 100M", "Lagbhag ek paanchva hissa daily actives kisi bhi waqt app ko foreground mein ya live push channel ke saath rakhta hai. Front tier ko size karne wala number yahi hai, QPS nahi."],
+        ["Chat servers", "about 1,000", "100M sockets, har box par lagbhag 100,000. Ek socket ek file descriptor aur ek chhota buffer hai, isliye limit memory aur tuning ki hai, CPU ki nahi. Yeh number bolna hi dikhata hai ki aap samajhte ho yeh tier alag kyun hai."],
+        ["Messages", "about 230k per second, peak 700k", "500M actives ko rozana 40 messages se multiply, 86,400 se divide, shaam ke peak ke liye teen se multiply."],
+        ["Delivery events", "about 1.2M per second", "Group messages amplify karte hain. Har das mein ek message agar aise group ko jaye jisme average pachaas log hain, to har message lagbhag paanch deliveries ban jaata hai. Asli load fan-out hai, ingest nahi."],
+        ["Undelivered storage", "about 40 GB", "Sirf woh messages jo offline device ka intezaar kar rahe hain. Agar 5% average ek ghanta wait karein, to yeh rounding error hai, aur yeh poori tarah neeche wale product decision ki wajah se hai."],
+        ["If history were kept", "about 7 PB per year", "Rozana 20 billion messages, har ek 1 KB. Do sau guna storage, bilkul alag database, aur alag company. Kuch bhi draw karne se pehle poocho ki aap kaunsa product bana rahe ho."]
+      ],
+      numbersNote: "Do numbers zor se bolne layak hain: <b>100M concurrent sockets</b>, kyunki yahi front tier ko stateful aur unusual banata hai, aur <b>40 GB versus 7 PB</b>, kyunki ek akela product question storage ka jawab do orders of magnitude badal deta hai aur zyadatar candidates yeh poochte hi nahi."
+    },
+
+    stagesIntro: "Chhe stages. Dekho ki complexity asal mein kahan jama hoti hai: database mein nahi, balki yeh jaanne mein ki hazaar processes mein se kaunsa ek particular socket hold kar raha hai, aur us chhote protocol mein jo ek unreliable network ko aisi conversation bana deta hai jiske unreliable hone ka kisi ko pata nahi chalta.",
+
+    stages: [
+      { pressure: "Abhi kuch nahi. Dono log ek hi process se connected hon, yahin se shuru karo, kyunki us version mein routing problem hai hi nahi, aur routing hi poora design hone wali hai.",
+        say: "Dono phones ek hi process se khula connection rakhte hain. Message ek map mein lookup aur ek socket par write hai, kahin koi storage nahi. Dhyan do ki connection long lived hai aur server push karta hai: yeh request and response nahi hai, aur chat ko is page ki baaki har cheez se alag karne wala ekmaatra structural fark yahi hai.",
+        breaks: "Phone B ki screen off hai. Lookup kuch nahi deta, message gayab ho jaata hai, aur sender ne sirf ek tick dekha. Aisa koi acceptable product nahi jisme yeh ho." },
+
+      { pressure: "Durability, aur yeh fact ki recipient din ka zyadatar hissa offline rehta hai. Sender ko batane se pehle message disk par safe hona chahiye.",
+        say: "Operations ka order hi design hai. Store mein likho, phir sender ko acknowledge karo, phir push try karo. Agar push pehle karo aur store baad mein, to beech mein crash hone par aisa message kho jaata hai jise sender deliver hua maan raha hai. Jab Phone B reconnect karta hai, woh apne paas ka aakhri sequence number bata kar uske baad ka sab kuch maangta hai, drain karta hai, aur acknowledge karta hai. Acknowledge par row delete ho jaati hai, isiliye storage estimate 40 GB tha, 7 PB nahi.",
+        breaks: "Ek process 100 million sockets hold nahi kar sakta, aur jaise hi do processes hue, Phone A ke process ko pata hi nahi ki Phone B ka socket kahan hai." },
+
+      { pressure: "100 million concurrent connections, har box par lagbhag 100,000, yaani lagbhag hazaar boxes. Ab har message ek routing problem hai: hazaar mein se recipient ko kaunsa hold kar raha hai?",
+        say: "Ek registry user id ko us server se map karti hai jo abhi woh socket hold kar raha hai. Connect par likhi jaati hai, disconnect par hataai jaati hai, aur ek chhote TTL ke saath, taaki crashed server ki entries apne aap expire ho jaayein. A ka server B ko lookup karta hai, internal connection par forward karta hai, aur B ka server socket par likhta hai. Agar lookup mein kuch na mile, to message inbox mein hi wait karta hai, jo offline case wala hi path hai aur isliye pehle se tested hai.",
+        breaks: "Network us forward ko duplicate karega, ya store hone ke baad drop karega, ya jab retry ek slow acknowledgement se race kare to do baar deliver karega. Abhi user message do baar dekhta hai, jo late dekhne se bura hai." },
+
+      { pressure: "Duplicates aur lost acknowledgements. Chat ka yeh ekmaatra sach mein subtle hissa hai, aur fix ek protocol hai, component nahi. Interview mein zor se bolne layak: har problem ek aur rectangle draw karke solve nahi hoti.",
+        say: "Message id server nahi, client generate karta hai, UUID ke roop mein. Bas yahi ek decision har hop ko idempotent bana deta hai: duplicate par store insert no-op ho jaata hai, recipient woh id drop kar deta hai jo woh pehle hi render kar chuka hai, aur timeout ke baad sender ka retry doosra message nahi bana sakta. Network at-least-once deta hai, id use user ke experience mein exactly once bana deta hai, aur kahin bhi kisi ko distributed transaction ki zaroorat nahi padi.",
+        breaks: "256 logon ke group ko ek message ek send aur 255 deliveries hai. Yeh sender ke chat server par inline karne ka matlab hai ki ek insaan ke angoothe se 255 registry lookups aur 255 forwards hote hain, uske pehle ki uska message sent dikhe." },
+
+      { pressure: "Write amplification. Chat system ka asli load groups se aata hai, aur request path par obvious cheez karne se sender baaki sabki delivery ka intezaar karta hai.",
+        say: "Sender ka server ek copy store karta hai aur turant acknowledge karta hai, phir ek event fan-out worker ko deta hai. Worker membership expand karta hai aur har recipient ke liye ek inbox row likhta hai. Sender ki latency ab group size se independent hai, jo poora point hai. 256 itna chhota hai ki fan-out on write sahi hai; agar yeh ek broadcast channel hota jisme ek million subscribers hote, to main ek shared log par flip karta jise readers pull karte, aur poochne se pehle yeh bol deta.",
+        breaks: "Logon ke paas ek se zyada device hote hain, woh chahte hain ki sab par same conversation ho, aur woh apne doston ke naam ke paas ek green dot expect karte hain. Presence khaas taur par ek trap hai: database write ke roop mein implement karo to yeh system ka sabse zyada write rate hai, system ke sabse kam keemti data ke liye." },
+
+      { pressure: "Teen product features jo har ek message path par load chupke se daalna chahte hain: doosra device fan-out multiply karta hai, presence unimportant writes ka firehose hai, aur 20 MB ka video warna aise process se guzarta jo 1 KB frames ke liye tune hai.",
+        say: "Delivery ki unit user nahi, device hai: registry device id par key hoti hai, inbox device id par key hota hai, aur message har device par alag acknowledge hota hai. Presence kabhi database ko touch nahi karta, yeh Redis mein ek key hai jiska thirty second ka TTL heartbeat se refresh hota hai, isliye key ka na hona hi insaan ka na hona hai aur koi jaate waqt kuch likhna nahi padta. Media presigned URL se blob storage mein jaata hai aur chat path se sirf pointer guzarta hai, kyunki chat path ek kilobyte ke liye tune hai." }
+    ],
+
+    boxesIntro: "Gyarah components. Yahan ke unusual do hain jo zyadatar designs mein nahi hote: ek front tier jo jaan-boojhkar stateful hai, aur ek registry jiska poora kaam ek sawaal ka jaldi jawab dena hai aur thoda galat hone ki chhoot rakhna hai.",
+
+    boxes: [
+      { job: "Ek long lived connection hold karta hai, message id generate karta hai, acknowledge hone tak retry karta hai.",
+        why: "Yeh isliye draw hua hai kyunki is design mein yeh asli kaam karta hai. Exactly once property yahan manufacture hoti hai, server par nahi, aur interviewers yahi hissa sunne ke liye baithe hote hain.",
+        forced: "Stage 3 ki duplicate problem. Server jo bhi id generate kare woh client ke retry ko idempotent banane ke liye bahut der se aata hai.",
+        alts: [["Server generated message ids", "reflex wala jawab, aur retry case mein toot jaata hai: client timeout hota hai, dobara bhejta hai, server doosra id banata hai, aur user ko apna message do baar dikhta hai."], ["A sequence number per client", "chalta hai, par ek user ke multiple devices ko mushkil bana deta hai, kyunki do devices ko sequence par agree karna padega. UUID coordination ko poori tarah side-step kar deta hai."]],
+        pros: ["Retries free aur safe ho jaate hain, har layer par, recipient ke renderer tak.", "Client offline rehte hue outbound messages queue kar sakta hai aur baad mein order mein drain kar sakta hai.", "Message ki identity ke liye system mein kahin coordination nahi."],
+        cons: ["Aap client par bharosa kar rahe ho ki woh unique ids banayega, isliye buggy client khud se collide kar sakta hai.", "Client ab asli state hold karta hai, aur client state woh state hai jo deploy se fix nahi hoti."],
+        cost: "Har message ke liye solah bytes, aur device par ek chhota outbox.",
+        fails: "Kharab clock ya bure random source wala client duplicate id banata hai, aur server ek sach mein naye message ko duplicate maan kar chupchaap drop kar deta hai. Ids ko per sender scope karo, taaki collision sirf ek conversation ko hi affect kar sake.",
+        say: "Client har message ke liye UUID chunta hai aur acknowledge hone tak usi ke saath retry karta hai. Bas yahi ek choice at-least-once delivery ko exactly once jaisa dikhati hai, aur iski keemat solah bytes hai." },
+
+      { job: "Naye connection ko ek chat server par rakho aur phir agle kai ghanton ke liye raaste se hat jao.",
+        why: "Kisi ko 100 million connections ko hazaar servers par spread karna hai, aur balance connection count par hona chahiye, requests per second par nahi, kyunki yahan connections ghanton jeete hain.",
+        forced: "Stage 2, jaise hi ek se zyada chat server hue.",
+        alts: [["A normal layer 7 HTTP load balancer", "chhoti requests ke liye bana hai aur long lived connections mein badly skewed distribution khushi se dega. Yeh aise terminate aur re-establish karta hai jo WebSockets ke liye dushmani wala hai."], ["Direct DNS to chat servers", "health awareness nahi, aur restart hue server ko gayab hone mein ek DNS TTL lagta hai, jiske dauran har reconnect fail hota hai."]],
+        pros: ["Least connections balancing tier ko even rakhta hai, jo matter karta hai kyunki hot server memory ki problem hai, CPU ki nahi.", "Reconnect storm ke dauran load shed karne ki natural jagah."],
+        cons: ["Yeh har connect ke path mein hai, isliye iska deploy jise bhi yeh drop kare uske liye reconnect event hai.", "Long lived connections draining ko slow bana deti hain: aap deploy tab tak khatam nahi kar sakte jab tak aakhri socket chala na jaye ya force off na ho."],
+        cost: "Per connection sasta, operational care mein mehnga. Connection tiers woh hain jinke liye aapko page aata hai.",
+        fails: "Ek datacentre blip ek saath ek million clients ko disconnect kar deta hai, sab ek second ke andar reconnect karte hain, aur reconnect storm us tier ko gira deta hai jo abhi tak theek tha. Client mein jittered exponential backoff se mitigate karo, jo phir client ka hi important kaam hai.",
+        say: "Connection count par balance karo, requests par nahi. Slowly drain karo. Aur client mein jitter ke saath backoff rakho, kyunki yahan failure mode server ka marna nahi hai, ek million clients ka ek hi instant mein wapas aana hai." },
+
+      { job: "Lagbhag 100,000 sockets hold karna, messages accept karna, unhe durable banana, aur jo push ho sake woh push karna.",
+        why: "Kisi ko connection own karna hai. Yeh tier us tarah stateful hai jisse bachne mein baaki industry apni zindagi laga deti hai, aur ulta pretend karna hi wajah hai ki candidates is problem mein kho jaate hain.",
+        forced: "Push requirement. Agar server initiate nahi kar sakta, to client ko poll karna padta hai, aur is scale par polling messages se zyada mehngi padti hai.",
+        alts: [["HTTP long polling", "fallback jo har jagah chalta hai, hostile corporate proxies ke peeche bhi. Zyada latency aur har message par kaafi zyada overhead. Real products dono ship karte hain aur socket ko prefer karte hain."], ["Push notifications only, no socket", "backgrounded phone sach mein aise hi kaam karta hai, aur yeh design nahi fallback hai: notification services best effort aur rate limited hoti hain."], ["A stateless tier with the socket held in a sidecar", "state ko hataata nahi, hila deta hai, aur system ke sabse hot path mein ek hop jodta hai."]],
+        pros: ["Dono parties connected hon to sau millisecond se kam delivery, kyunki socket pehle se khula hai.", "Connected user ke message ki keemat ek map lookup aur ek write hai.", "Backpressure natural hai: slow client apna hi socket buffer bharta hai, kisi aur ka nahi."],
+        cons: ["Ek box restart karne se 100,000 log disconnect hote hain, isliye deploys routine nahi, asli engineering problem hain.", "Memory bound hai, CPU bound nahi, matlab usual autoscaling signals galat hain.", "Yeh state hold karta hai, isliye registry chahiye, aur registry galat ho sakti hai."],
+        cost: "Lagbhag hazaar boxes, har ek par 100,000 sockets. Har socket ek file descriptor, kuch buffers aur thoda bookkeeping hai, isliye yeh memory aur kernel tuning ka kaam hai.",
+        fails: "Ek box 100,000 sockets ke saath mar jaata hai. Woh clients reconnect karke kahin aur land karte hain, registry entries apne TTL par expire hoti hain, aur beech ke gap mein forward hue messages inbox mein fall back karte hain aur reconnect par deliver hote hain. Kuch nahi khota, bashart store push se pehle aaya ho.",
+        say: "Jaan-boojhkar stateful. Do rules jo ise sane rakhte hain: acknowledge se pehle durable, aur delivery attempt ko sender ke response ko kabhi block mat karne do." },
+
+      { job: "Wahi binary, do baar draw hua, kyunki dilchasp arrow woh hai jo iske do instances ke beech hai.",
+        why: "Yeh diagram par routing ko visible banane ke liye hai. Ek akela box jis par chat server likha ho yeh chhupa deta hai ki message ek process se doosre mein cross karta hai, aur duplicates isi crossing se aate hain.",
+        forced: "Stage 2. Ek box draw karne se aap poori routing wali baat skip kar dete, jabki wahi baat asli baat hai.",
+        alts: [["Server to server forwarding, as drawn", "ek hop, sabse kam latency, aur har server ko har doosre server tak connection pool chahiye. Hazaar servers par yeh bahut connections hain, par sasta aur idle."], ["A pub-sub topic per user that servers subscribe to", "registry hata deta hai, par har message ke path mein broker jodta hai aur users ke connect aur disconnect hone par subscription churn ki problem aati hai."], ["Routing every message through a central bus", "draw karna simple, aur yeh ek system ko prati second ek million deliveries ke path mein daal deta hai."]],
+        pros: ["Sender aur recipient ke beech ek network hop.", "Hot path par chalane ko koi broker nahi.", "Failure local hai: peer unreachable ho to message pehle se durable hai aur inbox mein wait karta hai."],
+        cons: ["Hazaar servers ke beech connections ka full mesh, jo theek hai par manage karna padta hai.", "Har server ko chahiye ki registry lagbhag sahi ho."],
+        cost: "Har delivery par ek internal RPC. 1.2 million deliveries per second par yeh diagram ka sabse busy arrow hai.",
+        fails: "Registry kehti hai B server 412 par hai, aur B ek second pehle server 88 par chala gaya. Server 412 ke paas aisa koi socket nahi, isliye woh kuch nahi karta, aur message inbox se tab deliver hota hai jab B ka naya connection apne aakhri sequence number ke baad ka kuch bhi maangta hai. Stale registry ki keemat latency hai, correctness kabhi nahi, aur yeh design se hai.",
+        say: "Yeh wahi service hai. Main ise do baar draw kar raha hoon kyunki message ek process boundary cross karta hai, aur is design ki har mushkil problem usi boundary par rehti hai." },
+
+      { job: "Connect par apna inbox drain karta hai, sequence order mein render karta hai, message id se dedupe karta hai, aur acknowledge karta hai.",
+        why: "Requirements ki aakhri do guarantees, koi duplicates nahi aur sahi order, yahan enforce hoti hain, server par nahi, kyunki sirf device jaanta hai ki usne insaan ko pehle se kya dikha diya hai.",
+        forced: "Stage 3. Server nahi jaan sakta ki delivery screen tak pahunchi ya nahi; yeh sirf device ka acknowledgement bata sakta hai.",
+        alts: [["Trusting the server to deliver exactly once", "us network par distributed transaction maangta hai jo user haath mein pakde lift mein ghus raha hai. Available nahi hai."]],
+        pros: ["Device par seen ids ka ek chhota set duplicates free mein hata deta hai.", "Arrival ke bajaye conversation sequence number se ordering out of order delivery ko invisible bana deti hai.", "Acknowledgement hi server ko delete karne deta hai, jo storage ko 40 GB par rakhta hai."],
+        cons: ["Client bugs server ki storage problems ban jaate hain: jo device kabhi acknowledge nahi karta uska inbox hamesha rehta hai.", "Har platform ko wahi logic sahi implement karna padta hai, teen baar."],
+        cost: "Recent ids ka ek bounded set aur har conversation ke liye ek sequence number.",
+        fails: "Ek device reinstall hota hai aur kuch acknowledge nahi karta, to uska inbox bina limit badhta hai. Inbox ko age aur size se cap karo, aur cap paar hone ko explicit resync maano, aisi error nahi jise koi notice na kare.",
+        say: "Device par dedupe karo, conversation sequence se order karo, aur acknowledgement ko hi woh cheez rehne do jo row delete kare. Server ka kaam hai ki us par retry karna safe ho." },
+
+      { job: "Ek sawaal ka jawab dena, kaunsa server is device ka socket hold kar raha hai, ek millisecond se kam mein.",
+        why: "Hazaar servers ke saath delivery routing problem hai, aur routing ko directory chahiye. Connect par likhi jaati hai, disconnect par delete hoti hai, aur jab koi server bina cleanup ke mar jaye to TTL se expire hoti hai.",
+        forced: "Stage 2. Ek server ke saath jawab hamesha wahi tha, aur box ko exist karne ki zaroorat nahi thi.",
+        alts: [["Consistent hashing from user id to server", "koi registry nahi, aur jaise hi server add, remove ya restart ho toot jaata hai, kyunki har affected user ka socket galat box par hai aur unhone abhi reconnect nahi kiya."], ["A database table", "durable, aur durability un data ke liye bekaar hai jo TCP disconnect se invalidate ho jaata hai. Aap minutes jeene wale connections ke liye disk writes ki keemat de rahe honge."], ["Broadcasting to all servers and letting the right one answer", "sahi rakhne ko koi directory nahi, aur yeh har delivery ko hazaar messages bana deta hai."]],
+        pros: ["Sub millisecond, aur galat hone ki ijazat hai, jo rare aur keemti combination hai.", "TTL crashed server ke baad bina kisi coordination ke cleanup kar deta hai.", "Chhota: 100 million entries, har ek kuch bytes, ek shardable Redis cluster hai, project nahi."],
+        cons: ["Yeh har message ke path mein hai, isliye iski availability iske contents se zyada matter karti hai.", "Churn high hai: har connect aur disconnect ek write hai, aur mobile clients lagataar disconnect hote hain."],
+        cost: "Lagbhag 100 million chhoti entries, aur write rate jo message volume se nahi, connection churn se chalta hai.",
+        fails: "Yeh unavailable hai. Delivery messages ko inbox mein chhodne par fall back karti hai, aur sab kuch galat hone ki jagah slow ho jaata hai. Yeh fallback ka hona hi wajah hai ki yeh box cache hai, database nahi.",
+        say: "Redis, device id se keyed, value server hai, thirty second TTL jo socket hold karne wala server refresh karta hai. Stale hone ki ijazat hai, kyunki stale jawab ki keemat ek delayed message hai, kabhi lost message nahi." },
+
+      { job: "Woh messages hold karna jo abhi acknowledge nahi hue, per conversation ordered, is tarah keyed ki do baar insert karna harmless ho.",
+        why: "Recipient zyadatar waqt offline hai, aur sender ko message sent bataane se pehle durability aani chahiye.",
+        forced: "Stage 1. Is design ki baaki har cheez speed ke baare mein hai; yeh box sirf isliye hai ki kuch kho na jaye.",
+        alts: [["Keeping full history on the server", "alag product aur alag company: saat petabytes prati saal, ek search problem, aur ek legal team. Poocho ki aap kaunsa bana rahe ho."], ["A queue per user rather than a table", "conceptually wahi cheez, aur queues aam taur par un do operations mein kharab hoti hain jo yahan sabse zyada chahiye: kisi position se padhna, aur ek specific message delete karna."], ["Cassandra or DynamoDB partitioned by recipient", "scale par sahi shape. Partition key recipient hai, clustering key sequence hai, jisse drain ek single ordered range scan ban jaata hai."]],
+        pros: ["Reconnect par drain aakhri acknowledged sequence se ek range scan hai.", "(recipient, message id) par unique key insert ko idempotent banati hai, isliye retries free hain.", "Acknowledge par delete ise history store se do orders of magnitude chhota rakhta hai."],
+        cons: ["Write rate fan-out rate hai, ek million per second se upar, jo chhoti rows ke liye bhi asli database load hai.", "Is volume par deletes ki apni problem hai: row by row deletion ki jagah TTL ya partition drop use karo."],
+        cost: "Lagbhag 40 GB live, ek million se zyada writes aur ek million deletes per second par. Size trivial hai, write rate nahi.",
+        fails: "Ek device acknowledge karna band kar deta hai aur uska partition bina bound badhta hai. Age se cap karo, aur cap paar hone par device par full resync trigger karo, aise unbounded partition ki jagah jise koi dekh nahi raha.",
+        say: "Recipient device se partition, sequence se cluster, message id par unique, TTL backstop ke roop mein. Yeh history store nahi, ek waiting room hai, aur yeh bolna hi storage estimate ko honest rakhta hai." },
+
+      { job: "Ek group message ko har recipient device ke liye ek inbox row aur ek push mein badalna.",
+        why: "256 ka group, har ek ke do devices, yaani 512 deliveries. Yeh sender ke request path par karne se unki latency is par depend karti hai ki unke kitne doston hain.",
+        forced: "Stage 4. One to one messages ko is box ki kabhi zaroorat nahi thi, aur ise pehle add karna problem dhoondhta hua infrastructure hota.",
+        alts: [["Fanning out inline on the sender's chat server", "paanch ke group ke liye theek, aur send latency ko group size ke proportional bana deta hai, jo bilkul galat shape hai."], ["A shared group log that members pull from", "kuch hazaar members se upar sahi jawab, kyunki yeh N baar ki jagah ek baar likhta hai. Reader ko poll ya subscription ki keemat deni padti hai, aur chhote groups ke liye kam fayde ki zyada machinery hai."], ["Hybrid, push for small groups and pull for large ones", "jo mature system aakhir mein karta hai, aur jawab tab dene layak jab interviewer kahe ki group mein ek million members hain."]],
+        pros: ["Fan-out ka kuch bhi hone se pehle sender acknowledge ho chuka hota hai.", "Fan-out retryable aur parallel hai, aur ek slow recipient kisi aur ko slow nahi karta.", "Backlog consumer lag ke roop mein dikhta hai, jo aisa metric hai jis par alert laga sakte ho."],
+        cons: ["Write amplification asli hai: ek message saikdon rows ban jaata hai.", "Yeh asynchronous hai, isliye ek member ko row exist karne se thoda pehle message receive karta dikhaya ja sakta hai, jab tak ticks acknowledgements se drive na hon."],
+        cost: "Peak par lagbhag 1.2 million deliveries per second, jo design ka sabse bada akela load hai.",
+        fails: "Bahut bada group ek send ko aise burst mein badal deta hai jo baaki sabko handle karne wale workers ko starve kar deta hai. Work queue ko group size se partition karke isolate karo, taaki ek enormous group family chat wale workers par na baithe.",
+        say: "Kuch sau tak ke groups ke liye fan-out on write, aur low thousands ke aaspaas main shared log par switch karunga jise readers pull karein. Crossover woh number hai jo main measure karunga, guess nahi." },
+
+      { job: "Batana ki abhi group mein kaun hai, aur jab koi message bheja gaya tab kaun tha.",
+        why: "Fan-out ko member list chahiye, aur sahi chahiye, kyunki group mein add hone par aapko pichhle saal ke doosron ke messages retroactively nahi dikhne chahiye.",
+        forced: "Stage 4. Yeh chhoti lookup table dikhti hai aur time ke baare mein ek sach mein awkward requirement carry karti hai.",
+        alts: [["Denormalising the member list into every message", "lookup hata deta hai aur group chhodne ko history ka rewrite bana deta hai."], ["Keeping membership only on the client", "end to end encrypted groups kuch had tak aise hi kaam karte hain, aur iska matlab server fan-out kar hi nahi sakta, jo poora design badal deta hai."]],
+        pros: ["Chhota, cacheable, aur likhne se kahin zyada padha jaata hai.", "Membership changes messages ke muqable rare hain, isliye ise aggressively cache karna safe hai."],
+        cons: ["Kisi point in time par membership ek versioning problem hai jo lookup table mein chhupi hai.", "Yeh har group message par padha jaata hai, isliye kabhi slow nahi hona chahiye."],
+        cost: "Bytes mein tiny, reads mein bahut hot. Ise fan-out workers ke paas cache karo.",
+        fails: "Fan-out ke dauran ek member hata diya jaata hai aur use ek aakhri message mil jaata hai. Explicitly decide karo ki yeh acceptable hai ya nahi, bolo, aur agar nahi hai to membership version ko message ke saath capture karo.",
+        say: "Hard cache, membership change par invalidate, aur message us membership version ko carry karta hai jiske against woh fan out hua, taaki group join karne par past kabhi na dikhe." },
+
+      { job: "Batana ki koi online hai ya nahi, aur woh aakhri baar kab dikha.",
+        why: "Yeh system ka sabse zyada write rate hai sabse kam keemti data ke liye, isliye ise aisa mechanism milta hai jo correctness ki jagah sastepan ke liye chuna gaya ho.",
+        forced: "Stage 5. Alag isliye draw hua kyunki naive implementation, har state change par ek row update, messaging load se zyada bhari padti.",
+        alts: [["A last_seen column updated on every action", "sahi hai, aur har baar koi scroll kare to database write hai. Yahi woh version hai jo postmortem mein dikhta hai."], ["Pushing every presence change to every contact", "contacts mein quadratic, aur zyadatar un dots ko koi dekh nahi raha."]],
+        pros: ["TTL wali key ka matlab offline hone par koi write nahi: key bas exist karna band kar deti hai.", "Heartbeats sasti hain aur crash ke baad self healing.", "Sirf un contacts ko subscribe karna jo abhi screen par hain fan-out ko utne tak bound karta hai jitna user actually dekh sakta hai."],
+        cons: ["Last seen heartbeat interval tak approximate hai, jo theek hai aur phir bhi bug report banayega.", "Presence ek privacy surface hai, isliye per user visibility rules chahiye."],
+        cost: "Har online device ke liye ek chhoti key, har thirty second mein refresh. Lagbhag 100 million keys aur 3 million refreshes per second, jo Redis cluster ka normal din hai.",
+        fails: "Ek network partition sabko ek saath offline dikha deta hai. Kyunki absence expired key se infer hoti hai, likhi nahi jaati, heartbeats resume hote hi state khud theek ho jaati hai.",
+        say: "Har device ke liye ek Redis key, thirty second TTL, heartbeat se refresh. Offline matlab key ka na hona, isliye offline jaane mein zero writes lagte hain. Aur main presence sirf un conversations ke liye push karunga jo abhi user ki screen par hain." },
+
+      { job: "Photos aur videos hold karna. Chat path sirf ek pointer aur ek decryption key carry karta hai.",
+        why: "Chat tier ek kilobyte ke frames ke liye tune hai, jo ghanton khule socket par chalte hain. 20 MB ka video usse guzarne par ek connection ko ek minute ke liye occupy karta aur us box par baaki sab kuch stall kar deta.",
+        forced: "Stage 5, aur yeh is page ke har doosre design jaisa hi rule hai: bytes seedhe object storage jaate hain, metadata API se guzarta hai.",
+        alts: [["Streaming media through the chat servers", "ek code path, aur yeh ek bada slow transfer aise process ke andar daal deta hai jiska poora kaam chhote fast frames hai."], ["Base64 inside the message body", "payload ek tihai badhata hai aur text ke liye size hue message store mein video daal deta hai."]],
+        pros: ["Upload aur download object store ki speed se chalte hain, messaging ke parallel.", "Encrypted blob group message ke har recipient share kar sakta hai, isliye ek upload 256 downloads serve karta hai.", "Chat tier predictable rehta hai, jisse woh 100,000 sockets hold kar pata hai."],
+        cons: ["Doosra transport apni auth kahani ke saath, presigned aur short lived.", "Lifecycle sach mein mushkil hai: blob kab delete ho sakta hai, jab ek recipient ek mahine se offline ho sakta hai?"],
+        cost: "Poore product ki sabse badi byte cost, aur usme se lagbhag kuch bhi aapke likhe kisi cheez se nahi guzarta.",
+        fails: "Blob delete ho jaata hai jabki ek recipient abhi bhi offline hai, aur woh wapas aakar toota hua image dekhta hai. Retention ko sabse lambe inbox retention se jodo, us moment se nahi jab pehla recipient use download kare.",
+        say: "Sender ek baar encrypt karta hai, blob storage par upload karta hai, aur message ek pointer aur key carry karta hai. Har recipient wahi object download karta hai. Koi bhi badi cheez socket tier ko kabhi touch nahi karti." }
+    ],
+
+    flowsIntro: "Do paths, aur doosra wahi hai jo log bhool jaate hain: reconnect. Chat system ki zyadatar correctness is mein rehti hai ki jab ek din se band device wapas aata hai to kya hota hai.",
+
+    flows: [
+      { n: "Dono log online",
+        steps: [
+          ["Phone A ek UUID generate karta hai, apne khule socket par encrypted body bhejta hai, aur retry timer shuru karta hai.", "sync"],
+          ["A ka chat server store mein insert karta hai, (recipient device, message id) par keyed, taaki retry no-op ho.", "sync"],
+          ["Woh A ko acknowledge karta hai. Ek tick. Server ne bas yahi ek promise kiya hai, aur woh durability ke baare mein hai, delivery ke baare mein nahi.", "sync"],
+          ["Woh registry mein B ke devices dhoondhta hai aur har holding server ko forward karta hai.", "async"],
+          ["B ka server frame B ke socket par likhta hai. B ka device id se dedupe karta hai, sequence order mein render karta hai, aur acknowledge karta hai.", "async"],
+          ["Acknowledgement inbox row delete karta hai aur A tak do ticks ke roop mein wapas jaata hai. Read receipts wahi path hain, bas alag event ke saath.", "async"]
+        ] },
+      { n: "Recipient mangalwar se offline hai",
+        note: "Yeh path hi wajah hai ki store exist karta hai, aur yahin ordering aur duplicate suppression asal mein test hote hain.",
+        steps: [
+          ["B ke jaane ke dauran messages aaye. Har ek store hua aur har forward attempt ko registry mein kuch nahi mila, isliye kuch hua nahi aur kuch fail nahi hua.", "async"],
+          ["B ka device reconnect karta hai. Load balancer use sabse kam loaded server par rakhta hai, jo pichhla wala nahi hoga.", "sync"],
+          ["Server B ke device ko TTL ke saath registry mein likhta hai, aur B har conversation ke liye apne paas ka aakhri sequence number bhejta hai.", "sync"],
+          ["Server us sequence se inbox ko range scan karta hai aur backlog ko order mein, batches mein stream karta hai, taaki ek mahine ke messages ek enormous frame mein na aayein.", "sync"],
+          ["B batches mein acknowledge karta hai. Har acknowledgement rows delete karta hai aur senders ko do ticks release karta hai, jinme se kuch khud kai dinon se online nahi hue.", "async"]
+        ] },
+      { n: "Ek group message",
+        steps: [
+          ["A ek baar bhejta hai. Unka server ek copy store karta hai, acknowledge karta hai, aur ek single fan-out event publish karta hai.", "sync"],
+          ["Ek worker membership padhta hai, jo lagbhag hamesha cache hit hai, aur users ki jagah devices tak expand karta hai.", "async"],
+          ["Woh har device ke liye ek inbox row likhta hai aur har us device ko push karta hai jise registry connected batati hai.", "async"],
+          ["Har device alag se acknowledge karta hai. Sender ke ticks sabse slow recipient se drive hote hain, isiliye group ticks one to one ticks se alag lagte hain.", "async"]
+        ] }
+    ],
+
+    tradeoffsIntro: "Chat ke trade-offs khaas taur par sharp hain kyunki product decisions infrastructure ko orders of magnitude se hila dete hain. Yeh chaar woh hain jinpar opinion rakhna banta hai.",
+
+    tradeoffs: [
+      { a: ["Delete on delivery", "Server ek waiting room hai. Lagbhag 40 GB live, koi history problem nahi, koi search problem nahi, aur phone kho jaaye to history bhi gayi."],
+        b: ["Keep full history server side", "Saat petabytes prati saal, search, multi device sync free mein, aur ek legal aur privacy surface jo kabhi chhota nahi hota."],
+        flip: "product ek workplace tool ho. Slack aur Teams sab kuch rakhte hain, kyunki compliance ko chahiye aur history hi woh feature hai jiske liye log paisa dete hain. Yeh ek sawaal storage ka jawab do sau guna badal deta hai, isliye pehle do minute mein poochho." },
+      { a: ["Persistent WebSocket", "Server push kar sakta hai. Sau millisecond se kam delivery, har device ke liye ek connection, aur ek stateful tier jise deploy karna mushkil hai."],
+        b: ["Polling or push notifications only", "Stateless aur operate karna trivial. Latency seconds mein naapi jaati hai, aur battery aur bandwidth aise sawaal poochne mein jaati hai jiska jawab aam taur par nahi hota."],
+        flip: "app background mein ho, jahan operating system aapka socket waise bhi band kar dega aur push notification hi ekmaatra channel hai. Real clients dono chalate hain aur switch karte hain, jo bolna chahiye, yeh pretend karne ki jagah ki socket hamesha wahan hai." },
+      { a: ["Fan-out on write to per device inboxes", "Reads trivial hain. Ek send saikdon writes ban jaata hai, jo 256 members par theek hai."],
+        b: ["A shared group log that readers pull from", "Group size chahe jo ho, ek write. Har reader ko ab poll ya subscribe karna padta hai, aur unread counts mushkil ho jaate hain."],
+        flip: "groups broadcast channels ban jaayein jinme das hazaar se zyada members hon. Tab har member ke liye row likhna absurd hai aur log jeet jaata hai. Mature product dono chalata hai aur group size se chunta hai." },
+      { a: ["Client generated message ids", "Har hop idempotent hai, retries free hain, aur exactly once ek client side property hai."],
+        b: ["Server generated ids with server side deduplication", "Server uniqueness control karta hai, aur woh us retry ko dedupe nahi kar sakta jo pehla response dikhne se pehle aa jaaye."],
+        flip: "message id ke liye kabhi nahi. Badi seekh generalise hoti hai: jab bhi retry ho sakta hai, request ki identity use chunni chahiye jo retry karega." }
+    ],
+
+    next: [
+      "<b>Multi region.</b> Conversation ki ordering ek region par pin karo aur inbox ko asynchronously replicate karo. Cross region delivery tab ek forward hai, consensus problem nahi.",
+      "<b>Per conversation backpressure.</b> Aaj ek enormous group fan-out workers ko crowd kar sakta hai. Work ko group size se partition karo, taaki family chat kabhi broadcast channel ke peeche na ho.",
+      "<b>Message expiry aur disappearing messages.</b> Zyadatar client feature, aur ise server side TTL chahiye jo us device se bhi survive kare jo kabhi wapas nahi aata.",
+      "<b>Content padhe bina abuse handling.</b> Rate limits, graph signals aur reports, kyunki encryption ne har content based option hata diya hai."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -1265,7 +1728,254 @@ const DESIGN = [
     ["GFG", "https://www.geeksforgeeks.org/system-design/design-twitter-a-system-design-interview-question/", "GFG, design Twitter", "H"],
     ["DG", "https://www.designgurus.io/course-play/grokking-the-system-design-interview/doc/designing-instagram", "Design Gurus, Instagram", "H"],
     ["GH", "https://github.com/donnemartin/system-design-primer", "System Design Primer", "M"]
-  ]
+  ],
+
+  hi: {
+    one: "Yahaan sirf ek sawaal hai, jo ya to likhte waqt poocha jaata hai ya padhte waqt: yeh post kiske feed mein jayega? Likhne ke time jawab do to har follower ke liye ek baar pay karte ho. Padhne ke time jawab do to har feed load pe pay karte ho. Dono mein se koi akela sabke liye sahi nahi hai, isliye asli jawab dono hai.",
+
+    brief: {
+      why: "Feeds wahi problem hai jahan naive design aur sahi design ek hi design hote hain, bas alag alag users pe apply hote hain. Jo cheez galat hoti hai woh hai ek strategy chun kar usi ko defend karte rehna. Kaam ki baat yeh hai ki follower graph bahut zyada skewed hota hai: jo rule do sau followers wale ke liye sasta hai, wahi rule ek crore followers wale ke liye barbaad kar deta hai. Design ko batana padta hai ki kaunsa rule kiske liye lagta hai aur yeh kaise decide hota hai.",
+      functional: [
+        "<b>Post</b> karo ek photo caption ke saath. Yeh un logon ke feed mein dikhta hai jo tumhe follow karte hain.",
+        "<b>Apna feed padho</b>, jo un accounts ke recent posts hain jinhe tum follow karte ho, sabse interesting pehle, paginated aur infinitely scrollable.",
+        "<b>Follow aur unfollow karo</b>, jo chupke se sabke feed ka shape badal deta hai.",
+        "<b>Like aur view counts</b>, jo trivial lagte hain aur product mein sabse zyada write rate inhi ka hai."
+      ],
+      out: ["stories aur reels", "direct messages", "khud ranking model", "advertising", "comment threads aur moderation"],
+      nfr: [
+        ["Feed load", "p99 under 200 ms", "Yeh app ka wahi ek screen hai jo zyadatar sessions mein khulti hai. Isse instant lagna hi padega, isliye zyadatar logon ke liye feed har load pe scratch se compute nahi ho sakta."],
+        ["Post visibility", "seconds, not milliseconds", "Koi nahi bata sakta ki ek photo apne dost ke feed tak do sau milliseconds mein pahunchi ya char second mein. Yeh weak requirement hi hai jo asynchronous fan-out ko legal banata hai."],
+        ["Feed availability", "99.9%, and stale is fine", "Jis feed mein pichhle das minute chhoote hain woh bhi feed hai. Jo feed load hi nahi hota woh outage hai. Kuch bhi stale serve karo, kabhi khaali mat chhodo."],
+        ["Counts", "approximate, eventually consistent", "Koi bhi like count verify nahi kar sakta, aur sabko slow like button turant pata chal jayega. Counter design karne se pehle yeh baat khul kar bolo, kyunki yahi poore mechanism ka faisla karti hai."],
+        ["Media durability", "no lost photos", "Is product mein bas yahi ek cheez hai jo kabhi khoni nahi chahiye. Aur yahi ek cheez hai jo tumhare application servers ko kabhi chhoo bhi nahi paati."]
+      ],
+      numbers: [
+        ["Daily actives", "500M", "Assumption bol do, phir usi pe design karo."],
+        ["Posts", "about 1,200 per second", "100M posts roz ke. Chhota lagta hai, aur akela dekhne pe bilkul galatfehmi paida karta hai, kyunki agli row hi asli kahani hai."],
+        ["Fan-out writes", "about 230k per second, peak 700k", "1,200 posts per second, average 200 followers se multiply karo. Average jhooth bolta hai, par tier ka size yahi decide karta hai."],
+        ["Feed loads", "about 58k per second, peak 175k", "500M actives din mein das baar feed load karte hain. Yahi wo number hai jo read path serve karta hai."],
+        ["The largest account", "over 300M followers", "Us account ka ek post matlab 30 crore inbox writes. Upar wale peak rate pe, sirf ek post poore fan-out tier ko saat minute tak busy rakh dega. Yahi ek row hai jiski wajah se design ke do strategies hain."],
+        ["Feed cache", "about 4 TB", "500M users, har ek ke 500 entries, har entry mein post id aur score ke solah bytes. Bada hai, aur sirf ids hain, isi wajah se sirf bada hai, bekabu nahi."],
+        ["Media", "about 200 TB per day", "Processing ke baad roughly 2 MB ke 100M photos. Yeh object storage mein jaata hai aur CDN se serve hota hai, aur kabhi bhi tumhare likhe hue kisi machine ko chhoota nahi hai."]
+      ],
+      numbersNote: "Sabse zaroori row hai <b>the largest account</b>. Baaki sab numbers comfortable hain. Wahi ek outlier hai jo ek saaf design ko hybrid bana deta hai, aur agar tum interviewer se pehle usse dhoond lo to yeh baaki poore diagram se zyada value ki baat hai."
+    },
+
+    stagesIntro: "Chhe stages. Stage 0 wo version hai jo sabke liye sahi hai aur kisi ke liye tez nahi. Stage 2 wo version hai jo sabke liye tez hai aur chand logon ke liye impossible. Stage 3 wahi hai jo tum actually ship karte ho, aur usko samajhna tabhi possible hai jab pehle dono stages ko fail hote dekha ho.",
+
+    stages: [
+      { pressure: "Kuch nahi. Yeh honest starting point hai, aur isme ek asli fayda hai jo bolne layak hai: ek post matlab sirf ek write, aur kisi ko unfollow karna turant effect karta hai, kahin bhi cleanup ki zarurat nahi.",
+        say: "Jin accounts ko follow karte ho unki list padho, har ek se recent posts post store se maango, merge karo aur sort karo. Isko fan-out on read kehte hain. Post likhna sirf ek row ka cost hai, aur unfollow turant hota hai kyunki kuch bhi precompute nahi hua tha. Yeh dono properties genuinely valuable hain aur main baad mein inhe wapas laana chahunga.",
+        breaks: "Jo user hazar accounts follow karta hai, uska ek feed load hazar range queries chala deta hai, aur feed peak pe 175,000 baar per second load hota hai. Kaam utna hi zyada hai jitna user product use karta hai, jo ulta hai: tumhare best users hi sabse mehenge padte hain." },
+
+      { pressure: "Roz ke do sau terabyte image bytes. Isme se kuch bhi application server se guzarna nahi chahiye, aur kuch bhi database mein store nahi hona chahiye.",
+        say: "Client seedha object storage pe presigned URL se upload karta hai aur API sirf ek key dekhta hai. Feed response sirf metadata aur URLs hai, chand kilobytes ka, aur client CDN se images khinchta hai. Design mein cost bachane ka sabse bada tareeka yahi hai, aur yeh sabse kam interesting box bhi hai, isliye ise pehle hi raste se hata dena chahta hoon.",
+        breaks: "Read path abhi bhi ek feed load pe hazar queries chala raha hai. Bytes bahar nikaalne se cost kam hua, speed nahi badhi." },
+
+      { pressure: "Reads, posts se pachaas guna zyada hain, aur read hi saara kaam kar raha hai. Ulta karo: write time pe ek baar pay karo, taaki read sirf ek pehle se bani list ka range scan ban jaye.",
+        say: "Ab post karna sirf ek row aur ek event ka cost hai. Ek worker follower list padhta hai aur post id har follower ki list mein push karta hai, cap paanch sau entries pe. Feed load ab sirf ek ids ki list padhna hai, phir post metadata ka batched hydration, jo lagbhag hamesha cache hit hota hai. Read path hazar queries se do queries pe aa gaya.",
+        breaks: "Koi teen crore followers wala account post karta hai. Ek photo ke liye 30 crore list writes, jo fan-out tier ko minutes tak saturate kar deta hai, aur har normal user ka post uske peeche atak jaata hai. Saath hi, celebrity ke apne followers ko post alag alag time pe milta hai, iss baat pe ki queue mein woh kahan lande." },
+
+      { pressure: "Follower distribution sirf skewed nahi, pathological hai. Fan-out on write 99.9% accounts ke liye sahi hai aur baaki ke liye impossible, isliye design ko yeh branch lena padta hai ki post kaun kar raha hai.",
+        say: "Ek threshold se zyada followers hone par, maan lo ek lakh, account ko celebrity mark kar dete hain aur uske posts fan-out hi nahi hote. Read time pe feed service tumhari precomputed list ko un chand celebrities ke direct query ke saath merge karti hai jinhe tum follow karte ho, jo sasta hai kyunki celebrities chand hi hoti hain aur unke recent posts system ke sabse hot cache entries hote hain. Normal accounts ko fan-out on write milta hai, famous accounts ko fan-out on read, aur reader ek chhota sa merge pay karta hai. Koi naya box nahi, ek hi branch, aur pathological case gayab ho jaata hai.",
+        breaks: "Feed ab strict reverse chronological order mein hai, jo yeh products saalon pehle chhod chuke hain. Ranking badalta hai ki read path ko kya karna hai, aur yeh badalta hai ki precomputed list mein kya reh sakta hai." },
+
+      { pressure: "Ranked feed ek fixed sorted list nahi ho sakta, kyunki ek post ka score likhne ke baad badalta rehta hai, aur ranking model ko reader ke baare mein bhi features chahiye hote hain, sirf post ke baare mein nahi.",
+        say: "Precomputed list ab feed nahi rahi, ek candidate set ban jaati hai, chand sau post ids jo dikhane layak ho sakte hain. Ranking read time pe usi chhote set pe hoti hai, kyunki yeh reader pe, freshness pe, aur har hafte badalne wale model pe depend karti hai. Retrieval precomputed aur sasta hai, scoring live aur chhota hai. Yahi split hai jo ranked feed ko affordable banata hai.",
+        breaks: "Ab har post pe ek like count aur ek view count hota hai, aur yeh product mein sabse zyada write rate wali cheezein hain, kaafi antar se. Har like pe row increment karna, system ke sabse zyada dekhe jaane wale content pe sabse hot write daal dega." },
+
+      { pressure: "Likes aur views volume mein bahut zyada hain, akele mein bekaar hain, aur har post pe dikhte hain. Requirement pehle hi keh chuka hai ki approximate chalega, aur design ko yeh permission use karni chahiye.",
+        say: "Ek like ek event hai, update nahi. Yeh stream mein jaata hai, ek aggregator use per post counter mein fold karta hai jo khud bhi kayi shards mein bata hota hai taaki koi ek key hot na ho, aur dikhaya jaane wala number sabhi shards ka sum hai, cache se padha jaata hai. User ka apna like client optimistically dikha deta hai taaki instant lage. Views ke saath bhi wahi treatment hai, upar se sampling ke saath, kyunki kisi ne kabhi notice nahi kiya ki view count ek percent galat hai." }
+    ],
+
+    boxesIntro: "Terah components, aur inme se sirf do hi mushkil hain. Fan-out workers aur feed cache poore design ko sambhalte hain, baaki sab ya to standard hain ya sirf isliye hain ki photos tumhare servers se door rahein.",
+
+    boxes: [
+      { job: "Feed ka ek page maangta hai, seedha object storage pe upload karta hai, aur like counts ke baare mein thoda jhooth bolta hai.",
+        why: "Yeh isliye draw hota hai kyunki design ki do sabse achhi properties yahin implement hoti hain: direct upload, jo roz ke 200 TB tumhare servers se door rakhta hai, aur optimistic UI, jo eventually consistent counter ko instant feel karata hai.",
+        forced: "Upload path ke liye stage 1, optimistic like ke liye stage 5.",
+        alts: [["Uploading through the API", "ek hi code path aur ek hi auth story milti hai, aur tumhara application tier bina wajah roz 200 TB data move karega."]],
+        pros: ["Bytes client se object store aur phir CDN tak jaate hain, kabhi tumhare chalaye kisi machine ko chhoote nahi.", "Optimistic rendering counter path ki har millisecond eventual consistency ko chhupa deta hai."],
+        cons: ["Presigned URL ek capability hai jo tumne de di hai, isliye usse narrow aur short lived rakhna padta hai.", "Optimistic UI ka matlab hai client kuch aisa dikha sakta hai jo server ne abhi accept nahi kiya, aur server disagree kare to reconcile karna padta hai."],
+        cost: "Kuch nahi, aur yeh system ke sabse bade cost ko hata deta hai.",
+        fails: "Presigned URL bahut broad scope ya lambe time ke liye ban jaaye, to woh kisi ke liye bhi upload endpoint ban jaata hai jiske paas woh URL aa jaaye. Ek key tak scope karo, minutes mein expire karo.",
+        say: "Presigned upload seedha object storage tak, ek single key tak scoped. API kabhi ek bhi image byte nahi dekhta, aur CDN bhi mere servers se kabhi kuch nahi maangta." },
+
+      { job: "Feed ka ek page assemble karo: candidate ids padho, celebrity pull merge karo, rank karo, hydrate karo, return karo.",
+        why: "Feed hi product hai, isliye jo code isse banata hai use baaki har cheez se alag rakhna hi sahi hai.",
+        forced: "Stage 2, jab read sirf ek query na rehke kayi sources wala assembly job ban gaya.",
+        alts: [["Building the feed inside the mobile app", "merge mobile app mein le jaata hai aur ranking pe tumhara koi control nahi rehta, ise release ke bina badal nahi sakte, aur bahut saari chatty requests ban jaati hain."], ["Precomputing the fully ranked page and storing it", "read trivial ho jaata hai aur har ranking change pe har feed recompute karna padta hai, aur post ka score store hote hi stale ho jaata hai."]],
+        pros: ["Cache hit ho ya na ho, read path ek fixed chhoti si call count hai, har followee ke liye ek call nahi.", "Yahi wo ek jagah hai jahan stale hona failure se behtar hai, isliye jab ranking unavailable ho to yeh reverse chronological pe degrade ho sakta hai."],
+        cons: ["Yeh har request pe chaar paanch dependencies pe fan-out karta hai, isliye iska p99 unme se sabse dheeme ke barabar hai aur har ek ko timeout chahiye.", "Ek ranked, badalte hue feed pe pagination genuinely mushkil hai aur yahi problem yahin rehti hai."],
+        cost: "Peak pe 175,000 requests per second, har ek mein kuch batched calls. Design ka sabse bada stateless tier.",
+        fails: "Ranking service dheemi ho jaaye, aur feed service uska wait kare. Sahi behavior yeh hai ki jaldi timeout karo aur candidate set ko reverse chronological order mein return karo, kyunki bina ranking wala feed bhi feed hai, spinner nahi.",
+        say: "Is service ki har dependency ka timeout hai aur ek defined degraded answer hai. Ranking timeout ho to chronological, counters timeout ho to number chhupa do, hydration fail ho to post drop karo. Feed hamesha kuch na kuch return karta hai." },
+
+      { job: "Har user ke liye ek capped list rakho recent candidate post ids ki, sabse naya pehle.",
+        why: "Yeh design ka precomputed hissa hai. Hazar queries ko ek list read mein badalna hi fan-out on write ka poora fayda hai, aur is list ko kahin rehna hai ek sorted set aur tez push ke saath.",
+        forced: "Stage 2. Usse pehle feed read time pe compute hoti thi aur store karne layak kuch tha hi nahi.",
+        alts: [["A database table of inbox rows", "durable hai, aur yeh data by definition regenerable hai, to tum us durability ka paisa de rahe ho jo tum kabhi bhi recompute kar sakte ho."], ["Storing the whole post in the list rather than the id", "read time pe ek hop kam ho jaata hai, aur 4 TB ko post ke size se multiply kar deta hai, aur caption edit karne pe lakhon list entries rewrite karni padti hain."]],
+        pros: ["Feed load ab ek sorted structure pe ek range read ban jaata hai.", "Paanch sau entries ka cap memory bound karta hai aur is sach ko maanta hai ki koi utna scroll nahi karta.", "Isse khona ek performance event hai, data loss event nahi: follow graph aur post store se wapas ban sakta hai."],
+        cons: ["4 TB memory ek asli cluster aur asli bill hai.", "Har follow, unfollow, block, delete aur privacy change isme reflect hona chahiye, warna feed kuch aisa dikhayega jo nahi dikhana chahiye.", "Yeh sirf un accounts ke liye sahi hai jinhe fan-out ke liye chuna gaya."],
+        cost: "Lagbhag 4 TB, sirf ids aur scores, user id se sharded taaki ek user ka feed hamesha ek hi node pe ho.",
+        fails: "Ek node kho jaaye to un users ka feed khaali dikhega. Recovery path yeh hai ki cold user ke liye fan-out on read pe fallback karo, jo tumne celebrities ke liye pehle hi bana rakha hai. Yeh doosri baar hai jab wo code khud ka paisa vasool kar raha hai.",
+        say: "Sirf ids, paanch sau tak capped, user id se sharded, aur store nahi cache maana jaata hai. Khaali ho jaaye to bhi main feed dheeme tareeke se compute kar sakta hoon, aur yahi fallback hai jo isse bina replication ke chalane deta hai." },
+
+      { job: "Post accept karo, metadata row likho, aur ek event emit karo. Phir raste se hat jao.",
+        why: "Writes 1,200 per second hain, reads 175,000 ke saamne. Yeh apni ek chhoti, careful service ke layak hain, system ke sabse busy tier ke ek corner mein nahi.",
+        forced: "Stage 2, jab post karna sirf ek insert na rehke ek asynchronous consequence bhi le aaya.",
+        alts: [["Fanning out inline before returning", "poster ko apne hi follower count ka wait karwata hai, jo bilkul galat incentive hai aur chand hazar followers ke upar use hi nahi kiya ja sakta."]],
+        pros: ["Poster ki latency audience size se relate nahi rakhti, hamesha ek row insert ke barabar hai.", "Follower count check jo celebrities ko fan-out se door rakhta hai, yahin ek jagah hai."],
+        cons: ["Post visible hone se pehle accept ho jaata hai, isliye poster ka apna view special case karna padta hai warna post ek second ke liye gaayab lagta hai.", "Isse yeh guarantee karna padta hai ki row likhne par event bhi emit ho, jo outbox problem hai."],
+        cost: "1,200 writes per second. Trivial.",
+        fails: "Row likh diya jaaye aur process event publish karne se pehle mar jaaye, to post exist karta hai aur kisi tak nahi pahunchta. Transactional outbox use karo: row aur event ek hi transaction mein likho, aur ek alag process outbox table se publish kare.",
+        say: "Row aur fan-out event ek hi transaction mein, ek outbox mein likhe jaate hain, aur wahin se publish hote hain. Warna dono ke beech crash aisa post bana degi jo exist karta hai aur invisible hai, jo is service ki sabse buri failure hogi." },
+
+      { job: "Ek post ko har follower ki list pe ek push mein badlo, jab tak author ke followers zyada na ho.",
+        why: "Yahin design ka asli faisla hota hai. Yeh bhi sirf ek hi component hai jiska cost kisi doosre ki popularity ke barabar hota hai.",
+        forced: "Stage 2 ne ise banaya, stage 3 ne isse celebrities skip karna sikhaya.",
+        alts: [["No fan-out at all, pure read time merge", "sahi, simple, aur hazar queries product ke sabse busy path pe daal deta hai."], ["Fan-out to everybody including celebrities", "sahi hai jab tak koi account ek crore followers tak na pahunch jaaye, phir ek post minutes tak tier ko occupy karta hai aur baaki sabko delay karta hai."], ["Fan-out only to active users", "ek badhiya optimisation. Zyadatar accounts ne mahine bhar se app nahi khola, unki list mein likhna pure waste hai. Recently active logon ko fan out karo, baaki ke liye on demand rebuild karo."]],
+        pros: ["Kaam ko 175,000 reads per second se 1,200 writes per second pe le jaata hai, yahi poora trade hai.", "Asynchronous hai, isliye lag kar sakta hai bina kisi ki request fail kiye.", "Lag ek visible metric hai, isliye tumhe users se pehle pata chal jaata hai."],
+        cons: ["Average write amplification do sau ka hai, aur tail mein aur bhi bura.", "Isse unfollows, deletes aur privacy changes pe react karna padta hai, jo code ka ek surprising hissa hai.", "Yeh eventually consistent hai, isliye author ke apne feed ko special handling chahiye."],
+        cost: "Peak pe 700,000 list pushes per second. Design ka sabse bada write load, kayi guna se.",
+        fails: "Threshold ke thoda neeche wala moderately famous account peak pe post kare aur uska fan-out har doosre post ko peeche dhakel de. Kaam ko follower count se partition karo taaki bada fan-out chhote ko bhookha na rakhe, aur threshold ko ek tunable banao, ek deploy karne wali constant nahi.",
+        say: "Celebrities ko poori tarah skip karo, jinhone tees din se app nahi khola unhe bhi skip karo, aur workers ko follower count se partition karo taaki bada fan-out chhote ko block na kare. Threshold ek dial hai, constant nahi." },
+
+      { job: "Do sawaalon ka jawab do: main kise follow karta hoon, aur is account ko kaun follow karta hai.",
+        why: "Dono directions chahiye, ek read path ke liye aur ek fan-out ke liye, aur inki shape bilkul alag hai.",
+        forced: "Followee list ke liye stage 0, follower list ke liye stage 2.",
+        alts: [["A graph database", "naam se obvious jawaab lagta hai aur yahan shayad hi sahi hota hai, kyunki queries traversal nahi, do flat adjacency lists hain."], ["A single table with an index in each direction", "yahi asal mein hai. Isse seedha bol do, ek list describe karne ke liye graph engine mat pakdo."]],
+        pros: ["Dono queries ek partitioned key pe range scans hain.", "Followee list itni chhoti hai ki per user cache ho sakti hai aur kam badalti hai."],
+        cons: ["Bade account ki follower list bahut badi hoti hai aur fan-out ke dauraan poori padhi jaati hai, isi wajah se celebrities ko us path se bahar rakha jaata hai.", "Follows bursty hote hain: ek viral account ek ghante mein das lakh followers paa sakta hai, aur har ek ek write plus feed backfill decision hai."],
+        cost: "Kayi arab edges, hamesha padhe jaate hain, kabhi kabhaar likhe jaate hain, bahut skewed.",
+        fails: "Fan-out ek teen crore row wali follower list memory mein padh le. Isi wajah se celebrity check read se pehle hota hai, baad mein nahi.",
+        say: "Do adjacency lists, account se partitioned, followee direction mein zor se cached. Follower direction sirf paged through hoti hai, kabhi load nahi hoti, celebrity ke liye to bilkul nahi." },
+
+      { job: "Post metadata rakho: author, caption, media key, timestamp, privacy. Ids ka ek batch le kar posts ka batch banao.",
+        why: "Feed cache ids isliye rakhta hai kyunki ids chhoti hoti hain. Kisi ko to ids se posts wapas banane hain, aur ek call mein pachaas ids ke liye karna hai.",
+        forced: "Stage 0, aur stage 2 mein role badla, author se query hone se id se read hone tak.",
+        alts: [["Storing the full post in the feed cache", "hydration call hata deta hai aur cache ko pachaas guna bada kar deta hai, aur edit karne pe lakhon entries rewrite karni padti hain."], ["A relational store", "bilkul theek hai. Access ek primary key pe batch get hai, isliye lagbhag kuch bhi chal jaata hai, aur choice operational familiarity pe honi chahiye, benchmark pe nahi."]],
+        pros: ["Id se batch get sabse sasta read shape hai, aur lagbhag perfectly cache hota hai.", "Ek post ek row, matlab edits aur deletes bas ek hi jagah hote hain."],
+        cons: ["Har feed load pe pachaas ids ke liye padha jaata hai, isliye iska cache hit rate hi tumhare p99 ka faisla karta hai.", "Yeh celebrity pull query bhi serve karta hai, jo alag shape hai aur apna alag index maangti hai."],
+        cost: "Roz kareeb 100M rows, chhoti rows, per second kareeb ek crore baar pachaas ke batches mein padhi jaati hain.",
+        fails: "Deleted post lakhon feed lists mein reh jaata hai. Hydration wahi jagah hai jahan deletion actually enforce hoti hai: jo id kuch na banaye, page se drop ho jaati hai. List saaf karna background job hai, correctness requirement nahi.",
+        say: "Hydration hi wo jagah hai jahan privacy aur deletion actually enforce hoti hai, kyunki feed lists ek cache hain aur hamesha thodi galat rahengi. Post gaya ho ya tumne block kiya ho, to hydrate nahi hota, aur page ek chhota reh jaata hai." },
+
+      { job: "Photos rakho. Durably, sasta, hamesha ke liye.",
+        why: "Roz do sau terabyte immutable binary data, exactly wahi hai jiske liye object storage bana hai aur exactly wahi hai jisme database sabse kamzor hota hai.",
+        forced: "Stage 1, aur media wale kisi bhi design mein sabse pehla kaam yahi hai.",
+        alts: [["Storing images in the database", "classic mistake. Database ka cache, backups aur replication sab barbaad ho jaate hain, sirf bytes store karne ke liye jinhe koi query hi nahi karta."], ["A self managed distributed file system", "yahi bade companies is scale pe cost ke liye actually chalate hain. Isko das guna size pe karne wali cheez ki tarah mention karo."]],
+        pros: ["Gyarah nines durability, bina kuch kiye.", "Yeh CDN ka origin hai, isliye sirf cache misses pe padha jaata hai.", "Storage cost per byte block storage se ek order kam hai."],
+        cons: ["Latency das milliseconds range mein hai, isliye yeh CDN ke peeche rehta hai, kabhi user ke saamne nahi.", "Roz 200 TB pe lifecycle aur cost management asli kaam ban jaata hai."],
+        cost: "Saal mein kareeb 70 PB tiering se pehle, aur purani photos ko thandi class mein bhejne ke baad kaafi kam.",
+        fails: "Yeh theek chal raha hota hai, aur uske aage wala CDN invalidation ke baad cold cache ho jaata hai, achanak yeh live traffic serve karne lagta hai jiske liye woh sized hi nahi tha. Invalidations ko stagger karo.",
+        say: "Immutable objects content addressed keys ke saath, taaki photo hamesha ke liye cache ho sake aur edit ek invalidation ke bajaye ek naya key ban jaaye." },
+
+      { job: "Har image byte reader ke paas se serve karo.",
+        why: "Images 99.9% bytes hain aur 0% logic. Yeh immutable hain aur bahut repeat hoti hain, edge caching ke liye ideal case.",
+        forced: "Stage 1. Iske bina object store poore global product ka har byte chand regions se serve karta.",
+        alts: [["Serving images from the application tier", "2 MB transfer ko us process se guzarna padta hai jo 4 KB JSON responses ke liye size kiya gaya hai."], ["Serving directly from the object store", "chalta hai aur door ke users ke liye dheema hai, aur egress bill lagbhag poore product ke cost ke barabar ho jaata hai."]],
+        pros: ["Latency ek local hop hai, intercontinental nahi.", "Immutable content ka matlab high nineties cache hit rate aur invalidation problem hi nahi.", "Yeh viral traffic ko absorb kar leta hai bina tumhare kisi cheez ko pata chale."],
+        cons: ["Product ke sabse visible hisse ke critical path mein ek aur vendor.", "Private content ke liye signed URLs fiddly hote hain aur wahin access control bugs chhupte hain."],
+        cost: "Sabse bada line item, aur alternative se kaafi chhota.",
+        fails: "Privacy change ke baad photo private ho jaata hai, aur CDN use cache se kisi ke bhi liye serve karta rehta hai jiske paas URL hai. Jo bhi public nahi hai uske liye signed, short expiry URLs use karo, aur maano ki public content ek baar fetch hone ke baad public hi hai.",
+        say: "Public photos ke liye content addressed URLs lambe TTL ke saath, private ke liye signed short lived URLs. Immutability hi hai jo pehla option safe banata hai." },
+
+      { job: "Ek reader ke liye chand sau candidates ko score karo aur order mein return karo.",
+        why: "Feed chronological nahi rahi. Ranking read time pe honi chahiye kyunki score reader pe depend karta hai, kitni der pehle usne dekha usпе, aur har hafte badalne wale model pe.",
+        forced: "Stage 4.",
+        alts: [["Ranking at write time and storing the order", "reads trivial ban jaate hain aur score kuch bhi badalte hi galat ho jaata hai, aur model change ka matlab har feed ka poora recompute."], ["Ranking on the client", "server cost zero, par model bina app release badle nahi badal sakte, aur client ke paas signals bhi nahi hote."]],
+        pros: ["Chand sau items score karna chhota, bounded kaam hai, sab kuch score karne jaisa nahi.", "Model changes stored data ko chhue bina ship hote hain.", "Yahi ek component hai jo band ho ke chronological pe degrade ho sakta hai bina product tode."],
+        cons: ["Yeh sabse busy endpoint ke critical path pe hai, isliye iski latency tumhari latency hai.", "Feature freshness apne aap mein ek poora subsystem hai."],
+        cost: "Har feed load pe chand sau scores, peak pe 175,000 feed loads per second. Yahin GPUs jaate hain.",
+        fails: "Yeh dheema ya band ho jaaye. Feed service timeout kar ke candidates ko reverse chronological order mein return kar deti hai. Users ko feed alag lagta hai par koi error nahi dikhta, jo sahi outcome hai.",
+        say: "Retrieval precomputed aur sasta hai, scoring live aur chhota hai. Feed ko in do hisson mein banta hi ranking ko affordable banata hai, aur isi liye feed cache ek finished page nahi, candidates rakhta hai." },
+
+      { job: "Ranking ko chahiye wale signals do: yeh reader recently kisme engage hua, yeh post kaisa perform kar raha hai, dono accounts kitne close hain.",
+        why: "Model bina features ke bekaar hai, aur features ko single digit milliseconds mein chand sau items ke liye ek saath available hona chahiye.",
+        forced: "Stage 4, ranker ke saath. Alag draw kiya gaya hai kyunki iski freshness requirements baaki sabse alag hain.",
+        alts: [["Computing features at request time from the source data", "accurate hai aur bahut dheema, kyunki kuch features mahino ke behavior ka aggregate hote hain."], ["Only using features computed in a nightly batch", "sasta hai aur feed ko andha bana deta hai us cheez ke liye jo tumne paanch minute pehle kiya, jo bilkul wahi signal hai jo sabse zyada matter karta hai."]],
+        pros: ["Batch aur streaming features ek hi interface ke peeche rehte hain, isliye model ko farq nahi padta number kahan se aaya.", "Yeh freshness problem khud absorb karta hai taaki ranker ko na karna pade."],
+        cons: ["Training aur serving ko features exactly same tarike se compute karna padta hai, aur jab yeh drift kare to model chupke se kharab hota hai.", "Yeh apne aap mein poora platform hai, aur pachpan minute ke interview ke liye naam lene ke alawa genuinely out of scope hai."],
+        cost: "High read rate, chhoti values, mixed freshness. Practically ek Redis ya key value tier, peeche ek batch pipeline ke saath.",
+        fails: "Streaming features atak jaate hain, store kal ki values serve karta rehta hai, aur feed chupke se kharab hota jaata hai bina ek bhi error ke. Errors pe nahi, feature staleness pe alert lagao.",
+        say: "Jab tak poocha na jaaye main isse naam lekar aage badh jaunga. Yeh feed problem se zyada platform problem hai, aur feed design ko isse bas ek bounded latency aur stale hone par ek defined behavior chahiye." },
+
+      { job: "Likes aur views ko request path se door le jao.",
+        why: "Engagement events volume mein bahut zyada hain aur akele mein bekaar, exactly wahi profile jo transaction mein nahi, log mein hona chahiye.",
+        forced: "Stage 5.",
+        alts: [["Updating the count synchronously", "product ki sabse zyada write rate ko sabse contended rows pe daal deta hai."], ["Counting in the client and reporting periodically", "sasta hai aur aasani se spoof ho sakta hai, jo matter karta hai jab number ranking mein use hota hai."]],
+        pros: ["Like request turant return hoti hai aur client change ko optimistically dikha deta hai.", "Yahi ek stream counters, ranking features aur analytics, teeno ko serve karta hai, ek pipeline se teen consumers.", "Replayable hai, isliye counting bug fix ho sakta hai, permanent nahi rehta."],
+        cons: ["Ek aur distributed system, aur yeh tumhare sabse frequent user action ke path pe hai.", "Post id se partition karne se exactly un posts pe hot partition ban jaata hai jinhe sab dekh rahe hain."],
+        cost: "Peak pe per second lakhon chhote events, ghanto se dino tak retained.",
+        fails: "Ek viral post hot partition bana deta hai. Post id plus ek random suffix pe key karo, read time pe shards sum karo, aur maano ki count store nahi, assemble hota hai.",
+        say: "Like ek event hai. Count derive hota hai. Yeh alag rakhna hi hai jo write path ko tez rakhta hai aur read path ko cache ho paane deta hai." },
+
+      { job: "Har post pe dikhne wale like aur view counts rakho, aur post ke saath serve karo.",
+        why: "Yeh number har impression pe padha jaata hai aur har interaction pe likha jaata hai, isliye ise memory mein hona chahiye aur ek single hot key nahi hona chahiye.",
+        forced: "Stage 5.",
+        alts: [["A counter column on the post row", "ek post, ek row, ek viral post pe ek contended row, aur har like ek lock wali database write."], ["Exact counting with a transaction per like", "sahi, mehenga, aur kisi ne kabhi like count audit nahi kiya."], ["HyperLogLog for unique viewers", "uniques ke liye sahi structure, chhoti aur well understood error ke saath, aur exactly wahi jiske liye approximate requirement thi."]],
+        pros: ["Ek logical counter ko kayi keys mein banta hot key hi khatam kar deta hai.", "Reads chand chhoti values ka sum hain, post ke saath cache hote hain.", "Yeh stream se wapas ban sakta hai, isliye source of truth nahi, cache hai."],
+        cons: ["Number approximate aur thoda late hai, koi na koi ise saal mein ek baar bug bolega.", "Shards sum karna ek value padhne se thoda mehenga hai."],
+        cost: "Har post ke liye chand chhoti values, sirf un posts ke liye jo actually dekhe ja rahe hain. Long tail evict aur recompute ho sakta hai.",
+        fails: "Stream lag kare aur site ka har count das minute stale ho jaaye. Kuch nahi tootta. Optimistic client rendering ka matlab hai users apna like turant dekhte hain, jo unke liye ek hi count matter karta hai.",
+        say: "Counts derived, sharded aur approximate hain, aur client pe optimistically echo hote hain. Yahi combination hai jo product ke sabse frequent write ko lagbhag free bana deta hai." }
+    ],
+
+    flowsIntro: "Do paths, aur dilchasp baat yeh hai ki dono ki pricing kitni alag hai. Post karna tumhare liye sasta hai aur system ke liye mehenga; padhna tumhare liye mehenga hai aur per user sasta.",
+
+    flows: [
+      { n: "Feed load karna",
+        steps: [
+          ["App ek page maangta hai, pichhle page ka cursor bhejte hue, offset nahi, kyunki scroll karte waqt feed badalti rehti hai."],
+          ["Feed service feed cache se candidate ids padhta hai. Ek range read, ek hi node pe sharded."],
+          ["Saath hi parallel mein un chand celebrities ke recent posts khinchta hai jinhe yeh user follow karta hai, jo bahut hot rows pe ek chhoti query hai."],
+          ["Dono sets merge karta hai, chand sau candidates ranker ko bhejta hai, aur top pachaas leta hai. Ranker timeout ho to time se sort kar ke aage badh jaata hai."],
+          ["Un pachaas ids ko ek batch call mein posts mein hydrate karta hai, jo deleted, private ya blocked hai use drop karte hue. Yahi jagah hai jahan authorisation actually hoti hai."],
+          ["Counter store se counts jodta hai aur metadata plus CDN URLs return karta hai. Client har image edge se khinchta hai, tumse nahi."]
+        ] },
+      { n: "Post publish karna",
+        steps: [
+          ["Client image ko seedha object storage pe upload karta hai, ek key tak scoped presigned URL se."],
+          ["Yeh post service ko key aur caption ke saath call karta hai. Ek row likhi jaati hai, ek fan-out event ke saath, ek hi transaction mein ek outbox mein."],
+          ["Client ko 201 milta hai aur post turant author ke apne feed mein locally dikha diya jaata hai, kyunki fan-out abhi hua nahi."],
+          ["Ek publisher outbox padhta hai aur event stream pe daalta hai. Ab post exist karta hai aur guarantee hai ki kabhi na kabhi fan out hoga."],
+          ["Ek worker follower count check karta hai. Threshold se neeche, post id har active follower ki list mein push karta hai. Upar hone pe kuch nahi karta, aur post read path se hi mil jaayega."],
+          ["Image processing, thumbnails aur safety classification isi event se chalte hain, posting path se poori tarah bahar."]
+        ] },
+      { n: "Ek like",
+        steps: [
+          ["Client bina kisi network call ke turant filled heart dikha deta hai. Yahi wajah hai ki baaki poora path dheema ho sakta hai."],
+          ["Request likes table mein ek row likhti hai, jo state ko durable banati hai aur user ko unlike karne deti hai."],
+          ["Wahi action stream pe ek event emit karta hai, jo count ko move karta hai."],
+          ["Ek aggregator us post ke kayi shards mein se ek ko increment karta hai. Dikhaya jaane wala count sum hai, chand seconds ke liye cached."]
+        ] }
+    ],
+
+    tradeoffsIntro: "Inmein se pehla poori problem hai. Baaki wahi hain jo isko solve karne ke baad follow karte hain.",
+
+    tradeoffs: [
+      { a: ["Fan-out on write", "Reads sirf ek list lookup hain. Ek post har follower ke liye ek write ka cost leta hai, aur famous accounts ke liye yeh unbounded hai."],
+        b: ["Fan-out on read", "Posts sirf ek write hain. Har feed load ek followee ke liye ek query ka cost leta hai, aur active users ke liye yeh unbounded hai."],
+        flip: "author follower threshold se upar ho, jo exactly wahi hai jo hybrid karta hai. Insight yeh hai ki yeh global choice nahi, per account choice hai, aur reader dono ko merge karta hai." },
+      { a: ["Store post ids in the feed cache", "Ek entry ke solah bytes, kul 4 TB, aur ek page ke liye ek hydration call."],
+        b: ["Store whole posts in the feed cache", "Koi hydration call nahi. Pachaas guna zyada memory, aur caption edit karne pe lakhon copies rewrite karni padti hain."],
+        flip: "post chhota aur immutable ho, jaise ek stock tick ya score update. Tab denormalise karna sasta hai aur extra hop ke layak nahi." },
+      { a: ["Rank at read time over a candidate set", "Model changes turant ship hote hain. Reader specific signals available hote hain. Sabse busy endpoint pe latency ka cost lagta hai."],
+        b: ["Rank at write time and store the order", "Reads trivial hain. Har model change ek poora recompute hai, aur score store hote hi stale ho jaata hai."],
+        flip: "ordering personalised na ho, jaise ek global trending list. Tab ek baar compute karo aur sab wahi answer padhen." },
+      { a: ["Approximate, sharded counters", "Koi hot key nahi, koi contention nahi, ek number jo seconds late aur thoda galat hai."],
+        b: ["Exact counters in a transaction", "Ek number jo audit ho sake, sabse zyada dekhe jaane wale rows pe ek lock, aur ek dheema like button."],
+        flip: "number paisa ho. Ad impressions ko exact nightly batch source of truth ke roop mein milta hai, approximate counter live view ke liye rakha jaata hai. Do systems, do purposes, aur yeh bolna zaroori hai ki kaunsa kis liye hai." }
+    ],
+
+    next: [
+      "<b>Backfill on follow.</b> Kisi ko follow karne pe uske recent posts dikhne chahiye. Yeh follow time pe ek chhota fan-out on read hai, aur isko rate limit chahiye warna bulk import ek fan-out storm ban jaata hai.",
+      "<b>Feed diversity.</b> Seedhi ranking se ek hi account ki barah photos ek saath dikh jaati hain. Isse theek karna ek re-ranking pass hai, aur yeh ek product decision hai jo ek sort ke andar chhupa hai.",
+      "<b>Multi region.</b> Feed cache regional hai aur follow graph global. Local padho, graph replicate karo, aur naye posts pe chand seconds ki cross region lag maan lo.",
+      "<b>Deletion that actually cleans up.</b> Aaj deleted post hydration pe filter hota hai aur lakhon lists mein reh jaata hai. Yeh chalta hai, par isko eventually ek background reaper chahiye hoga."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -1682,7 +2392,240 @@ const DESIGN = [
     ["DG", "https://www.designgurus.io/course-play/grokking-the-system-design-interview/doc/design-uber-backend", "Design Gurus, Uber backend", "H"],
     ["GFG", "https://www.geeksforgeeks.org/dsa/geohashing-and-quadtrees-for-location-based-services/", "Geohashing and quadtrees", "M"],
     ["GH", "https://github.com/ashishps1/awesome-system-design-resources", "Awesome system design resources", "E"]
-  ]
+  ],
+
+  hi: {
+    one: "Do mushkil cheezein, aur dono ulti direction mein kheenchti hain. Driver locations ek firehose hain jinhe koi durable nahi chahta, aur match ek chhota sa transaction hai jo ek driver ko kabhi do riders ko nahi dena chahiye. Is design ki lagbhag har galti tab hoti hai jab dono ko ek jaisa treat kiya jaata hai.",
+  
+    brief: {
+      why: "Yahan ka trap hai ek hi system design kar dena. Location stream 250,000 writes per second ka data hai jo chaar second baad bekaar ho jaata hai, aur matching 900 requests per second ka data hai jiske liye aap court tak jaoge. Dono ko ek hi database mein daaloge to ya to us durability ka paisa doge jo chahiye hi nahi, ya woh paisa kho doge jo chahiye tha. Pehle do minute mein inhe alag kar dena hi aadha kaam hai.",
+      functional: [
+        "<b>Ride request karo.</b> Rider pickup point se car maangta hai, aur use driver, estimate aur arrival time milta hai.",
+        "<b>Match karo.</b> System paas ke available drivers dhoondhta hai, trip offer karta hai, aur ek hi driver assign karta hai.",
+        "<b>Track karo.</b> Dono taraf ke log poori trip mein map par car ko chalte dekhte hain.",
+        "<b>Charge karo.</b> Trip khatam hoti hai, fare compute hota hai, aur paisa move hota hai. Sirf ek baar."
+      ],
+      out: ["routing aur ETA engine khud", "driver onboarding aur background checks", "pooled rides", "food delivery", "fraud system"],
+      nfr: [
+        ["Match latency", "under 5 seconds end to end", "Isme insaan ke accept dabane ka wait bhi shamil hai, aur zyada time wahi jaata hai. System ka apna budget kuch sau milliseconds hai."],
+        ["Assignment", "exactly one driver per ride, always", "Ek hi jagah jahan strong consistency par koi samjhauta nahi. Ek car mein do riders akhbaar ki khabar hai, incident report nahi."],
+        ["Location freshness", "within about 5 seconds", "Jo car uchhal kar jump kare woh lag karti car se buri hai. Yeh freshness ki zaroorat hai, durability ki nahi, aur poora design isi farak par tika hai."],
+        ["Availability", "99.99% on request and track", "Baarish mein footpath par khada rider ke paas koi fallback nahi hota. Dhyan do ki location tier data kho sakta hai aur product phir bhi chalta hai."],
+        ["Money", "charged exactly once, auditable", "Payments ko idempotency keys aur immutable ledger milta hai. Yahan baaki sab kuch approximate ho sakta hai; yeh nahi."]
+      ],
+      numbers: [
+        ["Online drivers", "about 1M at peak", "Registered shayad 5M mein se. Concurrent number hi har cheez ka size decide karta hai."],
+        ["Location pings", "about 250k per second", "Ek million drivers, har chaar second mein ek ping. Yeh design ka sabse bada number hai, lagbhag teen sau guna bada."],
+        ["Ride requests", "about 900 per second at peak", "Roz 25 million rides, shaam ko strong peak ke saath. Bahut chhota. Dono numbers saath bol do to design khud samajh aa jaata hai."],
+        ["The ratio", "about 280 to 1", "Locations aur matches ka ratio. Do systems, do tarah ki guarantees, do technologies. Jo bhi inhe ek jaisa treat kare woh ek ke liye galat hoga."],
+        ["Location volume if persisted", "about 2 TB per day", "250k pings, har ek lagbhag 100 bytes. Aur kuch second baad woh bekaar hai, isliye live copy memory mein hai aur sirf sampled trail rakhi jaati hai."],
+        ["Trip storage", "about 18 TB per year", "Roz 25M trips, har ek do-teen kilobytes. Durable, immutable, aur hamesha ke liye, kyunki yeh paisa hai aur saboot bhi."],
+        ["Search radius", "about 3 km, a few hundred drivers", "Isliye geospatial index ko sirf chhota sa set return karna padta hai. Index candidate list ko bound karne ke liye hai, sort karne ke liye nahi."]
+      ],
+      numbersNote: "<b>250,000 against 900.</b> Kuch bhi draw karne se pehle yeh do numbers board par saath likh do. Yeh batate hain ki firehose kabhi us database ko na chhue jisme trip hai, aur matching path zyada careful reh sakta hai kyunki uske muqable woh lagbhag khaali hai."
+    },
+  
+    stagesIntro: "Chhe stages. Pehle do us query ko theek karte hain jo scale nahi ho sakti, beech ke do do workloads ko alag karte hain jo kabhi ek machine par nahi hone chahiye, aur aakhri do paisa handle karte hain aur is baat ko ki demand poore shehar mein barabar nahi faili hoti.",
+  
+    stages: [
+      { t: "0. Ask every driver where they are",
+        pressure: "Abhi kuch nahi. Naive matcher draw karne layak hai kyunki uski failure conceptual nahi quantitative hai, aur uska fix hi is problem ka ekmaatra asli naya idea hai.",
+        say: "Har driver ki ek row hai jisme latitude aur longitude hai. Sabse paas wala dhoondhne ke liye sabse distance nikalo aur sort karo. Yeh sahi hai, ek hi query hai, aur yahi woh version hai jo sab pehle likhte hain.",
+        breaks: "Har request par ek million rows scan, 900 baar per second, jabki wahi rows 250,000 baar per second update ho rahi hain. Scan kisi cheez mein quadratic nahi hai aur phir bhi umeed nahi, kyunki latitude par B-tree aur longitude par B-tree do dimensional sawaal ka jawab nahi de sakte: latitude par index aapko woh saare drivers deta hai jo ek band mein hain, aur woh band poori duniya ko cross karta hai." },
+  
+      { t: "1. Index by place, not by identity",
+        pressure: "Do dimensions mein ek range query. Yeh problem ka ekmaatra asli specialised computer science hai, aur fix hai do dimensions ko ek mein badal dena.",
+        say: "Duniya ko hierarchical grid se cells mein kaato, geohash, S2 ya H3, taaki cell ek single string ho aur paas ki jagahein ek prefix share karein. Driver ki location ek cell id ban jaati hai. Paas ke drivers dhoondhna ab yeh hai: rider ka cell nikalo, uske aath neighbours lo, woh nau lists padho, phir exact distance se filter karo. Do dimensions ek ho gaye, to normal index chalta hai, aur candidate set ek million ki jagah kuch sau ka hai.",
+        breaks: "Index ab sahi hai, par woh ek aise database mein hai jo 250,000 writes per second le raha hai, aur us data ki umar chaar second hai. Har write ek durable, replicated, logged transaction hai ek aise fact ke liye jo flush hone se pehle hi galat ho chuka hoga." },
+  
+      { t: "2. Get the firehose off the database",
+        pressure: "Do sau pachaas hazaar writes per second jo fresh chahiye aur restart survive karne ki zaroorat nahi. Yeh database workload nahi hai, aur iske liye database ke daam dena yahan ki sabse mehngi galti hai.",
+        say: "Drivers ek persistent connection se gateway se jude rehte hain jo pings ingest karta hai. Live index memory mein hai, cell ke hisaab se key kiya hua, tees second ki TTL ke saath, to offline jaane wala driver bina kisi row likhe gayab ho jaata hai. Ek sampled copy stream mein jaati hai trip trail, analytics aur disputes ke liye, shayad das mein ek ping. Durable store sirf state changes dekhta hai: online, offline, on a trip.",
+        breaks: "Matching mein abhi bhi woh bug hai jo matter karta hai. Ek hi cell mein do riders ek hi pal mein ek hi paas ka driver padhte hain, dono offer karte hain, aur driver dono accept kar leta hai. Index ek cache hai aur cache arbitrate nahi kar sakta." },
+  
+      { t: "3. One driver, one rider, and the offer protocol",
+        pressure: "System ki ekmaatra strong consistency requirement. Baaki sab kuch stale ho sakta hai; yeh nahi, aur iske liye cache par compare and set nahi, durable store par transaction chahiye.",
+        say: "Index candidates deta hai, straight line distance ki jagah estimated time of arrival se ranked, kyunki nadi ko parwah nahi ki aap kitne paas ho. Offer ek baar mein ek driver ko jaata hai, chhoti deadline ke saath, aur acceptance ek conditional write hai: trip ka driver isi driver par set karo sirf agar woh abhi null hai, aur driver ka current trip bhi sirf agar woh null hai, ek hi transaction mein. Doosra acceptance condition par fail hota hai, driver ko bata diya jaata hai ki ride ja chuki, aur kahin koi lock nahi lagana pada.",
+        breaks: "Trip khatam hoti hai aur paisa move karna hai. Payment kisi aur ke system ko call hai, woh bina bataye time out ho sakta hai ki chala ya nahi, aur use retry karke double charge kabhi nahi hona chahiye." },
+  
+      { t: "4. The trip, the money, and the outbox",
+        pressure: "Ek external system jo us tarah fail ho sakta hai jisse distributed systems sabse zyada nafrat karte hain: unknown outcome. Do baar charge karna der se charge karne se bura hai, isliye yeh poora path safely retryable hone ke around design hai.",
+        say: "Trip khatam karna final state aur ek charge intent ko ek hi transaction mein likhta hai, ek outbox table mein. Ek worker outbox padhta hai aur payment provider ko trip id se bani idempotency key ke saath call karta hai, to timeout ke baad retry guaranteed wahi charge hai, doosra nahi. Trip ek state machine hai, ek row, in-place arithmetic nahi, to sab kuch baad mein auditable hai, aur fare par jhagda hone par asli zaroorat yahi hoti hai.",
+        breaks: "Demand ek shehar mein ya ek din mein barabar nahi faili hoti. Stadium khaali hota hai aur ek cell mein das hazaar riders aur chalis drivers ho jaate hain, jabki index aur matcher khushi se un sab riders ko wahi chalis candidates serve karte rehte hain." },
+  
+      { t: "5. Hot cells, and pricing as the pressure valve",
+        pressure: "Bahut zyada spatial skew. Ab tak ka design uniform hai, aur shehar nahi: Friday raat nau baje load kuch cells mein concentrate ho jaata hai, aur un cells mein matching search problem nahi allocation problem hai.",
+        say: "Sab kuch city ke hisaab se shard hota hai, kyunki ride kabhi ek city cross nahi karti aur kuch global nahi chahiye. Hot cell ke andar do second ke window mein batches mein matching, ek ek request ko greedily karne se behtar hai, kyunki woh poore set ko optimal ke zyada paas assign kar sakti hai. Aur surge yahan pricing gimmick nahi, feedback loop hai: aggregator har cell mein open requests aur available drivers ka ratio dekhta hai, aur price hi woh ekmaatra lever hai jo supply ko us cell mein kheenchta hai, bas jo hai use ration nahi karta." }
+    ],
+  
+    boxesIntro: "Gyarah components. Do samajhne layak hain: live geo index, jo jaan-boojhkar durable nahi hai, aur trip store, jo jaan-boojhkar fast nahi hai. Baaki sab in dono ko alag rakhne se nikalta hai.",
+  
+    boxes: [
+      { job: "Ride request karta hai, phir map par car ko chalte dekhta hai.",
+        why: "Yeh isliye draw hai kyunki tracking connection ek asli design element hai: rider poori trip ke liye ek open channel rakhta hai, aur woh us request se alag traffic shape hai jisne trip shuru ki.",
+        forced: "Request ke liye stage 0, aur connection ke liye tracking requirement.",
+        alts: [["Polling for the driver's position", "simple hai, aur iska matlab hai car jhatke se chalti dikhti hai, aur poll rate ka kharcha trip par har rider ke liye dena padta hai."]],
+        pros: ["Push channel kam message rate par smooth movement deta hai.", "Client updates ke beech interpolate karta hai, to network chaar second ke samples bhejta hai aur user ko continuous motion dikhta hai."],
+        cons: ["Ek aur stateful connection tier chalana padta hai.", "Interpolation ka matlab hai screen par car ek meethi kalpana hai, jo tab matter karta hai jab rider check kar raha ho ki driver sach mein paas hai ya nahi."],
+        cost: "Har active trip par ek connection, jo har driver par ek se bahut kam hai.",
+        fails: "Lift ya tunnel mein connection tootta hai. App polling par fall back karta hai, aur trip par koi asar nahi padta, kyunki tracking state ka ek view hai, state khud nahi.",
+        say: "Chaar second ke samples bhejo aur client par interpolate karo. Network se sixty positions per second dilwane ki koshish kabhi mat karo sirf isliye ki marker smooth dikhe." },
+  
+      { job: "Har kuch second mein apni location ping karta hai aur deadline ke andar offers ka jawab deta hai.",
+        why: "Yeh system ki sabse badi data stream ka source hai, aur trip accept kar sakne wala ekmaatra participant.",
+        forced: "Stage 2.",
+        alts: [["Pinging faster, once a second", "firehose chaar guna, aisi accuracy ke liye jo koi mehsoos nahi karta, kyunki client waise bhi interpolate kar raha hai."], ["Pinging only when asked", "firehose hat jaata hai, aur index tab khaali hota hai jab uski sabse zyada zaroorat hoti hai."], ["Adaptive rate", "sahi jawab: khadi ho to kam ping, chal rahi ho ya trip par ho to zyada. Yeh design ke sabse bade number mein free kami hai."]],
+        pros: ["Adaptive rates firehose ko aadhe se zyada kam kar dete hain, bina kisi mehsoos hone waali loss ke.", "Kai positions ek message mein batch karne se thodi latency lagti hai aur overhead bahut kam hota hai."],
+        cons: ["Battery aur mobile data asli product constraint hain, aur drivers dhyan dete hain.", "Location spoof ho sakti hai, aur us ek line ke peeche poori fraud problem hai."],
+        cost: "Yeh woh 250,000 pings per second banata hai jinhe survive karne ke liye baaki design bana hai.",
+        fails: "Pings ruk jaate hain, tunnel ya dead battery se. TTL driver ko tees second ke andar index se expire kar deti hai, to unhe offers milna band ho jaata hai. Na cleanup job, na repair karne ko state.",
+        say: "Adaptive ping rate, batched, aur client aakhri kuch positions rakhe taaki reconnect par jump ki jagah chhoti trail bheji ja sake." },
+  
+      { job: "Ek million driver connections hold karo, pings ingest karo, aur offers usi pipe se wapas bhejo.",
+        why: "Offer ko ek second se kam mein ek specific driver tak pahunchna hai, matlab kisi ko us driver ka connection pakde rehna hai, aur woh wahi ho sakta hai jo pehle se uske pings le raha hai.",
+        forced: "Pings ke liye stage 2, offers ke liye stage 3.",
+        alts: [["Plain HTTP posts for pings and push notifications for offers", "chalta hai, aur offer mein kuch second ki latency jod deta hai, theek us waqt jab driver sochta hai ki accept kare ya nahi."], ["Separate gateways for ingest and for offers", "saaf separation hai, har driver par do connection tiers, aur bina faayde ke doguna connection cost."]],
+        pros: ["Ek connection dono directions carry karta hai, to offer turant pahunchta hai.", "Ping ke content ke hisaab se stateless: forward karta hai aur bhool jaata hai.", "Load mein pings drop karne ki natural jagah hai, aur ek ping drop karna sach mein harmless hai."],
+        cons: ["Ek million connections wala stateful tier, to deploys aur reconnect storms asli kaam hain.", "Yeh sabse badi stream aur sabse time-sensitive push, dono ke critical path par hai."],
+        cost: "Ek million connections aur dhai lakh messages per second. Connections aur packet rate se size hota hai, CPU se nahi.",
+        fails: "Yeh overload ho jaata hai aur peeche girne lagta hai. Sahi behaviour hai pings shed karna, jo akele mein bekaar hain, aur offer kabhi shed na karna, jo isme ekmaatra latency-sensitive message hai. Yeh priority zor se bolo.",
+        say: "Pings droppable hain, offers nahi. Yeh priority gateway mein build karne se hi woh overload hokar bhi kaam karta hai." },
+  
+      { job: "Ek cell diya ho to abhi usme kaun se drivers hain, list karo. Memory mein, expire hone waala, jaan-boojhkar durable nahi.",
+        why: "Poori matching problem cell se ek bounded lookup par aa jaati hai, aur data ki useful life lagbhag chaar second hai. Durability ka matlab hai aisi cheez persist karne ka paisa dena jo pehle se galat hai.",
+        forced: "Stage 1 ne index banaya, stage 2 ne use database se bahar nikala.",
+        alts: [["PostGIS or a spatial index in the main database", "sach mein achha aur bilkul sahi, aur woh 250,000 durable writes per second us machine par daal deta hai jisme aapki trips hain."], ["Redis geospatial commands", "bilkul yahi, off the shelf, aur naam lekar dene ke liye bahut defensible jawab."], ["A quadtree rebuilt periodically", "restaurants jaise static data ke liye behtar. Yahan bekaar, kyunki moves ki lagataar stream ke neeche tree rebalance karna sirf cost hai, faayda nahi."]],
+        pros: ["Cell ids do dimensional query ko prefix lookup bana dete hain, to normal structures chalte hain.", "TTL ka matlab hai offline jaane par na write, na cleanup.", "Ise kho dene ka cost lagbhag tees second ki degraded matching hai jab tak pings ise bhar nahi dete, isliye isko replication nahi chahiye."],
+        cons: ["Cells chaukor hain aur shehar nahi, to dense cell mein hazaaron drivers hote hain aur khaali mein koi nahi. Hierarchical grids se level badal sakte ho, aur ek use karne ki sabse badi wajah yahi hai.", "Yeh stale ho sakta hai, isliye yeh candidates banata hai, decisions kabhi nahi."],
+        cost: "Lagbhag ek million chhoti entries, har chaar second mein dobara likhi jaati hain. Cell prefix se sharded, jisse ek city ka data ek node par bhi rehta hai.",
+        fails: "Ek stadium cover karne wale cell mein das hazaar drivers hain aur lookup sab return kar deta hai. Dense areas mein finer cell level use karo, aur candidate list cap karo, kyunki sirf kuch best chahiye.",
+        say: "Memory mein, cell se keyed, tees second TTL, cell prefix se sharded. Yeh logon kahan hain uska cache hai, isko galat hone ki chhoot hai, aur yeh kabhi kuch decide nahi karta." },
+  
+      { job: "Pings ki sampled copy un sab ko do jo matching nahi hain: trip trail, analytics, ETA training, dispute evidence.",
+        why: "Kai consumers yeh data chahte hain aur koi bhi real time mein nahi chahta. Ek log sabko copy de deta hai bina kisi ke ingest path ko chhue.",
+        forced: "Stage 2. Iske bina ya to pings poori tarah phenk diye jaate hain aur aap sabit nahi kar sakte ki car kahan gayi, ya woh database mein jaate hain aur design dhah jaata hai.",
+        alts: [["Persisting every ping to the trip store", "roz 2 TB aise data ka jiski useful life chaar second hai, us database mein jisme aapka paisa hai."], ["Keeping nothing", "sabse sasta, aur phir rider route par dispute karta hai aur aapke paas dikhane ko kuch nahi."]],
+        pros: ["Das mein ek sampling volume ko ek order of magnitude kam kar deti hai aur woh kuch nahi khoti jo koi dekhta hai.", "Ek stream, kai independent consumers, koi bhi gateway ko slow nahi kar sakta.", "Replayable, to kharab trail computation baad mein theek ho sakti hai."],
+        cons: ["Sabse bade data flow ke path mein ek aur distributed system.", "Sampling ek aisa decision hai jo baad mein undo nahi kar sakte."],
+        cost: "Das se ek reduction ke baad lagbhag 25,000 sampled events per second, kuch ghante retain.",
+        fails: "Consumers peeche reh jaate hain aur trails late aate hain. Matching, tracking ya payment par koi asar nahi, aur sampled path ko live index se alag rakhne ki poori wajah yahi hai.",
+        say: "Sample karo. Har ping kisi ko nahi chahiye, aur jo matter karte hain, active trip ke pings, unhe khadi car ke pings se zyada rate par sample kiya ja sakta hai." },
+  
+      { job: "Request lo, chhoti candidate list banao, drivers ko ek ek karke offer karo, aur exactly ek ko assign karo.",
+        why: "Yeh ekmaatra component hai jo irreversible decision leta hai, isliye ekmaatra jise transaction chahiye.",
+        forced: "Stage 0, aur stage 3 mein iska kaam picking se badalkar arbitrating ho gaya.",
+        alts: [["Offering to all nearby drivers and taking the first acceptance", "tez hai, aur iska matlab hai ki kai drivers ek ride ke liye kaam chhod dete hain, aur drivers ko reflexively accept karna sikhata hai."], ["Assigning without an offer", "koi race hi nahi, aur drivers aisa system nahi maanenge jo unki choice hata de, aur design ko refusal phir bhi model karna padta hai."], ["Batched matching over a short window", "dense areas mein behtar allocation, ek do second ki latency ke badle. Bilkul wahan worth it jahan greedy approach sabse kharab karta hai."]],
+        pros: ["Candidate set kuch sau ka hai, to ranking smart ho sakti hai: time of arrival, straight line distance nahi.", "Assignment ek conditional write hai, to na lock, na coordinator.", "Rejections sasti hain: agle candidate par chalo."],
+        cons: ["Offer timeouts latency ka ek floor hain jo engineering se nahi hatta, kyunki loop mein insaan hai.", "Batched mode aur greedy mode do code paths hain aur dono sahi hone chahiye."],
+        cost: "Peak par 900 requests per second. Lagbhag kuch nahi, aur isi se woh careful reh paata hai.",
+        fails: "Ek driver theek tab accept karta hai jab offer expire ho raha hai aur use reassign kar diya jaata hai. Conditional write ka matlab hai do mein se exactly ek outcome jeet-ta hai aur doosre ko saaf bata diya jaata hai. Ise kabhi client par timeout se resolve mat karo.",
+        say: "Index mujhe candidates deta hai, store decision leta hai. Trip row aur driver row par ek transaction mein conditional update, aur haarne wale ko race ki jagah saaf rejection milta hai." },
+  
+      { job: "Ek trip ki ek durable row, jo state machine se guzarti hai, aur woh outbox jo payment chalata hai.",
+        why: "Yeh paisa aur saboot hai. Design mein ek hi jagah jahan khoya hua write recover nahi ho sakta.",
+        forced: "Assignment ke liye stage 3, outbox ke liye stage 4.",
+        alts: [["Keeping trip state in a cache with periodic flushes", "tez hai, aur restart par trips kho deta hai, matlab paisa kho dena aur ek aisi behes jo aap jeet nahi sakte."], ["An event sourced trip", "yahan sach mein achha, kyunki trip sach mein events ka sequence hai, aur paintalis minute ke jawab ke liye zyada machinery hai. Naam lene layak."]],
+        pros: ["Strongly consistent, transactional, aur city se shardable kyunki trip kabhi ek se bahar nahi jaati.", "Explicit transitions wali state machine illegal states ko represent hi nahi hone deti, jo kisi bhi index se zyada kimti hai.", "Write rate kam hai, to synchronous replication afford kar sakte ho."],
+        cons: ["Assignment path par sabse slow cheez yahi hai, aur hoga hi, kyunki assignment ko sahi yahi banata hai.", "City se sharding ka matlab hai ek city ek failure domain hai, jo aam taur par chahiye aur kabhi kabhi nahi."],
+        cost: "Roz 25 million rows, har ek kuch kilobytes, hamesha ke liye rakhi. Modest.",
+        fails: "Ek city ka shard unavailable hai. Woh city rides shuru nahi kar sakti, aur baaki sab cities par koi asar nahi. Yahi blast radius wajah hai trip id ke bajay city se shard karne ki.",
+        say: "City se sharded, sirf state machine transitions, aur payment intent final state ke saath usi transaction mein likha. Agar in dono ko crash alag kar sakta hai, to aapke paas ek trip hai jo khatam hui aur kabhi charge nahi hui." },
+  
+      { job: "Profile, vehicle, documents, aur woh state jo durable honi chahiye: offline, available, on trip.",
+        why: "Availability durable honi chahiye bhale hi location na ho. Kaun kahan hai yeh kho dene ka cost chaar second hai; yeh kho dene ka ki woh trip par hai, double assignment.",
+        forced: "Stage 2, jab location aur state ka farak hi point ban gaya.",
+        alts: [["Keeping availability in the same cache as location", "ek system, aur ab cache eviction ka matlab hai ki trip par driver doosri trip ke liye available ho jaata hai."]],
+        pros: ["Write rate kam hai, kyunki state din mein kuch baar badalti hai jabki location har chaar second mein.", "Current trip id par unique constraint exactly once assignment ka doosra half hai."],
+        cons: ["Yeh assignment transaction mein ek aur store hai, to ya to ise trip store ke saath co-locate karo ya do step protocol chahiye."],
+        cost: "5 million rows, bahut kam write rate, har assignment par read.",
+        fails: "Driver trip khatam karta hai aur state update fail ho jaata hai, to use kabhi doosra offer nahi milta. Trip store se reconcile karo, jo is baat ka source of truth hai ki trip open hai ya nahi.",
+        say: "Location cache hai, state database hai. Kehne ka sabse saaf tareeka: fact kho dene ka cost seconds hai to cache, aur paisa hai to database." },
+  
+      { job: "Paisa move karo. Kisi aur ka system, network par, aur outcome unknown ho sakta hai.",
+        why: "Yeh isliye draw hai kyunki yeh external hai aur ek specific tareeke se unreliable, jo uske around ka code shape karta hai: timeout aapko kuch nahi batata ki charge hua ya nahi.",
+        forced: "Stage 4.",
+        alts: [["Charging synchronously at the end of the trip", "rider ek third party ka wait karta hai, aur timeout ke baad koi safe action nahi bachta: retry karo to double charge ka risk, na karo to free ride ka."], ["Charging optimistically at the start", "failure end se hat jaata hai aur refunds ban jaate hain, jo zyada bure hain."]],
+        pros: ["Trip id se bani idempotency key retry ko bina shart safe bana deti hai, jo yahan ekmaatra zaroori property hai.", "Asynchronous charging ka matlab hai rider ki trip tab khatam hoti hai jab trip khatam hoti hai."],
+        cons: ["Failures ek business process hain, exception nahi: cards decline hote hain, aur uske liye retry schedule aur ek human path chahiye.", "Ab aap revenue ke liye kisi aur ki availability par depend karte ho."],
+        cost: "Roz 25 million charges, jinme se har ek retry ho sakta hai aur duplicate nahi hona chahiye.",
+        fails: "Call time out hota hai. Worker wahi idempotency key ke saath retry karta hai. Provider ya to charge ek baar karta hai ya jo pehle kar chuka use report karta hai. Key hi unknown outcome ko survivable banati hai.",
+        say: "Idempotency key trip id ke barabar, outbox se backoff ke saath retried, aur ledger entry confirmation par likhi jaaye, attempt par nahi. Idempotency key kabhi timestamp ya retry count se mat banao." },
+  
+      { job: "Ride se pehle fare quote karo, aur uske baad final compute karo.",
+        why: "Yeh alag isliye hai ki quote fast chahiye aur final fare sahi, aur pricing rules matching logic se kahin zyada badalte hain.",
+        forced: "Stage 5, surge ke saath.",
+        alts: [["Pricing inside the matching service", "ek service kam, aur ab har pricing experiment us component ko redeploy karta hai jo drivers assign karta hai."]],
+        pros: ["Independently deploy hota hai, jo matter karta hai kyunki pricing har hafte badalti hai aur matching nahi.", "Quote ko ek chhote window ke liye cell ke hisaab se cache kiya ja sakta hai, kyunki saath khade do riders ke beech woh mushkil se badalta hai."],
+        cons: ["Trip se pehle diya gaya quote aur baad mein charge kiya gaya fare mel khane chahiye, warna complaints aate hain. Quote ko maan lo jab tak route materially na badle, aur quote ko trip ke saath store karo."],
+        cost: "Har request par ek quote aur har trip par ek fare. Chhota.",
+        fails: "Request ke waqt yeh unavailable hai. Ride se mana karne ki jagah cached ya base fare par fall back karo, kyunki thoda galat price bilkul service na hone se behtar hai.",
+        say: "Quote dete hi use trip par store karo. End mein price zero se dobara compute karna hi tareeka hai kisi ko wada kiye se zyada charge karne ka." },
+  
+      { job: "Har cell mein, har minute, open requests ko available drivers ke saamne dekho aur ek multiplier publish karo.",
+        why: "Spatial skew supply problem hai, search problem nahi. Kitni bhi indexing us driver ko paida nahi karti jo hai hi nahi, aur price hi ekmaatra lever hai jo ek ko cell mein kheench laata hai.",
+        forced: "Stage 5.",
+        alts: [["A fixed price everywhere", "sunne mein fair, aur iska matlab surge mein sab wait karte hain aur koi wait na karne ke liye pay karna choose nahi kar sakta, aur drivers ke paas demand ki taraf jaane ki koi wajah nahi."], ["Queueing riders instead of pricing", "kuch markets mein aur regulation se use hota hai, aur yeh kami ko fix nahi karta, ration karta hai."]],
+        pros: ["Stream mein pehle se maujood data par chhoti windowed aggregation.", "Yeh ek feedback loop hai: multiplier driver behaviour badalta hai, jo ratio badalta hai, jo multiplier badalta hai."],
+        cons: ["Feedback loops oscillate karte hain. Damp karo, cap karo, aur multiplier ko kabhi drivers se tez mat badalne do.", "Yeh product ka sabse public roop se napasand kiya jaane wala component hai, aur ise explainable hona chahiye."],
+        cost: "Har cell, har minute ek windowed count. Jitni behes yeh karwata hai uske hisaab se bahut sasta.",
+        fails: "Yeh oscillate karta hai: ooncha multiplier drivers ko kheenchta hai, multiplier gir jaata hai, woh chale jaate hain, phir spike. Kuch minutes par smooth karo aur change ki rate cap karo.",
+        say: "Har cell, har minute, smoothed aur capped. Yeh ek control loop hai, to main ise kisi bhi control loop jitni care se design karunga: pehle damping, phir setpoint." }
+    ],
+  
+    flowsIntro: "Teen paths, aur dhyan do ki inka daam kitna alag hai. Ping path bahut bada aur sasta hai, match path chhota aur careful, aur money path chhota aur paranoid.",
+  
+    flows: [
+      { n: "A location ping",
+        note: "Ek second mein do sau pachaas hazaar aise, aur har ek ko fail hone ki ijazat hai.",
+        steps: [
+          ["Driver app apne open connection par position bhejta hai, agar aakhri kuch hain to unke saath batched.", "async"],
+          ["Gateway cell id compute karta hai aur driver ko live index mein us cell mein fresh TTL ke saath likhta hai.", "async"],
+          ["Das mein ek ping stream mein bhi jaata hai, trip active ho to zyada rate par, trail aur analytics ke liye.", "async"],
+          ["Kuch durable nahi likha jaata. Agar poora path is ping ko drop kar de, to agla chaar second mein aa jaata hai.", "async"]
+        ] },
+      { n: "Requesting and matching a ride",
+        steps: [
+          ["Rider pickup point se ride request karta hai. Matching service pricing se quote maangti hai aur use request ke saath store karti hai.", "sync"],
+          ["Woh pickup cell compute karti hai, use aur uske neighbours ko live index se padhti hai, aur kuch sau candidates paati hai.", "sync"],
+          ["Woh available drivers tak filter karti hai aur estimated arrival time se rank karti hai, straight line distance se nahi, kyunki nadi chhota detour nahi hoti.", "sync"],
+          ["Woh best candidate ko driver gateway se offer karti hai, pandrah second ki deadline ke saath. Rider ko searching dikhta hai.", "sync"],
+          ["Driver accept karta hai. Service ek transaction karti hai: trip ka driver set karo jahan woh null hai, aur driver ki trip set karo jahan woh null hai. Exactly ek acceptance jeet sakta hai.", "sync"],
+          ["Agar koi accept nahi karta, agle candidate par jao. Agar cell mein supply khatam hai, to yahi woh loop hai jise todne ke liye surge hai.", "sync"]
+        ] },
+      { n: "Ending the trip and charging for it",
+        steps: [
+          ["Driver trip khatam karta hai. Final fare actual route se compute hota hai, stored quote se compare hota hai, aur trip row completed mein jaati hai.", "sync"],
+          ["Usi transaction mein, trip id ke barabar idempotency key ke saath ek charge intent outbox mein likha jaata hai.", "sync"],
+          ["Ek worker outbox padhta hai aur payment provider ko call karta hai. Timeout ka matlab hai wahi key ke saath retry, hamesha, backoff ke saath.", "async"],
+          ["Confirmation par ledger entry likhi jaati hai aur driver ki earnings credit hoti hain. Decline par trip payment failed state mein jaati hai, jo ek business process hai, error nahi.", "async"],
+          ["Receipts, ratings aur trip trail sab usi completion event se chalte hain aur inme se koi use delay nahi kar sakta.", "async"]
+        ] }
+    ],
+  
+    tradeoffsIntro: "Yahan ke pehle do hi design hain. Agar interview mein sirf ek point argue kar sako, to pehla karo.",
+  
+    tradeoffs: [
+      { a: ["Locations in memory, expiring", "Ek second mein 250k writes ka cost lagbhag kuch nahi. Poora kho dene ka cost tees second ki degraded matching."],
+        b: ["Locations in the transactional database", "Ek system, ek query, poori durability, aur ek second mein 250,000 durable writes us machine par jisme aapka paisa hai."],
+        flip: "aapko kanooni roop se har position retain karni ho, jis case mein bhi live index memory mein rehta hai aur ek copy stream se persist hoti hai. Tab bhi jawab dono hai, ek nahi." },
+      { a: ["Offer to one driver at a time", "Driver ki choice meaningful hai, aur bekaar interruptions nahi. Har rejection par kuch second ka cost."],
+        b: ["Broadcast to all nearby drivers, first to accept wins", "Sabse tez possible match, aur ek ride ke liye das drivers ko interrupt karta hai aur sabko reflexively accept dabana sikhata hai."],
+        flip: "supply bahut kam hai aur cell kaafi der se search kar raha hai. Tab chhote set ko broadcast karna baarish mein khade rider se behtar hai, aur woh default nahi, soch samajh kar escalation hai." },
+      { a: ["Charge asynchronously from an outbox", "Trip tab khatam hoti hai jab trip khatam hoti hai. Retries safe hain kyunki idempotency key trip id hai."],
+        b: ["Charge synchronously at trip end", "Rider ko turant pata chalta hai ki payment hua ya nahi, aur woh third party ka wait karta hai, aur timeout ke baad koi safe move nahi bachti."],
+        flip: "market ko payment in person confirm karna zaroori ho, jaise cash ya terminal flow. Tab woh kanoon se synchronous hai aur design ko unknown outcome interface mein carry karna padta hai." },
+      { a: ["Shard by city", "Local failures, natural load spread, aur ek boundary jo business pehle se use karta hai."],
+        b: ["Shard by trip id, uniformly", "Bilkul barabar load, aur har city ka traffic har shard par faila hota hai, to ek shard outage har city ko ek saath degrade karta hai."],
+        flip: "ek city itni badi hai ki ek shard se zyada ho jaati hai, jo hota hai. Tab us city ko cell prefix se keyed kai shards milte hain, aur principle wahi rehta hai: key geography ko follow karti hai." }
+    ],
+  
+    next: [
+      "<b>Pooled rides.</b> Isse matching assignment problem se routing problem ban jaati hai, aur yeh sach mein alag algorithm hai, is wale ka extension nahi.",
+      "<b>Driver positioning.</b> Har cell mein demand predict karna aur surge se pehle drivers ko us taraf nudge karna, jo baad mein pricing se zyada kimti hai.",
+      "<b>Offline and degraded modes.</b> Tunnel mein driver, trip ke end par bina signal ka rider. Connectivity wapas aane par dono complete hone chahiye.",
+      "<b>Fraud.</b> Spoofed locations, driver aur rider ke beech collusion, aur cancelled trips jo complete hui thi. Sab kuch sampled trail se juda hai, live index se nahi."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -2109,7 +3052,241 @@ const DESIGN = [
     ["DG", "https://www.designgurus.io/course-play/grokking-the-system-design-interview/doc/designing-ticketmaster", "Design Gurus, Ticketmaster", "H"],
     ["GFG", "https://www.geeksforgeeks.org/system-design/what-is-two-phase-commit-in-distributed-systems/", "Two phase commit, and why it is avoided", "M"],
     ["GH", "https://github.com/donnemartin/system-design-primer", "System Design Primer", "M"]
-  ]
+  ],
+
+  hi: {
+    one: "Is system mein sab kuch aasaan hai, bas aakhri seat ko chhodkar. Design hai ek read path jo stale cache ho sakta hai, aur ek write path jo serialised transaction hona chahiye, aur poori skill hai doosre ko jitna ho sake chhota aur jitna ho sake short rakhna.",
+  
+    brief: {
+      why: "Yeh is page ke baaki sab designs ka counterweight hai. Wahan eventual consistency ek tool thi jise aap uthate the; yahan ek seat do baar bech dena hi failure hai, aur koi clever caching ise acceptable nahi banati. Dilchasp baat yeh hai ki 99% traffic ko phir bhi cache chahiye, to design ko do ulti discipline ek saath nibhani hain aur bilkul saaf rehna hai ki dono ke beech line kahan hai.",
+      functional: [
+        "<b>Browse karo.</b> Film, cinema, date, show dhoondho, aur dekho kaun si seats free hain. Lagbhag saara traffic yahi hai.",
+        "<b>Hold karo.</b> Seats chuno aur payment ke liye kuch minute pao, jinme koi aur unhe nahi le sakta.",
+        "<b>Book karo.</b> Pay karo, aur confirmed ticket pao. Kisi bhi seat ke liye exactly ek insaan.",
+        "<b>Cancel karo.</b> Seat ko wapas pool mein chhodo, jo wahi inventory problem hai bas ulti taraf chalti hui."
+      ],
+      out: ["recommendations", "reviews aur ratings", "loyalty aur coupons, price hook se aage", "cinema ka apna screen management", "food ordering"],
+      nfr: [
+        ["No double booking", "absolute", "Ek seat par do log incident nahi hai, refund hai, maafi hai aur ek kahani hai. Yahi woh requirement hai jiske around baaki sab jhukta hai."],
+        ["Browse latency", "p99 under 200 ms", "Requests ka ninety nine percent, aur popular on-sale ke dauran yeh hazaar mein ek jaisa hota hai, kyunki sab refresh karte hain."],
+        ["Booking latency", "under 2 seconds excluding payment", "Jaan-boojhkar browse se slow. Write path ko mehnga hone ki chhoot hai kyunki woh rare hai aur sahi hona zaroori hai."],
+        ["Hold duration", "about 8 minutes", "Itna lamba ki card details bhar sako, itna chhota ki hoarder poora hall lock na kar sake. Yeh ek product number hai jiske seedhe inventory nateeje hain."],
+        ["Payment", "charged once, or not at all", "Ek idempotency key aur ek state machine. Ticket par double charge failed booking se zyada bura hai."]
+      ],
+      numbers: [
+        ["Registered users", "100M", "Sirf us bheed ke size ke roop mein relevant jo ek saath aa sakti hai."],
+        ["Normal browse", "about 50k per second", "Ek desh ke cinemas mein ek aam din. Aaram se."],
+        ["On-sale spike", "about 500k users in the first minute", "Blockbuster ka pehla din, ya stadium tour. Yahi woh number hai jo naive designs todta hai, aur yeh aisi schedule par aata hai jo aapko pehle se pata hoti hai."],
+        ["Contention", "about 16 to 1", "Popular shows ki lagbhag 30,000 seats ke liye 500,000 log. Zyada tar requests fail hongi, aur design ka kaam hai unhe jaldi aur sasti fail karwana."],
+        ["Booking attempts", "about 8k per second at peak", "Aur sab kuch hazaar rows par girti hain. Load bada nahi hai, concentrated hai, jo bilkul alag problem hai."],
+        ["Seat inventory", "about 200M rows", "Ek million shows, har ek mein do-teen sau seats. Chhota. Yahan sab kuch mushkil contention ke baare mein hai, volume ke nahi."],
+        ["Browse to book ratio", "100 to 1 normally, 1000 to 1 in a spike", "Drop ke dauran sab seat map refresh karte hain aur lagbhag koi complete nahi karta. Ise cache se serve karo, warna kisi ke kuch khareedne se pehle database gir jaayega."]
+      ],
+      numbersNote: "Do numbers sab kuch shape karte hain. <b>16 to 1</b> ka matlab hai zyada tar users haarenge, isliye haarna sasta hona chahiye. <b>200M rows</b> ka matlab hai yeh volume problem hai hi nahi: yeh kuch hazaar bahut garm rows hain, aur yahan ki har technique is baare mein hai ki koi bhi ek ko kitni der pakde rakhta hai."
+    },
+  
+    stagesIntro: "Chhe stages. Pehle do sirf double booking ko impossible banane ke liye hain, aur interviewer yahi sunna chahta hai. Baaki is baat se bachne ke baare mein hai ki aadha million log ek hi minute mein aate hain, sab wahi chalis seats chahte hain.",
+  
+    stages: [
+      { t: "0. Check, then book, and the bug that lives in the gap",
+        pressure: "Abhi kuch nahi. Wahi version draw karo jo sab likhte hain, kyunki usme jo bug hai wahi is poori problem ka subject hai aur woh paragraph ke bajay pseudocode ki do lines mein kahin aasani se dikhta hai.",
+        say: "Seat padho, dekho ki free hai, booking insert karo. Testing mein aur Tuesday dopahar production mein yeh bilkul theek chalta hai. Do users ek hi millisecond mein hit karte hain, dono free padhte hain, dono insert karte hain, aur cinema ne seat J12 do baar bech di. Yeh check-then-act hai, aur koi retry logic ya optimism ise fix nahi karta, kyunki read aur write ke beech ka gap hi woh jagah hai jahan bug rehta hai.",
+        breaks: "Ek user se zyada kuch bhi. Aur dhyan do ki ise kya fix <i>nahi</i> karta: tez database, bada machine, ya do baar check karna." },
+  
+      { t: "1. Let the database be the referee, and add a hold",
+        pressure: "Pehle correctness, aur phir ek product requirement jo ise mushkil banati hai: user ko payment ke liye kuch minute chahiye, aur un minutes mein seat na free honi chahiye na sold.",
+        say: "Do badlav. Pehla, booking ek condition wala single statement ban jaati hai, ek update jahan seat abhi bhi free hai, ya show aur seat par unique constraint ke khilaf insert. Do concurrent writers mein se exactly ek row affect karta hai aur doosre ko saaf rejection milta hai, kahin application level locking ke bina. Doosra, ek hold: expiry wala chhota claim, to seat payment ke dauran reserved rehti hai aur user bhatak jaaye to khud pool mein wapas aa jaati hai. Expiry hi asli baat hai, kyunki iska matlab hai band hue browser ke baad kisi ko safai nahi karni padti.",
+        breaks: "Sahi hai, aur ab browse ki har ek 50,000 requests per second usi database ko bhi hit kar rahi hai jisme yeh inventory hai, aur on-sale ke dauran yeh aadha million logon ka seat map refresh karna ban jaata hai." },
+  
+      { t: "2. Split browsing from buying",
+        pressure: "Dono workloads ulti cheezein chahte hain. Browsing bahut bada hai, repetitive hai, aur kuch second purane data se bilkul khush hai. Buying rare hai, contended hai, aur stale read bardasht nahi kar sakta. Dono ke beech ek service aur ek database share karne ka matlab hai ki strict wala dono ke rules tay karta hai.",
+        say: "Do services, do disciplines. Browse do second ki TTL wala cached seat map padhta hai aur interface mein yeh kehta bhi hai, kyunki seat map ek hint hai, promise nahi. Buying source of truth par jaati hai aur conditional write leti hai. Dono ke beech ki line woh sentence hai jo main chahunga ki interviewer sune: <i>cache batata hai kya shayad free hai, database decide karta hai kya sach mein aapka hai.</i> User ko ek green seat dikhna jo taken nikle ek normal, expected, achhe se handle kiya gaya outcome hai.",
+        breaks: "User ab seat hold karke pay karne jaata hai, aur payment mein ek third party hai jo slow ho sakta hai, fail ho sakta hai, aur bina bataye time out ho sakta hai ki kya hua. Tab tak hold tik-tik kar raha hai." },
+  
+      { t: "3. Payment, and the awkward gap it opens",
+        pressure: "Ek time limited claim ke andar ek external dependency. Asli ghatiya case failure nahi hai, woh payment hai jo hold expire hone aur seat dobara bik jaane ke baad succeed hota hai.",
+        say: "Booking ek state machine ban jaati hai: held, pending payment, confirmed, ya released, aur seat sach mein sirf confirmation par sold hoti hai. Charge ke saath booking id ke barabar idempotency key jaati hai, to timeout ke baad retry kabhi doosra charge nahi ban sakta. Aur hold payment shuru hone par extend hota hai, naya shuru nahi, kyunki card form wahi jagah hai jahan user sabse slow hote hain. Agar payment hold jaane aur seat dobara bikne ke baad confirm ho, to jawab hai automatic refund aur maafi, jo worker decide karta hai. Yeh case rare hai, aur iska jawab zor se bolna yeh maanne se zyada kimti hai ki yeh ho hi nahi sakta.",
+        breaks: "Sab kuch sahi hai, aur phir ek blockbuster on sale aata hai aur aadha million log usi sixty second mein aate hain, sab usi chalis rows ke ek hi button ko dabate hain." },
+  
+      { t: "4. The on-sale, which is a scheduled denial of service",
+        pressure: "Paanch lakh users, tees hazaar seats. Zyada tar ko ticket nahi milega, aur agar sabko yeh ek hi database rows par contend karke pata karne diya gaya, to kisi ko nahi milega.",
+        say: "Write path ke aage ek waiting room. Jo bhi aata hai use ek position aur live estimate milta hai, aur booking service sirf admission token wali requests leti hai, jo us rate se issue hote hain jo inventory sach mein absorb kar sake, shayad kuch hazaar per second. Yeh teen kaam ek saath karta hai: thundering herd ko paced stream banata hai, haarna error ki jagah queue jaisa lagta hai, aur mehnga path kabhi oversubscribed nahi hota. Seat map sale khulne se pehle cache mein pre-warm kiya jaata hai, kyunki cold cache ka sabse bura pal drop ka pehla second hai.",
+        breaks: "Tickets bik gaye, aur abhi kisi ke paas nahi hain. Confirmation emails, QR codes, cinema ka apna system aur analytics sab jaanna chahte hain, aur inme se koi bhi sale ko slow ya fail nahi kar sakta." },
+  
+      { t: "5. Everything that happens after the money",
+        pressure: "Confirmed booking ke nateejon ki ek lambi poonchh hai, jinme se har ek kisi ke liye zaroori hai aur koi bhi sale ke critical path par allowed nahi.",
+        say: "Confirmation aur outbox row ek hi transaction mein likhi jaati hain, aur ek worker outbox se publish karta hai. Aage sab kuch, QR code, email, push notification, cinema ka apna system, analytics, us ek event ka consumer hai. Email provider down ho to bhi tickets bik jaate hain. Outbox ki poori wajah yahi hai: uske bina ya to charge ke baad sale kho sakti hai, ya email chupchap kabhi nahi jaa sakta, aur dono ek minute late hone se bure hain." }
+    ],
+  
+    boxesIntro: "Gyarah components. Dhyan do ki kitne kam sach ko chhuate hain: sirf booking service aur inventory store ko kuch decide karne ki ijazat hai. Baaki sab ya cache hai, ya queue, ya pacer, ya ek nateeja.",
+  
+    boxes: [
+      { job: "Seat map dikhata hai, hold request bhejta hai, phir payment, aur haarne ko achhe se sambhalta hai.",
+        why: "Yeh isliye draw hai kyunki design use jaan-boojhkar ek kaam deta hai: shayad stale data ko imaandari se dikhana, aur rejection ko error ki jagah normal outcome ki tarah handle karna.",
+        forced: "Stage 2, jab seat map ek cached hint ban gaya.",
+        alts: [["Making the seat map strictly live over a socket", "sach mein achha, aur on-sale ke dauran iska matlab hai aadha million logon ko un seats ke updates push karna jo unhe milengi nahi."]],
+        pros: ["Chhoti cache TTL aur imaandar interface live updates se kahin sasta hai aur lagbhag utna hi achha.", "Seat haarna achhe se handle ho sakta hai: paas mein dobara select karo, user ko flow mein rakho."],
+        cons: ["User kabhi kabhi aisi seat chunta hai jo pehle hi ja chuki, aur koi engineering ise poori tarah nahi hatati.", "Hold countdown ke liye client side timers server ke timers se drift karenge, to server ki expiry hi ginti hai."],
+        cost: "Kuch nahi, aur yeh live inventory feed ki zaroorat hata deta hai.",
+        fails: "User ka countdown kehta hai do minute bache hain aur server hold pehle hi expire kar chuka hai. Submit par hamesha dobara check karo, aur hamesha server ki clock par bharosa karo.",
+        say: "Seat map ek hint hai. Interface ko yeh kehna chahiye, client ko submit par dobara check karna chahiye, aur seat haarne par user ko error page ki jagah wapas selection mein daalna chahiye." },
+  
+      { job: "Posters, listings aur show page ke zyada tar static hisse serve karo.",
+        why: "On-sale ke dauran page khud aadha million baar maanga jaata hai aur uska content mushkil se badalta hai. Ise apne servers se serve karna capacity ko sajawat par kharch karna hai.",
+        forced: "Stage 2, aur yeh apni jagah mainly stage 4 mein kamaata hai.",
+        alts: [["Serving everything from the application", "Tuesday ko theek, aur drop ke pehle minute mein bekaar."]],
+        pros: ["Spike ka woh hissa absorb karta hai jo asal mein seats ke baare mein nahi hai.", "Ek static waiting room page rakhne ki natural jagah jo aapke infrastructure ko bilkul nahi chhuta."],
+        cons: ["Edge par jo bhi cached hai woh definition se stale hai, to seat map kabhi inme se ek nahi hona chahiye.", "Show on sale jaane par cache invalidation scheduled honi chahiye, umeed par nahi chhodi jaani chahiye."],
+        cost: "Sasta, aur yeh spike requests ka sabse bada hissa hata deta hai.",
+        fails: "Seat map galti se edge par lambi TTL ke saath cache ho jaata hai, aur hazaaron log das minute purana map dekhte hain. Dynamic inventory ko CDN se poori tarah bahar rakho aur boundary explicit rakho.",
+        say: "Seat map ke alawa sab kuch. Jis pal inventory edge par hai, aapne aisa promise kar diya jo aap nibha nahi sakte." },
+  
+      { job: "Read only sawaalon ke jawab do: kya chal raha hai, kahan, kab, aur lagbhag kaun si seats free hain.",
+        why: "Yeh 99% traffic hai aur iske rules booking se bilkul alag hain. Inhe alag karne ka matlab hai read path boxes jodkar scale ho sakta hai aur inventory ki correctness ko kabhi affect nahi kar sakta.",
+        forced: "Stage 2.",
+        alts: [["One service for both", "kam moving parts, aur browsing mein spike phir booking path se connections aur threads chheen leta hai, theek us pal jab booking sabse zyada matter karti hai."], ["Read replicas of the inventory database", "phir bhi har request par ek database round trip, aur replica lag seat map ko waise bhi stale banata hai, to cache rakho aur staleness khud control karo."]],
+        pros: ["Stateless aur aasaani se scalable.", "Ise aggressively cache kiya ja sakta hai kyunki yeh kabhi kuch decide nahi karta.", "Agar yeh poori tarah fail ho jaaye, to maujooda bookings aur payments chalte rehte hain."],
+        cons: ["Yeh woh data serve karta hai jise woh jaanta hai stale ho sakta hai, jo product mein bataya jaana chahiye, chhupaya nahi."],
+        cost: "Aam taur par 50,000 requests per second, spike mein kahin zyada, lagbhag sab cache se serve.",
+        fails: "Sale khulte waqt iska cache cold hai aur har request inventory database tak pahunch jaati hai, jo writes ke liye size hua hai. Scheduled on-sale se pehle pre-warm karo, jo aap kar sakte ho kyunki schedule pata hai.",
+        say: "Yeh padhta hai, kabhi likhta nahi, aur kabhi decide nahi karta. Yahi constraint diagram ke is aadhe hisse ki har optimisation ko allowed banati hai." },
+  
+      { job: "Rendered seat maps aur show listings ko ek baar mein do second ke liye hold karo.",
+        why: "Drop ke dauran wahi seat map ek second mein hazaaron baar maanga jaata hai aur lagataar badalta hai. Do second ki TTL ise second mein kuch database reads mein badal deti hai aur imaandar bhi rehti hai.",
+        forced: "Stage 2.",
+        alts: [["No cache, read the database every time", "millisecond tak sahi, aur yeh poora browse load us machine par daal deta hai jo booking transactions kar rahi hai."], ["Long TTL with event driven invalidation", "average mein fresher, aur drop ke dauran invalidation rate booking rate ke barabar hoti hai aur aap effectively uncached ho, upar se extra machinery ke saath."], ["Pushing seat map deltas to connected clients", "sabse achha user experience aur bahut saara kaam, sirf us product ke liye justified jiska poora business on-sales hai."]],
+        pros: ["Fixed chhoti TTL crowd kitni bhi badi ho, predictable, bounded database load deti hai.", "Staleness bounded hai aur interface mein bataayi ja sakti hai.", "Ise scheduled sale se pehle warm karna aasan hai aur sabse bura failure mode hata deta hai."],
+        cons: ["Users kabhi kabhi aisi seat chunenge jo ja chuki. Yeh design mein hai, roka nahi jaata.", "Per show keys ka matlab hai garm show ek hot key hai, jiske aage browse service mein local caching chahiye."],
+        cost: "Chhota: har show ka ek map, un shows ke liye har do second mein badla jaata hai jinhe koi dekh raha hai.",
+        fails: "Ek show itna garm hai ki ek single cache key ek node ko saturate kar deti hai. Browse service mein ek chhota in process cache jodo, to ek box par hazaar requests per second ek cache read ban jaati hain.",
+        say: "Event invalidation ki jagah do second TTL. Jis ek pal mein sab matter karta hai, invalidation aur booking ek hi rate par hote hain, to fixed TTL simple bhi hai aur zyada predictable bhi." },
+  
+      { job: "Bheed ko rokna, positions dena, aur logon ko booking path mein us rate par admit karna jo woh survive kar sake.",
+        why: "Paanch lakh log tees hazaar rows ke liye contend nahi kar sakte. Kisi ko herd ko stream mein badalna hai, aur kisi bhi mehnge kaam se pehle karna baad mein karne se kahin sasta hai.",
+        forced: "Stage 4. Yeh ek scheduled event ke liye hai aur sale aur outage ke beech ka farak hai.",
+        alts: [["Plain rate limiting with 429s", "backend ko bachata hai aur user ko bina jaankari ke random lottery deta hai, jiska jawab woh refresh karke dega, aur halat aur kharab hoga."], ["First come first served with no queue", "sabse tez network jeetta hai, jo ek bot hai, aur design ne scalping ko technical advantage bana diya."], ["Letting everyone in and letting the database sort it out", "default hai, aur iska matlab hai sale ka pehla minute sale nahi outage hai."]],
+        pros: ["Spike ko us rate mein badalta hai jo aapne chuni, har mehnge kaam ke aage.", "Position aur estimate error se kahin behtar experience hai, bhale nateeja wahi ho.", "Bot mitigation ko effective banane ki sabse achhi ek jagah hai, kyunki yeh sab kuch ke upstream hai."],
+        cons: ["Ek aur system, kabhi kabhi hi use hota hai, matlab woh system jo tab toota hone ki sabse zyada sambhavna rakhta hai jab aapko chahiye.", "Queue fairness ek product decision hai jiske asli nateeje hain, aur log ise gehri parwah karte hain."],
+        cost: "Ise sirf har waiting user ke liye ek token aur position hold karni hai, jo chhota hai. Iski mushkil operational hai, computational nahi.",
+        fails: "Yeh khud bottleneck ban jaata hai. Ise dumb rakho: admission time wala signed token, statelessly verified, to admission ko request ke waqt koi shared state nahi chahiye.",
+        say: "Timestamp wale signed admission tokens, us rate par issue jo inventory absorb kar sake. Booking service bina token wali har cheez reject karti hai, aur queue khud ek counter se zyada kuch nahi rakhti." },
+  
+      { job: "Inventory badalne ki ijazat wala ekmaatra component. Hold acquire karo, payment lo, confirm ya release karo.",
+        why: "Correctness tab sabse aasaani se guarantee hoti hai jab exactly code ka ek hissa likh sakta hai. Design mein baaki sab is tarah arrange hai ki yeh service jitna ho sake kam kaam, jitni ho sake chhoti der ke liye kare.",
+        forced: "Stage 0, aur uske baad har stage mein ise narrow kiya gaya.",
+        alts: [["Letting several services write inventory", "banana tez hai aur har aane wali team se double booking introduce hone ki jagahein multiply ho jaati hain."], ["A dedicated inventory service that only this one calls", "ek extra hop, aur bade organisation mein sach mein sahi jahan kai products wahi seats bechte hain."]],
+        pros: ["Ek writer ka matlab ek jagah audit, ek jagah test, ek jagah sahi karna.", "Yeh itni chhoti hai ki iska transaction short ho sakta hai, jisse hot rows chalti rehti hain.", "Admission tokens ka matlab hai yeh kabhi oversubscribed nahi hoti."],
+        cons: ["Yeh ek single logical writer hai, to ise horizontally scalable hona hai bina single writer property todhe, jo database constraint deta hai.", "Yeh un ekmaatra requests ke path par hai jo paisa banati hain."],
+        cost: "Peak par 8,000 attempts per second. Volume mein chhota, contention mein concentrated.",
+        fails: "Yeh payment call ke across database transaction khula rakhti hai. Kabhi mat karo: transaction hold ko commit karta hai, payment uske bahar hota hai, aur confirmation ek doosra chhota transaction hai. Jo transaction third party ka wait kare, uski wajah se ek slow payment poora hall lock kar deta hai.",
+        say: "Transaction kabhi kisi aur ko network call ke across nahi failta. Hold, commit, pay, commit. Do chhote transactions aur unke beech ek slow third party, ek anjaan ke around lipta ek lamba transaction nahi." },
+  
+      { job: "Sach. Har show ki har seat ki ek row, aur ek constraint jo ise do baar bechna impossible banati hai.",
+        why: "Har design mein kahin ek component hota hai jo arbitrate karta hai. Yahan woh relational store hai, aur wajah unique constraint hai, tables ke baare mein kuch nahi.",
+        forced: "Stage 0, aur stage 1 ne ise woh constraint diya jo ise sahi banata hai.",
+        alts: [["A NoSQL store with conditional writes", "workable hai, kyunki ek single item par conditional put exactly wahi primitive hai jo chahiye, aur mushkil tab hoti hai jab booking kai seats par ho aur sab ya koi nahi chahiye."], ["Holding inventory in Redis with atomic scripts", "bahut tez, per key atomic, aur ab yeh us cheez ka durable record hai jo aapne becha, jo iske rehne ki buri jagah hai."], ["An event sourced inventory", "concept mein achha fit, aur yeh is seat free hai sawaal ko lookup ki jagah fold bana deta hai, jo system ke sabse garm read ki galat shape hai."]],
+        pros: ["(show, seat) par unique constraint double booking ko unlikely nahi impossible banati hai, jo guarantee ki alag category hai.", "Multi seat bookings free mein ek transaction ban jaati hain, all or nothing.", "Yeh chhota hai, lagbhag 200 million rows, to ek achhi tarah provisioned cluster ise sambhal leta hai."],
+        cons: ["Drop ke dauran hot rows: kuch hazaar rows par hazaaron transactions per second, sab database se serialised.", "Yeh woh component hai jo eventually consistent nahi ho sakta, to yeh buying ki availability ka ceiling tay karta hai."],
+        cost: "200M rows, kam volume, extreme concentration. Show id se shard karo taaki ek popular show doosre ko slow na kar sake.",
+        fails: "Popular row par lock contention transactions ko queue karta hai, latency badhti hai, timeouts fire hote hain, aur clients retry karte hain, halat aur kharab. Fix sab duration ke baare mein hain: transactions short rakho, controlled rate par admit karo, aur row pakde hue kabhi kisi external cheez ka wait mat karo.",
+        say: "Show id se sharded, (show, seat) par unique, transactions single digit milliseconds mein naape gaye. Diagram ke is taraf ka har design decision isliye hai ki koi row kitni der pakde rakhta hai woh kam ho." },
+  
+      { job: "Record karo ki seat claimed hai par abhi paid nahi, aur kuch minute baad ise apne aap bhool jao.",
+        why: "User ko pay karne ke liye time chahiye, aur us dauran seat ek teesri state mein hai jo na free hai na sold. Expiry automatic honi chahiye, kyunki aam ending ek aisa user hai jo bas tab band kar deta hai.",
+        forced: "Stage 1.",
+        alts: [["A status column on the seat row with an expires_at timestamp", "ek system, booking ke saath poori tarah transactional, aur expired holds release karne ke liye sweeper job chahiye, aur jab tak woh job nahi chalta seat taken dikhti hai."], ["A Redis key with a TTL", "expiry free aur exact hai, aur hold ab sale se alag system mein hai, to hold acquire karna aur booking confirm karna ek transaction nahi ho sakta."]],
+        pros: ["TTL expiry ka matlab na sweeper, na cleanup, na adhoori released seats.", "Itna tez ki spike mein hold acquire karna bottleneck nahi.", "Agar hold aur seat ek hi jagah rehte hain to ek atomic script mein check ho sakte hain."],
+        cons: ["Do systems jinhe agree karna hai: Redis mein hold aur database mein sale. Reconciliation worker ka kaam hai aur yeh asli kaam hai.", "Agar Redis kho jaaye to har in flight hold gayab ho jaata hai, aur payment ke beech ke users seat kho dete hain."],
+        cost: "Har in flight hold ke liye ek key. Hazaaron, millions nahi. Bahut chhota.",
+        fails: "Redis fail over hota hai aur users payment page par hain tab holds gayab ho jaate hain. Woh payments un seats par confirm honge jo ab free dikhti hain, aur confirmation write succeed hogi, jo sahi outcome hai. Khatarnak direction doosri hai, jahan hold bacha rehta hai par sale nahi, jise worker reconcile karta hai.",
+        say: "Main holds aur inventory ko ek hi store mein rakhunga agar kar sakun, kyunki tab hold acquire karna aur sale confirm karna ek transaction hai. Agar alag hain, to mujhe reconciler chahiye, aur mujhe yeh kehna chahiye, do boxes draw karke umeed nahi rakhni chahiye." },
+  
+      { job: "Paisa lo. External, slow, aur unknown outcome return kar sakta hai.",
+        why: "Design mein yahi ek cheez hai jo aapke control mein nahi, aur yeh ek time limited hold ke andar baithi hai, jo ise routine ki jagah dilchasp banati hai.",
+        forced: "Stage 3.",
+        alts: [["Charging after confirming the seat", "user ko ticket milta hai aur card decline ho jaata hai, to ab aap paise ke peeche daud rahe ho ya woh ticket cancel kar rahe ho jiska kisi ne screenshot le liya."], ["Pre-authorising and capturing on confirmation", "is shape ki problem ke liye sach mein sabse achha jawab: seat confirm hone se pehle authorise, baad mein capture. Do phases, aur yeh hold aur confirm par bilkul map hota hai."]],
+        pros: ["Idempotency keys timed out charge ko retry karna safe banati hain, jo ekmaatra property hai jo yeh sab workable banati hai.", "Webhooks late confirmation ko bhi booking complete karne dete hain bina kisi ke poll kiye."],
+        cons: ["Latency seconds mein naapi jaati hai aur aapke control mein nahi, isliye hold ko usse lamba jeena padta hai.", "Webhooks out of order, do baar, ya bahut baad mein aate hain, to receiving state machine ko bhi idempotent hona padta hai."],
+        cost: "Peak par 8,000 attempts per second, jinme se har ek time out hokar retry ho sakta hai.",
+        fails: "Payment hold expire hone aur seat dobara bikne ke baad confirm hota hai. Worker seat ke bina confirmed payment detect karta hai, automatically refund karta hai, aur notify karta hai. Yeh jawab taiyaar rakho, kyunki achha interviewer sabse pehle yahi poochta hai.",
+        say: "Hold karte waqt authorise, confirmation par capture, booking id ke barabar idempotency key, aur webhook handler jo do baar call hone par safe ho. Late success ka refund path ek designed feature hai, incident nahi." },
+  
+      { job: "Outbox se publish karo, stale bookings expire karo, aur payments aur inventory ke beech ke disagreements reconcile karo.",
+        why: "Do systems ko span karne wale har design ko kuch chahiye jiska kaam yeh notice karna hai ki woh kab disagree karte hain. Yeh maan lena ki kabhi nahi karenge ek achhe answer ki sabse aam kami hai.",
+        forced: "Stage 3.",
+        alts: [["Doing all of this inline in the booking service", "slow, retry heavy, third party dependent kaam us ekmaatra endpoint ke transaction path mein daal deta hai jo paisa banata hai."], ["Trusting webhooks alone", "webhooks kho jaate hain, late aate hain aur duplicate hote hain. Pending bookings ka periodic sweep hi woh cheez hai jo khoya hua webhook stuck order ki jagah delay bana deta hai."]],
+        pros: ["Yeh outbox pattern ko kaam karwata hai, to sale aur uske nateeje crash se alag nahi ho sakte.", "Yeh woh ek jagah hai jahan awkward cases rehte hain, jo unhe paanch services mein bikhre hone se kahin behtar hai.", "Retries aur backoff yahan rehte hain, request path mein nahi."],
+        cons: ["Yeh asynchronous hai, to hamesha ek window hota hai jab do systems disagree karte hain aur worker ne abhi dekha nahi.", "Yeh sabse kam glamorous component hai aur wahi jo under-tested rahega."],
+        cost: "Modest aur bursty, sale curve ko follow karta hai.",
+        fails: "Bade sale ke baad yeh peeche reh jaata hai, aur confirmation emails das minute late aate hain. Kuch nahi khota, kyunki outbox durable hai, aur yahi woh property hai jiska paisa diya ja raha hai.",
+        say: "Outbox publisher, expiry sweeper aur reconciler, ek component mein. Agar interviewer poochhe ki payment succeed ho aur seat na ho to kya hota hai, to main isi box ki taraf ishara karta hoon." },
+  
+      { job: "Confirmed booking ko ticket, email, QR code, push notification aur cinema ko message mein badlo.",
+        why: "In sab ka kisi ke liye matlab hai aur inme se koi bhi sale ko fail nahi karwa sakta. Yeh ek event ke consumers hain, transaction ke steps nahi.",
+        forced: "Stage 5.",
+        alts: [["Sending the email inline during confirmation", "sale ab email provider ki availability par depend karti hai, jo aisa trade nahi jo koi jaan-boojhkar karega."]],
+        pros: ["Ek event, kai independent consumers, har ek apne aap retry karta hai.", "Baad mein ek naya consumer booking path mein bina badlav ke joda ja sakta hai."],
+        cons: ["User email aane se pehle screen par confirmation dekhta hai, jo interface mein kehna padta hai.", "At-least-once delivery ka matlab hai consumers idempotent hone chahiye, warna logon ko ticket ki teen copies milti hain."],
+        cost: "Har booking par ek event, har ek ke kai consumers.",
+        fails: "Email provider ek ghante ke liye down hai. Tickets phir bhi bik jaate hain aur app mein dikhte hain, aur emails recover hone par jaate hain. Ticket ka source of truth email ki jagah app ko banana wahi design decision hai jo ise survivable banata hai.",
+        say: "Ticket booking confirm hote hi exist karta hai. Email ek aisi cheez ke baare mein notification hai jo pehle hi ho chuki, woh cheez khud nahi." }
+    ],
+  
+    flowsIntro: "Do paths aur ek repair path. Repair path woh hai jo payment system chalaye hue candidate ko us candidate se alag karta hai jisne bas padha hai.",
+  
+    flows: [
+      { n: "Browsing a seat map during a busy sale",
+        steps: [
+          ["Page aur posters CDN se aate hain. Inme se kuch bhi aapki services ko nahi chhuta.", "sync"],
+          ["Seat map request browse service ko hit karti hai, jo cache se per show key padhti hai. Lagbhag hamesha hit.", "sync"],
+          ["Miss par ek process key ko inventory se bharta hai aur baaki sab uska wait karte hain, to hazaar concurrent misses ek query ban jaate hain.", "sync"],
+          ["Response batata hai ki do second pehle kaun si seats free thi, aur interface imaandari se kehta hai ki yeh ek hint hai.", "sync"]
+        ] },
+      { n: "Buying a seat",
+        note: "Do chhote transactions aur unke beech ek slow anjaan. Yahi shape is problem ka jawab hai.",
+        steps: [
+          ["On-sale ke dauran user waiting room join karta hai aur apni baari aane par signed admission token pata hai.", "sync"],
+          ["Woh seats chunte hain aur hold request karte hain. Booking service har seat par ek conditional write karti hai, sab ek transaction mein: jahan abhi free ho wahan claim.", "sync"],
+          ["Agar koi bhi seat condition fail kare, poora transaction rollback hota hai aur user ko bataya jaata hai ki kaun si seats gayi, alternatives ke saath. Yeh aam case hai aur tez hai.", "sync"],
+          ["Transaction commit hota hai aur aath minute ki expiry wala hold ban jaata hai. Database transaction ab khatam hai, kisi third party se contact hone se pehle.", "sync"],
+          ["Payment booking id ke barabar idempotency key ke saath authorise hoti hai. Isme seconds lagte hain aur koi lock nahi hold hota.", "sync"],
+          ["Authorisation par ek doosra chhota transaction seats confirm karta hai, payment capture karta hai, aur ek outbox row likhta hai. User ke paas ticket hai.", "sync"],
+          ["Worker event publish karta hai aur fulfilment tickets, email aur cinema ke system mein fan out hota hai.", "async"]
+        ] },
+      { n: "When it goes wrong, which it will",
+        note: "Teen cases, aur har ek ka ek defined jawab hai. Poochhe jaane se pehle yeh bolo.",
+        steps: [
+          ["<b>User chhod deta hai.</b> Hold apne aap expire hota hai, seat pool mein wapas aati hai, aur kisi ko notice nahi karna pada. Yeh sabse aam ending hai.", "async"],
+          ["<b>Payment time out hota hai.</b> Worker wahi idempotency key ke saath retry karta hai. Provider ya to charge ek baar karta hai ya jo woh pehle kar chuka use report karta hai. Booking jawab aane tak pending rehti hai.", "async"],
+          ["<b>Payment hold expire hone aur seat dobara bikne ke baad succeed hota hai.</b> Worker seat ke bina confirmed payment dekhta hai, automatically refund karta hai, aur user ko notify karta hai. Rare, unavoidable, aur umeed se hata nahi handle kiya gaya.", "async"],
+          ["<b>Webhook do baar aata hai.</b> Handler payment id par keyed hai aur doosra ek no-op hai. Maan lo har webhook do baar aayega, kyunki aayega.", "async"]
+        ] }
+    ],
+  
+    tradeoffsIntro: "Yahan ke pehle do tay karte hain ki system sahi hai ya nahi. Aakhri do tay karte hain ki woh apne launch day se bachta hai ya nahi.",
+  
+    tradeoffs: [
+      { a: ["Conditional write with a constraint", "Check write ke andar hai, to koi gap nahi. Haarne walon ko saaf rejection milta hai aur kuch hold nahi hota."],
+        b: ["Explicit locking, SELECT FOR UPDATE", "Intuitive aur samajhna aasan. Locks aapke code ke across hold hote hain, to transaction ke andar ek slow branch sabko block karti hai."],
+        flip: "decision ko sach mein kai statements aur beech mein ek read chahiye, jo complex pricing ya allocation rules mein hota hai. Tab lock lo, transaction chhota rakho, aur lock timeout set karo." },
+      { a: ["Two short transactions around payment", "Database kabhi third party ka wait nahi karta. Us payment ko reconcile karna padta hai jo hold expire hone ke baad succeed ho."],
+        b: ["One transaction spanning the payment call", "Kabhi reconciliation nahi chahiye. Ek slow payment ab seat rows ko utni der hold karta hai jitni der provider lagata hai."],
+        flip: "kabhi nahi, is contention par. Is trade-off ka jo version rakhne layak hai woh authorise versus capture hai: hold ke andar authorise, confirm par capture, jo wahi shape hai sahi tarah kiya hua." },
+      { a: ["Waiting room in front of the write path", "Load aisi rate ban jaata hai jo aapne chuni. Haarna error ki jagah queue jaisa lagta hai."],
+        b: ["Let everyone through and rely on rejections", "Banane ke liye koi extra system nahi. Sale ka pehla minute khud par thopa hua denial of service hai."],
+        flip: "koi scheduled on-sales nahi hain aur traffic smooth hai. Tab waiting room ek aisa system hai jo aap us event ke liye maintain karte ho jo kabhi aata nahi, aur plain rate limiting kaafi hai." },
+      { a: ["Seat map cached with a fixed short TTL", "Predictable, bounded database load, crowd kitni bhi badi ho. Kabhi kabhi woh seat dikhata hai jo ja chuki."],
+        b: ["Event driven invalidation, or live push", "Fresher, aur drop ke dauran invalidation rate booking rate ke barabar hoti hai, to aap uncached ho extra machinery ke saath."],
+        flip: "venue chhota aur premium hai, jahan sau log chalis seats mein se chun rahe hain. Tab live updates sasti hain aur experience uske layak hai." }
+    ],
+  
+    next: [
+      "<b>Dynamic and tiered pricing.</b> Wahi inventory, ek price ke saath jo row, time aur demand se badalta hai. Yeh write path se kahin zyada read path ko chhuta hai.",
+      "<b>Cancellations and resale.</b> Seat ko pool mein wapas bhejna wahi conditional write ulta hai, saath mein ek refund state machine jo sale se zyada nazuk hai.",
+      "<b>Bot and scalper defence.</b> Waiting room sahi jagah hai, aur iske peeche device signals, payment velocity checks aur per account limits chahiye.",
+      "<b>Multi region.</b> Inventory swabhaav se regional hai, kyunki cinema ek hi jagah hai. Show ko uske venue ke region par pin kar do to mushkil problem lagbhag khatam ho jaati hai."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -2594,7 +3771,276 @@ const DESIGN = [
     ["HI", "https://www.hellointerview.com/learn/low-level-design/in-a-hurry/patterns", "Hello Interview, when to use which pattern", "M"],
     ["GFG", "https://www.geeksforgeeks.org/system-design/low-level-design-problems/", "GFG, LLD problem list", "M"],
     ["LIST", "https://leetcode.com/problem-list/design/", "LeetCode Design problems", "M"]
-  ]
+  ],
+
+  hi: {
+    one: "Yeh wahi product hai jo ticket booking page pe tha, bas ek box aur andar. Yahaan kuch bhi distributed nahi hai: poora sawaal yeh hai ki seat map kaunsa object own karega, exactly kya synchronise karna hai, aur pricing aur payment ko us class mein leak hone se kaise rokna hai jo tickets bechti hai.",
+
+    brief: {
+      why: "LLD round HLD round se ek chhota sawaal poochta hai: yeh nahi ki kya yeh das lakh logon ko serve kar sakta hai, balki yeh ki kya main chhe mahine baad ise maintain karna chahunga. Do cheezein score hoti hain: tumhare objects wahi nouns hain ya nahi jo domain expert use karega, aur jo ek genuinely concurrent operation hai woh kisi aisi cheez se protected hai jise tum ungli rakh ke dikha sako. Patterns teesri cheez hain, aur sirf tab jab woh koi asli coupling hatate hain. Paanch pattern ke naam gina do to marks kam hote hain, badhte nahi.",
+      functional: [
+        "Ek show ka <b>seat map dikhao</b>, har seat ka status aur price ke saath.",
+        "Kuch minute ke liye <b>seats hold karo</b> taaki user pay kar sake, aur agar woh na kare to apne aap release ho jaayein.",
+        "Payment ke baad <b>booking confirm karo</b>, ya hold release karo. Concurrency mein bhi ek seat pe exactly ek booking.",
+        "Row, din aur show ke hisaab se <b>seat ka price nikalo</b>, bina booking code ko yeh rules jaane.",
+        "<b>Cancel karo</b>, aur seats wapas pool mein daal do."
+      ],
+      out: ["HTTP layer", "repository interface ke aage ka persistence", "user accounts aur auth", "cinema ki apni scheduling", "price hook ke aage discount coupons"],
+      nfr: [
+        ["Thread safety", "per show, not global", "Ek hi show ke liye kayi threads ek saath seats hold karenge. Ek global lock correct hai, par poori cinema chain ko ek hi queue bana deta hai, aur interviewer yeh notice kar lega."],
+        ["No double booking", "absolute", "Ek hi correctness requirement jo sabse upar hai. Class design mein baaki sab negotiable hai."],
+        ["Extensibility", "new price rule, no change to booking", "Yeh us ek pattern ki stated wajah hai jo yahaan definitely apni jagah kamata hai."],
+        ["Testability", "no real payment, no real clock", "Payment ek interface ke peeche, aur expiry ek injectable clock se chalti hai. Warna expiry test karne ka ek hi tareeka hai ki aath minute intezaar karo."]
+      ],
+      numbers: [
+        ["Seats per show", "about 200", "Itna chhota ki ek show ka seat map memory mein ek hi object ban jaata hai, aur poori locking strategy isi baat pe tiki hai."],
+        ["Concurrent holders per show", "tens", "Hazaaron nahi. Contention per show hai aur chhota chalta hai, isliye ek simple lock per show genuinely kaafi hai."],
+        ["Hold duration", "8 minutes", "Itna lamba ki pay kar sako, itna chhota ki koi hoarder poora hall lock na kar sake."],
+        ["Seats per booking", "1 to 10", "Isi liye claim all or nothing hona chahiye, aur isi liye lock ordering matter karti hai."]
+      ],
+      numbersNote: "Design ka faisla karne wala number hai <b>200 seats per show</b>. Ek show ka seat map ek object mein fit ho jaata hai, isliye locking ki unit show hai. Agar show mein das lakh seats hoti to jawab per seat locks hota, aur code kaafi kharab hota."
+    },
+
+    stagesIntro: "Chhe stages, aur shape wahi hai jo HLD page ka tha: woh class se shuru karo jo sab pehle likhte hain, use todo, aur har naya type isliye aaye kyunki kuch specific galat hua. Machine coding round mein tum stage 2 pehle likhoge aur time bache to baaki add karoge, isliye yahaan ka order priority order bhi hai.",
+
+    stages: [
+      { pressure: "Abhi kuch nahi. Pehle draft aisa hi dikhta hai, aur ise draw karna worth hai, kyunki isme jo do cheezein galat hain wahi do cheezein baaki poora design theek karta hai.",
+        say: "Ek class jisme show id se booked seats ke set ka map hai, pricing rules ek if-else chain mein hain, aur payment call inline hai. Yeh compile hoti hai, single threaded test pass karti hai, aur isme is problem ke dono classic defects hain: do threads dono ek seat ko free dekh sakte hain, aur ek price rule add karne ka matlab us class ko edit karna hai jo tickets bechti hai.",
+        breaks: "Koi domain objects nahi hain, isliye har method strings leta hai aur strings lautata hai, aur kisi invariant ke rehne ki koi jagah nahi hai. Ek Seat jo yeh nahi bata sakti ki woh available hai ya nahi, model nahi hai, woh bas ek row hai jisne bhes badal rakha hai." },
+
+      { pressure: "Jis invariant ka koi object owner nahi hai, use protect nahi kar sakte. Kisi bhi locking se pehle, design ko ek aisi cheez chahiye jo jaanti ho ki seat kya hai, aur ek aisi cheez jo seat map own kare.",
+        say: "Problem statement ke nouns classes ban jaate hain: Show, Seat, Booking. Inheritance ki jagah composition, yaani Show ke paas Seats hain, PremiumShow jo Show ko extend kare aisa nahi, kyunki seat type per seat badalta hai, per show nahi. Booking ko ek id milti hai aur seats ki list. Dhyan do ki service ab kya hai: ek coordinator jo koi data own nahi karta, aur ek service se tum yahi chahte ho.",
+        breaks: "Do threads ek hi Show pe ek hi moment mein book call karte hain. Dono seat ko available padhte hain, dono use taken mark karte hain, aur design utna hi toota hai jitna stage 0 mein tha, bas ab naamon ke saath behtar." },
+
+      { pressure: "Ek hi hard requirement. LLD interview mein yahi wo moment hai jo score hota hai, aur galat jawab pehchaane jaa sakte hain: har method pe synchronized laga dena, ya kandhe uchka ke keh dena ki database sambhaal lega.",
+        say: "Ek SeatLockProvider, per show yeh rakhta hai ki kaunsi seats claim hui hain, kisne ki, aur kab tak ke liye. Acquire karna us show ke lock object pe ek single synchronized block hai, aur uske andar ya to maangi gayi saari seats free hoti hain ya koi bhi nahi li jaati. Lock show pe hai, na service pe na seat pe: service pe lagane se poori cinema chain serialise ho jaati hai, aur seat pe lagane se deadlock ka darwaza khulta hai jab do bookings wahi do seats ulte order mein maangti hain. Main acquire karne se pehle seat list ko sort bhi karunga, jo us deadlock ko poori tarah hata deta hai.",
+        breaks: "Pricing abhi bhi booking code ke andar ek if-else chain hai. Har naya rule, weekend surcharge, recliner premium, matinee discount, us class ko edit karta hai jo tickets bechti hai, aur har edit tickets bechna todne ka ek mauka hai." },
+
+      { pressure: "Pattern introduce karne layak hai ya nahi, iska ek hi bharosemand test: naam lo ki kya badalta hai. Yahaan woh price rule hai, woh business wajahon se badalta hai, technical wajahon se nahi, aur baar baar badalta hai.",
+        say: "Ek interface, ek method: ek show ke liye ek seat ka price nikalo aur amount lautao. Base fare, weekend surcharge aur recliner premium ke liye implementations, aur ek composite jo unki list ko order mein chalata hai. Rule add karna ab ek nayi class aur configuration ki ek line hai, aur booking code kabhi nahi badalta. Yahi open-closed principle hai, jo tum quote karne ki jagah actually dikha sakte ho.",
+        breaks: "Payment ek real gateway ko concrete call hai, isliye booking flow bina internet ke test nahi ho sakta, aur provider badalne ka matlab phir se sales code ko edit karna hai." },
+
+      { pressure: "Core flow ke andar ek external dependency, aur ek booking jiska status field koi bhi kuch bhi set kar sakta hai.",
+        say: "PaymentProcessor ek interface hai jiski tests ke liye fake implementation hai, aur wahi iske hone ki poori wajah hai. Aur Booking se public status setter hat jaata hai: use confirm aur cancel methods milte hain jo tab throw karte hain jab current state us transition ko allow nahi karti. Held se confirmed ya expired, confirmed se cancelled, aur usse aage kuch bhi reachable nahi. Illegal states ko unrepresentable bana dena, is page ke kisi bhi pattern se zyada value ka hai.",
+        breaks: "Confirmation email bhejna, cinema ki screen update karna aur audit record likhna, teeno confirm method mein baithe hain, aur har naya ek aur baar use edit karta hai. Saath hi service abhi bhi data memory mein rakhti hai, isliye restart ke baad kuch bachta nahi." },
+
+      { pressure: "Do alag tarah ke leaks. Jo cheezein kisi booking ke baare mein jaanna chahti hain woh us code ke andar nahi rehni chahiye jo booking banata hai, aur Booking kahan store hoti hai woh BookingService ka kaam nahi hai.",
+        say: "Ek BookingListener interface jisme register method hai, aur har consequence ek listener ban jaata hai: email, cinema ki screen, audit log. Naya add karna ab ek nayi class hai, edit nahi. Aur ek BookingRepository interface, jo interview ke liye ek map se implement hota hai aur baad mein database se, taaki service kabhi table ka naam na le. Asli round mein main yeh dono sabse baad mein likhunga, aur zor se bolunga ki main inhe extensibility ke liye add kar raha hoon, isliye nahi ki requirements ne maanga, kyunki jo extension points kisi ne maange hi nahi unhe invent karna khud ek failure mode hai." }
+    ],
+
+    boxesIntro: "Barah types. Chaar entities hain jo state own karti hain, teen interfaces hain jo kisi cheez ko bahar rakhne ke liye hain, aur baaki unke peeche ki implementations. Machine coding round mein time kam ho to pehle paanch hi jawab hain, baaki improvement hai.",
+
+    boxes: [
+      { job: "Request ko service pe ek call mein badalta hai, aur result ko response mein.",
+        why: "Yeh diagram pe boundary dikhane ke liye hai. Iske daayin taraf sab kuch bina network ke testable hai, aur poora design isi property ke around arrange kiya gaya hai.",
+        forced: "Kuch nahi. Yeh isliye draw hua hai ki dikhe design kahan se shuru hota hai.",
+        alts: [["Putting logic in the controller", "ek saaf design ke sadne ka sabse common tareeka, kyunki controller wahi ek class hai jiska koi unit test nahi likhta."]],
+        pros: ["Transport concerns, status codes aur serialisation ko domain se bahar rakhta hai.", "Service ko tests mein seedha chalaya ja sakta hai, kahin HTTP ke bina."],
+        cons: ["Ek extra layer jo sach mein patli hai, aur kabhi na kabhi koi poochega ki yeh hai kyun."],
+        cost: "Ek class, lagbhag koi code nahi.",
+        fails: "Validation isme khisakti hai, phir business rules uske peeche, aur ek saal baad rules do jagah hain jo ek doosre se alag baat kehte hain.",
+        say: "Controller map karta hai aur delegate karta hai. Agar yahaan kisi method mein domain ke baare mein if statement hai, to woh galat class mein hai." },
+
+      { job: "Sequence coordinate karo: show dhoondho, seats lock karo, price nikalo, payment lo, booking confirm karo.",
+        why: "Operations ka order kisi ko to own karna hai. Yeh coordinator isliye hai kyunki sequence own karna aur data own karna alag kaam hain, aur jo class dono karti hai wahi stage 0 ki god class hai.",
+        forced: "Stage 0, aur uske baad har stage ne isse kuch jodne ki jagah kuch cheen liya.",
+        alts: [["Putting the flow inside Booking itself", "anaemic-model ka overcorrection: ab entity payment gateways ke baare mein jaanti hai, jo us coupling se kaafi buri hai jo tumne hataai thi."], ["Splitting it into HoldService and ConfirmService", "bade system mein reasonable hai, aur yahaan ek hi sequence ke do hisse bina kisi faide ke alag kar deta hai."]],
+        pros: ["Poora flow padhne ke liye ek jagah, jo reviewer chahta hai.", "Koi state own nahi karta, isliye fakes ke saath trivially testable hai.", "Har dependency ek interface hai, isliye har collaborator badla ja sakta hai."],
+        cons: ["Yeh wahi class hai jo chupke se badhti rehti hai agar koi dekh na raha ho, aur ise jaan boojh ke rokna padta hai.", "Paanch constructor dependencies comfortable ki edge pe hai."],
+        cost: "Ek class, aur ek constructor jo har collaborator ka naam leta hai, jo khud ek useful documentation hai.",
+        fails: "Chhathi aur saatvi responsibility aa jaati hain, discounts aur loyalty points, aur phir se stage 0. Bachaav yeh hai ki inme se har ek ko method ki jagah strategy ya listener hona chahiye.",
+        say: "Yeh sequence own karta hai aur kuch nahi. Agar yeh data own karne ya rules banane lage, to kuch galat jagah rakha gaya hai." },
+
+      { job: "Ek screen mein, ek time pe ek film, jo apna seat map own karti hai.",
+        why: "Yeh aggregate root hai. Yeh wo object hai jo seats own karta hai, isliye yeh consistency aur locking dono ki natural unit hai, aur yeh aisa faisla hai jo galti se nahi, jaan boojh ke lena chahiye.",
+        forced: "Stage 1.",
+        alts: [["A Screen owning seats, with Show referencing it", "arguably zyada correct, kyunki seats physically screen ki hoti hain, aur isse seat map shows ke beech shared ho jaata hai, isliye per show availability ke liye alag structure chahiye. Practice mein worse."], ["Subclasses such as PremiumShow", "inheritance ek aisi cheez ke liye jo per seat badalti hai, per show nahi, isliye galat axis hai."]],
+        pros: ["Seat map ka ek owner, isliye locking unit saaf hai.", "Physical layout aur per show availability ek hi jagah rehte hain.", "Lagbhag do sau seats, isliye Show ek comfortable in memory object hai."],
+        cons: ["Ek hi screen ke har show mein seat layout duplicate hota hai, jo memory hai jo bacha sakte the aur clarity hai jo kho dete."],
+        cost: "Har show ke liye ek object jisme do sau ke aas paas seats hain.",
+        fails: "Koi ek method add karta hai jo lock provider se guzre bina seat map mutate karta hai. Map ko private rakho aur intent expose karo, collection nahi.",
+        say: "Show aggregate root hai aur isliye locking ki unit. Ise shuru mein hi explicit kar dena wahi cheez hai jo concurrency ke sawaal ko baad mein hawa mein udne se rokti hai." },
+
+      { job: "Ek physical position: row, number, type, aur yeh ki abhi available hai ya nahi.",
+        why: "Yeh wo cheez hai jis pe invariant reh sakta hai. Iske bina availability kahin ek collection mein boolean hai aur koi uske baare mein rule enforce nahi kar sakta.",
+        forced: "Stage 1.",
+        alts: [["An enum or a string identifier", "tab tak theek jab tak seat ko type, price band aur status nahi chahiye, aur us waqt tumhare paas string se keyed parallel maps hote hain, jo woh class hai jo abhi likhi nahi gayi."], ["A subclass per seat type", "recliner aur regular data aur price rule mein alag hain, behaviour mein nahi, isliye type field aur pricing strategy simple hai aur configure karna aasan."]],
+        pros: ["Type seat pe rehta hai, isliye pricing poochh sakti hai, use bataya nahi jaata.", "(show, row, number) se equality use sets mein aur lock key ke roop mein safe bana deti hai."],
+        cons: ["Seat apna status khud rakhe ya show ek status map rakhe, yeh design ka asli fork hai, aur dono mix karna hi state ko out of sync karne ka tareeka hai."],
+        cost: "Ek chhota, lagbhag immutable object, har show mein do sau ke aas paas.",
+        fails: "Seat.status aur Show mein map, dono maujood hain, aur woh alag ho jaate hain. Ek owner chuno. Main status seat pe rakhunga aur show us pe queries expose karega.",
+        say: "Value jaisi, position se equal, aur type uspe, taaki pricing ko kabhi bataana na pade ki woh kis tarah ki seat dekh rahi hai." },
+
+      { job: "Ek user ke liye seats ka ek set expiry ke saath atomically claim karo, ya koi bhi nahi.",
+        why: "Yeh problem ke ek hi hard sawaal ka jawab hai. Yeh apna alag type isliye hai ki tum synchronise kya karte ho iska jawab ek class ho jise tum dikha sako, code mein bikhra hua keyword nahi.",
+        forced: "Stage 2.",
+        alts: [["synchronized on the BookingService", "correct hai, aur har cinema ke har show ko ek hi monitor se serialise kar deta hai, jo sach mein bura jawab hai jo achha dikhta hai."], ["A lock per seat", "sabse fine granularity aur sabse zyada concurrency, aur deadlock aa jaata hai jaise hi ek booking seats A aur B maange aur doosri B aur A. Hal hai hamesha sorted order mein lock karna, aur yeh batana worth hai ki tum problem aur fix dono jaante ho."], ["Optimistic, compare and swap on the seat status", "koi lock nahi aur ek seat ke liye achha chalta hai, aur kayi seats pe all-or-nothing ke liye rollback path chahiye jo tumhe khud likhna padta hai."], ["Leaving it to the database", "production mein sahi jawab aur LLD round mein galat, jahan object model hi examine ho raha hai."]],
+        pros: ["Lock per show sweet spot hai: shows independent hain, isliye cross show contention nahi, aur ek show ke andar contention milliseconds ke liye tens of threads ka hai.", "Expiry lock ke saath rehti hai, isliye chhoda hua checkout kahin aur cleanup nahi maangta.", "Ek chhoti class jisme ek synchronized block hai, jo review aur test karna aasan hai."],
+        cons: ["Expiry ke liye ya to read pe check hone wala timestamp chahiye ya ek sweeper. Timestamp simple hai, aur expired lock ko wahi reclaim kar leta hai jo agla poochta hai.", "In memory hai, isliye single process. Ise distribute karne ka matlab Redis, jo isi box ka HLD version hai."],
+        cost: "Har show ke liye ek map, ek waqt mein chand entries.",
+        fails: "Koi payment call ke dauraan lock pakde rehta hai, aur ek slow card poore hall ko aath minute ke liye lock kar deta hai. Lock, claim, monitor chhodo, phir pay karo. Claim mein expiry isi liye hai ki monitor ko pakde rehna na pade.",
+        say: "Ek lock per show, acquire karne se pehle seats sorted, aur kisi bhi external call se pehle monitor chhoda hua. Agar processes ke across chalana ho to wahi interface TTL ke saath Redis pe jaata hai, aur uske upar kuch nahi badalta." },
+
+      { job: "Ek user, ek show, seats ka ek set, ek amount, aur ek status jo sirf legal directions mein hi chal sakta hai.",
+        why: "Yeh sale ka record hai, aur yahin state machine rehti hai. Public setter wala status field cancelled likh kar phir confirmed likhne ka nimantran hai.",
+        forced: "Class ke liye stage 1, state machine ke liye stage 4.",
+        alts: [["A status field with a setter", "zyadatar pehle drafts mein yahi hota hai, aur isse har illegal transition codebase mein kahin se bhi reachable ho jaata hai."], ["The State pattern, one class per status", "textbook jawab, aur chaar statuses ke saath simple transitions ke liye yeh problem ke behaviour se zyada classes hain. Naam lene layak hai ki statuses badhe to tum wahan jaoge."]],
+        pros: ["Throw karne wale methods ke roop mein transitions illegal states ko unreachable bana dete hain, jo kisi bhi test se zyada strong hai.", "Total ko hold time pe ek baar compute karke rakhne ki natural jagah yahi hai, taaki user ke neeche price na khisake."],
+        cons: ["Enum plus guards State pattern se kam extensible hai, aur tumhe kehna chahiye ki tum yeh trade-off jaante ho, use doosre ke bataane ka intezaar mat karo."],
+        cost: "Har sale ke liye ek object.",
+        fails: "Do threads ek hi booking confirm karte hain. Transition ko khud atomic banao, status pe compare and set, taaki doosre ko second charge ki jagah exception mile.",
+        say: "Status pe koi setter nahi. confirm() aur cancel() illegal transition pe throw karte hain, isliye object ko aisi state mein nahi daala ja sakta jo business mein hai hi nahi." },
+
+      { job: "Ek show aur ek seat diye jaayein, to ek amount lautao.",
+        why: "Pricing wo cheez hai jo business wajahon se badalti hai, sabse zyada badalti hai, aur bechne se uska koi lena dena nahi. Yeh combination hi us strategy ki definition hai jise extract karna banta hai.",
+        forced: "Stage 3.",
+        alts: [["An if-else chain in the service", "ek class kam, aur har price change us class ko edit karta hai jo tickets bechti hai, jo codebase ki sabse high risk file hai."], ["A price field on Seat", "tab tak chalta hai jab tak price din ya show pe depend na kare, seat pe nahi, aur woh turant karta hai."], ["A rules engine", "jawab tab hai jab pricing non engineers configure karein, aur interview ke liye bahut zyada overkill."]],
+        pros: ["Naya rule ek nayi class hai, existing code mein koi edit nahi.", "Rules compose hote hain: order mein lagai gayi strategies ki list bina kisi nayi abstraction ke base fare plus surcharges de deti hai.", "Har rule alag se testable hai, jo pricing ko buri tarah chahiye."],
+        cons: ["Composition ka order matter karta hai aur type system mein dikhta nahi, isliye percentage flat surcharge se pehle lage ya baad mein, jawab alag aata hai.", "Chhoti classes badhti hain, jo tabhi problem hai agar rules trivial hain."],
+        cost: "Ek interface, har rule ke liye ek class, ek composite.",
+        fails: "Do rules dono percentage lagate hain aur result registration order pe depend karta hai. Composite ka order explicit aur tested banao, aur total lautane wale rules ki jagah delta lautane wale rules prefer karo.",
+        say: "Ek method, price(show, seat). Ek composite unhe defined order mein chalata hai. Yeh wo ek pattern hai jo main bina poochhe introduce karunga, kyunki requirement khud kehti hai ki prices row aur din ke hisaab se badalte hain." },
+
+      { job: "Base fare, weekend surcharge, recliner premium, matinee discount.",
+        why: "Yeh yeh dikhane ke liye hain ki strategy ki ek se zyada implementation hai, jo ek hi cheez hai jo interface ko rakhne layak banati hai.",
+        forced: "Stage 3.",
+        alts: [["One class with a switch on rule type", "interface hata di gayi aur kharab tareeke se dobara implement ki gayi."]],
+        pros: ["Har rule kuch lines aur ek test hai.", "Configuration tay karta hai ki kaunse rules kis show pe lagte hain, isliye promotion ek data change hai."],
+        cons: ["Aisa rule jo poori booking dekhna chahta hai, ek seat nahi, jaise buy three get one free, is interface mein fit nahi hota aur booking level pe doosra interface maangta hai."],
+        cost: "Kuch chhoti classes.",
+        fails: "Ek rule ko seat ki jagah total chahiye, aur koi interface ko chauda karke Booking le leta hai. Seat rule ko aisa parameter uthane pe majboor karne ki jagah alag BookingDiscount abstraction add karo.",
+        say: "Per seat rules aur per booking rules do alag abstractions hain. Code likhne se pehle yeh notice kar lena pattern se khud zyada value ka hai." },
+
+      { job: "Ek booking ke liye amount charge karo, aur batao ki kaam hua ya nahi.",
+        why: "Yeh isliye hai ki booking flow bina internet ke test ho sake, aur provider sales code ko chhue bina badla ja sake. Yeh do alag justifications hain aur dono akele kaafi hain.",
+        forced: "Stage 4.",
+        alts: [["Calling the gateway SDK directly", "kam types, aur ab core flow test nahi ho sakta aur provider nahi badal sakta."], ["A full adapter layer with request and response models", "production mein sahi cheez, aur 45 minute ke round ke liye zyada machinery. Naam lo aur aage badho."]],
+        pros: ["Fake implementation poore flow ko testable banati hai, failure branch samet, jo wahi branch hai jo matter karti hai.", "Provider ki specifics ek class mein rehti hain."],
+        cons: ["Interface itna general ho ki kayi providers ke liye chale aur itna specific ki kaam ka ho, aur yeh galat ho jaye to der se pata chalta hai."],
+        cost: "Ek interface, ek real implementation, ek fake.",
+        fails: "Interface provider ke concepts leak kar deta hai, signature mein Stripe token, aur doosra provider fit nahi hota. Interface ko apni vocabulary mein rakho: amount, currency, booking reference, result.",
+        say: "Fake implementation hi point hai. Agar main payment-declined path bina network ke test nahi kar sakta, to design poora nahi hua." },
+
+      { job: "Ek class jo real provider se baat karti hai, ek jo woh lautati hai jo test maange.",
+        why: "Do implementations woh minimum hain jo abstraction ko real saabit karte hain. Ek interface ki ek hi implementation aksar extra steps wali class hoti hai.",
+        forced: "Stage 4.",
+        alts: [["Mocking the interface in each test instead of a shared fake", "theek hai, aur wahi setup har test file mein failta hai. Scripted outcome wali fake aksar kam code hoti hai."]],
+        pros: ["Retries, timeouts aur idempotency keys adapter mein rehte hain, service mein nahi.", "Fake declined aur timeout paths ko heroics ki jagah ordinary tests bana deti hai."],
+        cons: ["Fake real behaviour se drift kar sakti hai, jis tarah ek well tested system production mein surprise se milta hai."],
+        cost: "Do chhoti classes.",
+        fails: "Fake hamesha succeed karti hai, isliye declined path kabhi test nahi hota, aur launch day pe pata chalta hai.",
+        say: "Idempotency key booking id ke barabar, adapter ke andar set hoti hai. Service ko pata bhi nahi hona chahiye ki retry karna possible hai." },
+
+      { job: "Yeh sunna ki booking confirm ya cancel hui, aur uske baare mein kuch karna.",
+        why: "Consequences badhte jaate hain. Email, cinema ki screen, audit record, analytics. Confirm method mein jodi gayi har ek cheez system ke sabse khatarnak method ko edit karne ki ek aur wajah hai.",
+        forced: "Stage 5.",
+        alts: [["Calling each consequence directly from confirm", "explicit aur readable, aur har feature pe ek line badhti rehti hai hamesha, aur inme se kisi ek ka fail hona sale fail kar deta hai."], ["An in process event bus", "wahi idea zyada indirection ke saath, tab useful jab publishers aur subscribers alag modules mein hon."]],
+        pros: ["Naya consequence add karna ek nayi class aur ek registration hai.", "Listeners alag alag fail ho sakte hain, agar tum per listener catch karo, isliye toota hua email sale cancel nahi karta.", "Yeh HLD design ke outbox ka LLD saaya hai, aur yeh connection zor se bolna marks ke layak hai."],
+        cons: ["Control flow indirect ho jaata hai, aur padhne wala confirm padh ke yeh nahi dekh sakta ki confirm pe kya kya hota hai.", "Listeners ke beech ordering undefined hai jab tak tum define na karo, aur koi ise galti se depend kar lega."],
+        cost: "Ek interface, ek list, ek loop.",
+        fails: "Ek listener throw karta hai aur transaction ko saath le doobta hai. Per listener catch aur log karo. Confirmed sale ek failed email se undo nahi honi chahiye.",
+        say: "Per listener catch karo. Sale ho chuki hai; listener jo bhi kare, use unmake nahi kar sakta." },
+
+      { job: "Bookings ko save aur find karo, bina service ko yeh bataye ki kaise.",
+        why: "Taaki poora design ek map ke against banaya aur test kiya ja sake, aur baad mein database pe point kiya ja sake bina upar kuch badle.",
+        forced: "Stage 5.",
+        alts: [["Calling the database from the service", "kam types, aur ab service bina database ke test nahi ho sakti, aur SQL business flow ke beech mein baithi hai."], ["Active record, where Booking saves itself", "kam code aur entity ko storage se couple kar deta hai, jo wahi coupling hai jise yeh interface rokne ke liye hai."]],
+        pros: ["In memory implementation poore design ko interview mein runnable bana deti hai, jo bilkul wahi hai jise machine coding round reward karta hai.", "Queries ek jagah rehti hain, jahan review ho sakti hain."],
+        cons: ["Yeh tees find methods wala pass-through ban sakta hai, jahan abstraction ne apna kharcha nikalna band kar diya."],
+        cost: "Ek interface, ek map based implementation.",
+        fails: "Query methods badhte jaate hain jab tak interface hi database ho jaata hai, naye naamon ke saath. Use sirf un queries tak rakho jo domain sach mein poochta hai.",
+        say: "Pehle interface, interview ke liye map implementation, baad mein database implementation. Iska matlab yeh bhi hai ki main poora flow bina kisi infrastructure ke chala ke dikha sakta hoon, jo round mujhse maang raha hai." }
+    ],
+
+    patternsIntro: "Teen patterns apni jagah kamate hain aur kayi jaane maane patterns nahi. Interview mein, bina yeh bataye ki kya badalta hai pattern introduce karna, ratta lagane wale jaisa dikhne ka sabse tez tareeka hai. Naam lo ki kya badalta hai, phir pattern obvious aur defend karne layak ho jaata hai.",
+
+    patterns: [
+      { what: "Ek interface, kayi interchangeable price rules, jo configuration time pe chune aur compose kiye jaate hain.",
+        varies: "Price rule. Yeh business wajahon se badalta hai, aksar, aur kisi technical cheez se independent.",
+        without: "Us class ke andar ek if-else chain jo tickets bechti hai, aur jo har baar edit hoti hai jab marketing ko koi idea aata hai.",
+        cost: "Ek interface aur har rule ke liye ek chhoti class. Composition order ek aisi cheez ban jaata hai jo tumhe define aur test karni padti hai." },
+      { what: "Transitions aisi methods ke roop mein jo illegal moves refuse karte hain, setter wale status field ki jagah.",
+        varies: "Kuch nahi badalta. Yeh extension ke baare mein nahi hai, yeh galat state ko unreachable banane ke baare mein hai.",
+        without: "Kahin ka bhi koi code cancelled booking ko wapas confirmed set kar sakta hai, aur bug mahino baad refund report mein dikhta hai.",
+        cost: "Field se thoda zyada code. Poora State pattern, har state ke liye ek class, agla step hai agar statuses kuch ginti se aage badh jaayein." },
+      { what: "Service pe register kiye gaye listeners, jinhe booking confirm ya cancel hone ke baad notify kiya jaata hai.",
+        varies: "Un cheezon ka set jo parwah karti hain. Aaj email, kal cinema ki screen, uske baad analytics.",
+        without: "Confirm method mein har feature pe ek line badhti hai aur inme se kisi ek ka fail hona sale fail kar sakta hai.",
+        cost: "Indirect control flow, aur per listener error handling jo tumhe actually likhni padti hai." },
+      { what: "Ek factory jo decide kare ki kaunsa kind ka Booking banana hai.",
+        varies: "Kuch nahi. Booking ka ek hi kind hai, aur construction ek constructor call hai jisme koi branching nahi.",
+        without: "Tum new call karte ho. Yeh theek hai, aur code ko yahi kehna chahiye.",
+        cost: "Ek class jo indirection ka ek level jodti hai aur aisa sawaal jawab deti hai jo kisi ne poocha nahi. Tab add karo jab seat types ko kabhi sach mein alag Booking subclasses chahiye, jo yahaan nahi chahiye." },
+      { what: "SeatLockProvider ka ek global instance, kahin se bhi reachable.",
+        varies: "Kuch nahi, aur yahi exactly problem hai: singleton ek global mutable state hai jis pe pattern ka naam chipka diya gaya hai.",
+        without: "Ek banao aur inject karo. Woh wahi ek single instance hai, aur ab use test mein replace kiya ja sakta hai.",
+        cost: "Untestable, parallel tests ke liye hostile, aur ek dependency chhupata hai jo constructor ko declare karni chahiye. Agar interviewer yeh suggest kare to yeh baat kaho; yeh ek common aur jaan boojh ke rakhi gayi trap hai." },
+      { what: "Ek pricing strategy ko doosri strategy mein wrap karna jo surcharge add kare.",
+        varies: "Wahi cheez jo Strategy yahaan pehle se handle kar raha hai.",
+        without: "Ek composite jo strategies ki list chalata hai, jo padhne aur configure karne mein simple hai.",
+        cost: "Ismein kuch galat nahi, aur is problem mein yeh composite se zyada kuch nahi deta. Ise improvement ke roop mein present karne ki jagah ek equivalent alternative ke roop mein naam lena worth hai." }
+    ],
+
+    flowsIntro: "Do traces, aur doosra wahi hai jo poochha jaata hai. Ek concurrent path ko zor se bolte hue walk karna, exactly yeh batate hue ki monitor kahan liya aur chhoda jaata hai, LLD round mein sabse high value ki cheez hai.",
+
+    flows: [
+      { n: "The happy path",
+        steps: [
+          ["Controller <code>bookingService.hold(showId, seatIds, userId)</code> call karta hai."],
+          ["Service Show load karti hai, aur seat ids sort karti hai. Sorting sirf dikhawa nahi hai: yahi deadlock ko impossible banati hai agar lock granularity kabhi per seat ho jaaye."],
+          ["Us show pe ek synchronized block ke andar, lock provider check karta hai ki har seat free hai ya uska lock expire ho chuka hai, aur sabko expiry ke saath claim karta hai. All or nothing."],
+          ["Monitor chhod diya jaata hai. Ise pakde hue kuch bhi external call nahi kiya gaya, jo wahi rule hai jo ek slow payment ko hall freeze karne se rokta hai."],
+          ["Pricing strategy per seat lagti hai aur total Booking pe store hota hai, taaki user ke pay karte waqt price na khisake."],
+          ["Payment processor call hota hai. Yeh seconds ka kaam hai, aur uske dauraan koi lock nahi pakda hua."],
+          ["<code>booking.confirm()</code> state machine ko aage badhata hai, seats sold mark hoti hain, locks release hote hain, aur repository ise save karti hai."],
+          ["Listeners ko notify kiya jaata hai, har ek apne try aur catch ke andar, kyunki sale pehle hi final hai."]
+        ] },
+      { n: "Two threads, one seat",
+        note: "Interview mein yeh zor se, dheere dheere bolo. Yahi woh jawab hai jispe marks lagte hain.",
+        steps: [
+          ["Thread A aur thread B dono ek hi show ki seat J12 ke liye hold call karte hain, microseconds ke fark se."],
+          ["Dono us show ke lock object pe synchronized block tak pahunchte hain. Ek andar jaata hai, doosra intezaar karta hai. Yahi wo moment hai jahan design ya to chalta hai ya nahi chalta."],
+          ["A ko J12 free dikhti hai, A ke liye expiry ke saath ek lock record karta hai, aur block chhod deta hai."],
+          ["B andar aata hai, A ka ek live lock dekhta hai, aur kuch nahi leta. Woh failure lautata hai jo batata hai ki kaunsi seats chali gayi, taaki user error dekhne ki jagah dobara chun sake."],
+          ["Agar A chhod deta hai, to lock expire ho jaata hai. Agla caller expired lock dekhta hai aur use reclaim kar leta hai. Correctness ke liye kisi sweeper thread ki zarurat nahi."],
+          ["Agar A pay kar deta hai, to confirm seats ko sold mark karta hai aur locks hata deta hai. B ka retry ab unhe sold dekhta hai, jo alag message hai aur wahi outcome."]
+        ] }
+    ],
+
+    apiNote: "Yahaan do aadatein dikhane layak hain: false lautane ki jagah woh failure jo seats ke naam batata hai, aur idempotent release, kyunki caller browser hai aur browsers buttons do baar dabate hain.",
+
+    api: [
+      ["hold(showId, seatIds, userId)", "HoldResult", "All or nothing. Failure pe yeh batata hai ki kaunsi seats le li gayi thi, kyunki list actionable hai aur boolean nahi."],
+      ["confirm(holdId, paymentToken)", "Booking", "Price karta hai, charge karta hai, state machine ko aage badhata hai, save karta hai, notify karta hai. Ek hi method jo paise leta hai."],
+      ["release(holdId)", "void", "Explicit cancel. Idempotent, kyunki user ka back do baar dabana koi error condition nahi hai."],
+      ["seatMap(showId)", "List of SeatView", "Read only. Har seat ka status aur price lautata hai, taaki caller ko dono alag calls se jodne na pade."],
+      ["cancel(bookingId)", "Booking", "Cancelled mein transition karta hai, seats pool mein wapas karta hai, aur notify karta hai. Refund khud ek listener hai."]
+    ],
+
+    tradeoffsIntro: "LLD ke trade-offs HLD ke trade-offs se chhote hain aur utni hi dhyan se marked hote hain, kyunki woh dikhate hain ki tumhari opinions hain ya sirf aadatein.",
+
+    tradeoffs: [
+      { a: ["Lock per show", "Koi cross show contention nahi, microsecond critical sections, aur ek lock ke saath deadlock possible hi nahi."],
+        b: ["Lock per seat", "Maximum concurrency, aur deadlock jaise hi do bookings seats ki wahi jodi alag order mein maangein."],
+        flip: "ek hi show mein hazaaron seats hain aur dozens concurrent bookers, jaise ek stadium. Tab per seat jao aur har baar, bina exception ke, acquire karne se pehle seat list sort karo." },
+      { a: ["Composition, Show has Seats", "Seat type per seat badalta hai, isliye ek field plus pricing strategy bina class explosion ke kaam kar deta hai."],
+        b: ["Inheritance, PremiumSeat extends Seat", "Har seat kind ke liye type safety, aur fark data aur price ka hai, behaviour ka nahi, isliye hierarchy kuch nahi kamati."],
+        flip: "seat kinds sach mein alag behave karte hain, jaise ek wheelchair space jo adjacency compute karne ka tareeka badal deta hai. Behaviour inheritance ka test hai, data kabhi nahi." },
+      { a: ["Enum plus guarded transitions", "Das lines, koi nayi class nahi, illegal transitions throw karte hain."],
+        b: ["The State pattern, one class per state", "Naya state add karna kisi existing cheez ko nahi chhoota, aur chaar statuses ke liye chaar classes hain jinme lagbhag koi behaviour nahi."],
+        flip: "status count paanch se aage badh jaaye, ya states sirf alag legality ki jagah alag behaviour rakhne lagein. Tab switch statements smell hain aur State fix hai." },
+      { a: ["Listeners for consequences", "Effect add karna ek nayi class hai. Failures per listener isolated hote hain."],
+        b: ["Direct calls inside confirm()", "Tum confirm padh ke sab kuch dekh sakte ho jo hota hai, jo genuinely valuable hai."],
+        flip: "sirf do consequences hain aur hamesha do hi rahenge. Do calls ki fixed jodi ke liye Observer bina payoff wali indirection hai, aur readability zyada worth hai." }
+    ],
+
+    next: [
+      "<b>Seat suggestion.</b> Best available adjacent block ek bin packing problem hai, aur woh lock ke bahar aata hai, claim time pe nahi suggestion time pe.",
+      "<b>Per booking discounts.</b> Buy three get one free per seat pricing interface mein fit nahi hota, aur ise chaude interface ki jagah doosri abstraction chahiye.",
+      "<b>Distributed locks.</b> Wahi interface, peeche TTL ke saath Redis, aur is baat ki charcha ki lock service unreachable ho to kya hota hai.",
+      "<b>Auditability.</b> Har state transition ka append only log, jo disputes ko answerable banata hai aur flow mein change nahi, ek listener hai."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -3072,7 +4518,269 @@ const DESIGN = [
     ["GFG", "https://www.geeksforgeeks.org/dsa/minimize-cash-flow-among-given-set-friends-borrowed-money/", "Minimise cash flow, the simplification algorithm", "M"],
     ["HI", "https://www.hellointerview.com/learn/low-level-design/in-a-hurry/patterns", "Hello Interview, when to use which pattern", "M"],
     ["LIST", "https://leetcode.com/problem-list/design/", "LeetCode Design problems", "M"]
-  ]
+  ],
+
+hi: {
+    one: "Yeh problem chhota dikhta hai magar ismein do traps chhupe hain. Paisa double nahi hota, aur balance ek field nahim jise update karo, yeh immutable shares ki list par ek fold hai, aur is tarah ke apps mein log jo bhi bug report karte hain wo in dono mein se ek galat karne se aata hai.",
+
+    brief: {
+      why: "Yeh sawaal isliye poochha jaata hai kyunki yeh CRUD jaisa dikhta hai aur hai nahi. Naive version mein kaun kisko kitna owe karta hai uska ek map rakha jaata hai aur usme add hota rehta hai, jisse ek number ban jaata hai jo drift karta hai, jise user ko samjhaya nahi ja sakta, aur jise pichle Tuesday ki expense edit karne par correct nahi kiya ja sakta. Sahi design facts store karta hai aur balances derive karta hai, aur arithmetic integers mein karta hai. Dono kaam mushkil nahi hain, aur pehle draft mein lagbhag koi dono sahi nahi karta.",
+      functional: [
+        "<b>Expense add karo</b> ek group mein: kisne pay kiya, kitna, aur kin logon mein kaise split hota hai.",
+        "<b>Kam se kam teen tareeke se split karo</b>: equally, exact amounts se, aur percentage se. Chautha tareeka add karne se existing code ko haath nahi lagna chahiye.",
+        "<b>Balances dikhao.</b> Har person kitna owe karta hai ya kitna use milna hai, per group aur overall.",
+        "<b>Settle up.</b> Do logon ke beech ek payment record karo, optionally sabse kam transfers suggest karke jo poore group ko clear kar dein.",
+        "<b>Expense edit ya delete karo</b> jo galat enter ho gayi thi, yahi wo jagah hai jahan naive design gir jaata hai."
+      ],
+      out: ["authentication", "mobile client", "asal mein paisa move karna", "currency conversion, sirf ek currency store karne se zyada kuch nahi", "receipt scanning"],
+      nfr: [
+        ["Exactness", "the shares always sum to the total", "Approximately nahi. Agar sau rupaye teen logon mein split hokar 99.99 banta hai, to kisi na kisi ko yeh dikh jaata hai aur koi ise explain nahi kar sakta."],
+        ["Correctable", "editing an old expense must be safe", "Yahi requirement hai jo mutable running totals ko mana karti hai aur ek ledger rakhne par majboor karti hai."],
+        ["Extensible splits", "a new split type touches no existing code", "Is problem mein sirf yahi jagah hai jahan pattern lagana clearly justify hota hai."],
+        ["Explainable", "every balance traceable to expenses", "User poochhe main 340 kyun owe karta hoon, to usse ek list milni chahiye, ek number nahi. Yeh data model ki requirement hai, UI ki nahi."]
+      ],
+      numbers: [
+        ["Group size", "2 to about 20", "Chhota. Matlab fewest transfers algorithm worst case mein exponential ho sakta hai aur phir bhi turant khatam hoga, aur yeh zor se bolne layak baat hai."],
+        ["Expenses per group", "hundreds to a few thousand", "Itna chhota ki ledger se balance recompute karna sasta hai, yahi cheez derived balances ko practical banati hai."],
+        ["Money precision", "integer minor units", "Paise store karo, ya cents. Double 0.1 ko represent nahi kar sakta, aur paisa ek hundredth se off hona rounding error nahi, support ticket hai."],
+        ["Split types at launch", "3", "Equal, exact, percentage. Aur ek mahine ke andar chautha, by shares, aayega, yahi strategy ka argument hai."]
+      ],
+      numbersNote: "Rukne layak number hai <b>integer minor units</b>. Yeh performance decision nahi hai, correctness decision hai, aur pehle minute mein isse choose karna sabse sasta tareeka hai yeh dikhane ka ki tumne paisa involve karne wali cheez ship ki hai."
+    },
+
+    stagesIntro: "Chhe stages. Stage 0 mein chaar lines ke andar dono classic bugs hain, aur uske baad har stage ya to kuch nikal rahi hai jo vary karta hai, ya kuch store karne se mana kar rahi hai jise compute hona chahiye.",
+
+    stages: [
+      { pressure: "Abhi kuch bhi kharab nahi hua. Pehla draft banao, kyunki iske dono bugs hi is exercise ka point hain aur dono happy path test mein invisible hain.",
+        say: "Payer se borrower tak ek nested map, har expense par update, amounts doubles ke roop mein. Yeh demo mein bahut achha lagta hai. Ismein do bugs hain: sau rupaye teen logon mein split hokar 33.333333 teen baar store hote hain, jo ab sau tak sum nahi hota aur har expense ke saath aur drift karta hai, aur koi record nahi hai ki koi number waisa kyun hai, isliye pichle hafte ki expense edit karna namumkin hai.",
+        breaks: "Koi Expense object nahi hai, isliye kuch bhi edit, explain, list ya correct nahi ho sakta. Sirf balance exist karta hai, aur apne causes ke bina balance ek aisa number hai jise us insaan ko defend nahi kar sakte jo use owe karta hai." },
+
+      { pressure: "Har requirement jo yahan mushkil hai, editing, explaining, correcting, use original expense ka exist karna zaroori hai. To design ko wo record karna hoga jo hua, na ki jo usne conclude kiya.",
+        say: "Chaar nouns. Ek Group mein Users aur Expenses hote hain. Ek Expense mein payer, total, aur Shares ki list hoti hai. Share ek value object hai: ek user aur minor units mein amount, integers, kabhi double nahi. Woh invariant jo yeh sab kaam karwata hai ek line hai: <i>expense ke shares uske total tak exactly sum karte hain.</i> Ise constructor mein enforce karo, phir yeh program mein kahin bhi false nahi ho sakta.",
+        breaks: "Shares compute karna service ke andar split type par ek switch statement hai. Shares se ya adjustment se split add karna matlab expenses banane wale method ko edit karna, aur har edit invariant ko risk mein daalta hai." },
+
+      { pressure: "Requirement literally aaj teen split types kehti hai aur kal aur ka ishara deti hai. Yeh sabse saaf signal hai jo koi design de sakta hai ki kuch interface hona chahiye.",
+        say: "Ek interface: total aur participants diye jaayein, to Shares ki list wapas karo. Equal, exact aur percentage ise implement karte hain, aur chautha ek naya class hai jisme kahin edit nahi karna padta. Interface ke liye do rules apna kaam karte hain. Yeh Shares return karta hai, expense ko mutate nahi karta, isliye yeh pure hai aur test karna trivial hai. Aur har implementation ko wahi postcondition satisfy karni hoti hai, ki shares total tak sum karte hain, matlab ek shared test sab par chal sakta hai.",
+        breaks: "Sau rupaye teen logon mein split hokar 3,333 paise har ek ko aur total 10,000, to ek paisa unaccounted reh jaata hai. Har split type mein yahi problem hai aur service ka koi opinion nahi hai ki remainder kisko milega." },
+
+      { pressure: "Purani expense edit karne ki requirement. Ek stored running total ko correct karna namumkin hai bina uss history ko replay kiye jo tumne rakhi hi nahi, to balance ko un shares se derive karna hoga jo pehle se exist karte hain.",
+        say: "BalanceSheet ek function hai, field nahi. Group ki har expense ko fold karo: total ko payer ki net position mein add karo, har share ko uske owner ki position se subtract karo. Result ek signed integer per person hai, jo zero tak sum karta hai, yeh khud ek checkable invariant hai. Ek expense edit karna ab ek fact ka change hai aur balances khud follow karte hain. Aur rounding remainder ko finally ek rule mil jaata hai: extra unit payer ko do, deterministically, aur likh do taaki do runs kabhi disagree na karein.",
+        breaks: "Har read par har expense se har balance recompute karna hazaar expenses ke liye theek hai, ek dashak ke liye nahi, aur ab bhi settlement ka koi record nahi hai, jo expense se zyada ek fact hai." },
+
+      { pressure: "Do problems, ek jawab. Corrections traceable hone chahiye, aur expenses kharab connection wale phone se do baar aa sakte hain.",
+        say: "Entries append hoti hain aur kabhi modify nahi hoti. Purani expense edit karna ek reversal likhta hai jiske baad ek replacement, isse history khud ko explain karti hai aur user dekh sakta hai ki correction hua hai, chupke se number badalte hue dekhne ke bajaye. Delete karna ek reversal hai jiske baad kuch nahi. Har entry apna client supplied id rakhti hai, to retry karne wala phone wahi entry banata hai, doosri nahi. Aur jab group lamba ho jaaye, balance ka periodic snapshot plus us snapshot ke baad ki entries fold ko sasta rakhti hain, bina balance ko kabhi mutable field banaye.",
+        breaks: "Balances sahi hain aur instructions ke roop mein bekaar hain. Chhe logon ka group ek holiday khatam karta hai chhe numbers ke saath, aur kisi ko nahi pata kaun kisko pay kare." },
+
+      { pressure: "Balance ek state hai; settlement ek instruction hai. Ek ko doosre mein badalna ek chhota optimisation problem hai, aur is design mein yahi ek jagah hai jahan obvious jawab shaayad galat ho.",
+        say: "Settlement service signed balances leta hai aur transfers banata hai. Greedy version baar baar sabse bade debtor ko sabse bade creditor se match karta hai, jo fast hai, explain karna aasan hai, aur hamesha minimal nahi hota. Minimal version exponential hai, aur bees logon tak yeh phir bhi turant hota hai, to chaho to exact answer afford kar sakte ho. Zyada zaroori product judgement yeh hai: simplification badal deta hai kaun kisko pay karta hai, isliye Anita ek dinner ke liye Rahul ko pay karti hai jisme Rahul tha hi nahi. Ise opt in rakho, aur settlement record karna sirf ek aur ledger entry hai, yahi wajah hai ki isse support karne ke liye design mein kahin aur kuch badalna nahi pada." }
+    ],
+
+    boxesIntro: "Baarah types, aur design ko carry karne wale do hain Share, kyunki yeh exactness ko ek umeed ki jagah invariant banata hai, aur LedgerRepository, kyunki yeh correction ko possible hi banata hai.",
+
+    boxes: [
+      { job: "Translates a request into a service call and a result into a response.".replace(/.*/, "Ek request ko service call mein aur result ko response mein translate karta hai."),
+        why: "Yeh boundary marks karta hai. Iske right mein sab kuch bina kisi framework ke test hota hai, jo ek LLD round asal mein dikhwana chahta hai.",
+        forced: "Kuch nahi. Yeh dikhane ke liye khincha gaya ki design kahan se shuru hota hai.",
+        alts: [["Business logic in the controller", "clean design ke degrade hone ka usual tareeka, kyunki controllers wahi classes hain jinko koi unit test nahi karta."]],
+        pros: ["Serialisation aur status codes ko domain se bahar rakhta hai."],
+        cons: ["Ek patla layer jiski value tab tak invisible rehti hai jab tak koi usme koi rule na daale."],
+        cost: "Ek chhota class.",
+        fails: "Split validation yahan bhi dikhti hai aur strategy mein bhi, dono disagree karte hain, aur ek invalid expense ek raste se andar aa jaati hai.",
+        say: "Map karo aur delegate karo. Validation us object ki hai jo invariant ka owner hai, splits ke liye yeh strategy hai." },
+
+      { job: "Coordinate karo: group dhoondo, shares banao, expense create karo, ledger mein append karo.",
+        why: "Koi to is sequence ka owner hona chahiye. Ise entities se alag rakhna hi Expense ko repositories ke baare mein jaanne se rokta hai.",
+        forced: "Stage 0, aur uske baad ka har stage isse kuch na kuch nikaalta gaya.",
+        alts: [["Putting the flow on Group", "aggregate root ko persistence aur split strategies par ek dependency mil jaati hai, jo hataayi gayi coupling se bhaari hai."], ["Splitting into ExpenseService and BalanceService", "reasonable hai, aur balance ka kaam pehle se ek alag collaborator hai, to split se mostly ek lambi class list milti hai."]],
+        pros: ["Poora flow ek hi jagah readable hai.", "Koi state nahi rakhta, to fakes se test hota hai, koi fixtures nahi chahiye."],
+        cons: ["Yahi wo jagah hai jahan koi objection na kare to unrelated features add ho jaate hain."],
+        cost: "Chaar collaborators wala ek class.",
+        fails: "Currency conversion, notifications aur receipt parsing sab yahan chhe mahine mein aa jaate hain, aur yeh better dependencies ke saath phir se stage 0 ban jaata hai.",
+        say: "Yeh sirf operations ka order rakhta hai aur kuch nahi. Ise padhne mein aur test karne mein boring hona chahiye." },
+
+      { job: "Members ka ek set aur unke against record hui expenses.",
+        why: "Yeh aggregate root hai aur consistency ki unit hai: balances per group hain, membership per group hai, aur settlements ek group ko clear karte hain.",
+        forced: "Stage 1.",
+        alts: [["No group, just pairwise expenses between users", "one to one expenses aise hi kaam karte hain, aur group balance ek implicit set par query ban jaata hai jise har feature ko dobara banana padta hai."], ["A group as a tag on an expense", "wahi information, koi owner nahi, to koi enforce nahi kar sakta ki share group ke kisi member ki hai."]],
+        pros: ["Membership validation ka ek owner hai: group ke bahar kisi ke liye share boundary par reject ho jaati hai.", "Balances aur settlements naturally scoped hain."],
+        cons: ["Non zero balance wale member ka group chhodna ek genuinely awkward case hai jiska jawab isi class ko dena hai.", "Groups ke across overall balances ek field nahi, doosri query hai."],
+        cost: "Har group ke liye ek object, jisme member references aur expense ids hoti hain.",
+        fails: "Koi paisa owe karte hue group se remove ho jaata hai aur unka balance chupke se sheet se gayab ho jaata hai. Removal ke liye zero balance zaroori hona chahiye, ya group ke bahar ek debt mein convert hona chahiye.",
+        say: "Group membership ka owner hai, to yahi wo jagah hai jahan non member ki share reject hoti hai. Root par yeh enforce karne se har jagah se ek check hat jaata hai." },
+
+      { job: "Ek person, shares aur balances se id se reference hota hai.",
+        why: "Yeh jaan boojh kar ek thin entity hai. Yahan person ke baare mein jo bhi matter karta hai, wo user mein nahi, shares mein hai.",
+        forced: "Stage 1.",
+        alts: [["Using a plain string id everywhere", "kam types, aur ab koi display name ya currency preference carry nahi kar sakta, aur har method signature ek string ban jaata hai."]],
+        pros: ["Id se identity shares ko comparable, hashable aur maps mein safe banati hai.", "Display concerns ko arithmetic se door rakhti hai."],
+        cons: ["User delete karna ek referential problem hai: unki shares doosron ki history ka hissa hain aur simply gayab nahi ho saktin."],
+        cost: "Trivial.",
+        fails: "Ek user delete ho jaata hai aur purane balances unexplainable ho jaate hain. Delete kabhi mat karo, deactivate karo, ledger wali kisi bhi cheez mein hamesha.",
+        say: "Id se reference hota hai, kabhi embed nahi hota. Share ek user id rakhti hai, user nahi, kyunki profile badalne ke baad bhi ledger ka matlab bana rehna chahiye." },
+
+      { job: "Kisne pay kiya, kitna, kaunsi currency mein, kab, aur wo shares ki list jo total ka hisaab deti hai.",
+        why: "Yeh fact hai. Har requirement jo stage 0 satisfy nahi kar paaya, editing, explaining, reversing, isi object ke exist karne par depend karti hai.",
+        forced: "Stage 1.",
+        alts: [["Storing only the resulting balance deltas", "chhota hai, aur explanation phenk deta hai, jo ek requirement thi."], ["Subclasses per split type, EqualExpense and so on", "split rule sirf creation par ek baar use hone wala behaviour hai, expense ki hamesha rehne wali property nahi. Creation par strategy hamesha rehne wali hierarchy se behtar hai."]],
+        pros: ["Construction ke baad immutable, to kuch bhi drift nahi kar sakta.", "Constructor hi wo ek jagah hai jahan sum invariant check hota hai, isliye yeh hamesha hold karta hai.", "Edits mutations nahi, nayi entries ban jaate hain, yahi cheez history ko honest banati hai."],
+        cons: ["Immutability ka matlab hai edit se do aur entries banti hain, to user actions ki ginti se ledger tezi se badhta hai."],
+        cost: "Kuch shares wala har expense ke liye ek object.",
+        fails: "Koi amount ke liye ek setter add kar deta hai aur shares ab total tak sum nahi karte. Ise immutable rakho aur invariant ko constructor mein rehne do.",
+        say: "Immutable, sum invariant constructor mein check hota hai. Agar shares total tak add nahi hote, to object ban hi nahi sakta, isliye kisi aur code ko check karne ki zaroorat nahi." },
+
+      { job: "Ek expense mein ek person ka hissa, integer minor units mein.",
+        why: "Yeh chhota sa class hai jahan poore design ki correctness rehti hai. Yeh unit ko explicit banata hai, floating point ko mana karta hai, aur isi par sum invariant likha jaata hai.",
+        forced: "Stage 1.",
+        alts: [["A double amount", "default hai, aur 0.1 binary floating point mein representable nahi hai, to totals drift karte hain aur comparisons aise fail hote hain jo bhoot jaisi lagte hain."], ["BigDecimal", "correct aur verbose, jisme scale manage karni padti hai aur har operation par rounding mode specify karna padta hai. Bank ke liye sahi, yahan zaroorat se zyada bhaari."], ["A Money value object with amount and currency", "isi ka better version, aur jis moment doosri currency aaye, main ise isi mein grow karta."]],
+        pros: ["Integers addition ko exact aur comparison ko trivial banate hain.", "Unit type mein hai, to kisi ko yaad nahi rakhna padta ki number rupaye hai ya paise.", "Remainder visible ho jaata hai: integers ke saath ek missing paisa rounding error mein chhup nahi sakta."],
+        cons: ["Har input aur output ko boundaries par conversion chahiye, aur ek bhool jaana matlab sau ka factor.", "Percentages ko phir bhi division chahiye, to remainder rule ki zaroorat rehti hai."],
+        cost: "Do field wala ek immutable value object.",
+        fails: "Ek code path rupaye store karta hai aur doosra paise. Constructor ko sirf minor units lene do aur field ka naam aisa rakho ki galat na padha jaaye.",
+        say: "Integer minor units. Yeh pehla decision hai jo main lunga aur jispe compromise nahi karunga, kyunki baad mein mila hua money bug data mein unfixable hota hai." },
+
+      { job: "Total aur participants diye jaayein, to shares return karo.",
+        why: "Split rule wahi cheez hai jo requirements kehti hain vary karti hai, aur yeh product reasons se product timescale par vary karti hai.",
+        forced: "Stage 2.",
+        alts: [["A switch on a split type enum", "ek class kam, aur har naya type us method ko edit karta hai jo expenses banata hai, jahan invariant enforce hota hai."], ["A closure or lambda per split", "itni chhoti cheez ke liye genuinely theek hai, aur validation aur shared postcondition test rakhne ki named jagah kho deta hai."]],
+        pros: ["Naya split type ek naya class hai aur kuch aur nahi badalta.", "Pure: inputs se outputs, koi state nahi, to tests ek ek line ke hain.", "Ek shared property test, ki shares total tak sum karte hain, har implementation par chalta hai, future waalon par bhi."],
+        cons: ["Har type ko alag inputs chahiye: exact ko amounts, percentage ko percentages. Ya to interface parameters ka ek bag leta hai ya har strategy apne parameters ke saath construct hoti hai, aur doosra cleaner hai par lamba."],
+        cost: "Ek interface, har split type ke liye ek class.",
+        fails: "Interface har naye split type ke liye ek parameter grow karta hai jab tak paanch nullable arguments na le le. Har strategy ko apne parameters ke saath construct karo aur method signature ko total aur participants tak seemit rakho.",
+        say: "Strategy ko apni configuration ke saath construct karo, phir split(total, participants) call karo. Isse interface hamesha narrow rehta hai chahe kitne bhi types aayein." },
+
+      { job: "Teen concrete split rules, har ek apni validation aur apna remainder ke liye responsible.",
+        why: "Teen implementations hi interface ko real banate hain, aur har ek ki genuinely alag validation rule hai, yahi shared switch ke against argument hai.",
+        forced: "Stage 2.",
+        alts: [["One class with a mode flag", "interface delete hokar field ke roop mein reimplement ho jaata hai."]],
+        pros: ["Exact validate karta hai ki amounts total tak sum karte hain. Percentage validate karta hai ki percentages sau tak sum karte hain. Equal kuch validate nahi karta aur remainder distribute karta hai. Teen alag rules, teen classes.", "Har ek chand lines ka hai aur do tests se fully covered hai."],
+        cons: ["Remainder rule sabme identical hona chahiye warna do split types disagree karenge ki extra unit kisko milega."],
+        cost: "Teen chhote classes.",
+        fails: "33, 33 aur 34 ke percentages validate ho jaate hain ki sau tak sum karte hain, aur resulting paise division ki wajah se phir bhi total tak sum nahi karte. Percentages validate karo aur phir actual remainder distribute karo, validation ke bharose mat raho ki usne pehle hi theek kar diya.",
+        say: "Validation us strategy ki hai jiska opinion hai. Equal ka koi nahi, exact aur percentage dono ka apna apna hai, aur yeh logic service mein bilkul nahi hona chahiye." },
+
+      { job: "Ledger ko fold karke har person ke liye ek signed net position banao.",
+        why: "Balance derived state hai. Ise store karna editing ko namumkin banata hai aur drift ko avoidable nahi rehne deta, aur dono brief mein requirements thi.",
+        forced: "Stage 3.",
+        alts: [["A stored balance updated on each expense", "O(1) reads, aur ise correct nahi kiya ja sakta, explain nahi kiya ja sakta, aur agar koi update miss ya do baar apply ho jaaye to drift karta hai."], ["Event sourcing with projections", "yahi cheez, formalised. Isse aage kya grow hoga yeh naam lena worth hai, aur brief ke scale ke liye informal version kaafi hai."]],
+        pros: ["Construction se correct: expenses se disagree nahi kar sakta kyunki wahi se compute hota hai.", "Expense edit karne ke liye koi balance maintenance nahi chahiye.", "Sab balances ka sum zero hota hai, jo ek free assertion hai jo tumhe actually likhni chahiye."],
+        cons: ["Entries ki ginti mein O(n) per read, yahi wajah hai snapshots ki.", "Snapshot ek cached balance hai, jo thoda sa wahi wapas le aata hai jise avoid kiya tha, ab bas ledger ke saath ek defined aur testable relationship ke saath."],
+        cost: "Kuch hazaar entries par ek fold. Microseconds.",
+        fails: "Ek group das saal ki entries jama kar leta hai aur balance reads slow ho jaate hain. Periodically snapshot karo aur sirf snapshot ke baad ki entries fold karo. Snapshot ko ek background job mein full recompute se verify karo, aur ise skip karne ke liye kabhi utna trust mat karo.",
+        say: "Hamesha derived, ek assertion ke saath ki balances zero tak sum karte hain. Agar wo assertion kabhi fire ho, to matlab kahin share invariant violate hua, aur mujhe yeh turant pata chalna chahiye, support ticket mein nahi." },
+
+      { job: "Entries append karo, unhe order mein wapas padho, aur periodic snapshots rakho.",
+        why: "Append only hi corrections ko traceable aur idempotency ko possible banata hai. Yeh wo akela decision hai jo ise CRUD se kuch aisi cheez banata hai jise paisa involve karne ke liye trust kiya ja sake.",
+        forced: "Stage 4.",
+        alts: [["A mutable expenses table with updates and deletes", "obvious design, aur ek edit purani version ko mita deta hai, to koi nahi dekh sakta ki correction hua tha."], ["Soft deletes on a mutable table", "aadha waha tak pahunchta hai, aur yeh deletes rakhta hai magar edits kho deta hai, jo zyada common correction hai."]],
+        pros: ["Har entry ka apna client supplied id hai, to kharab connection wale phone ke retries naturally idempotent hain.", "Corrections reversals ke roop mein visible hain, jo user asal mein dekhna chahta hai.", "Poori balance history kisi bhi point in time ke liye reconstruct ho sakti hai, jo disputes ka jawab deta hai."],
+        cons: ["Yeh monotonically badhta hai aur kabhi shrink nahi hota.", "Balance padhne ka matlab kai rows padhna hai, isliye snapshots hain.", "Users edit ke terms mein sochte hain, to interface ko ek reversal aur ek replacement ko ek action ki tarah present karna padta hai."],
+        cost: "Har group mein kuch hazaar chhoti entries, plus har kuch sau ke baad ek snapshot.",
+        fails: "Koi repository mein ek update method add kar deta hai kyunki ek baar convenient tha. Mat do. Us method ka na hona hi design hai.",
+        say: "Append only, har entry ka ek client supplied id, speed ke liye snapshots. Ek edit ek reversal plus ek replacement hai, user ko edit ki tarah dikhta hai aur do facts ki tarah store hota hai." },
+
+      { job: "Balances ke set ko transfers ki list mein badlo, aur jab payment ho to record karo.",
+        why: "Balance batata hai kya sach hai; settlement batata hai kya karna hai. Yeh alag sawaal hain aur inhe mix karna ek optimisation algorithm ko reporting class ke andar daal deta hai.",
+        forced: "Stage 5.",
+        alts: [["Showing raw pairwise debts with no suggestion", "honest hai, jo asal mein kisko owe karta tha usse faithful hai, aur chhe logon ke group ko khud sort karne ke liye pandrah possible payments chhod deta hai."], ["Always simplifying", "sabse kam transfers aur unn logon ke beech debts bana deta hai jinhone kabhi saath khana nahi khaya, jo users ko confusing lagta hai aur kabhi kabhi object bhi karte hain."]],
+        pros: ["Settlement record karna sirf ek aur ledger entry hai, to isse support karne ke liye design mein aur kuch badalna nahi pada.", "Suggestion aur recording alag hain, to group suggestion ignore karke jise chahe use pay kar sakta hai."],
+        cons: ["Simplification ek algorithm ke bhes mein product decision hai, aur alag apps ise jaan boojh kar alag tarike se karte hain."],
+        cost: "Chhota. Groups zyada se zyada bees logon ke hote hain.",
+        fails: "Ek suggested transfer ko ek obligation ki tarah dikhaya jaata hai aur koi do baar pay kar deta hai, ek baar suggestion ke hisaab se aur ek baar jaisa unhe yaad tha. Settlements explicitly record honi chahiye, kabhi ek suggestion dikhne se infer nahi honi chahiye.",
+        say: "Suggest karo, decide mat karo. Aur settlement ko ek ledger entry ki tarah record karo taaki balance usi fold se nikle jisse baaki sab nikalta hai." },
+
+      { job: "Net balances ke set ko jitna ho sake kam transfers mein reduce karo.",
+        why: "Yeh alag class isliye hai kyunki yeh ek trade-off wala algorithm hai, aur kyunki ek group ise off kar sakna chahiye.",
+        forced: "Stage 5.",
+        alts: [["Greedy, largest debtor to largest creditor", "zyada se zyada n-1 transfers, explain karna aasan, aur hamesha minimal nahi. Lagbhag hamesha yahi ship karne layak hai."], ["Exact minimum via subset partitioning", "genuinely minimal aur exponential, aur bees logon ke saath yeh phir bhi turant hota hai, to yahan yeh affordable hai jabki scale par nahi hota."]],
+        pros: ["n squared se n-1 transfers tak, bahut kam.", "Chand integers par chalta hai, to is size par kuch cost nahi karta."],
+        cons: ["Un logon ke beech debts banata hai jinka kabhi transaction nahi hua, jo confusing hai aur kabhi kabhi socially galat bhi.", "Explanation kho deta hai: main tumhe 400 doonga in teen dinners ki wajah se, ban jaata hai main tumhe 400 doonga arithmetic ki wajah se."],
+        cost: "Bees logon par negligible, exact version ke liye bhi.",
+        fails: "Simplification default se chalta hai aur user nahi dekh paata ki wo ek near stranger ko kyun owe karta hai. Ise per group opt in rakho, aur underlying pairwise history hamesha available rakho.",
+        say: "Default greedy, per group opt in, aur raw pairwise view hamesha available. Optimisation aasan hai; yeh jaanna ki yeh ek product decision hai, wahi asli jawab hai." }
+    ],
+
+    patternsIntro: "Ek pattern clearly justified hai, ek aur arguable hai, aur is problem ka interesting part yeh hai ki kitne well known patterns applicable lagte hain aur hote nahi. Yeh keh paana ki kyun nahi, ek pattern use karne jitna hi valuable hai.",
+
+    patterns: [
+      { what: "Ek interface, har split type ke liye ek implementation, har ek apni configuration ke saath construct hoti hai.",
+        varies: "Split rule. Launch par teen, ek mahine mein chautha, har ek ki validation alag.",
+        without: "Ek switch statement us method ke andar jo expenses banata hai, jise har baar naya split type add hone par edit karna padta hai, us invariant ke bilkul paas jise usse todna nahi chahiye.",
+        cost: "Ek interface aur har type ke liye ek chhota class. Interface ko narrow rakhna zaroori hai warna har implementation ke liye ek parameter jama ho jaata hai." },
+
+      { what: "Immutable, value se equal, integer minor units, unit type mein encoded.",
+        varies: "Kuch nahi. Yeh extension allow karne ke liye nahi, bug ki ek poori category ko impossible banane ke liye exist karta hai.",
+        without: "Doubles, drift, aur ek support queue jo un balances se bhari hai jo ek paisa se off hain aur explain nahi ho sakte.",
+        cost: "Har boundary par conversion, aur kabhi bhi floating point amount introduce na karne ka discipline." },
+
+      { what: "Append only entries, unse fold hokar balances, corrections reversals ki tarah.",
+        varies: "Kuch nahi varies karta. Yeh correctability, idempotency aur explainability kharidta hai, jo sab requirements thi.",
+        without: "Mutable running totals jo edit nahi ho sakte, audit nahi ho sakte aur drift karte hain.",
+        cost: "Snapshots add karne tak O(n) reads, aur ek badhta store. Dono group scale par acceptable hain aur dono kehna zaroori hai." },
+
+      { what: "Listeners jinhe pata chale jab expense add ho, push notifications aur ek activity feed ke liye.",
+        varies: "Un cheezon ka set jinhe fikar hai, jo genuinely badhne wala hai.",
+        without: "Service se direct calls, har feature ke liye ek line.",
+        cost: "Isme kuch galat nahi, aur stated requirements ke liye yeh out of scope hai. Agar extend karne ko kaha jaaye to yehi hai jo main sabse pehle add karunga, aur main woh keh dunga bina poochhe add karne ke bajaye." },
+
+      { what: "Expense types ki hierarchy par alag cheezein compute karne ke liye ek visitor.",
+        varies: "Kuch nahi. Ek hi Expense type hai. Split behaviour ek strategy mein nikaal diya gaya, to visit karne layak koi hierarchy hi nahi bachi.",
+        without: "Expense par ek method, ya ek function jo ek Expense leta hai.",
+        cost: "Do interfaces aur ek double dispatch, us problem ko solve karne ke liye jo design pehle hi hata chuka hai. Yeh ek accha example hai us pattern ka jo tabhi applicable banta hai jab ek pehle wali galti kar chuke ho." },
+
+      { what: "Kahin se bhi reachable ek single global ExpenseService.",
+        varies: "Kuch nahi, aur yeh ek dependency chhupa deta hai jo constructor ko declare karni chahiye.",
+        without: "Ek banao aur inject karo. Wahi instance, ab tests mein replaceable.",
+        cost: "Global mutable state, parallel tests ke against, aur ek invisible dependency graph. Yeh ek common interview trap hai aur ise politely refuse karna hi sahi jawab hai." }
+    ],
+
+    flowsIntro: "Do traces. Doosra wala, pichle hafte ki expense edit karna, wahi hai jo ek ledger wale design ko bina ledger wale se alag karta hai, aur yahi wo follow up sawaal hai jiske liye yeh problem exist karta hai.",
+
+    flows: [
+      { n: "Ek expense add karna",
+        steps: [
+          ["Controller <code>addExpense(groupId, payerId, totalMinor, strategy, participants, clientId)</code> call karta hai."],
+          ["Service group load karta hai aur check karta hai ki payer aur har participant member hain. Membership group ka invariant hai, to group hi jawab deta hai."],
+          ["Strategy shares banata hai. Yeh apne inputs validate karta hai, exact amounts total tak sum karte hain, percentages sau tak sum karte hain, aur remainder shared rule se distribute hota hai."],
+          ["Expense constructor assert karta hai ki shares total tak sum karte hain. Agar nahi karte, to object ban hi nahi sakta aur downstream kisi ko dobara check nahi karna padta."],
+          ["Entry client supplied id ke saath ledger mein append hoti hai. Agar wo id pehle se exist karti hai, to existing entry return ho jaati hai aur kuch likha nahi jaata."],
+          ["Balances ko touch nahi kiya jaata, kyunki balances store nahi hote. Agla read nayi entry ko fold kar leta hai."]
+        ] },
+      { n: "Pichle Tuesday ki expense edit karna",
+        note: "Yahi trace hai jo is page ke har design decision ko justify karta hai. Isse ek stored running total ke against narrate karke dekho aur girte hue dekho.",
+        steps: [
+          ["User ek purani expense ka amount badalta hai. Kuch mutate nahi hota."],
+          ["Ek reversal entry append hoti hai: wahi shares signs flip karke, original entry id ko reference karte hue."],
+          ["Corrected amount aur freshly computed shares ke saath ek replacement entry append hoti hai."],
+          ["Agla balance read poore ledger ko fold karta hai aur sahi numbers deta hai, system mein kahin bhi balance maintenance code ke bina."],
+          ["Activity view ek edit dikhati hai, kyunki dono entries linked hain. User dekhta hai ki correction hua hai, na ki koi number apne aap badal gaya."],
+          ["Agar purani amount ke against pehle se koi settlement record ho chuki thi, to wo waisi hi rehti hai. Balance ab phir se non zero hai, jo sahi aur honest hai."]
+        ] }
+    ],
+
+    tradeoffsIntro: "Chaar decisions, aur pehla waala really negotiable nahi hai. Yeh yahan isliye hai taaki tum sun sako iske against arguments kaise sunayi dete hain.",
+
+    tradeoffs: [
+      { a: ["Integer minor units", "Exact addition, exact comparison, aur remainder visible hai to usse ek rule dena zaroori hai."],
+        b: ["Doubles, ya BigDecimal", "Doubles simple aur galat hain. BigDecimal correct hai, verbose hai, aur har operation par scale aur rounding mode chahiye."],
+        flip: "tumhe fractional minor units chahiye, jaise currency conversion ya interest. Tab BigDecimal, scale fix aur stated ke saath. Doubles kabhi nahi, kisi bhi cheez ke liye, kabhi bhi." },
+      { a: ["Ledger se derive hue balances", "Editing kaam karta hai, corrections visible hain, aur numbers expenses se disagree nahi kar sakte."],
+        b: ["Stored running balances", "O(1) reads, aur wo history ke bina edit namumkin hai jo tumne rakhi hi nahi."],
+        flip: "reads eventually mehenge ho jaate hain. Tab ek snapshot add karo, jo ledger ke saath ek defined relationship wala cache hai, aur ek background job rakho jo use verify kare." },
+      { a: ["Har split type ke liye strategy", "Naye types naye classes hain. Har ek apni validation ka owner hai."],
+        b: ["Split type enum par ek switch", "Ek class, saara logic ek jagah visible, aur har naya type us method ko edit karta hai jisme invariant hai."],
+        flip: "genuinely hamesha ek hi split type rahega. Yeh yeh problem nahi hai, aur requirements ne yahi kaha hai." },
+      { a: ["Simplified settlements suggest karo, opt in", "Group chahe to zyada se zyada n-1 transfers, aur raw pairwise truth hamesha available."],
+        b: ["Hamesha raw pairwise debts dikhao", "Kaun kisko owe karta tha usse perfectly faithful, aur chhe logon ke group ke liye pandrah payments."],
+        flip: "group do logon ka hai, jahan simplification identity function hai aur option sirf noise hai. Chhote groups ko aisi setting nahi dikhani chahiye jo kuch na kare." }
+    ],
+
+    next: [
+      "<b>Multiple currencies.</b> Share Money ban jaata hai currency ke saath, aur balance har currency ke liye ek number ban jaata hai, kyunki currencies ke across netting ka matlab hai ek rate aur ek moment choose karna, jo ek product decision hai.",
+      "<b>Ek activity feed.</b> Woh Observer jo jaan boojh kar chhoda gaya tha, jab notifications guess nahi, requirement ban jaayen.",
+      "<b>Recurring expenses.</b> Har mahine ka rent ek template plus ek scheduler hai, aur isse ordinary ledger entries banni chahiye taaki downstream kuch na badle.",
+      "<b>Balance ke saath group chhodna.</b> Zyadatar apps mein genuinely unsolved case, aur honest jawab yeh hai ki pehle settle karwao ya ise group ke bahar ek debt mein convert karo."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -3578,7 +5286,278 @@ const DESIGN = [
     ["GFG", "https://www.geeksforgeeks.org/system-design/load-balancing-algorithms/", "Load balancing algorithms compared", "E"],
     ["GFG", "https://www.geeksforgeeks.org/system-design/rate-limiting-system-design/", "Rate limiting, the algorithms and the trade-offs", "M"],
     ["HI", "https://www.hellointerview.com/learn/system-design/core-concepts/networking-essentials", "Hello Interview, load balancers and proxies", "M"]
-  ]
+  ],
+
+  hi: {
+    one: "Yeh whiteboard sketch nahi, ek real implementation hai, isliye interesting cheezein chaaron algorithms nahi hain. Interesting hain yeh: kaunsa mutex kis cheez ko protect karta hai, woh lock ordering jo do goroutines ko deadlock hone se rokti hai, aur woh chaar chhote defects jo code review se bach jaate hain aur load pe saamne aate hain.",
+
+    brief: {
+      why: "Is site ke baaki har page pe kuch design hota hai. Yeh page pehle se likhe hue code ko review karta hai, jo alag aur zyada kaam ka exercise hai: algorithms aasan hisse hain aur sab textbook hain, jabki jo state woh share karte hain wahi decide karta hai ki cheez 10,000 requests per second pe chalti hai ya nahi. Isse padhte waqt mutexes dhoondo, strategies nahi. Load balancer wo ek component bhi hai jiska apna fail hona uske peeche ka sab kuch gira deta hai, isliye uske failure modes ko happy path se zyada dhyan milna chahiye.",
+      functional: [
+        "Koi bhi HTTP request kisi ek backend ko <b>proxy karo</b> aur response stream karke wapas do.",
+        "Chaar strategies mein se ek se <b>backend chuno</b>, jo configuration se select hoti hai: round robin, least connection, client IP pe consistent hashing, ya random.",
+        "Runtime pe HTTP se backends <b>register aur deregister karo</b>, bina restart ke.",
+        "<b>Dead backends pakdo</b> do tareeke se: unhe poll karke, aur yeh notice karke ki unhe gayi ek request fail hui.",
+        "Per client IP <b>rate limit karo</b>, atomically, taaki kayi load balancer instances ek hi budget share karein."
+      ],
+      out: ["TLS termination", "request retries aur circuit breaking", "consistent hashing ke aage sticky sessions", "layer 4 balancing", "backend autoscaling"],
+      nfr: [
+        ["Correctness under concurrency", "no data race, no deadlock", "Har request apne goroutine mein chalti hai aur sab ek hi shared pool ko chhoote hain. Poora design isi requirement ke baare mein hai, aur race detector ki isi pe apni raay hogi."],
+        ["Latency added", "sub millisecond in the balancer itself", "Balancer kisi aur ki request pe pura overhead hai. Woh per request jo bhi allocate karta hai, use ek second mein lakh baar allocate karta hai."],
+        ["Failure detection", "seconds, not minutes", "Ek dead backend jise traffic milti rahe, ek backend kam hone se bura hai. Isi liye ek nahi, do detection mechanisms hain."],
+        ["Availability of the balancer", "higher than anything behind it", "Yeh bane hi single point of failure ke roop mein hai. Har design decision jo in process state badhata hai, doosri copy chalana mushkil kar deta hai, aur aakhri stage isi tension ke baare mein hai."]
+      ],
+      numbers: [
+        ["Virtual nodes per server", "150", "Ring har backend ke liye ek ki jagah 150 points rakhti hai, kyunki ek point per server bahut uneven arcs deta hai. 150 se load ka standard deviation lagbhag 5% aa jaata hai, aur zyadatar implementations isi number pe settle karte hain."],
+        ["Ring lookup", "binary search over 150 times N points", "Teen backends matlab 450 points, isliye ek lookup mein lagbhag nau comparisons. Ring change pe ek baar sort hoti hai aur har request pe padhi jaati hai, jo bilkul sahi taraf ka balance hai."],
+        ["Health poll interval", "10 seconds", "Sirf polling se worst case detection 10 seconds plus request timeout hai. Isi liye passive detection hai: woh dead backend ko agle poll ki jagah pehli failed request pe hi pakad leta hai."],
+        ["Proxy timeout", "10 seconds", "Client pe bhi aur request context pe bhi. Generous hai, aur yahi woh ceiling hai ki ek dead backend ek goroutine ko kitni der tak pakde reh sakta hai."],
+        ["Shutdown grace", "10 seconds", "In flight requests ko process exit hone se pehle khatam hone diya jaata hai. Add karna sasta hai aur isi se deploy invisible ho jaata hai."],
+        ["Round robin selection", "one allocation per request", "Healthy list har call pe dobara banti hai. Correct hai, aur yeh design ka ek hot path allocation hai."],
+        ["Rate limit state", "one Redis key per client", "Memory ki jagah Redis mein, jo wahi ek decision hai jo batata hai ki yeh ek se zyada instances mein chalne ke liye banaya gaya tha."]
+      ],
+      numbersNote: "Behas layak row aakhri wali hai. Rate limit state ko jaan boojh ke shared jagah rakha gaya, aur server pool aur health state ko nahi. Yeh asymmetry is design ki sabse interesting cheez hai aur stage 5 ka poora subject."
+    },
+
+    stagesIntro: "Chhe stages. Pehle do shared state ke baare mein hain, beech ke do algorithms aur unse majboor hui lock ordering ke baare mein, aur aakhri do failure ke baare mein aur is baat ke baare mein ki balancer ko khud survive karna hota hai.",
+
+    stages: [
+      { pressure: "Abhi kuch nahi. Ek reverse proxy lagbhag pandrah lines ka hota hai: request padho, URL rewrite karo, forward karo, response stream karke wapas do. Ise draw karna worth hai taaki uske baad ki har cheez saaf dikhe ki woh kisi cheez ka jawab hai.",
+        say: "Fiber fasthttp ke upar baitha hai, isliye handler sasta hai aur framework bottleneck nahi hai. Is point pe load balancer kuch balance nahi karta: yeh ek proxy hai jisme destination compile hoke baithi hai. Yahaan se aage sab kuch is baare mein hai ki destination ek choice ban jaye, aur woh choice kayi goroutines ek saath karein.",
+        breaks: "Doosre backend ka matlab ek list, list ko runtime pe badalna padta hai kyunki backends aate jaate rehte hain, aur har request apne goroutine mein chalti hai. Ek plain Go slice jise hazaar goroutines padh rahe hon aur ek uspe append kar raha ho, woh data race hai, aur Go tumhe likhne se rokega nahi." },
+
+      { pressure: "Shared mutable state. Yahi poori problem hai: backends ki ek list, jo har request pe padhi jaati hai, aur registration API aur dono health mechanisms usse likhte hain, aise goroutines se jo ek doosre ke baare mein kuch nahi jaante.",
+        say: "Ek type list ka owner hai aur uske bahar koi slice ko chhoo nahi sakta. Reads read lock lete hain aur writes write lock, jo sahi hai kyunki reads, writes se hazaaron guna zyada hain. Per server connection counter mutex field ki jagah ek atomic hai, isliye use badhane ke liye sirf read lock chahiye, aur yahi fark hai us counter mein jo scale karta hai aur us mein jo process ki har request ko serialise kar deta hai.",
+        breaks: "Pool ek backend safely de sakta hai, aur usse choose karne ka sirf ek tareeka aata hai: agla utha lo. Round robin alag size ke backends ke liye galat hai, long lived connections ke liye galat hai, aur tab galat hai jab tum chahte ho ki ek hi client hamesha ek hi backend pe jaye." },
+
+      { pressure: "Backend chunne ke chaar alag tareeke, jo startup pe configuration se chune jaate hain, aur har ek ka fair ka alag matlab. Yeh strategy ka textbook signal hai, aur yahi pattern yeh codebase actually use karta hai.",
+        say: "Ek function decide karta hai, configured strategy name pe ek switch ke saath aur ek sensible default ke saath, aur har strategy ka shape same hai: healthy set lo, rule lagao, URL ya error lautao. Go mein yeh aksar interface ki jagah function type hota hai, kyunki strategies mein ek hi method hai aur apni koi state nahi. Round robin healthy count pe modulo karke atomic counter use karta hai, least connection sabse chhota atomic counter dhoondhne ke liye scan karta hai, aur random ek utha leta hai. Teeno kuch lines ke hain, aur yahi point hai: algorithms kabhi hard hissa the hi nahi.",
+        breaks: "Chaar mein se teen strategies stateless hain. Consistent hashing nahi hai: use ek sorted ring chahiye jo pool ke saath step mein rakhni padti hai, yaani shared state ka doosra hissa aur isliye doosra mutex, aur deadlocks yahin se aate hain." },
+
+      { pressure: "Doosra mutex. Jaise hi do locks maujood hain aur koi bhi code path dono le sakta hai, unhe ek defined order mein lena padta hai, warna do goroutines har ek ek lock pakde doosre ka intezaar karenge, hamesha ke liye.",
+        say: "Ring hash points ko backends se map karti hai, har ek ke 150 points, taaki wahi client IP wahi backend pe jaye aur ek backend add karne se sirf uske hisse ke clients hilein, sab ko dobara shuffle na karna pade. Iska apna lock hai, aur code dono ko kabhi ek saath na pakadne ka poora dhyan rakhta hai: pool lock healthy set copy out karne ke liye liya jaata hai, chhoda jaata hai, aur tab jaake ring se poochha jaata hai. Registration doosri taraf se yahi karta hai, pool lock chhodne ke baad ring update karta hai. Yeh is codebase ka sabse experienced dikhne wala decision hai, aur interview mein zor se bolne layak hai, kyunki zyadatar log lock inversion se bachne ke bajaye use debug karke jaante hain.",
+        breaks: "Har strategy ek health flag pe filter karti hai jise kisi ne kabhi set hi nahi kiya. Ek backend band ho sakta hai aur balancer usse traffic bhejta rahega jab tak koi notice na kare." },
+
+      { pressure: "Ek dead backend jo abhi bhi traffic pa raha hai, ek backend kam hone se bura hai. Sirf polling bahut slow hai, aur sirf failures ka intezaar karne ka matlab har recovery ke baad ka pehla user guinea pig hai.",
+        say: "Active checking ek goroutine hai jo har das second mein har backend ke health endpoint ko poll karta hai aur result pool mein likhta hai. Passive checking wo hai jab proxy ek backend ko usi pal down mark kar deta hai jab usko gayi request fail hoti hai, jo maut ko das second ki jagah ek request mein pakad leta hai. Dono saath standard jawab hain, aur sasta hai. Dhyan do ki ring unhealthy backend ke saath kya karti hai: woh rebuild nahi karti, woh clockwise agle healthy point tak chalti hai, isliye ek beemar backend baaki clients ko remap nahi karta.",
+        breaks: "Balancer ab woh sab forward karega jo koi bhi use bheje, jitni tez woh bhej sakein, un backends ko jinke paas koi defence nahi. Aur jaise hi availability ke liye balancer ki doosri copy chahiye hoti hai, pata chalta hai ki uski aadhi state isi process mein hai." },
+
+      { pressure: "Do problems, ek jawab. Abusive traffic edge pe marna chahiye, backend pe nahi, aur per process enforce ki gayi limit limit hai hi nahi jab ek se zyada process hon.",
+        say: "Limit sabse pehle check hoti hai, backend chunne se bhi pehle, isliye rejected request ka cost ek Redis round trip hai aur kuch nahi. Check aur decrement ek Lua script ke andar hote hain, jise Redis atomically chalata hai, isliye do instances jo ek hi pal poochein woh dono ko yes nahi bol sakte. Yeh aakhri baat hi wajah hai ki state Redis mein hai, aur yeh chupke se intended deployment ke baare mein kuch batati hai: yeh ek se zyada process mein chalne ke liye banaya gaya tha. Jo pool ko, jo abhi bhi is process ki memory mein baitha hai, interesting loose end bana deta hai." }
+    ],
+
+    boxesIntro: "Barah types. Inme se do, pool aur ring, design ki har hard problem rakhte hain, aur baaki ya to stateless hain ya kisi aur ke. Pehle in do ke disadvantages aur failure rows padho.",
+
+    boxes: [
+      { job: "Ek ordinary HTTP request bhejta hai aur kabhi nahi jaanta ki koi balancer beech mein tha.",
+        why: "Yeh isliye draw hua hai ki transparency ek requirement hai, nicety nahi: client ka IP wahi hai jis pe consistent hashing key karta hai aur jise rate limiter ginta hai, isliye balancer use kaise nikalta hai yeh ek real decision hai.",
+        forced: "Request ke liye stage 0, identity ke sawaal ke liye stage 5.",
+        alts: [["Keying the rate limit on an API key or account", "behtar hai, kyunki ek IP ek NAT ke peeche sab ke saath shared hota hai aur phone network badalne pe badal jaata hai. Jab abhi koi identity nahi hai, tab IP sahi default hai."]],
+        pros: ["Client mein koi change nahi chahiye, jo reverse proxy ka poora point hai."],
+        cons: ["Client ka real address tabhi correct hai jab balancer pehla hop ho. CDN ya kisi aur proxy ke peeche har client us proxy jaisa dikhta hai.", "IP ek kharab identity hai: NAT ke peeche bahut coarse aur mobile pe bahut fine."],
+        cost: "Kuch nahi, aur yeh do features ki correctness decide karta hai.",
+        fails: "Kisi aur proxy ke peeche deploy karo aur yeh configure na karo ki kaunsa forwarded header trust karna hai, to har request same source address ke saath aati hai. Consistent hashing sabko ek backend pe bhejta hai aur rate limiter poore internet ko ek client maan ke block kar deta hai. Fiber mein isi ke liye trusted proxy setting hai, aur woh default mein off honi chahiye, kyunki jo header client set kar sakta hai, us pe client jhooth bol sakta hai.",
+        say: "Default mein IP, aur jaise hi mere aage koi hop ho, main configure karta hoon ki kaunsa forwarded header aur kin addresses se trust karna hai. Forwarded header ko bina shart trust karne se koi bhi client apna rate limit bucket khud chun sakta hai." },
+
+      { job: "Routes own karo, request ko limit, select aur forward se guzaro, aur in flight kaam gire bina shut down ho jao.",
+        why: "Yeh composition root hai. Design ka har decision ek handler ki paanch lines ke order mein dikhta hai, jo rakhne layak achhi property hai.",
+        forced: "Stage 0.",
+        alts: [["The standard library plus httputil.ReverseProxy", "Go mein genuinely sahi default jawab: yeh hop by hop headers, X-Forwarded-For, error hooks aur streaming ko sahi handle karta hai, aur battle tested hai. Proxy haath se likhna zyada educational hai aur subtly galat hone ki zyada jagah."], ["net/http with a custom mux", "load mein fasthttp se slow, aur har Go HTTP library ke saath fully compatible, jo fasthttp nahi hai. Yahi incompatibility Fiber choose karne ka asli cost hai."]],
+        pros: ["fasthttp request aur response objects reuse karta hai, isliye framework per request lagbhag kuch allocate nahi karta.", "Poora request lifecycle ek function mein, order mein padha ja sakta hai.", "Das second ke drain ke saath graceful shutdown, plus signal handling, taaki deploy in flight requests na girae. Add karna sasta hai aur aksar chhoot jaata hai."],
+        cons: ["fasthttp net/http interfaces implement nahi karta, isliye bade ecosystem ka koi bhi middleware adapter maangta hai.", "Iske reuse hone wale contexts bugs ka jaana maana source hain jab koi value handler se zyada jeeta hai, jo yahaan matter karta hai kyunki response handler ke return hone ke baad stream hota hai."],
+        cost: "Ek process, ek port, hot path pe ek handler.",
+        fails: "Response body handler return hone pe deferred call se close hoti hai, par streamed body fasthttp handler ke return hone ke <i>baad</i> likhta hai, aur jo stream Closer implement karti hai use fasthttp khud close karta hai. Ise jaldi close karne se load mein responses truncate hote hain, aur chhoti body ke saath haath se test mein yeh dikhta hi nahi. Deep dive dekho.",
+        say: "Handler padhne mein limit, select, forward, return hai, isi order mein, aur yahi order design hai. Main ise aise hi rakhunga chahe cheezein add hoti rahein, aur jo is sentence mein fit nahi hota woh kisi aur type ka hai." },
+
+      { job: "Chune hue backend ke against request dobara banao, bhejo, response stream karke wapas do, aur fail hone pe backend ko down mark karo.",
+        why: "Yeh akela jagah hai jo user ki taraf se network ko chhoota hai, isliye yahi akela jagah hai jo real time mein jaanti hai ki backend dead hai.",
+        forced: "Stage 1, aur stage 4 mein isne passive health ka role bhi le liya.",
+        alts: [["httputil.ReverseProxy from the standard library", "header rules, streaming aur error hooks ko out of the box sahi handle karta hai. Haath se likha version padhne mein saaf hai aur galat hone ki zyada surface rakhta hai, jis pe failure row hai."], ["Forwarding in a goroutine and waiting on channels", "yahi yeh code karta hai, aur goroutine kuch nahi kharidta: select exactly un do channels pe wait karta hai, isliye yeh ek scheduling hop aur ek extra stack ke saath direct call hai. Hatane layak hai, aur yeh bata pana ki zaroori kyun nahi hai."]],
+        pros: ["Ek shared http.Client, isliye backends ke connections pool hote hain aur reuse hote hain, har request pe dial nahi.", "Har request pe timeout wala context, isliye koi request hamesha ke liye hang nahi ho sakti.", "Failure turant useful hai: woh sirf error nahi, health signal ban jaata hai."],
+        cons: ["Hop by hop headers copy hoke aage chale jaate hain. Connection, Keep-Alive aur Transfer-Encoding ek hop pe lagne ke liye defined hain aur proxy ko unhe strip karna zaroori hai.", "X-Forwarded-For add nahi hota, isliye backends real client dekh nahi sakte.", "Request body forward karne se pehle poori memory mein padh li jaati hai, jo upload size ko utne pe cap kar deta hai jitna process hold kar sake."],
+        cost: "Ek outbound connection pool, har request pe ek context aur ek buffer.",
+        fails: "Kisi bhi ek failure pe backend ko down mark karne ka matlab ek client ki cancelled request ya ek transient timeout ek bilkul healthy backend ko agle poll tak rotation se nikaal deta hai. Burst mein yeh cascade ban sakta hai: ek slow backend kuch requests fail karta hai, nikaal diya jaata hai, load baaki pe chala jaata hai, aur woh bhi slow ho jaate hain. Failure threshold, ek window mein teen strikes, standard fix hai aur health design mein wahi ek cheez missing hai.",
+        say: "Passive health checking ko failures ginne chahiye, ek pe react nahi karna chahiye. Ek timeout client ki kahani hai; das second mein teen, backend ki kahani hai." },
+
+      { job: "Backends ki list, unki health, aur unki connection counts own karo. Uske bahar koi slice ko chhoo nahi sakta.",
+        why: "Yeh akeli mutable state hai jo process ke har goroutine ke saath shared hai, isliye yeh ek type mein compress hua poora concurrency design hai.",
+        forced: "Stage 1.",
+        alts: [["A plain slice with a package level mutex", "wahi cheez, bas invariant package mein bikhra hua hai type ke owner hone ki jagah, isliye naya call site lock bhool sakta hai aur production se pehle koi nahi batata."], ["sync.Map", "alag shape ke liye bana hai, kayi keys jo kam likhi jaati hain aur kayi goroutines se padhi jaati hain. Yahaan collection chhoti hai aur har request pe poori iterate hoti hai, isliye slice pe RWMutex tez bhi hai aur saaf bhi."], ["A copy on write atomic.Pointer to an immutable slice", "yahaan genuinely attractive hai. Reads lock free pointer loads ban jaate hain aur writes rare hain, jo is workload ka exact shape hai. Agar profiling lock contention dikhaye to sabse pehle main yahi optimisation karunga."]],
+        pros: ["RWMutex access pattern se match karta hai: hazaaron concurrent readers, aur write sirf tab jab backend register ho ya health badle.", "Connection counts struct ke andar atomics hain, isliye ek badhane ke liye sirf read lock chahiye. Plain int se har request pe write lock lagta aur poora process serialise ho jaata.", "Maujooda URL pe Register use dobara healthy mark karta hai, duplicate nahi banata, isliye recovery idempotent hai."],
+        cons: ["List pointers ka snapshot lautata hai, values ka nahi, isliye un pointers se field padhne wala caller bina kisi lock ke shared memory padh raha hai. Do call sites bilkul yahi karte hain.", "Round robin har request pe healthy slice dobara banata hai, jo hot path pe allocate karta hai aur matlab counter ek aisi list mein index karta hai jiski length neeche se badalti rehti hai.", "Least connection select aur increment do alag lock acquisitions mein karta hai, isliye ek saath aayi do requests dono ek hi least loaded backend chun sakti hain."],
+        cost: "Ek mutex, ek slice, ek atomic counter. Har request pe read locked.",
+        fails: "Race detector List snapshot ko turant pakad leta hai: ek goroutine write lock ke andar Healthy likhta hai jabki doosra use pointer se bina lock padhta hai. Zyadatar hardware pe yeh tab tak harmless hai jab tak nahi rehta, aur fix paanch lines ka hai. Deep dive dekho.",
+        say: "Pool slice own karta hai aur values deta hai, pointers kabhi nahi. Jis pal snapshot pointer leak karta hai, lock ka koi matlab nahi rehta, aur is code ka yahi defect main sabse pehle fix karunga." },
+
+      { job: "Ek backend: uska URL, healthy hai ya nahi, aur usko kitni requests in flight hain.",
+        why: "Yeh wo unit hai jisse health flag aur connection counter belong karte hain, aur unhe ek owner dene se hi pool unke baare mein rule bol paata hai.",
+        forced: "Stage 1.",
+        alts: [["Parallel maps, url to healthy and url to count", "wahi data bina owner ke aur do cheezein step mein rakhni padti hain."], ["An immutable value copied out of the pool", "pointer leak ka fix: callers ko copy milti hai aur woh us pe race nahi kar sakte. Isse per read ek chhota allocation lagta hai aur bugs ki poori class hat jaati hai."]],
+        pros: ["Atomic connection counter ka matlab hot path ko kabhi write lock nahi chahiye.", "Ek backend ke baare mein sab kuch ek jagah hai, isliye baad mein weight ya failure count jodna ek hi type ko chhoota hai."],
+        cons: ["Kyunki struct mein atomic hai, use ek baar use hone ke baad value se copy nahi kiya ja sakta, aur isi liye pool pointers leak karta hai. Clean version identity fields ko counter se alag karta hai.", "Servers endpoint ise seedha JSON mein serialise karta hai, aur atomic ke koi exported fields nahi hote, isliye connection count ek khaali object ban ke nikalta hai."],
+        cost: "Har backend ke liye ek chhota struct. Inki ginti tens mein hai, millions mein nahi.",
+        fails: "Koi pointer race se bachne ke liye Server ko value se copy karta hai aur vet lock copy karne ki warning deta hai. Sahi shape hai reads ke liye alag view type, jisme plain values hon, jo pool ke andar uske lock ke neeche banaya jaye.",
+        say: "Atomic wala struct copy nahi ho sakta, isliye ya to pool pointers deta hai, jo locking todta hai, ya lock ke neeche bana chhota view type deta hai. Doosra sahi hai aur lagbhag das lines ka hai." },
+
+      { job: "Ek dispatch point jo configured strategy name ko chune hue backend mein badalta hai.",
+        why: "Chunne ka rule wo cheez hai jo badalti hai. Ek function mein ek switch hi poora extension point hai, aur har strategy ka signature same hai.",
+        forced: "Stage 2.",
+        alts: [["A strategy interface with four implementing types", "classic jawab, aur Go mein aksar zaroorat se zyada bhari jab har strategy ka ek method ho aur koi state nahi. Function type idiomatic equivalent hai."], ["A map from name to function, populated at init", "switch hata deta hai aur nayi strategy ko khud register hone deta hai. Thoda zyada magic hai, aur jab strategies alag files mein hon tab yahi chahiye."], ["Choosing per request from a header", "testing aur per route policies ke liye genuinely useful, aur iska matlab hai ki strategy ab safely state nahi rakh sakti, kyunki round robin ka counter per process hai, per route nahi."]],
+        pros: ["Default case unknown ya khaali configuration ko startup pe fail hone ki jagah round robin pe fall back karata hai.", "Har strategy wahi pair lautati hai, ek URL aur ek error, isliye caller ke paas no healthy backends ke liye ek hi path hai."],
+        cons: ["Strategy startup pe set kiye gaye package level variable se padhi jaati hai, isliye restart ke bina badal nahi sakti aur test karna awkward hai.", "Least connection ki bookkeeping strategy mein nahi caller mein rehti hai, isliye handler ko pata hona chahiye ki usne kaunsi chuni. Yahi coupling wajah hai ki increment selection se race karta hai."],
+        cost: "Har request pe ek string pe ek switch.",
+        fails: "Nayi strategy add hoti hai, uska case selector mein add hota hai, aur handler mein connection accounting update nahi hoti, isliye use chupke se koi bookkeeping nahi milti. Accounting ko strategy ke andar le jaane se yeh possibility hi khatam ho jaati hai.",
+        say: "Go mein main ise interface ki jagah function type banaunga, aur connection accounting ko least connection strategy ke andar le jaunga taaki handler ko kabhi pata hi na chale ki kaunsi configured hai." },
+
+      { job: "Round robin, least connection aur random: healthy set se chunne ke teen tareeke.",
+        why: "Yeh dikhane ke liye hain ki strategy ki ek se zyada implementation hai jinki properties genuinely alag hain, sirf code alag nahi.",
+        forced: "Stage 2.",
+        alts: [["Weighted round robin", "obvious agla, aur sirf Server pe ek weight chahiye. Naam lena worth hai, kyunki real backends identical nahi hote."], ["Least response time", "jab backends speed mein alag hon to least connection se behtar, aur har backend ke liye rolling latency estimate chahiye, jo real state hai."], ["Power of two choices", "do random chuno aur kam loaded le lo. Least connection ke lagbhag barabar achha, na scanning na counter bookkeeping. Yahi main actually suggest karunga."]],
+        pros: ["Teeno kuch lines ke hain aur ek atomic counter ke alawa unki apni koi state nahi.", "Random ko koi coordination nahi chahiye, isliye yahi akela hai jo kayi balancer instances ke across trivially correct hai.", "Jab request durations bahut vary karti hain to least connection sahi default hai, aur tab round robin sabse kharab hota hai."],
+        cons: ["Round robin ka counter aisi healthy list mein index karta hai jiski length badalti hai, isliye jab backend girta hai to rotation sabke liye shift ho jaati hai, ek slot skip nahi hota.", "Least connection har request pe har backend scan karta hai. Tens ke liye theek, hazaaron ke liye galat, aur power of two choices ise fix karta hai.", "Round robin har request pe naya healthy slice allocate karta hai, jo hot path pe wahi ek avoidable allocation hai."],
+        cost: "Tens ki list pe har request pe ek O(n) scan.",
+        fails: "Load mein do requests ek saath aati hain, dono scan karti hain, dono ek hi backend ko least loaded dekhti hain, aur kisi ke increment karne se pehle dono usse bhej deti hain. Counter atomic hai par read aur increment ek operation nahi hain. Select aur increment ek hi lock ke neeche karo aur window khatam.",
+        say: "Least connection mein chunne aur increment karne ke beech ek check then act window hai. Fix hai choice aur increment ko pool ke andar ek operation banana, jo handler se strategy specific code bhi hata deta hai." },
+
+      { job: "Client IP ko ek backend se map karo, taaki wahi client wahi backend pe aata rahe.",
+        why: "Sessions ke bina session affinity. Backends ki ginti pe modulo simple hota aur count badalne pe lagbhag har client ko remap kar deta, jo wahi cheez hai jise cache ya in memory session survive nahi kar sakta.",
+        forced: "Stage 3, aur yeh doosra mutex saath laayi.",
+        alts: [["hash(ip) modulo backend count", "ek line, aur teen mein chautha backend jodne se lagbhag teen chauthai clients hil jaate hain. Consistent hashing se lagbhag ek chauthai hilte hain, aur yahi is technique ke hone ki poori wajah hai."], ["Rendezvous hashing", "arguably nicer: na ring, na virtual nodes, na sorting, aur har lookup pe har backend ke liye ek hash compute karta hai. Tens of backends pe yeh sunne se sasta hai aur code aadhe size ka hai."], ["Sticky sessions via a cookie", "precise, aur balancer ko cookies samajhna aur set karna padta hai, aur jo browser nahi hai uske liye kaam nahi karta."]],
+        pros: ["Har backend ke 150 virtual nodes load ke spread ko kuch percent ke andar le aate hain, jabki ek node per backend bahut uneven hota.", "Lookup sorted slice pe binary search hai, isliye logarithmic aur allocation free.", "Unhealthy backend ko hataya nahi jaata, clockwise paar kiya jaata hai, isliye beemar backend sirf apne clients ko remap karta hai aur baaki sabka mapping chhoota nahi. Yahi property poora point hai aur ise khona aasan hai."],
+        cons: ["Doosra mutex, jahan se lock ordering problem aati hai.", "Removal har virtual node ka hash dobara compute karke use delete karta hai, isliye agar do backends ke virtual nodes kabhi ek hi 32 bit point pe collide karein to ek ko hataane se doosra chupke se unmap ho jaata hai. Kuch sau backends se neeche unlikely hai aur jaanna worth hai.", "Ring har registered backend ko rakhti hai, healthy ho ya nahi, isliye har lookup pe healthy set pass karna padta hai."],
+        cost: "Har backend ke 150 points, change pe sorted, read pe binary searched.",
+        fails: "Koi pool lock leke ring mein call karta hai jabki doosra goroutine ring lock pakde pool ka intezaar kar raha hai. Dono ruk jaate hain. Yeh code jaan boojh ke isse bachta hai: healthy set copy out karke, pool lock chhodke, tab ring query karke, aur ek comment mein likhke. Yahi sahi fix hai aur bolne ki sahi jagah.",
+        say: "Kabhi do locks mat pakdo. Jo chahiye woh pehle lock ke neeche se copy out karo, use chhodo, phir doosra lo. Aur 150 virtual nodes koi magic number nahi, yeh wo point hai jahan load ka spread itni tez improve hona band ho jaata hai ki memory ka kharcha worth na rahe." },
+
+      { job: "Ek background goroutine jo har backend ka health endpoint interval pe poll karta hai aur result pool mein likhta hai.",
+        why: "Sirf passive detection recovery kabhi notice nahi karti, isliye wapas aaya backend hamesha rotation se bahar rehta. Active checking hi backend ko wapas judne deti hai.",
+        forced: "Stage 4.",
+        alts: [["Passive detection only", "sasta hai aur koi backend kabhi wapas nahi aata, kyunki succeed karne ke liye koi use traffic bhej hi nahi raha."], ["Backends registering their own heartbeats", "direction ulti kar deta hai, aur matlab woh backend jo POST karne layak zinda hai par serve karne layak toota hua, healthy maana jaata hai."], ["A readiness endpoint that checks dependencies", "us handler se kaafi behtar jo bina shart 200 lautata hai. Jis backend ka database unreachable hai use apna health check fail karna chahiye."]],
+        pros: ["Ek goroutine, ek ticker, har backend ke liye har interval ek HTTP call. Lagbhag free.", "Checks parallel chalte hain, isliye ek hung backend baaki ko delay nahi karta.", "Recovery automatic hai aur kisi insaan ki zaroorat nahi."],
+        cons: ["Response body kabhi close nahi hoti, isliye har poll ek connection aur ek file descriptor leak karta hai. Har das second pe, hamesha ke liye: ek slow, pakka leak.", "Poll ek aise client se hota hai jisme timeout nahi, isliye jo backend connection accept karke kabhi jawab nahi deta woh ek goroutine ko permanently pakde rehta hai, aur agle tick pe naya banta hai. Yeh ek unbounded goroutine leak hai jiska trigger hung backend hai.", "Ek failed poll flag flip kar deta hai, isliye ek dropped packet healthy backend ko das second tak rotation se nikaal sakta hai."],
+        cost: "Ek goroutine plus har backend ke liye har interval ek. Agar do leaks fix ho jaayein to negligible.",
+        fails: "Ek backend connections refuse karne ki jagah hang ho jaata hai. Har das second mein ek aur goroutine banta hai aur hamesha ke liye block ho jaata hai. Ek raat mein hazaaron atke hue goroutines aur unke sockets. Dono leaks ek ek line ke hain: body close karo, aur client ko timeout do.",
+        say: "Do ek line ke fix is component ko sambhalte hain: response body close karo, aur default client ki jagah timeout wala client use karo, jisme koi timeout nahi hota. Phir failure threshold add karo taaki ek dropped packet healthy backend ko evict na kare." },
+
+      { job: "Decide karo ki yeh client yeh request kar sakta hai ya nahi, koi backend chune jaane se pehle.",
+        why: "Abusive traffic ko jitna jaldi aur sasta ho sake reject karna chahiye, aur balancer sabse pehli cheez hai jise tum own karte ho.",
+        forced: "Stage 5.",
+        alts: [["A token bucket in process memory", "zero latency aur Redis nahi, aur do balancer instances ke saath har client ko double limit milti hai. Yahi ek sentence wajah hai ki state remote hai."], ["Fixed window counters", "implement karna sabse simple aur window boundary pe double burst allow karta hai, jo log sliding windows pe jaane ki classic wajah hai."], ["Sliding window log", "exact hai aur har request ka timestamp store karta hai, jo sabse busy clients ke liye mehenga hai, jinhe hi limit karna hai."]],
+        pros: ["Ek call ke peeche do algorithms, configuration se chune, jo backend selection ka wahi strategy shape hai. Dono ke beech consistency ki kuch value hai.", "Token bucket burst aur phir steady rate allow karta hai, jo hard cap se behtar real clients ke behaviour se match karta hai.", "Yeh selection se pehle chalta hai, isliye rejected request kabhi backend ya pool ko nahi chhoo."],
+        cons: ["Yeh har request pe Redis round trip daalta hai, unpe bhi jo allow hongi. Shared limit ki yahi keemat hai aur ise bolna chahiye.", "Redis ka unavailable hona ek policy sawaal hai jiska koi achha default nahi: fail open karo to limit gayab, fail closed karo to Redis poori site gira deta hai."],
+        cost: "Har request pe ek Redis round trip, local network pe sub millisecond.",
+        fails: "Redis unreachable hai. Design ne pehle se tay kar rakha hona chahiye ki kis taraf fail karna hai, aur rate limiter ke liye jawab lagbhag hamesha open hai, alert ke saath, kyunki ek healthy system ko protect karne wala rate limiter kabhi us system ke down hone ki wajah nahi hona chahiye.",
+        say: "Fail open, zor se. Rate limiter ek guard rail hai, aur jo guard rail toote to road band kar de woh bina guard rail se bura hai. Is box ke peeche wali library ka design uske apne page pe hai, <a href='?p=ratelimiter-lld'>Rate limiter</a>, aur woh abhi fail closed karti hai, jo main sabse pehle badalunga." },
+
+      { job: "Har client ke liye ek bucket rakho, aur check aur decrement ko ek indivisible operation ke roop mein chalao.",
+        why: "Counter balancer instances ke across shared hona chahiye aur read aur write atomic. Lua script ke saath Redis is jode ke liye standard jawab hai.",
+        forced: "Stage 5.",
+        alts: [["GET then SET from the application", "beech mein gap ke saath do round trips, isliye do instances dono teen tokens bache padhte hain aur dono ek kharch kar dete hain. Yeh is page pe har jagah wala wahi check then act bug hai, network ke upar."], ["INCR with an expiry", "atomic hai aur sirf fixed window implement karta hai, aisa bucket nahi jo waqt ke saath refill ho."], ["A local limiter plus a shared one", "bade systems yahi karte hain: obvious cases ke liye sasta in process check aur baaki ke liye shared wala. Agar Redis round trip kabhi matter kare to optimisation ke roop mein naam lena worth hai."]],
+        pros: ["Lua server pe chalta hai, isliye poora read, refill, compare aur write sequence ek atomic operation hai jisme andar koi round trip nahi.", "Har client ke liye TTL ke saath ek chhoti key, isliye inactive clients khud expire ho jaate hain aur kuch cleanup nahi karna.", "Design mein yahi akeli state hai jise kayi balancer instances pehle se sahi tareeke se share karte hain."],
+        cons: ["Har ek request ke hot path pe network dependency.", "Yeh shared component hai, isliye usi Redis pe ek shor machane wala padosi sabke rate limiting ko affect karta hai.", "Bucket key client IP se banti hai, isliye users se bhara NAT ek bucket share karta hai."],
+        cost: "Har active client ke liye ek key, har request pe ek round trip aur ek script evaluation.",
+        fails: "Redis fail over karta hai aur buckets kho jaate hain. Har client ko poora bucket mil jaata hai, jo intended rate ka double ek chhoti window ke liye hai. Rate limiter ke liye yeh bilkul acceptable failure hai aur yeh kehna worth hai, kyunki isi se synchronously replicate na karne ka faisla justify hota hai.",
+        say: "Lua script hi poora point hai. Check aur decrement server pe ek operation mein, kyunki client se do mein karna wahi race hai jise yeh design teen aur jagah, teen aur tareeke se fix karta hai." },
+
+      { job: "Asli kaam karo. Runtime pe HTTP se register aur deregister hote hain.",
+        why: "Yeh external isliye draw hue hain kyunki balancer ka un pe koi control nahi, sirf is baare mein raay hai ki woh zinda hain ya nahi.",
+        forced: "Stage 0.",
+        alts: [["A static list from configuration", "simple hai, aur matlab backend add karna balancer ka deploy hai."], ["Service discovery, Consul or etcd or DNS", "production actually yahi karta hai, aur yeh registration API hata deta hai aur pool ko kisi aur ke sach ka cache bana deta hai. Yahi stage 5 ki multi instance problem ka bhi jawab hai."]],
+        pros: ["Runtime registration ka matlab scale out ke liye na restart na configuration change.", "Backend ka boot pe khud ko register karna natural pattern hai aur kisi orchestrator ki zaroorat nahi."],
+        cons: ["Registration endpoints pe koi authentication nahi, isliye jo bhi balancer tak pahunch sake woh backend add karke traffic pa sakta hai, ya sabko hata sakta hai.", "Registration sirf usi instance tak pahunchta hai jisne use receive kiya, jo wahi loose end hai jiske baare mein aakhri stage hai."],
+        cost: "Balancer ko slice entry aur health poll ke alawa kuch nahi.",
+        fails: "Registration API proxied traffic ke same port pe exposed hai, isliye jo path backend bhi serve karta ho woh shadow ho sakta hai, aur bahar ka koi bhi apna server register kar sakta hai. Admin routes ko alag port ya internal interface pe bind karo, aur token maango.",
+        say: "Register aur deregister administrative hain, aur woh user traffic wale hi public listener pe hain, bina auth ke. Kahin real jagah jaane se pehle alag port, ya kam se kam ek shared secret." }
+    ],
+
+    patternsIntro: "Ek pattern do baar use hua hai aur dono baar apni jagah kamata hai. Is codebase ka interesting hissa pattern nahi hai, concurrency discipline hai, isliye aakhri do entries naamon ke baare mein nahi, aadaton ke baare mein hain.",
+
+    patterns: [
+      { what: "Ek dispatch function, configuration se chune gaye chaar interchangeable selection rules.",
+        varies: "Backend kaise chuna jaata hai. Aaj chaar rules jinki properties genuinely alag hain, aur weighted aur power of two choices obvious additions hain.",
+        without: "Selection rule handler mein inline, isliye use badalne ka matlab traffic proxy karne wale code ko edit karna.",
+        cost: "Go mein ise interface ki jagah function type chahiye, kyunki strategies mein ek method hai aur koi state nahi. Yahaan interface use karna Java ki aadat import karna hota." },
+      { what: "Token bucket ya sliding window ek call ke peeche, configuration se selected.",
+        varies: "Limiting algorithm, aur unka burst behaviour alag hai, code shape nahi.",
+        without: "Har call site pe ek conditional, ek aise function mein jo har ek request se pehle chalta hai.",
+        cost: "Do algorithms ko alag parameters chahiye, isliye ek ki configuration doosre ke liye meaningless hai. Yeh theek hai aur ise startup pe validate karna chahiye, chupke se zero pe default nahi hona chahiye." },
+      { what: "Koi named pattern nahi, aur is codebase ki sabse valuable aadat. Jo chahiye woh lock A ke neeche banao, use chhodo, phir lock B lo.",
+        varies: "Kuch nahi. Yeh isliye hai ki do locks kabhi ek saath pakde na jaayein, jo deadlock ko unlikely nahi, structurally impossible banata hai.",
+        without: "Do goroutines har ek ek lock pakde doosre ka intezaar kar rahe hain, raat ke teen baje, load mein, aur kabhi test mein nahi.",
+        cost: "Copy kiye hue set ke liye ek chhota allocation, aur copy ek snapshot hai, isliye jab tak use ho woh stale ho sakti hai. Yahaan theek hai: ek stale health flag ki keemat ek misrouted request hai." },
+      { what: "Ek package level pool jise har strategy seedha uthati hai.",
+        varies: "Kuch nahi, aur yeh ek dependency chhupata hai jo strategies ko declare karni chahiye.",
+        without: "Pool ko pass karo. Production mein wahi single instance, aur ab do tests alag pools ke saath parallel chal sakte hain.",
+        cost: "Yeh yahaan ka ek design decision hai jo code ko test karna mushkil banata hai, aur yahi wajah hai ki har strategy kisi cheez ka method nahi, package level function hai. Badalne layak hai, aur chhota change hai." },
+      { what: "Rate limiting, selection, forwarding aur accounting composable middleware ke roop mein, paanch statements ki jagah.",
+        varies: "Steps ka set, jo genuinely badhne wala hai: authentication, tracing, retries, circuit breaking.",
+        without: "Ek handler jo ek ek step badhta hai, jo paanch steps pe bilkul readable hai aur barah pe nahi rehta.",
+        cost: "Indirection, aur poora lifecycle ek function mein padh pane ka nuksaan, jo abhi is design ki sabse achhi properties mein se ek hai. Abhi nahi. Bolo kab." }
+    ],
+
+    flowsIntro: "Ek request, phir do tareeke jinse pata chalta hai ki backend dead hai. Doosra aur teesra wahi hain jahan design apni jagah kamata hai, aur jahan defects rehte hain.",
+
+    flows: [
+      { n: "A proxied request",
+        steps: [
+          ["Fiber handler ko ek context deta hai. Client IP padha jaata hai, aur woh tabhi real client hai jab is process ke aage kuch nahi hai."],
+          ["Rate limiter Redis mein ek Lua script chalata hai: bucket ko elapsed time se refill karo, compare karo, decrement karo, sab ek operation mein. Budget se upar 429 lautata hai aur request yahin ruk jaati hai, kisi backend ko chhue bina."],
+          ["Selector configured strategy pe dispatch karta hai. Har ek pool read lock leti hai, healthy pe filter karti hai, apna rule lagati hai, aur URL lautati hai."],
+          ["Least connection ke liye, handler us backend ka atomic counter badhata hai. Yeh doosra lock acquisition hai, aur chunne aur badhane ke beech ka gap hi race hai."],
+          ["Backend URL ke against ek naya request banta hai das second ke context ke saath, headers copy hote hain, aur body forward hoti hai."],
+          ["Response client ko stream hoke wapas jaata hai. Counter decrement hota hai. Dhyan do ki streaming handler ke return hone ke baad hoti hai, jo deferred close ko khatarnak banata hai."]
+        ] },
+      { n: "A backend dies, discovered passively",
+        note: "Ek request cost bharti hai. Uske baad sab kisi aur taraf route hote hain.",
+        steps: [
+          ["Proxy call error lautata hai: connection refused, ya context deadline expire ho gayi."],
+          ["Pool ko us backend ko unhealthy mark karne ko kaha jaata hai, write lock ke neeche. Har agla selection use turant filter kar deta hai."],
+          ["Jis client ne discovery trigger ki use 500 milta hai. Koi retry nahi, isliye ek user detection ki keemat bharta hai. Ek alag backend pe ek retry ise invisible bana deta, aur yahi sabse valuable missing feature hai."],
+          ["Ring nahi badalti. Jis hashed client ka backend abhi mara woh clockwise agle healthy point pe chalta hai, aur baaki har client ka mapping chhoota nahi."]
+        ] },
+      { n: "A backend recovers, discovered actively",
+        steps: [
+          ["Har das second mein checker goroutine har registered backend ke liye ek goroutine spawn karta hai."],
+          ["Har ek backend ke health endpoint pe GET bhejta hai. Is call pe koi timeout nahi, jo leak hai: jo backend accept karke kabhi jawab nahi deta woh us goroutine ko hamesha ke liye pakde rehta hai."],
+          ["2xx backend ko dobara healthy mark karta hai, isliye recovery ko na insaan chahiye na registration call."],
+          ["Response body kabhi close nahi hoti, isliye har poll ek connection leak karta hai. Do ek line ke fix, aur yeh wo component hai jise inki sabse zyada zaroorat hai."]
+        ] }
+    ],
+
+    apiNote: "Das second ki cheez: admin routes aur proxy ka catch all ek hi public listener pe hain, bina authentication ke. Jo bhi balancer tak pahunch sake woh har backend ko deregister kar sakta hai.",
+
+    api: [
+      ["POST /register {url}", "200", "Backend aur uske 150 virtual nodes ring mein jodta hai. Idempotent: maujooda URL register karne se woh dobara healthy mark hota hai, jo recovery ko repeat karne ke liye safe banata hai."],
+      ["POST /deregister {url}", "200", "Use pool aur ring dono se hataata hai. Us tak in flight requests affect nahi hoti, jo sahi hai."],
+      ["GET /servers", "list of backends", "Har backend ki health aur connection count. Operator ke liye pool mein yahi akeli khidki hai, isliye connection count ka khaali object ke roop mein serialise hona matter karta hai."],
+      ["ALL *", "the backend's response", "Baaki sab proxy hota hai. Dhyan do ki yeh catch all upar ke teen admin routes ke saath ek hi listener share karta hai, jo backends card ka security sawaal hai."],
+      ["GET /health on each backend", "2xx if alive", "Woh contract jis pe balancer depend karta hai. Jo handler bina shart 200 lautata hai woh bekaar se bhi bura hai: woh ek process report karta hai, service nahi."]
+    ],
+
+    tradeoffsIntro: "Chaar decisions, aur pehla wahi hai jise dono taraf se defend kar pana chahiye.",
+
+    tradeoffs: [
+      { a: ["Copy out, then take the second lock", "Deadlock structurally impossible hai. Copy kiya hua set ek request se stale ho sakta hai."],
+        b: ["A documented global lock ordering", "Na copy na staleness. Sirf tab tak correct jab tak har future contributor rule follow kare."],
+        flip: "copy mehenga ho jaye, jo yahaan kabhi nahi hota kyunki list tens of entries ki hai. Ek hot path mein bade structure ke saath, dono mutexes pe ordering plus comment behtar trade hai." },
+      { a: ["An RWMutex over a slice", "Simple, obvious, aur har request pe read locked. Contention eventually aata hai aur sirf real load mein."],
+        b: ["Copy on write behind an atomic pointer", "Lock free reads. Har write poora slice copy karta hai, jo theek hai kyunki writes rare hain."],
+        flip: "profiling read path pe lock contention dikhaye, jo hazaaron requests per second pe hoga. Yeh workload, kayi readers aur lagbhag koi writer nahi, bilkul wahi hai jiske liye copy on write bana hai, aur pehla optimisation yahi hoga jo main karunga." },
+      { a: ["Rate limit state in Redis", "Har balancer instance ke across ek shared budget. Har request pe network round trip."],
+        b: ["Rate limit state in process", "Zero added latency. N instances ka matlab intended limit ka N guna, isliye limit asal mein limit nahi."],
+        flip: "sach mein sirf ek hi instance hai, ya round trip bottleneck ban jaye. Mature version dono hai: obvious cases ke liye sasta local check aur baaki ke liye shared wala." },
+      { a: ["Passive health with a failure threshold", "Ek transient error healthy backend ko evict nahi karta. Detection mein ek ki jagah kuch failures lagte hain."],
+        b: ["Mark down on the first failure", "Sabse tez possible detection, aur ek cancelled client request healthy backend ko rotation se hata deta hai."],
+        flip: "backends sasta aur bahut hain aur ek ko thodi der kho dene ki keemat nil hai. Chhote pool mein ek error pe evict karna cascade shuru kar sakta hai, jo asal mein is trade-off ka failure hai." }
+    ],
+
+    next: [
+      "<b>Ek alag backend pe ek retry.</b> Passive detection abhi ek user se laash dhoondhne ki keemat vasool karti hai. Kahin aur ek idempotent retry poori cheez ko invisible bana deta hai, aur yahi sabse valuable addition hai.",
+      "<b>Ek failure threshold, phir circuit breaker.</b> Down mark karne se pehle ek window mein teen failures, aur traffic wapas aane se pehle ek half open probe. Dono chhote hain aur dono cascades rokte hain.",
+      "<b>Shared pool state.</b> Ya to Redis mein ya service discovery ke peeche, taaki doosra instance sach mein doosra instance ho, doosri raay nahi.",
+      "<b>Proxy correctness.</b> Hop by hop headers strip karo, X-Forwarded-For aur X-Forwarded-Proto add karo, request body ko buffer karne ki jagah stream karo, aur admin routes ko token ke peeche public listener se hatao."
+    ]
+  }
 },
 
 /* ==========================================================================
@@ -3987,7 +5966,241 @@ const DESIGN = [
     ["HI", "https://www.hellointerview.com/learn/system-design/problem-breakdowns/rate-limiter", "Hello Interview, design a rate limiter", "H"],
     ["GH", "https://github.com/alicebob/miniredis", "miniredis, an in process Redis with a clock you can move", "E"],
     ["BB", "https://blog.bytebytego.com/p/ep141-a-cheatsheet-on-system-design", "ByteByteGo, the HLD cheatsheet", "E"]
-  ]
+  ],
+
+  hi: {
+    one: "Rate limiting matlab ek read, ek decision aur ek write, us state par jo kai processes share karte hain. Yeh teeno kaam apne process se karoge to race hoga; poori library ka wajood is liye hai ki yeh teeno Redis ke andar chale jaayein, jahan yeh ek hi operation ban jaate hain.",
+
+    brief: {
+      why: "Yeh page ka sabse chhota project hai, paanch sau lines se bhi kam, aur code ke muqable decision ka ratio sabse zyada isi mein hai. Algorithms khud mostly hain hi nahi, har ek bees line ka Lua hai. Asal interesting cheezein yeh hain: logic caller mein chalne ke bajaye database par kyun chalta hai, bucket refill hota hai jabki koi use refill karta hi nahi, sliding window script ki ek line UUID ke bina chupke se undercount kyun karegi, aur ek library apne import karne wale program ka kya karz rakhti hai. Yeh notice karne ki achhi jagah bhi hai ki library ke users uske andar nahi dekh sakte, isliye jo bhi decision woh unki taraf se chupke se leti hai, woh unke haath se nikal jaata hai.",
+      functional: [
+        "<b>Decide karo</b> ki ek given key abhi request kar sakti hai ya nahi, ek hi call mein.",
+        "<b>Token bucket</b>: tokens ek fixed rate se jama hote hain, burst ceiling tak, aur request unhe kharch karti hai. Chhote bursts allowed, long term average enforce hota hai.",
+        "<b>Sliding window</b>: kisi bhi trailing window of time mein zyada se zyada N requests, aur boundary par koi spike nahi.",
+        "<b>Processes ke across kaam karo.</b> Caller ki das copies ko ek hi budget share karna hai, das budgets nahi milne chahiye.",
+        "<b>Idle hone par kuch cost nahi.</b> Jis key ko kisi ne use nahi kiya, use khud hi exist karna band kar dena chahiye, bina kisi sweeper ke."
+      ],
+      out: ["HTTP middleware", "per route ya per plan configuration", "distributed quota borrowing", "leaky bucket aur fixed window", "metrics aur observability"],
+      nfr: [
+        ["Atomicity", "check and decrement are one operation", "Yahi asli requirement hai. Baaki poora design isi se nikalta hai, aur isi wajah se algorithms Go mein nahi, Redis mein rehte hain."],
+        ["Correct across processes", "N callers, one budget", "Jo limiter sirf ek process mein correct hai woh limiter nahi, ek suggestion hai. Isi liye state remote rakhi gayi hai."],
+        ["Latency", "one round trip per decision", "Limiter har guarded request se pehle chalta hai, to uska cost sab par add hota hai. Ek round trip floor hai aur design ko usse zyada nahi karna chahiye."],
+        ["Behaviour when Redis is down", "a decision, not an accident", "Fail open karo to limit gayab. Fail closed karo to Redis poori service gira deta hai. Dono defensible hain; magar caller ke liye chupke se ek choose kar lena defensible nahi."],
+        ["Idle cost", "zero", "Har key par ek TTL hai jo uske apne parameters se nikalta hai, isliye inactive clients khud expire ho jaate hain aur koi cleanup job chalane ki zaroorat nahi."]
+      ],
+      numbers: [
+        ["Token bucket state", "two fields, about 100 bytes", "Ek hash jisme tokens aur ek timestamp hai. Har key ke liye constant, chahe us key ka traffic kitna bhi ho, aur yahi bucket ka sabse bada fayda hai."],
+        ["Sliding window state", "one member per request in the window", "Sorted set ki ek entry nanosecond timestamp plus ek UUID hoti hai, to lagbhag 80 bytes har ek. 100 requests ke limit par yeh lagbhag 8 KB per key hai."],
+        ["The memory ratio", "about 80 to 1", "Per key, per algorithm. Ek million active clients par yeh 100 MB versus 8 GB hai, yaani ek Redis instance aur ek Redis budget conversation ka farq."],
+        ["Token bucket TTL", "ceil(burst / rate) seconds", "Bilkul utna time jitna ek khaali bucket ko poora refill hone mein lagta hai. Uske baad stored state ek fresh key se alag nahi dikhta, isliye expire karne se kuch nahi khota. Yeh derivation codebase ki sabse sundar line hai."],
+        ["Sliding window TTL", "the window length", "Ek window tak koi request na aaye to har entry waise bhi evict ho chuki hoti. Wahi logic, alag unit."],
+        ["Round trips per decision", "one", "Script ka poora point yahi hai. Go se read aur phir write karna do round trips aur unke beech ek race hota."],
+        ["Script bytes on the wire", "about 600, every single call", "Kyunki script hash se nahi, value se bheji jaati hai. Uski jagah 40 byte ka SHA bhejna ek line ka change hai aur woh service ki har request par lagta hai."]
+      ],
+      numbersNote: "Do rows design ko carry karti hain. <b>80 to 1</b> algorithms mein se choose karne ki asli wajah hai, aur yeh correctness nahi, memory ka argument hai. <b>ceil(burst / rate)</b> woh TTL hai jo parameters se hi derive hota hai, aur isi wajah se idle keys bina sweeper ke free ho jaati hain."
+    },
+
+    stagesIntro: "Chhe stages. Pehle do aise galat hain jinhe feel karna zaroori hai, teesra woh idea hai jiske liye library bani hai, agle do do algorithms hain aur har ek ki ek subtle line, aur aakhri stage us code ka farq hai jo bas chalta hai aur us library ka jis par koi aur rely kar sake.",
+
+    stages: [
+      { pressure: "Abhi kuch nahi. Yeh woh hai jo sab sabse pehle likhte hain aur yeh do tarah se galat hai, jo chaar lines ke code ke liye achha ratio hai.",
+        say: "Key se count ka ek map, har request par increment, aur timer par reset. Test mein chalta hai aur do tarah se galat hai. Yeh per process galat hai, to service ki do copies har client ko double limit de deti hain. Aur increment kai goroutines se ek read aur ek write hai, to locally bhi correct hone ke liye mutex chahiye.",
+        breaks: "Dono problems ki shape ek hi hai: aisi state jo kai cheezein share karti hain, aur jo read ke baad write se badalti hai. Mutex ek process ke andar fix kar deta hai aur do processes ke across kuch nahi karta." },
+
+      { pressure: "Kai processes, ek budget. State ko process se bahar jaana hoga, aur obvious jagah Redis hai, ek increment aur ek expiry ke saath.",
+        say: "Har client, har window ke liye ek key, increment hoti hai aur TTL milta hai. Ab har process ek hi number share karta hai, jo problem ka important aadha hissa fix karta hai, aur INCR khud atomic hai to counter kho nahi sakta. Yeh ek fixed window counter hai aur ise ship karna bilkul reasonable hai.",
+        breaks: "Do cheezein. Fixed window apni boundary ke across double burst allow karta hai: 59.9 seconds par poora limit aur 60.1 par phir poora limit. Aur jaise hi rule ko increment se zyada kuch chahiye, jaise refill, stored timestamp se comparison, window ke andar abhi kitna bacha hai, woh read, decide, write ban jaata hai. Go se teen steps, har do ke beech gap, aur do processes dono ek hi value padh kar dono yes bol sakte hain." },
+
+      { pressure: "Read, decide, write ko ek indivisible step hona hai. Bahar se, network par, kai processes ek saath, yeh ho hi nahi sakta.",
+        say: "Poora algorithm ek Lua script mein chala jaata hai jo Redis tumhari taraf se chalata hai. Redis script ko ek unit ki tarah execute karta hai, to read, arithmetic, comparison aur write kisi aur ke saath interleave nahi ho sakte. Race ko unlikely nahi banaya gaya, impossible banaya gaya hai, aur kahin koi lock nahi hai. Caller ko iska cost dekho: kuch nahi. Ek round trip, increment jaisa hi, aur ab logic kitna bhi complicated ho sakta hai.",
+        breaks: "Bucket ko waqt ke saath refill hona hai, aur refill karne ke liye kuch chal hi nahi raha. Obvious jawab, ek background job jo har tick par har bucket top up kare, matlab ek process jiska kaam clients ki sankhya ke saath badhta hai, aur zyadatar ke liye kuch useful nahi karta." },
+
+      { pressure: "Refill elapsed time ka function hai, aur token count ki parwah sirf tab hoti hai jab request aati hai. To tab hi compute karo, stored timestamp se, aur background mein kuch bhi mat chalao.",
+        say: "Stored token count aur woh time padho jab store hua tha, rate times elapsed add karo, burst par cap karo, aur naye timestamp ke saath wapas likh do. Bucket us pal bilkul utna full hota hai jitna hona chahiye jab koi pooche, aur warna use koi chhoota nahi. Aur TTL choose nahi kiya jaata, parameters se derive hota hai: ek khaali bucket burst over rate seconds mein poora refill ho jaata hai, to itni der baad stored bucket fresh wale se alag nahi dikhta aur use delete karne se kuch nahi khota. Isliye idle client ka cost zero hai aur kisi ko sweep nahi karna padta.",
+        breaks: "Bucket design se bursts ko smooth karta hai, jo tab bilkul galat hai jab requirement hard cap ho: sau calls per minute se zyada nahi, kabhi nahi, pehle second mein bhi nahi." },
+
+      { pressure: "Alag requirement ko alag structure chahiye. Fixed window ki counting boundary par double burst allow karti hai, aur bucket jaanbujhkar bursts par permissive hai, to koi bhi strict cap ka jawab nahi hai.",
+        say: "Request timestamps ka ek sorted set. Window se purana sab evict karo, jo bacha use count karo, aur agar woh limit se kam hai to yeh request add karo. Teen commands, ek script, atomic. Subtle line member hai: woh timestamp <i>plus ek UUID</i> hai, kyunki sorted set ek set hota hai, aur ek hi nanosecond par aayi do requests agar same member likhein to ek entry mein collapse ho jaati hain aur chupke se undercount ho jaata hai. Exactness ki keemat memory hai jo constant nahi balki limit ke proportional hai, aur yahi dono algorithms ka asli trade-off hai.",
+        breaks: "Dono scripts ko current time caller deta hai, caller ki apni clock se. Ek process ho to theek. Das processes ho to das clocks hain, aur woh aapas mein agree nahi karti." },
+
+      { pressure: "Do problems jo dono boundary ke baare mein hain. Time bahar se aata hai aur processes ke beech agree karega, iska koi bharosa nahi, aur jawab bahar ek single bit ban kar jaata hai jo script ki jaani hui har cheez phenk deta hai.",
+        say: "Clock ko jaanbujhkar external box ki tarah draw kiya gaya hai, kyunki woh wahi hai: ek value jo atomic region ke bahar bani hai aur andar poori tarah trust ki jaati hai. Redis time khud de sakta hai, jisse har caller ke liye ek hi clock ho aur skew poori tarah hat jaaye. Aur return value wahi jagah hai jahan library help karti hai ya nahi karti: yeh sirf yes ya no deti hai, to caller nahi bata sakta kitna wait karna hai, rate limit aur Redis outage mein farq nahi kar sakta, aur fail open choose nahi kar sakta. Script teeno jaanti hai. Tests diagram par isliye hain kyunki unhone testing ka sabse mushkil hissa achhe se solve kiya: time based algorithm tab hi testable hai jab tum time ko move kar sako, aur miniredis yeh karne deta hai." }
+    ],
+
+    boxesIntro: "Paanch sau se kam lines ke liye nau components, jo batata hai ki density kahan hai. Do Lua scripts hi design hain; baaki sab bas unhe arguments pahunchane aur jawab wapas lane ke liye hai.",
+
+    boxes: [
+      { job: "Poochta hai ki key aage badh sakti hai ya nahi, aur jawab ke saath kuch sensible karta hai.",
+        why: "Yeh isliye draw kiya gaya hai kyunki library ki boundary ek design decision hai, aur yeh wali caller ko jitna de sakti thi usse kam deti hai. Is line ko paar kya jaata hai, yahi aakhri stage ka poora subject hai.",
+        forced: "Stage 0, aur uski shape stage 5 mein ek sawaal ban gayi.",
+        alts: [["Shipping HTTP middleware in the library", "convenient hai, aur har us insaan par web framework thop deta hai jo bas rate limiter chahta hai. Core ko framework free rakhna aur middleware ko alag package mein dena behtar split hai."]],
+        pros: ["Library HTTP ke baare mein kuch nahi jaanti, isliye queue consumers, gRPC handlers aur background jobs ke liye barabar chalti hai.", "Ek call, ek boolean, seekhne ko kuch nahi."],
+        cons: ["Boolean yeh express nahi kar sakta ki kitna wait karna hai, isliye caller Retry-After header nahi bhej sakta aur clients andhadhundh retry karte hain.", "Yeh rate limit aur Redis failure mein farq nahi kar sakta, isliye caller chahe bhi to fail open choose nahi kar sakta.", "Key ek bare string hai, to ek program ke do features bina kisi ko pata chale ek key par takra sakte hain."],
+        cost: "Har guarded request par ek function call aur ek Redis round trip.",
+        fails: "Caller har HTTP handler ko isse wrap karta hai aur Redis unreachable ho jaata hai. Har request deny ho jaati hai, aur service us cheez ki wajah se down hai jo use protect karne ke liye thi. Caller ko kuch aur decide karne ka mauka hi nahi mila.",
+        say: "Rate limiter ko ek bit nahi, ek decision wapas dena chahiye: allowed, kitne bache hain, agla kitni der mein, aur backend ne jawab diya ya nahi. Teeno cheezein script ke andar pehle se maloom hain aur boundary par phenk di jaati hain." },
+
+      { job: "Parameters hold karta hai, arguments sahi order mein lagata hai, script evaluate karta hai, aur reply ko ek jawab mein badalta hai.",
+        why: "Yeh facade hai. Caller ko kabhi Lua arguments haath se nahi banane chahiye, aur script ko kabhi nahi pata hona chahiye ki Go type kya hota hai.",
+        forced: "Stage 0, aur stage 4 mein ise doosra algorithm mil gaya.",
+        alts: [["Two separate types, TokenBucket and SlidingWindow", "behtar shape hai, aur iski wajah neeche disadvantages mein hai. Do constructors wala ek type matlab uski aadhi fields kisi bhi waqt meaningless hoti hain."], ["An interface with two implementations", "do types plus runtime par unhe swap karne ki kshamta, jo is library ko use karne wala load balancer asal mein chahta hai, kyunki woh algorithm configuration se choose karta hai."], ["Free functions taking a config struct", "hold karne ko koi state nahi, aur iska matlab har call par parameters pass karna, jo unhe hold karne se zyada error prone hai."]],
+        pros: ["Do algorithms call site par interchangeable hain, jo configuration se choose karne wale caller ko chahiye.", "Parameters construction par ek baar capture hote hain, to koi call site kisi doosre se drift nahi kar sakta.", "Redis client pass kiya jaata hai, owned nahi, to library kabhi aisa connection manage nahi karti jo usne banaya hi nahi."],
+        cons: ["Ek struct chaar fields carry karta hai aur har constructor unme se do bharta hai, to token bucket instance par sliding window method call karna compile hota hai, chalta hai, aur sab kuch deny karta hai, kyunki window aur limit dono zero hain.", "Errors standard output par print hote hain aur false mein badal diye jaate hain. Library ko kabhi caller ke output mein nahi likhna chahiye, aur kabhi caller ki failure policy decide nahi karni chahiye.", "Dono methods ke signatures alag hain, ek requested count leta hai aur ek nahi, isliye woh bina badlaav ke interface ke through asal mein interchangeable nahi hain."],
+        cost: "Ek chhota struct. Kaam poora round trip mein hai.",
+        fails: "Koi token bucket banata hai, baad mein config flag badalta hai, aur us par sliding window path call karta hai. Window zero aur limit zero ka matlab count kabhi limit se neeche nahi hota, to har request deny hoti hai, chupke se, kahin koi error nahi. Do types ise compile time par unrepresentable bana dete hain.",
+        say: "Do fields ke do alag hisson wale ek struct ke bajaye do types, unke upar ek shared interface, aur ek return value jo error carry kare. Yeh teen changes shayad chalis lines ke hain aur working code aur library ke beech ka farq hain." },
+
+      { job: "Beete hue time ke liye bucket refill karta hai, agar kaafi tokens hain to requested tokens kharch karta hai, aur result store karta hai.",
+        why: "Yeh us limit ka algorithm hai jo bursts tolerate kare. Tokens use karo ya na karo, jama hote rehte hain, to ek shaant client capacity bank kar leta hai aur baad mein jaldi kharch kar sakta hai, jo asal clients ka behaviour hai.",
+        forced: "Script ke liye stage 2, lazy refill ke liye stage 3.",
+        alts: [["A background job topping up every bucket on a tick", "algorithm ka intuitive reading, aur yeh clients ki sankhya ke proportional kaam karta hai requests ki nahi, jisme zyadatar waste hota hai."], ["Leaky bucket", "input nahi, output ko smooth karta hai, to reject nahi queue karta hai. Alag product decision, aur queue karne ke liye jagah chahiye."], ["Storing tokens as an integer count of thousandths", "karne layak hai. Tokens hash field mein float hain, to bar bar chhote refills lambe chalne wali key par floating point error jama karte hain. Integers use karne se yeh poori tarah hat jaata, aur argument wahi hai jo paisa kabhi float mein store na karne ka hai."]],
+        pros: ["Har key ke liye constant memory, do fields, traffic chahe jitna ho.", "Refill stored timestamp par arithmetic hai, to background mein kuch nahi chalta aur kuch schedule nahi karna padta.", "TTL parameters se nikal aata hai, isliye idle keys tabhi expire hoti hain jab unki state meaningless ho jaati hai.", "Missing key full bucket ki tarah padhi jaati hai, to pehli request aur expire hui key ek hi path lete hain, koi special case nahi."],
+        cons: ["Yeh design se burst permit karta hai, isliye hard cap express nahi kar sakta.", "Token count ek string field mein float hai, jo aisi precision hai jo chahiye nahi aur audit nahi ho sakti.", "Burst size se zyada tokens maangna kabhi succeed nahi hoga, aur caller ko no milta hai bina kisi hint ke ki request impossible thi na ki bas jaldi."],
+        cost: "Ek hash read, thoda arithmetic, ek hash write aur ek expiry. Redis ke andar microseconds.",
+        fails: "Caller burst 5 set karta hai aur 10 tokens maangta hai. Jawab hamesha ke liye no hai, aur rate limited hone jaisa hi dikhta hai. Construction par validate karo, ya alag pehchaan mein aane wali reason return karo.",
+        say: "Lazy refill yaad rakhne layak trick hai: aisi state update karne ke liye kaam schedule mat karo jise koi dekh hi nahi raha. Jab koi pooche tab timestamp se compute karo." },
+
+      { job: "Window se purana sab hata deta hai, jo bacha use count karta hai, aur request tabhi admit karta hai jab woh count limit se kam ho.",
+        why: "Yeh hard cap ka algorithm hai. Fixed window ke ulat, isme burst karne ko koi boundary nahi, kyunki window request ke saath chalti hai, clock ke saath nahi.",
+        forced: "Stage 4.",
+        alts: [["Fixed window counters", "ek integer aur ek expiry, aur boundary ke across limit ka double allow karta hai: ek window ke ant mein poora quota aur agli ki shuruaat mein phir."], ["Sliding window log with approximation", "pichli window ka count rakho aur current window mein kitna aage ho us hisaab se weight karo. Constant memory, chhota error, aur scale par aam production choice. Yeh naam lene layak hai ki memory chubhe to yahan jaana hai."], ["A bucket with burst set to the limit", "effect mein kareeb hai magar wahi guarantee nahi, kyunki bucket continuously refill hota hai aur window nahi."]],
+        pros: ["Exact. Kisi bhi trailing window mein zyada se zyada N requests, na boundary effect na approximation.", "Eviction score ke hisaab se range delete hai, jo Redis ek command mein karta hai.", "Poori state inspect ho sakti hai: asal request times list kar sakte ho, jo tab kaam aata hai jab koi limit par dispute kare."],
+        cons: ["Memory limit ke proportional hai, window mein har request ke liye ek member, to bada limit ek mehngi key hai.", "Sabse busy clients sabse zyada memory lete hain, jo tab bilkul ulta hai jab unse bachna hai.", "Har member UUID carry karta hai, to storage data se zyada identifiers ka hai."],
+        cost: "Window mein har request ke liye lagbhag 80 bytes. 100 ke limit par 8 KB per key, jabki bucket ke 100 bytes.",
+        fails: "Member mein UUID na ho to ek hi nanosecond mein aayi do requests same member likhti hain, sorted set ek rakhta hai, aur count ek kam ho jaata hai. Asal concurrency mein yeh aisa limiter hai jo kabhi kabhi zyada admit karta hai, aise tareeke se jo koi test nahi pakdega. UUID har request ko uska apna member banata hai.",
+        say: "Sorted set ek set hai, to member har request ke liye unique hona chahiye warna identical timestamps collapse ho jaate hain. Yeh ek detail exact limiter aur load mein leak karne wale limiter ke beech ka farq hai." },
+
+      { job: "State hold karta hai, aur uske upar script bina kisi ko interleave hone diye chalata hai.",
+        why: "Do properties ek saath chahiye: aisi state jo kai processes dekh saken, aur aisi jagah jahan read aur write ek operation ho sake. Script ke saath Redis dono ka sabse chhota raasta hai.",
+        forced: "Sharing ke liye stage 1, atomicity ke liye stage 2.",
+        alts: [["A relational database with a transaction", "correct hai, aur har request ko durable storage par transaction bana deta hai, jo disposable state ke liye orders of magnitude mehnga hai."], ["An in memory limiter per process", "na network na shared budget, to N processes matlab N guna limit."], ["A dedicated rate limiting service", "jo bahut bade scale par banate ho, central authority se lease kiye local budgets ke saath. Kahin zyada machinery, aur agla step ke roop mein naam lene layak."]],
+        pros: ["Single threaded command execution, to script bina kahin locking ke atomic hai.", "TTLs native hain, to expiry ko na sweeper chahiye na bookkeeping.", "Sub millisecond, aur yahi ek wajah hai ki har request ke aage yeh acceptable hai."],
+        cons: ["Jo bhi limiter guard karta hai us sab ke hot path par network dependency.", "Lamba script har doosre client ko block karta hai, kyunki jo cheez ise atomic banati hai woh yahi hai ki aur kuch chalta nahi. Yeh dono chhote hain; ek script jo bade key set par iterate kare production incident hoga.", "State durable nahi hai, to failover har bucket reset kar deta hai."],
+        cost: "Har decision par ek round trip aur ek script evaluation.",
+        fails: "Redis failover karta hai aur har bucket kho jaata hai. Har client ko ek saath poora bucket mil jaata hai, jo lagbhag double intended rate ki chhoti window hai. Limiter ke liye yeh acceptable failure hai aur zor se kehna banta hai, kyunki yahi argument hai ki yahan synchronous replication ke liye paisa kyun nahi dena.",
+        say: "Script ke atomic hone ki wajah yeh hai ki Redis single threaded hai, aur wahi wajah hai ki script chhota rehna chahiye. Us vaakya ke dono hisse matter karte hain." },
+
+      { job: "Do fields: kitne tokens bache the, aur yeh kab sach tha.",
+        why: "Yeh lazy refill support karne wali sabse chhoti state hai. In do numbers aur current time se sahi token count ek subtraction aur ek multiplication hai.",
+        forced: "Stage 2.",
+        alts: [["Storing a token count alone, with a background refiller", "do ke bajaye ek field, aur ise honest rakhne ke liye ek process chahiye."], ["A stream or list of grants", "auditable, aur yeh sliding window ki memory profile hai uski exactness ke bina."]],
+        pros: ["Traffic ki parwah kiye bina constant size.", "Do chhoti fields ka hash Redis compactly encode karta hai, to yeh sach mein lagbhag sau bytes hai.", "Absent key matlab full bucket, jisse pehla use aur expiry ek hi code path ho jaate hain."],
+        cons: ["Token count float hai jo string mein render hota hai, to na exact hai na parse karna sasta.", "Timestamp jo bhi caller ki clock ne kaha wahi hai, to state kisi aur ka andaza carry karti hai ki ab kab tha."],
+        cost: "Har active key ke liye lagbhag 100 bytes, khud expire hoti hui.",
+        fails: "Do callers jinki clocks kuch seconds alag hain out of order timestamps likhte hain. Refill computation elapsed time ko zero par clamp karti hai, to bucket kuch der refill hi nahi hota, aur client configured se zyada limit ho jaata hai aur kisi log mein kuch nahi jo iski wajah bataye.",
+        say: "Token ka hazaarwan hissa integer mein store karna ise exact bana dega, aur reasoning wahi hai jo paisa kabhi float mein na rakhne ki hai. Yahan ka float consequence mein chhota hai aur kind mein identical." },
+
+      { job: "Window ke andar abhi bachi har request ke liye ek member, uske timestamp se scored.",
+        why: "Exactness ko individual events chahiye. Ek count nahi bata sakta ki kaunsi requests window se girne wali hain; timestamps ka set bata sakta hai.",
+        forced: "Stage 4.",
+        alts: [["A count plus the oldest timestamp", "constant memory, aur yeh nahi jaan sakta ki doosra sabse purana kab expire hoga, to sirf approximate kar sakta hai."], ["Two counters, the current and the previous window, weighted", "standard approximation. Constant memory, kuch percent ka error, aur jo zyadatar bade systems asal mein chalate hain."]],
+        pros: ["Score ke hisaab se range delete expired entries ek command mein evict karta hai.", "Eviction ke baad count ek single O(1) command hai.", "Inspectable hai, to decision ke peeche ke exact request times padhe ja sakte hain."],
+        cons: ["Memory limit aur traffic ke saath badhti hai, to sabse heavy users track karne mein sabse mehnge hain.", "Member mein UUID hi sabse bhaari hissa hai, to stored bytes ka zyadatar hissa information nahi, uniqueness guarantee karne ke liye hai."],
+        cost: "Window ki har request ke liye lagbhag 80 bytes. 100 ke limit par 8 KB per key.",
+        fails: "Ek key bahut bade limit aur lambi window ke saath banti hai, aur sorted set megabytes tak badh jaata hai. Eviction command ko ab atomic script ke andar asli kaam karna padta hai, jo chalte waqt har doosre Redis client ko block karta hai. Limit ko cap karo, ya kisi size ke upar upar bataye weighted approximation par jao.",
+        say: "Chhota unique member, UUID ke bajaye ek counter, is key ki memory aadhi kar deta aur exactness rakhta. UUID aasan correct jawab hai, sasta nahi." },
+
+      { job: "Bata do ki abhi time kya hai, dono algorithms ke liye.",
+        why: "Ise external, untrusted box ki tarah draw kiya gaya hai kyunki woh bilkul wahi hai. Value atomic region ke bahar bani hai, us process ne banayi jisne request handle ki, aur phir andar poori tarah trust ki jaati hai.",
+        forced: "Stage 5, aur yeh design ki sabse interesting kamzori hai.",
+        alts: [["Redis TIME, called inside the script", "har caller ke liye ek clock, to skew poori tarah gayab. Pehle yeh awkward tha kyunki non deterministic command script ko verbatim replicate karne ke liye unsafe bana deta tha, aur modern Redis script ke effects replicate karta hai uske source ko nahi, to yeh objection hat gaya."], ["Requiring NTP on every caller", "design nahi, ek umeed hai. Das milliseconds ka skew normal hai aur kabhi kabhi seconds ka hota hai."]],
+        pros: ["Time andar pass karna script ko deterministic rakhta hai, jo purana aur zyada conservative choice hai.", "Algorithm ko trivially testable banata hai, kyunki test jo time chahe pass kar sakta hai."],
+        cons: ["Kai callers matlab kai clocks aur unke beech koi agreement nahi.", "Tez clock wala caller bucket mein future timestamp likhta hai, aur phir sahi clock wala har caller zero elapsed time compute karta hai aur real clock pakadne tak koi refill nahi lagta.", "Sliding window ke liye skewed now poori window shift kar deta hai, to client un requests ki wajah se limit ho sakta hai jo us process ke hisaab se abhi hui hi nahi."],
+        cost: "Kuch nahi, aur yahi ek fleet mein correct aur approximately correct ka farq hai.",
+        fails: "Autoscaling group ka ek instance do second aage ki clock ke saath aata hai. Uski writes agle do seconds tak har us client ke bucket ko poison karti hain jise woh serve karta hai, aur symptom yeh hai ki clients configured se zyada limit hote hain, kabhi kabhi, sirf kuch instances par. Bahar se yeh dhoondhna sach mein bura bug hai.",
+        say: "Script ke andar Redis se time lo. Ek clock, koi skew nahi, aur determinism ka objection kai major versions pehle lagna band ho gaya." },
+
+      { job: "Dono algorithms ko in process Redis ke against chalata hai, aur time ko demand par aage badhata hai.",
+        why: "Time based algorithm ko clock ka control chahiye, warna honest test nahi ho sakta. Test mein asal ek second ruk kar dekhna slow aur flaky hai; fake ko fast forward karna dono nahi.",
+        forced: "Stage 5, aur yeh is repository ka woh hissa hai jise sabse zyada copy karna chahiye.",
+        alts: [["Testing against a real Redis in a container", "higher fidelity, asli Lua interpreter samet, aur test suite chalane ke liye infrastructure chahiye. Ek doosri, slower suite ke liye achha candidate, akeli suite ke liye nahi."], ["Mocking the Redis client", "fast hai aur kuch test nahi karta, kyunki poora algorithm us script mein hai jiski jagah mock khada hoga."], ["Sleeping in the test", "woh version jo sab pehle likhte hain: slow, flaky, aur loaded build machine par fail hone ke baad delete ho jaata hai."]],
+        pros: ["Koi infrastructure nahi, to suite kahin bhi ek second mein chalti hai.", "Time fast forward karne se refill aur expiry sabr ke kaam nahi, aam assertions ban jaate hain.", "Tests asli Lua exercise karte hain, uska Go reimplementation nahi, to test hone wali cheez wahi hai jo ship hoti hai."],
+        cons: ["In process Redis asli wale se alag Lua implementation use karta hai, to script yahan pass ho kar production mein alag behave kar sakta hai. Rare, aur jaanna zaroori.", "Yeh us concurrency ko exercise nahi karta jise handle karne ke liye scripts bane hain, kyunki ek test goroutine kabhi khud se race nahi karta."],
+        cost: "Ek dependency, sirf test ke liye.",
+        fails: "Script kisi aise Redis ya Lua behaviour par rely karti hai jo in process version thoda alag implement karta hai, aur farq production mein pata chalta hai. Wahi suite continuous integration mein asli Redis ke against bhi chalao, jo naye tests nahi, ek configuration change hai.",
+        say: "Time ko control karna hi time based algorithm ko testable banata hai. Agar refill test karne ka ekmaatra tareeka uska intezaar karna hai, to design mein ek seam missing hai." }
+    ],
+
+    patternsIntro: "Itni chhoti library mein lagbhag teen decisions ki jagah hai. Unme se do naam lene layak patterns hain, ek pattern jo sahi tarah se refuse kiya gaya, aur do aur shapes jo is code mein shayad honi chahiye thi aur nahi hain.",
+
+    patterns: [
+      { what: "Poora decision Lua ki ek constant string hai, jo Redis ko bheji jaati hai aur wahin chalti hai.",
+        varies: "Iska kuch vary nahi hota. Yeh isliye hai ki read, decision aur write ek operation ban jaayein aur kuch interleave na ho sake.",
+        without: "Go se read, Go mein decide, Go se write. Do round trips, aur unke beech ek window jismein doosra process wahi karta hai aur wahi galat conclusion par pahunchta hai.",
+        cost: "Logic ab doosri language mein rehta hai, na type checking, na test coverage tooling, na debugger. Yeh asli keemat hai aur ise dekar wahi ek property milti hai jo yahan matter karti hai." },
+      { what: "Token bucket aur sliding window, is se choose hote hain ki kaunsa constructor call karte ho, uske baad call shape same.",
+        varies: "Limiting algorithm. Caller configuration se choose karta hai, jaise is library ko import karne wala load balancer karta hai.",
+        without: "Caller ek algorithm ke implementation tak seedha pahunchta hai aur code badle bina apna mann nahi badal sakta.",
+        cost: "Yahan ise ek struct ki tarah implement kiya gaya jo dono parameter sets rakhta hai, to aadhi fields kisi bhi waqt meaningless hain aur mismatched call chupke se sab deny kar deti hai. Pattern sahi hai; iski yeh shape design ka sabse kamzor point hai." },
+      { what: "Ek ticker jo schedule par har bucket mein tokens add karta hai, jaise algorithm aam taur par describe hota hai.",
+        varies: "Kuch nahi, aur yeh aisa process hota jiska kaam requests ki sankhya ke saath nahi, clients ki sankhya ke saath badhta.",
+        without: "Refill ko stored timestamp se compute karo jab koi pooche. Bucket jab bhi observe ho correct hai aur warna untouched.",
+        cost: "Koi nahi. Isse refuse karna codebase ka sabse achha decision hai, aur general lesson kahin bhi lagu hota hai: aisi state maintain karne ke liye kaam schedule mat karo jise abhi koi dekh nahi raha." },
+      { what: "Ek TokenBucket type aur ek SlidingWindow type, har ek sirf apne parameters hold karta hai, ek shared interface ke peeche.",
+        varies: "Kuch naya nahi. Yeh kuch enable nahi karta, bas ek poori class ki error hata deta hai.",
+        without: "Chaar fields wala ek struct jisme do hamesha zero hain, to galat method call karna compile hota hai aur hamesha ek plausible, galat jawab deta hai.",
+        cost: "Ek extra type aur ek interface, shayad chalis lines. Yeh woh change hai jo main sabse pehle karta, aur ise rejected isliye list kiya hai kyunki code mein abhi yeh hua nahi." },
+      { what: "Allowed, remaining, retry after aur error return karo, ek bit nahi.",
+        varies: "Caller kya karna chahta hai. Retry-After header bhejna, near misses log karna, backend unreachable ho to fail open.",
+        without: "Caller denied aur broken mein farq nahi kar sakta, aur client ko nahi bata sakta ki kab wapas aana hai. Script ne dono compute kiye aur boundary ne phenk diye.",
+        cost: "Signature mein ek struct aur ek error, jo published API mein breaking change hai. Ek major version ke layak, aur doosra change jo main karta." }
+    ],
+
+    flowsIntro: "Do decisions, har algorithm ke liye ek. Dono ek round trip hain, aur sab kuch interesting beech ke step mein Redis ke andar hota hai.",
+
+    flows: [
+      { n: "A token bucket decision",
+        note: "Pehle aur aakhri step ke beech ka sab kuch ek atomic script ke andar hota hai.",
+        steps: [
+          ["Caller poochta hai ki key kuch tokens kharch kar sakti hai ya nahi. Library local clock se current time padhti hai aur key, rate, burst, woh time aur maangi hui amount ke saath script evaluate karti hai."],
+          ["Redis ke andar: stored token count aur timestamp padho. Missing key full bucket ki tarah padhi jaati hai, to pehle use ko koi special case nahi chahiye."],
+          ["Stored timestamp se elapsed time compute karo, zero par clamp karke, tokens mein rate times elapsed add karo, aur result ko burst size par cap karo."],
+          ["Agar requested se kam tokens hain to zero return karo aur kuch mat likho. Denial koi nishaan nahi chhodta, isliye denied client kuch exhaust nahi kar sakta."],
+          ["Warna subtract karo, dono fields wapas likho, aur expiry us time par set karo jo ek full refill mein lagta. Ek return karo."],
+          ["Wapas Go mein reply true ya false ban jaata hai, aur script ki jaani hui baaki sab cheez phenk di jaati hai."]
+        ] },
+      { n: "A sliding window decision",
+        steps: [
+          ["Library is request ke liye ek member banati hai: nanoseconds mein current time jo ek fresh UUID se joda gaya hai, kyunki sorted set ka member unique hona chahiye warna ek hi pal ki do requests ek ban jaati hain."],
+          ["Redis ke andar: har woh member hata do jo now minus window se purane score ka hai. Yeh sliding hissa hai, aur yeh timer par nahi, read par hota hai."],
+          ["Jo bacha use count karo, jo ab bilkul trailing window ke andar ki requests ki sankhya hai."],
+          ["Agar count limit se neeche hai, to is request ka member add karo aur key ki expiry window length tak refresh karo. Ek return karo."],
+          ["Warna add kiye bina zero return karo, taaki reject hui request us window ko extend na kare jisne use reject kiya. Yeh detail matter karti hai: denials record karne se client khud ko hamesha limited rakh sakta."]
+        ] },
+      { n: "When Redis does not answer",
+        note: "Yeh raasta behas ke layak hai, aur yahi woh hai jo library abhi tumhare liye decide karti hai.",
+        steps: [
+          ["Evaluation ek error return karta hai, timeout, failover ya unreachable host se."],
+          ["Library error ko standard output par print karti hai. Library ka caller ke output mein likhna chhoti baat hai jo scale par irritating aur route karna impossible ban jaati hai."],
+          ["Yeh false return karti hai, jise caller rate limited padhta hai. Service ab har request deny karti hai kyunki use protect karne wala component unavailable hai."],
+          ["Kya hona chahiye: decision ke saath error bhi return karo aur caller ko choose karne do. Rate limiter ke liye jawab lagbhag hamesha alert ke saath fail open hai, kyunki jo guard rail toot kar road band kar de woh kisi guard rail se bhi bura hai."]
+        ] }
+    ],
+
+    tradeoffsIntro: "Chaar decisions. Pehla caller ka hai, doosra library ka hai aur sahi hai, aur aakhri do library ke hain aur badalne layak hain.",
+
+    tradeoffs: [
+      { a: ["Token bucket", "Har key ke liye constant memory. Design se bursts tolerate karta hai, jo asal clients ke behaviour se match karta hai."],
+        b: ["Sliding window", "Exact, koi boundary effect nahi. Memory limit ke saath badhti hai, to heavy users sabse mehnge hote hain."],
+        flip: "requirement ek hard cap ho jo kabhi exceed nahi hona chahiye, jaise contractual quota ya ek third party API jo tum resell kar rahe ho. Tab exactness hi product hai aur memory keemat." },
+      { a: ["The algorithm as a Lua script", "Ek round trip, sach mein atomic, na retries na kahin locks."],
+        b: ["WATCH with optimistic retry from the caller", "Poora logic Go mein rehta hai, types aur tests ke saath, aur yeh usi contention mein retry loop ban jaata hai jiske liye rate limiting hai."],
+        flip: "script lamba ho ya bade key space par iterate kare, jahan woh chalte waqt har doosre Redis client ko block karta hai. Sirf chhote scripts, aur yeh dono chhote hain." },
+      { a: ["Take the time from Redis inside the script", "Har caller ke liye ek clock. Skew gayab ho jaata hai aur wapas nahi aa sakta."],
+        b: ["Pass the caller's time in as an argument", "Script deterministic rehti hai, aur tests jo time chahe de sakte hain. Kai callers matlab kai clocks jo agree nahi karti."],
+        flip: "tumhe script verbatim replication ke liye deterministic chahiye, jo modern Redis ko ab nahi chahiye kyunki woh source nahi effects replicate karta hai. Tests ke liye injectable clock rakho, aur production mein server ki use karo." },
+      { a: ["Return a decision and an error", "Caller Retry-After bhej sakta hai, near miss log kar sakta hai, aur apni failure policy khud decide kar sakta hai."],
+        b: ["Return a boolean", "Sabse chhota API aur seekhne ko kuch nahi. Denied aur broken ek hi value ban jaate hain."],
+        flip: "library ke liye kabhi nahi. Jo program bas bit chahta hai woh baaki ignore kar sakta hai; jise baaki chahiye woh use wapas nahi la sakta. Boolean private helper ke liye theek hai, kisi aur ke import karne wali cheez ke liye nahi." }
+    ],
+
+    next: [
+      "<b>Do types aur ek shared interface.</b> Sabse high value change: galat configuration par galat method call karna ek silent permanent denial ke bajaye compile error ban jaata hai.",
+      "<b>Error ke saath ek result type.</b> Retry after, remaining, aur caller ka fail open karne ki kshamta. Yeh sab script ke andar pehle se maujood hai.",
+      "<b>Time Redis se lo.</b> Ek clock intermittent, instance specific bugs ki poori class hata deta hai jo bahar se diagnose karna lagbhag impossible hai.",
+      "<b>Script hash se bhejo.</b> Ek baar load karke SHA se evaluate karne se service ki har request par lagbhag chhe sau bytes bachte hain, aur Redis client mein pehle se ek helper hai jo server ke bhoolne par source bhejne par fall back karta hai.",
+      "<b>Use mein dekho.</b> <a href='?p=loadbalancer-lld'>L7 load balancer</a> yeh library import karta hai aur ise har proxied request ke aage rakhta hai, jahan upar wala fail closed behaviour theoretical nahi rehta."
+    ] }
 }
 
 ];

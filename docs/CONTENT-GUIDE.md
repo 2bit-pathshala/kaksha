@@ -257,10 +257,36 @@ partitioned log, `cache` a lightning bolt, `ext` a dashed cloud, `iface` the UML
 Adding a role means adding its glyph to `ICON`, its colour pair to the `.r-*` block, and
 its legend chip to `.lg-*`, all in `design.html`.
 
+## `hi`, the whole project again in Hinglish
+
+Same idea as the concept pages' reading-language switch, same "ms-read" key in
+`localStorage`, one button in the header that redraws the page. `hi` mirrors
+the English structure positionally: `stages[i]` translates `stages[i]`,
+`boxes[i]` translates `boxes[i]`, and so on, same index, same array length as
+the English. Only the prose is translated (`pressure`/`say`/`breaks` on a
+stage; `job`/`why`/`forced`/`alts`/`pros`/`cons`/`cost`/`fails`/`say` on a
+box; `flowsIntro`/a flow's `n`/`note`/step text; `tradeoffsIntro`/a
+tradeoff's `a`/`b`/`flip`; `brief`; `next`). Node labels (`l`, `s`), ids,
+roles and every number stay exactly as written in English: a reader
+comparing the two languages side by side should see the same diagram and the
+same figures, only the sentences around them change. Anything missing falls
+back to English, so a project can be translated one field at a time.
+
 ## Before committing
 
 ```bash
 node --check data/design-data.js && node tools/check.js
 ```
 
-Then open `design.html?p=<id>`, step every stage with the arrow keys, and click every box.
+Then open `design.html?p=<id>`, step every stage with the arrow keys, click every box,
+and click the Hinglish switch to confirm the page redraws on the same stage.
+
+# The AI pages: one deliberate deviation
+
+`ai-concept.html` / `ai-revise.html` (`data/ai-concept-data.js`) and `ai-design.html`
+(`data/ai-design-data.js`) follow every rule above, with one exception: `code` there is
+`{pseudo, py}` only, never java/cpp/js. AI engineering happens in Python; padding out three
+more tabs with near-identical SDK calls would teach nothing extra. Everything else, the ten
+sections, the sentence-length ceiling, the math derivation width, no em-dash, the Design Lab
+stage/pressure/breaks discipline, applies exactly as written. Validate the AI pages with
+`node tools/check-ai.js` rather than `node tools/check.js`, which only looks at the DSA data.

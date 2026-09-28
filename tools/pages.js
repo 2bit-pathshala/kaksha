@@ -23,7 +23,10 @@ const PAGES = [
   { file: "lld.html",            path: "/lld",           priority: "0.8", changefreq: "weekly",  index: true },
   { file: "hr.html",             path: "/hr",            priority: "0.8", changefreq: "weekly",  index: true },
   { file: "design.html",         path: "/design",        priority: "0.8", changefreq: "weekly",  index: true },
-  { file: "ai.html",             path: "/ai",             index: false },
+  { file: "ai.html",             path: "/ai",             priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "ai-concept.html",     path: "/ai-concept",    priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "ai-revise.html",      path: "/ai-revise",     priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "ai-design.html",      path: "/ai-design",     priority: "0.8", changefreq: "weekly",  index: true },
 
   /* The three stubs kept alive for links published under the old names. Their
      canonical names the page they forward to, which is the whole job: pointing
