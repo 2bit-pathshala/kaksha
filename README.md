@@ -15,6 +15,14 @@ Interview prep notes. Two ways in:
   the previous one. Click any box for why it exists, what lost the argument, what it costs and
   how it fails.
 
+- **AI Engineering** (`ai.html`), the same two formats applied to building with LLMs instead
+  of DSA. `ai-concept.html` and `ai-revise.html` cover how LLMs work, prompting and context,
+  serving and inference, RAG, agents and MCP, evals and safety; `ai-design.html` grows a RAG
+  pipeline, a coding agent harness and an LLM inference platform the same stage-by-stage way.
+  Code samples here are pseudocode plus Python only, not five languages, since that is the
+  language AI engineering actually happens in. Every AI concept opens with "Why you need this"
+  and every page, in the AI and DSA Design Labs too, has the English / Hinglish switch.
+
 Plus the original sheets: DSA notes, a one-day sheet, the patterns roadmap, and LLD / HLD /
 HR one-pagers.
 
@@ -43,7 +51,11 @@ Pages stay in the root so their URLs are stable; everything else is grouped by k
   dsa-patterns.html   pattern roadmap + practice questions
   lld.html hld.html   system-design notes
   design.html         Design Lab, systems grown stage by stage
-  hr.html  ai.html    HR notes; AI placeholder
+  hr.html             HR notes
+  ai.html             AI Engineering landing page
+  ai-concept.html     the deep page for one AI concept
+  ai-revise.html      AI recall lines and questions
+  ai-design.html      AI Design Lab, systems grown stage by stage
   study.html dsa.html dsa-cheatsheet.html   redirects to the above
 assets/
   css/                tokens.css (the palette and the motion tokens), base
@@ -56,12 +68,14 @@ assets/
   img/                logo (logo-512.png is the master) and the icon sizes cut from it
 data/                 *-data.js, the single source of content per section
 docs/                 CONTENT-GUIDE.md, how to write a new concept
-tools/check.js        build check: run `node tools/check.js` before every commit
+tools/check.js        build check for the DSA pages: run before every commit
+tools/check-ai.js      the same guard rails, pointed at the AI pages
 ```
 
 Each page loads its matching `data/<name>-data.js`; `concept.html` and `revise.html`
 share `data/concept-data.js`, and `dsa-notes.html` and `dsa-patterns.html` share
-`data/dsa-data.js`.
+`data/dsa-data.js`. `ai-concept.html` and `ai-revise.html` share
+`data/ai-concept-data.js`; `ai-design.html` reads `data/ai-design-data.js`.
 
 ## Deploy on GitHub Pages
 

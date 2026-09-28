@@ -11,22 +11,21 @@
       if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
         document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
   </script>
-  <title>AI. 2BIT Pathshala</title>
-  <meta name="description" content="AI interview notes, coming soon on 2BIT Pathshala." />
+  <title>AI Engineering. 2BIT Pathshala</title>
+  <meta name="description" content="AI engineering interview notes: how LLMs work, prompting and context, serving and inference, RAG, agents and MCP, evals and safety, plus AI system design labs, taught the same way as the DSA concept pages." />
   <link rel="canonical" href="https://pathshala.2bit.in/ai" />
-  <meta name="robots" content="noindex, follow" />
   <meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#131315" media="(prefers-color-scheme: dark)" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="2BIT Pathshala" />
   <meta property="og:url" content="https://pathshala.2bit.in/ai" />
-  <meta property="og:title" content="AI" />
-  <meta property="og:description" content="AI interview notes, coming soon on 2BIT Pathshala." />
+  <meta property="og:title" content="AI Engineering" />
+  <meta property="og:description" content="AI engineering interview notes: how LLMs work, prompting and context, serving and inference, RAG, agents and MCP, evals and safety, plus AI system design labs." />
   <meta property="og:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
   <meta property="og:locale" content="en_IN" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="AI" />
-  <meta name="twitter:description" content="AI interview notes, coming soon on 2BIT Pathshala." />
+  <meta name="twitter:title" content="AI Engineering" />
+  <meta name="twitter:description" content="AI engineering interview notes: how LLMs work, prompting and context, serving and inference, RAG, agents and MCP, evals and safety, plus AI system design labs." />
   <meta name="twitter:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
   <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
@@ -45,6 +44,8 @@
         </div>
       </a>
       <div class="sp"></div>
+      <a class="btn" href="ai-concept.html">Concepts</a>
+      <a class="btn" href="ai-design.html">Design Lab</a>
       <a class="btn" href="index.html">Index</a>
       <button class="btn" id="themeToggle">Dark</button>
     </div>
@@ -52,11 +53,26 @@
 
   <main class="wrap">
     <div class="soon-card">
-      <h1>AI</h1>
-      <p>ML / LLM interview notes and practical building blocks will live here. This section is not written yet.</p>
-      <a class="btn" href="index.html">Back to index</a>
+      <h1>AI Engineering</h1>
+      <p>The same teaching format as the DSA pages, applied to building with LLMs: how the model actually works, prompting and context, serving and inference, retrieval, agents, evals and safety, plus AI systems grown stage by stage in the Design Lab.</p>
     </div>
-  </main>
+
+    <div class="cards">
+      <a class="card feature" href="ai-concept.html">
+        <span class="tag">Start here</span>
+        <strong>AI Concept Lab</strong>
+        <span>One concept per page: a stepped visual, plain words, why it works, a Hinglish pass, the maths with real numbers, costs and traps, pseudocode plus Python, questions to check yourself.</span>
+      </a>
+      <a class="card feature" href="ai-revise.html">
+        <span class="tag">10 minutes</span>
+        <strong>AI Rapid Revision</strong>
+        <span>Every concept as a single recall line, with the questions that prove you still know it.</span>
+      </a>
+    </div>
+
+    <div class="cards">
+      <a class="card" href="ai-design.html"><strong>AI Design Lab</strong><span>A RAG pipeline, a coding agent harness and an LLM inference platform, each grown stage by stage. Every box says why it exists, what it costs and how it fails.</span></a>
+    </div>
 
   <footer>
     <a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>

@@ -347,6 +347,19 @@ const DESIGN = (() => {
     if (p.stages.length < 5) problems.push(p.id + " has only " + p.stages.length + " stages");
     if (p.boxes.length < 8)  problems.push(p.id + " has only " + p.boxes.length + " components");
 
+    // the Hinglish mirrors the English positionally, or the switch shows a mismatch
+    if (p.hi) {
+      for (const k of ["stages", "boxes", "flows", "tradeoffs", "next", "patterns"]) {
+        if (p.hi[k] && p.hi[k].length !== (p[k] || []).length)
+          problems.push(p.id + " hi." + k + " has " + p.hi[k].length + " entries, English has " + (p[k] || []).length);
+      }
+      (p.hi.flows || []).forEach((f, i) => {
+        const steps = p.flows[i] && p.flows[i].steps;
+        if (f.steps && steps && f.steps.length !== steps.length)
+          problems.push(p.id + " hi.flows[" + i + "].steps out of step with the English");
+      });
+    }
+
     // every box on a stage has a card, and every card appears on a stage
     const cards = new Set(p.boxes.map(b => b.id)), onStage = new Set();
     p.stages.forEach(st => st.nodes.forEach(n => onStage.add(n.id)));
