@@ -46,9 +46,9 @@ jobs:
       - name: Check
         run: node tools/check.js
 
-      # Same guard rails, pointed at the AI concept and design data instead,
+      # Same guard rails, pointed at the AI, Networks and OS concept and design data instead,
       # since those live in their own files and check.js does not see them.
-      - name: Check AI content
+      - name: Check AI, Networks and OS content
         run: node tools/check-ai.js
 
       # Only what the site serves. README, docs and tools are part of the repo,

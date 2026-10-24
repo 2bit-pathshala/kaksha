@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <script>
+    /* set the theme before first paint so dark mode never flashes light */
+    (function () { try { var s = localStorage.getItem("dsa-theme");
+      if (s === "dark" || (!s && matchMedia("(prefers-color-scheme: dark)").matches))
+        document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {} })();
+  </script>
+  <title>Operating Systems Design Lab. Worked system design examples</title>
+  <meta name="description" content="Real systems designed box by box: a CPU scheduler and a virtual memory manager. Every component arrives because of a named pressure, with the rejected alternatives, the costs and the failure mode." />
+  <link rel="canonical" href="https://pathshala.2bit.in/os-design" />
+  <meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#131315" media="(prefers-color-scheme: dark)" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="2BIT Pathshala" />
+  <meta property="og:url" content="https://pathshala.2bit.in/os-design" />
+  <meta property="og:title" content="OS Design Lab" />
+  <meta property="og:description" content="Real systems designed box by box: a CPU scheduler and a virtual memory manager. Every component arrives because of a named pressure, with the rejected alternatives, the costs and the failure mode." />
+  <meta property="og:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
+  <meta property="og:locale" content="en_IN" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="OS Design Lab" />
+  <meta name="twitter:description" content="Real systems designed box by box: a CPU scheduler and a virtual memory manager. Every component arrives because of a named pressure, with the rejected alternatives, the costs and the failure mode." />
+  <meta name="twitter:image" content="https://pathshala.2bit.in/assets/img/logo-512.png" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css?v=1" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/brand.css" />
+  <script src="assets/js/scroll-focus.js" defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
+  <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
+  <style>
+    /* The eight box roles in the architecture diagrams. These stay categorical:
+       client, edge, service, store, cache, queue, worker and external have to
+       stay told apart at a glance, so they keep their own hues. What changed is
+       the temperature, the tints and the two neutrals now sit on warm paper
+       instead of the blue-grey the page used to paint itself. */
+    :root{
+      --dedge:#8a877c; --dedge2:#9c84c9; --dnew:var(--primary);
+      --r-client-bg:#f1f0ea; --r-client-bd:#cfcdc2;
+      --r-edge-bg:#e4f2f3;   --r-edge-bd:#7cc2c9;
+      --r-svc-bg:#eee9fa;    --r-svc-bd:#a99bea;
+      --r-store-bg:#e6eefa;  --r-store-bd:#88abe0;
+      --r-cache-bg:#f9efdc;  --r-cache-bd:#dfb264;
+      --r-queue-bg:#f9e8f0;  --r-queue-bd:#e08fb8;
+      --r-work-bg:#e6f2e9;   --r-work-bd:#7bbd93;
+      --r-ext-bg:#f6f5f0;    --r-ext-bd:#d8d6cb;
+    }
+    [data-theme="dark"]{
+      --dedge:#6e6c66; --dedge2:#7d63b8;
+      --r-client-bg:#212227; --r-client-bd:#45464e;
+      --r-edge-bg:#0e2a2c;   --r-edge-bd:#2c8188;
+      --r-svc-bg:#221e33;    --r-svc-bd:#6b5bd0;
+      --r-store-bg:#141d2e;  --r-store-bd:#3a63a8;
+      --r-cache-bg:#2c2410;  --r-cache-bd:#a3792a;
+      --r-queue-bg:#2e1622;  --r-queue-bd:#9c3f6d;
+      --r-work-bg:#16291c;   --r-work-bd:#2f8a5b;
+      --r-ext-bg:#1b1c1f;    --r-ext-bd:#35363a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth;scroll-padding-top:82px}
+    body{font-family:"Inter","Inter Fallback",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+
+    header.bar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--border)}
+    .bar-in{max-width:1160px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .logo{font-weight:800;font-size:1.1rem;letter-spacing:-.01em}.logo span{color:var(--primary-ink)}
+    .sp{flex:1}
+    .btn{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600;cursor:pointer;text-decoration:none;transition:border-color .15s,color .15s,transform .15s}
+    .btn:hover{border-color:var(--primary);color:var(--primary-ink);transform:translateY(-1px)}
+    .btn:disabled{opacity:.35;cursor:default;transform:none;border-color:var(--border);color:var(--text)}
+    .menu-btn{display:none;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1.05rem;cursor:pointer}
+
+    .layout{max-width:1160px;margin:0 auto;display:flex;gap:28px;padding:0 20px;min-height:100vh}
+    .side{width:238px;flex:0 0 238px;position:sticky;top:92px;align-self:flex-start;max-height:calc(100vh - 110px);overflow-y:auto;padding:20px 0 30px}
+    .side-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin:0 0 10px 8px}
+    .side-title.next{margin-top:20px}
+    #projNav a,#sectionNav a{display:block;padding:9px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:600;border:1px solid transparent;transition:background .12s,color .12s,border-color .12s;line-height:1.35}
+    #projNav a:hover,#sectionNav a:hover{background:var(--surface2);color:var(--text)}
+    #projNav a.active{background:var(--primary-soft);color:var(--primary-ink);border-color:color-mix(in srgb,var(--primary) 30%, transparent)}
+    #projNav a small{display:block;font-size:.72rem;font-weight:500;color:var(--muted);letter-spacing:0}
+    #sectionNav a{font-size:.82rem;padding:6px 12px}
+    .scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:35}
+    .scrim.open{display:block}
+
+    main{flex:1;min-width:0;padding:24px 0 48px}
+    @media(max-width:860px){
+      .layout{padding:0}
+      .side{position:fixed;top:0;left:0;bottom:0;width:270px;background:var(--surface);border-right:1px solid var(--border);z-index:40;transform:translateX(-100%);transition:transform .25s;max-height:none;padding:20px 14px 30px;box-shadow:var(--shadow)}
+      .side.open{transform:none}
+      .menu-btn{display:inline-block}
+      main{padding:16px 20px 40px}
+    }
+
+    h1.topic{font-size:clamp(1.9rem,5vw,2.6rem);font-weight:800;letter-spacing:-.03em;margin-bottom:2px}
+    .subtitle{color:var(--muted);font-weight:600;font-size:.95rem;margin-bottom:12px}
+    .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+    .chip{font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+    .chip.hld{background:var(--primary-soft);color:var(--primary-ink);border-color:color-mix(in srgb,var(--primary) 30%,transparent)}
+    .chip.lld{background:var(--accent-2-soft);color:var(--accent-2-ink);border-color:color-mix(in srgb,var(--accent-2) 34%,transparent)}
+    .intro{color:var(--text);background:linear-gradient(120deg,var(--primary-soft),transparent);border:1px solid var(--border);border-left:4px solid var(--primary);padding:14px 16px;border-radius:12px;margin-bottom:26px;font-size:1rem;line-height:1.7}
+
+    .pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:22px 24px;margin-bottom:20px}
+    h2.pat,h3.sub,h4.leaf{scroll-margin-top:96px}
+    @keyframes flashbg{0%{background:var(--primary-soft)}100%{background:transparent}}
+    .flash{animation:flashbg 1.6s ease}
+    h2.pat{font-size:1.4rem;font-weight:750;letter-spacing:-.01em;margin-bottom:6px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    h2.pat::before{content:"";width:9px;height:22px;border-radius:5px;background:linear-gradient(var(--primary),var(--accent-2));flex:0 0 auto}
+    h2.pat .sec-hint{font-size:.75rem;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:auto;text-transform:none}
+    h3.sub{font-size:1.12rem;font-weight:700;margin:22px 0 6px;color:var(--text)}
+    h4.leaf{font-size:1.02rem;font-weight:650;margin:18px 0 6px;display:flex;align-items:center;gap:9px;color:var(--text)}
+    h4.leaf::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent-2);flex:0 0 auto}
+
+    .hint{font-size:.95rem;color:var(--text);background:var(--accent-2-soft);border-radius:11px;padding:12px 15px;margin:10px 0;line-height:1.65}
+    .note{font-size:.95rem;color:var(--muted);margin:10px 0;line-height:1.7}
+    .note b{color:var(--text);font-weight:650}
+    .note code,.inl{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;background:var(--surface2);padding:2px 6px;border-radius:5px;color:var(--primary-ink);font-size:.85rem}
+    ul.tight{margin:8px 0 8px 20px;font-size:.94rem;line-height:1.7;color:var(--muted)}
+    ul.tight li{margin-bottom:5px}
+    ul.tight li b{color:var(--text);font-weight:650}
+
+    table.grid{width:100%;border-collapse:collapse;margin:12px 0;font-size:.88rem;display:block;overflow-x:auto;white-space:nowrap}
+    table.grid.wrap{white-space:normal;display:table}
+    table.grid.wrap td{overflow-wrap:anywhere}
+    @media(max-width:560px){ table.grid.wrap{display:block;overflow-x:auto} }
+    table.grid th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;padding:7px 12px 7px 0;border-bottom:1px solid var(--border)}
+    table.grid td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6;color:var(--muted)}
+    table.grid td:first-child{color:var(--text);font-weight:650}
+    table.grid td code{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.82rem;color:var(--primary-ink)}
+
+    /* ---------- the stepper ---------- */
+    .stagebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+    .stagebar .count{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.76rem;color:var(--muted);font-weight:600}
+    .dots{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+    .dots button{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;padding:0}
+    .dots button.on{background:var(--primary);border-color:var(--primary);color:#fff}
+    .stage-t{font-size:1.12rem;font-weight:750;margin:12px 0 2px;letter-spacing:-.01em}
+    .pressure{font-size:.95rem;line-height:1.65;background:var(--m-bg);color:var(--text);border-radius:11px;padding:11px 14px;margin:8px 0 4px}
+    .pressure b{font-weight:750}
+    .pressure .plabel{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:800;margin-bottom:3px}
+    .breaks{font-size:.93rem;line-height:1.65;color:var(--muted);border-left:3px solid var(--h);padding:2px 0 2px 13px;margin:14px 0 2px}
+    .breaks .plabel{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--h);font-weight:800;margin-bottom:2px}
+    .saysay{font-size:.93rem;line-height:1.65;color:var(--text);background:var(--surface2);border-radius:11px;padding:11px 14px;margin:12px 0 2px}
+    .saysay .plabel{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin-bottom:3px}
+
+    .stage{border:1px solid var(--border);border-radius:14px;background:var(--surface2);margin:14px 0 4px;overflow:hidden}
+    .stagesvg{padding:14px 10px;overflow-x:auto}
+    .stagesvg svg{display:block;width:100%;height:auto;min-width:var(--vw,520px);margin:0 auto}
+    /* One colour per role drives the outline, the glyph and the legend chip, so a
+       reader learns the shape once and then recognises it on every diagram. */
+    .dnode{cursor:pointer;color:var(--r-svc-bd);--boxbg:var(--r-svc-bg)}
+    .r-client{color:var(--r-client-bd);--boxbg:var(--r-client-bg)}
+    .r-edge  {color:var(--r-edge-bd);  --boxbg:var(--r-edge-bg)}
+    .r-svc   {color:var(--r-svc-bd);   --boxbg:var(--r-svc-bg)}
+    .r-store {color:var(--r-store-bd); --boxbg:var(--r-store-bg)}
+    .r-cache {color:var(--r-cache-bd); --boxbg:var(--r-cache-bg)}
+    .r-queue {color:var(--r-queue-bd); --boxbg:var(--r-queue-bg)}
+    .r-work  {color:var(--r-work-bd);  --boxbg:var(--r-work-bg)}
+    .r-ext   {color:var(--r-ext-bd);   --boxbg:var(--r-ext-bg)}
+    .r-entity{color:var(--r-store-bd); --boxbg:var(--r-store-bg)}
+    .r-iface {color:var(--r-edge-bd);  --boxbg:var(--r-edge-bg)}
+    .r-impl  {color:var(--r-work-bd);  --boxbg:var(--r-work-bg)}
+    .r-value {color:var(--r-cache-bd); --boxbg:var(--r-cache-bg)}
+    .dbox{fill:var(--boxbg);stroke:currentColor;stroke-width:1.5}
+    .dnode:hover .dbox{stroke-width:2.5}
+    .r-ext .dbox,.r-iface .dbox{stroke-dasharray:5 4}
+    .dcyl{fill:none;stroke:currentColor;stroke-width:1.5;opacity:.8}
+    .dicon{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.95;pointer-events:none}
+    .is-new .dbox{stroke:var(--dnew);stroke-width:2.5}
+    .is-sel .dbox{stroke:var(--dnew);stroke-width:3}
+    .newtag{fill:var(--dnew);font-size:8.5px;font-weight:800;letter-spacing:.08em}
+    .chip-ico{width:12px;height:12px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .dlab{fill:var(--text);font-weight:700;text-anchor:middle;pointer-events:none}
+    .dsub{fill:var(--muted);font-weight:500;text-anchor:middle;pointer-events:none}
+    .dedge{fill:none;stroke:var(--dedge);stroke-width:1.6}
+    .dedge.async{stroke:var(--dedge2);stroke-dasharray:6 4}
+    .delab{fill:var(--muted);font-size:9.5px;font-weight:600;text-anchor:middle}
+    .dgrouplab{fill:var(--muted);font-size:9px;font-weight:800;letter-spacing:.1em}
+    .dgroupbox{fill:none;stroke:var(--border);stroke-width:1.2;stroke-dasharray:4 4}
+
+    .legend{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
+    .legend span{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid}
+    .lg-client{background:var(--r-client-bg);border-color:var(--r-client-bd);color:var(--text)}
+    .lg-edge{background:var(--r-edge-bg);border-color:var(--r-edge-bd);color:var(--text)}
+    .lg-svc{background:var(--r-svc-bg);border-color:var(--r-svc-bd);color:var(--text)}
+    .lg-store{background:var(--r-store-bg);border-color:var(--r-store-bd);color:var(--text)}
+    .lg-cache{background:var(--r-cache-bg);border-color:var(--r-cache-bd);color:var(--text)}
+    .lg-queue{background:var(--r-queue-bg);border-color:var(--r-queue-bd);color:var(--text)}
+    .lg-work{background:var(--r-work-bg);border-color:var(--r-work-bd);color:var(--text)}
+    .lg-ext{background:var(--r-ext-bg);border-color:var(--r-ext-bd);color:var(--text)}
+    .lg-entity{background:var(--r-store-bg);border-color:var(--r-store-bd);color:var(--text)}
+    .lg-iface{background:var(--r-edge-bg);border-color:var(--r-edge-bd);color:var(--text)}
+    .lg-impl{background:var(--r-work-bg);border-color:var(--r-work-bd);color:var(--text)}
+    .lg-value{background:var(--r-cache-bg);border-color:var(--r-cache-bd);color:var(--text)}
+
+    .pick{border-top:1px dashed var(--border);padding:14px 16px;font-size:.92rem;line-height:1.65}
+    .pick .ptip{color:var(--muted)}
+    .pick h5{font-size:1rem;font-weight:750;margin-bottom:2px}
+    .pick .pjob{color:var(--muted);font-size:.88rem;margin-bottom:9px}
+    .pick dl{display:grid;grid-template-columns:130px 1fr;gap:5px 14px}
+    .pick dt{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800;padding-top:4px}
+    .pick dd{color:var(--muted)}
+    .pick dd b{color:var(--text);font-weight:650}
+    .pick .more{display:inline-block;margin-top:10px;font-size:.82rem;font-weight:700;color:var(--primary-ink);text-decoration:none}
+    @media(max-width:640px){ .pick dl{grid-template-columns:1fr;gap:1px} .pick dt{padding-top:9px} }
+
+    /* ---------- component cards ---------- */
+    .comp{border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:14px 0;background:var(--surface2);scroll-margin-top:96px}
+    .comp-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:2px}
+    .comp-head h3{font-size:1.04rem;font-weight:750;letter-spacing:-.01em}
+    .comp-head .role{display:inline-flex;align-items:center;gap:5px;font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:999px;border:1px solid}
+    .comp .job{font-size:.9rem;color:var(--muted);margin-bottom:11px}
+    .comp dl{display:grid;grid-template-columns:132px 1fr;gap:7px 14px;font-size:.92rem;line-height:1.65}
+    .comp dt{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800;padding-top:4px}
+    .comp dd{color:var(--muted)}
+    .comp dd b{color:var(--text);font-weight:650}
+    .comp dd.alts{display:flex;flex-direction:column;gap:4px}
+    .comp dd.alts span{display:block}
+    .comp dd.alts i{font-style:normal;color:var(--text);font-weight:650}
+    .comp dd ul{margin:0 0 0 17px}
+    .comp dd li{margin-bottom:3px}
+    .comp .say{margin-top:11px;font-size:.9rem;line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text)}
+    .comp .say::before{content:"Say it like this";display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin-bottom:3px}
+    @media(max-width:640px){ .comp dl{grid-template-columns:1fr;gap:1px} .comp dt{padding-top:10px} }
+
+    /* ---------- flows ---------- */
+    .flow{margin:14px 0}
+    .flow ol{margin:8px 0 0 0;padding:0;list-style:none;counter-reset:fs}
+    .flow li{counter-increment:fs;position:relative;padding:0 0 12px 34px;font-size:.93rem;line-height:1.6;color:var(--muted);border-left:1.5px solid var(--border);margin-left:11px}
+    .flow li:last-child{border-left-color:transparent;padding-bottom:0}
+    .flow li::before{content:counter(fs);position:absolute;left:-11.5px;top:1px;width:22px;height:22px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);color:var(--muted);font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace}
+    .flow li b{color:var(--text);font-weight:650}
+    .flow li .sync{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:1px 7px;border-radius:999px;margin-left:6px;background:var(--m-bg);color:var(--m)}
+    .flow li .async{background:var(--primary-soft);color:var(--primary-ink)}
+
+    /* ---------- trade-offs ---------- */
+    .to{border:1px solid var(--border);border-radius:13px;padding:14px 16px;margin:12px 0;background:var(--surface2)}
+    .to .versus{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin-bottom:9px}
+    .to .opt{flex:1 1 200px;border:1px solid var(--border);border-radius:10px;padding:9px 12px;background:var(--surface);font-size:.89rem;line-height:1.55;color:var(--muted)}
+    .to .opt b{display:block;color:var(--text);font-weight:700;font-size:.92rem;margin-bottom:2px}
+    .to .opt.win{border-color:var(--e);background:var(--e-bg)}
+    .to .opt.win b::after{content:" ✓";color:var(--e)}
+    .to .flip{font-size:.89rem;line-height:1.6;color:var(--muted)}
+    .to .flip b{color:var(--text);font-weight:650}
+
+    .codewrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:12px 0 14px;box-shadow:var(--shadow-sm)}
+    .codebar{display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--code-bar);border-bottom:1px solid #21262d}
+    .codebar .dot{width:11px;height:11px;border-radius:50%}
+    .codebar .lang{margin-left:auto;font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.7rem;color:#8b949e;letter-spacing:.04em}
+    pre.code{margin:0;background:var(--code-bg);color:#c9d1d9;padding:15px 17px;font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.82rem;line-height:1.7;overflow-x:auto;white-space:pre}
+    pre.code code{background:none!important;padding:0;font-size:inherit}
+
+    .qwrap{margin:14px 0 2px;padding-top:12px;border-top:1px dashed var(--border)}
+    .qhead{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:9px}
+    .probs{display:flex;flex-wrap:wrap;gap:9px}
+    .prob{display:inline-flex;align-items:center;gap:9px;text-decoration:none;padding:8px 13px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:.86rem;color:var(--text);transition:transform .14s,border-color .14s,box-shadow .14s}
+    .prob:hover{transform:translateY(-2px);border-color:var(--primary);box-shadow:var(--shadow-sm)}
+    .tag{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:6px}
+    .tag.E{color:var(--e);background:var(--e-bg)}.tag.M{color:var(--m);background:var(--m-bg)}.tag.H{color:var(--h);background:var(--h-bg)}
+    .pn{font-family:"JetBrains Mono","JetBrains Mono Fallback",monospace;font-size:.74rem;color:var(--muted)}
+    .pn.gfg{color:#297b3d;font-weight:700} .pn.edu{color:#5a5ddc;font-weight:700}
+    .pn.hi{color:#0a7885;font-weight:700}  .pn.gh{color:#7b52da;font-weight:700}
+    .pn.bb{color:#b05110;font-weight:700}  .pn.dg{color:#bc397a;font-weight:700}
+    .pn.cwa{color:#0a73a2;font-weight:700} .pn.eng{color:#d41b44;font-weight:700}
+    .pn.go{color:#007794;font-weight:700}
+
+    .nav{display:flex;justify-content:space-between;gap:12px;margin-top:30px}
+    footer{text-align:center;color:var(--muted);font-size:.82rem;padding:28px 20px 54px}
+    footer a{color:var(--primary-ink)}
+    @media(max-width:560px){ .pcard{padding:18px 16px} body{font-size:15px} }
+    @media print{header.bar,.side,.nav,.btn,.dots{display:none}body{background:#fff}a{color:#000}.stagesvg{overflow:visible}}
+      header.bar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
+      /* site badges: each colour nudged until it clears 4.5:1, darker on light, lighter on dark */
+    [data-theme="dark"] .pn.gfg{color:#419756} [data-theme="dark"] .pn.edu{color:#797cf3} [data-theme="dark"] .pn.hi{color:#0ea5b7} [data-theme="dark"] .pn.gh{color:#986ff7} [data-theme="dark"] .pn.bb{color:#f97316} [data-theme="dark"] .pn.dg{color:#ec4899} [data-theme="dark"] .pn.cwa{color:#0ea5e9} [data-theme="dark"] .pn.eng{color:#e85374} [data-theme="dark"] .pn.go{color:#00add8}
+      .pressure .plabel{color:#8a4f00} .breaks .plabel{color:#c02c42}
+    [data-theme="dark"] .pressure .plabel{color:var(--m)} [data-theme="dark"] .breaks .plabel{color:var(--h)}
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <button class="menu-btn" id="menuBtn">Menu</button>
+      <a class="brandlock" href="index.html"><img src="assets/img/logo-64.png" alt="" width="28" height="28" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a>
+      <span class="bl-divider" aria-hidden="true"></span>
+      <div class="logo">Operating Systems Design <span>Lab</span></div>
+      <div class="sp"></div>
+      <a class="btn" href="os-concept.html">OS Concepts</a>
+      <a class="btn" href="os.html">OS</a>
+      <button class="btn" id="langToggle" aria-label="Switch explanations to Hinglish">Hinglish</button>
+      <button class="btn" id="themeToggle">Dark</button>
+    </div>
+  </header>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="layout">
+    <aside class="side" id="side">
+      <div class="side-title">Projects</div>
+      <nav id="projNav" aria-label="Projects"></nav>
+      <div class="side-title next">On this page</div>
+      <nav id="sectionNav" aria-label="Sections"></nav>
+    </aside>
+    <main id="main"></main>
+  </div>
+
+  <footer>Every box arrives because something broke without it. Step the stages, then click a box for the reasoning · <a class="brandlock sm" href="index.html"><img src="assets/img/logo-64.png" alt="" width="18" height="18" loading="lazy" /><span>2BIT <span class="bl-accent">Pathshala</span></span></a></footer>
+
+  <script src="data/os-design-data.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    const $ = s => document.querySelector(s);
+    const LC = s => (typeof s === "string" && s.startsWith("http")) ? s : "https://leetcode.com/problems/" + s + "/";
+    const params = new URLSearchParams(location.search);
+    const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    let cur = DESIGN.find(p => p.id === params.get("p")) || DESIGN[0];
+
+    /* Reading language, shared with the concept pages under "ms-read". A
+       project carries its Hinglish in `hi`, mirroring brief/stages/boxes/
+       flows/tradeoffs/next field for field; anything not translated yet
+       falls back to English, same rule as the concept pages. */
+    let L = "en";
+    try { if (localStorage.getItem("ms-read") === "hi") L = "hi"; } catch (e) {}
+    // t(english, hinglish) picks the reading language, falling back to English
+    // whenever the Hinglish side of a field has not been written yet
+    const t = (en, hi) => (L === "hi" && hi != null) ? hi : en;
+    const hiOf = (obj, key, i) => {
+      if (L !== "hi" || !obj || !obj.hi) return null;
+      const h = obj.hi[key];
+      return i == null ? h : (h && h[i]) || null;
+    };
+    const U = {
+      en: { brief: "The brief", briefHint: "before a single box",
+            must: "What it must do", outOf: "Said out loud as out of scope:",
+            outOfWhy: "Naming these buys you the right to ignore them, and lets the interviewer pull one back in if they care.",
+            wrong: "What must not be wrong", envelope: "The back of the envelope",
+            prop: "Property", target: "Target", whyNum: "Why this number",
+            qty: "Quantity", answer: "Answer", how: "How you got there",
+            grewHld: "How the architecture grew", grewLld: "How the classes grew", grewHint: "use ← → keys",
+            pressureLabel: "The pressure that adds these boxes", sayLabel: "What you say at this point",
+            breaksLabel: "What breaks next", stageOf: "stage", of: "of",
+            back: "◀ Back", nextBtn: "Next ▶",
+            tip: "Click any box above for why it is there, what was rejected in its place, what it costs, and how it fails.",
+            more: "Full card, with the advantages and disadvantages listed out ↓",
+            boxesHld: "Every box, and why it is there", boxesLld: "Every class, and why it is there",
+            why: "Why it exists", forced: "What forced it", instead: "Instead of", considered: "Considered instead",
+            pros: "Advantages", cons: "Disadvantages", cost: "What it costs", fails: "How it fails",
+            walk: "Walk the arrows", trace: "Trace the calls", walkHint: "narrate this, do not point",
+            apiData: "API and data", apiPublic: "The public API", apiHint: "what a client can actually call",
+            call: "Call", returns: "Returns", decision: "The decision inside it",
+            deep: "The parts an interviewer will actually push on", deepHint: "pick two, go deep",
+            trade: "Trade-offs, said out loud", tradeHint: "a design with none sounds fake", flip: "Flip it when:",
+            hour: "If I had another hour", hourHint: "close on this, not on silence",
+            components: "components", used: "used", rejected: "rejected",
+            patterns: "The patterns that earned their place", patternsHint: "and the ones that did not",
+            varies: "What varies", without: "Without it", theCost: "The cost",
+            toggle: "Hinglish", toggleLabel: "Switch explanations to Hinglish" },
+      hi: { brief: "Brief", briefHint: "ek bhi box se pehle",
+            must: "Yeh kya karna chahiye", outOf: "Zor se bola gaya scope ke bahar:",
+            outOfWhy: "Inhe naam se bolne se inhe ignore karne ka haq milta hai, aur interviewer chahe to inhe wapas la sakta hai.",
+            wrong: "Kya galat nahi hona chahiye", envelope: "Envelope ke peeche ka hisaab",
+            prop: "Property", target: "Target", whyNum: "Yeh number kyun",
+            qty: "Quantity", answer: "Answer", how: "Kaise aaya",
+            grewHld: "Architecture kaise badha", grewLld: "Classes kaise badhi", grewHint: "← → keys use karo",
+            pressureLabel: "In boxes ko lane wala pressure", sayLabel: "Yahan kya bolna hai",
+            breaksLabel: "Aage kya tootega", stageOf: "stage", of: "ka",
+            back: "◀ Peeche", nextBtn: "Aage ▶",
+            tip: "Kisi bhi box par click karo: yeh kyun hai, iski jagah kya reject hua, iska cost kya hai, aur yeh kaise fail hota hai.",
+            more: "Poora card, advantages aur disadvantages ke saath ↓",
+            boxesHld: "Har box, aur woh kyun hai", boxesLld: "Har class, aur woh kyun hai",
+            why: "Yeh kyun hai", forced: "Isse kis cheez ne majboor kiya", instead: "Iski jagah", considered: "Kya socha gaya",
+            pros: "Fayde", cons: "Nuksan", cost: "Iska cost", fails: "Yeh kaise fail hota hai",
+            walk: "Arrows follow karo", trace: "Calls trace karo", walkHint: "bolke batao, sirf point mat karo",
+            apiData: "API aur data", apiPublic: "Public API", apiHint: "client asal mein kya call kar sakta hai",
+            call: "Call", returns: "Returns", decision: "Andar ka decision",
+            deep: "Woh hisse jinpar interviewer sabse zyada poochega", deepHint: "do chuno, gehraai mein jao",
+            trade: "Trade-offs, zor se bolo", tradeHint: "bina trade-off wala design fake lagta hai", flip: "Kab badlega:",
+            hour: "Agar ek ghanta aur milta", hourHint: "isi par khatam karo, chup mat raho",
+            components: "components", used: "use hua", rejected: "reject hua",
+            patterns: "Woh patterns jinhone apni jagah kamaayi", patternsHint: "aur jo nahi kama paaye",
+            varies: "Kya badalta hai", without: "Iske bina", theCost: "Cost",
+            toggle: "English", toggleLabel: "Switch explanations to English" },
+    };
+
+    /* ================= sidebar ================= */
+    const pnav = $("#projNav");
+    let lastKind = null;
+    DESIGN.forEach(p => {
+      if (p.kind !== lastKind) {
+        const t = document.createElement("div");
+        t.className = "side-title" + (lastKind ? " next" : "");
+        t.textContent = p.kind === "hld" ? "High level" : "Low level";
+        t.style.marginTop = lastKind ? "16px" : "0";
+        pnav.appendChild(t);
+        lastKind = p.kind;
+      }
+      const a = document.createElement("a");
+      a.href = "?p=" + encodeURIComponent(p.id);
+      a.innerHTML = esc(p.n) + "<small>" + esc(p.sub) + "</small>";
+      if (p.id === cur.id) a.className = "active";
+      pnav.appendChild(a);
+    });
+    const side = $("#side"), scrim = $("#scrim");
+    const toggleSide = () => { side.classList.toggle("open"); scrim.classList.toggle("open"); };
+    $("#menuBtn").addEventListener("click", toggleSide);
+    scrim.addEventListener("click", toggleSide);
+
+    /* ================= diagram ================= */
+    const ROLE_NAME = { client: "client", edge: "edge", svc: "service", store: "store",
+                        cache: "cache", queue: "stream", work: "worker", ext: "external",
+                        entity: "entity", iface: "interface", impl: "strategy", value: "value object" };
+
+    const BW = 178, BH = 88, CG = 72, RG = 44, PAD = 22;
+    const X = c => PAD + c * (BW + CG);
+    const Y = r => PAD + r * (BH + RG);
+
+    /* A glyph per role, drawn on a 16 by 16 grid, stroked in the role's colour.
+       Stores get no glyph: the box itself becomes a cylinder, which is the one
+       shape every reader already knows without a legend. */
+    const ICON = {
+      client: '<rect x="2" y="2.8" width="12" height="8.4" rx="1.2"/><path d="M6 14h4M8 11.2v2.8"/>',
+      edge:   '<circle cx="8" cy="8" r="6"/><path d="M2 8h12"/><path d="M8 2c2.6 3 2.6 9 0 12M8 2c-2.6 3-2.6 9 0 12"/>',
+      svc:    '<path d="M8 1.6 13.5 4.8v6.4L8 14.4 2.5 11.2V4.8Z"/><circle cx="8" cy="8" r="2.1"/>',
+      store:  '<path d="M8 2c3.1 0 5.5.9 5.5 2s-2.4 2-5.5 2-5.5-.9-5.5-2S4.9 2 8 2Z"/>' +
+              '<path d="M2.5 4v8c0 1.1 2.4 2 5.5 2s5.5-.9 5.5-2V4"/>',
+      cache:  '<path d="M9.4 1.6 3.8 8.9h3.3l-.5 5.5 5.6-7.3H8.9Z"/>',
+      queue:  '<rect x="1.5" y="4" width="13" height="8" rx="1"/><path d="M5.8 4v8M10.2 4v8"/>',
+      work:   '<circle cx="8" cy="8" r="2.6"/><path d="M8 1.3v2.3M8 12.4v2.3M1.3 8h2.3M12.4 8h2.3' +
+              'M3.3 3.3l1.6 1.6M11.1 11.1l1.6 1.6M12.7 3.3l-1.6 1.6M4.9 11.1l-1.6 1.6"/>',
+      ext:    '<path d="M4.9 12.4a3 3 0 0 1 .2-6.1 4 4 0 0 1 7.4-.6 2.9 2.9 0 0 1 .2 6.7Z"/>',
+      entity: '<rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M2 6.4h12"/>',
+      value:  '<path d="M6.3 2C4.6 2 4.9 5 4.9 6.4S3.6 8 2.6 8c1 0 2.3.2 2.3 1.6S4.6 14 6.3 14"/>' +
+              '<path d="M9.7 2c1.7 0 1.4 3 1.4 4.4s1.3 1.6 2.3 1.6c-1 0-2.3.2-2.3 1.6s.3 4.4-1.4 4.4"/>',
+      iface:  '<path d="M1.8 8h5.6"/><circle cx="10.9" cy="8" r="3.3"/>',
+      impl:   '<path d="M8 1.8 13.2 7.7H2.8Z"/><path d="M8 7.7v6.5"/>'
+    };
+    const glyph = (role, x, y) => ICON[role]
+      ? '<g class="dicon" transform="translate(' + (x + 10) + ',' + (y + 7) + ') scale(0.92)">' + ICON[role] + "</g>"
+      : "";
+    const chipIcon = role => ICON[role]
+      ? '<svg class="chip-ico" viewBox="0 0 16 16" aria-hidden="true">' + ICON[role] + "</svg>" : "";
+
+    /* A store is drawn as a cylinder inside the same bounding box every other
+       node uses, so the routing maths never has to know about the shape. */
+    const CYL_RY = 8;
+    const cylinder = (x, y) =>
+      '<path class="dbox" d="M' + x + " " + (y + CYL_RY) + " a" + (BW / 2) + " " + CYL_RY +
+      " 0 0 1 " + BW + " 0 v" + (BH - 2 * CYL_RY) + " a" + (BW / 2) + " " + CYL_RY +
+      " 0 0 1 " + (-BW) + ' 0 z"/>' +
+      '<path class="dcyl" d="M' + x + " " + (y + CYL_RY) + " a" + (BW / 2) + " " + CYL_RY +
+      " 0 0 0 " + BW + ' 0"/>';
+
+    /* Greedy word wrap, then shrink if a single word is still too wide.
+       Inter runs about 0.55em per glyph semibold, 0.52 regular; close enough
+       to keep a label inside a 178px box without measuring in the DOM. */
+    function wrap(text, maxW, size, k, maxLines) {
+      const words = String(text).split(/\s+/);
+      const longest = words.reduce((a, w) => Math.max(a, w.length), 1);
+      let s = Math.min(size, maxW / (k * longest));
+      let lines = [], cur = "";
+      for (const w of words) {
+        const t = cur ? cur + " " + w : w;
+        if (t.length * k * s <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+      }
+      if (cur) lines.push(cur);
+      while (lines.length > maxLines) {           // too tall, shrink and re-flow
+        s -= 0.6;
+        lines = []; cur = "";
+        for (const w of words) {
+          const t = cur ? cur + " " + w : w;
+          if (t.length * k * s <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+        }
+        if (cur) lines.push(cur);
+        if (s < 7) break;
+      }
+      return { lines, size: s };
+    }
+
+    function edgeGeom(a, b, e, slot) {
+      const ax = X(a.col), ay = Y(a.row), bx = X(b.col), by = Y(b.row);
+      const acx = ax + BW / 2, acy = ay + BH / 2, bcx = bx + BW / 2, bcy = by + BH / 2;
+      if (b.col > a.col) {
+        if (a.row === b.row) return { d: "M" + (ax + BW) + " " + acy + " H " + bx, lx: (ax + BW + bx) / 2, ly: acy - 7, lane: 0 };
+        /* An elbow has two horizontal runs and the bend decides how long each
+           one is. Put the label on the longer run, above the line, where it
+           has the most room. If it still will not fit there, fall back to the
+           full width of the gutter, which is the widest space available and
+           is never on top of a box. */
+        const bend = (e && e.bend != null) ? e.bend : 0.5;
+        const gap = bx - (ax + BW);
+        const mx = (ax + BW) + gap * bend;
+        /* Always label the run that arrives at the destination, and sit above
+           the line when coming down the page, below it when coming up. Two
+           arrows into the same box from opposite directions then never write
+           on top of each other, and neither do two arrows out of one box. */
+        const w = ((e && e.l) || "").length * 5.25;
+        const lx = (w + 8 <= gap * (1 - bend)) ? (mx + bx) / 2 : (ax + BW + gap / 2);
+        const step = (slot || 0) * 13;   // several arrows into one box, stacked
+        const ly = (a.row <= b.row) ? bcy - 7 - step : bcy + 13 + step;
+        return { d: "M" + (ax + BW) + " " + acy + " H " + mx + " V " + bcy + " H " + bx,
+                 lx: lx, ly: ly, lane: 0 };
+      }
+      if (b.col === a.col) {
+        if (b.row > a.row) return { d: "M" + acx + " " + (ay + BH) + " V " + by, lx: acx + 4, ly: (ay + BH + by) / 2 + 3, lane: 0, anchor: "start" };
+        return { d: "M" + acx + " " + ay + " V " + (by + BH), lx: acx + 4, ly: (by + BH + ay) / 2 + 3, lane: 0, anchor: "start" };
+      }
+      const lane = Math.max(ay, by) + BH + 26;    // route the return path under both boxes
+      return { d: "M" + acx + " " + (ay + BH) + " V " + lane + " H " + bcx + " V " + (by + BH),
+               lx: (acx + bcx) / 2, ly: lane + 12, lane: lane + 18 };
+    }
+
+    function drawStage(stage, selId) {
+      const byId = {};
+      stage.nodes.forEach(n => { byId[n.id] = n; });
+      const cols = Math.max.apply(null, stage.nodes.map(n => n.col)) + 1;
+      const rows = Math.max.apply(null, stage.nodes.map(n => n.row)) + 1;
+      let maxLane = 0;
+      let edges = "";
+      // number the arrows that arrive at the same box from the same side, so
+      // their labels stack instead of landing on the same two words
+      const slots = new Map(), seen = {};
+      (stage.edges || []).forEach(e => {
+        const a = byId[e.a], b = byId[e.b];
+        if (!a || !b || b.col <= a.col) return;
+        const k = e.b + "|" + (a.row <= b.row ? "down" : "up");
+        seen[k] = (seen[k] || 0) + 1;
+        slots.set(e, seen[k] - 1);
+      });
+      (stage.edges || []).forEach(e => {
+        const a = byId[e.a], b = byId[e.b];
+        if (!a || !b) return;
+        const g = edgeGeom(a, b, e, slots.get(e));
+        if (g.lane > maxLane) maxLane = g.lane;
+        const cls = "dedge" + (e.async ? " async" : "");
+        edges += '<path class="' + cls + '" d="' + g.d + '" marker-end="url(#' + (e.async ? "dah2" : "dah") + ')"/>';
+        if (e.l) {
+          const anch = g.anchor || "middle";
+          edges += '<text class="delab" x="' + g.lx + '" y="' + g.ly + '" style="text-anchor:' + anch + '">' + esc(e.l) + "</text>";
+        }
+      });
+
+      let boxes = "";
+      stage.nodes.forEach(n => {
+        const x = X(n.col), y = Y(n.row), cx = x + BW / 2;
+        const role = n.r || "svc";
+        const isCyl = role === "store";
+        const isNew = (stage.add || []).indexOf(n.id) >= 0;
+        const lab = wrap(n.l, BW - 20, 13, 0.56, 2);
+        const sub = n.s ? wrap(n.s, BW - 18, 10, 0.52, 2) : { lines: [], size: 10 };
+        const labLH = lab.size * 1.2, subLH = sub.size * 1.28;
+        const total = lab.lines.length * labLH + (sub.lines.length ? 4 + sub.lines.length * subLH : 0);
+        // the glyph sits in a band across the top, so tall labels drop below it
+        const drop = (lab.lines.length + sub.lines.length) >= 3 ? 8 : 4;
+        let ty = y + BH / 2 + drop - total / 2 + lab.size * 0.82;
+        let txt = "";
+        lab.lines.forEach(l => { txt += '<text class="dlab" x="' + cx + '" y="' + ty.toFixed(1) + '" style="font-size:' + lab.size.toFixed(1) + 'px">' + esc(l) + "</text>"; ty += labLH; });
+        if (sub.lines.length) { ty += 4 - labLH + sub.size * 1.0; }
+        sub.lines.forEach(l => { txt += '<text class="dsub" x="' + cx + '" y="' + ty.toFixed(1) + '" style="font-size:' + sub.size.toFixed(1) + 'px">' + esc(l) + "</text>"; ty += subLH; });
+        const shape = isCyl ? cylinder(x, y)
+          : '<rect class="dbox" x="' + x + '" y="' + y + '" width="' + BW + '" height="' + BH + '" rx="13"/>' +
+            glyph(role, x, y);
+        const tag = isNew ? '<text class="newtag" x="' + (x + BW - 10) + '" y="' + (y + (isCyl ? 28 : 15)) +
+                            '" style="text-anchor:end">NEW</text>' : "";
+        const cls = "dnode r-" + role + (isNew ? " is-new" : "") + (n.id === selId ? " is-sel" : "");
+        boxes += '<g class="' + cls + '" data-id="' + esc(n.id) + '" tabindex="0" role="button" ' +
+                 'aria-label="' + esc(n.l) + (isNew ? " NEW" : "") + ", " + ROLE_NAME[role] + ', open the reasoning">' +
+                 shape + txt + tag + "</g>";
+      });
+
+      const w = PAD * 2 + cols * (BW + CG) - CG;
+      const h = Math.max(PAD * 2 + rows * (BH + RG) - RG, maxLane + PAD);
+      const defs = '<defs>' +
+        '<marker id="dah" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+        '<path d="M0 0 L10 5 L0 10 z" fill="var(--dedge)"/></marker>' +
+        '<marker id="dah2" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+        '<path d="M0 0 L10 5 L0 10 z" fill="var(--dedge2)"/></marker></defs>';
+      return '<svg viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Architecture diagram. Each box opens its reasoning" ' +
+             'style="--vw:' + Math.min(Math.round(w * 0.8), 700) + "px;max-width:" + w + 'px">' + defs + edges + boxes + "</svg>";
+    }
+
+    /* ================= small builders ================= */
+    function card(title, hint) {
+      const s = document.createElement("section");
+      s.className = "pcard";
+      const h = document.createElement("h2");
+      h.className = "pat"; h.id = "s-" + slug(title);
+      h.innerHTML = esc(title) + (hint ? '<span class="sec-hint">' + esc(hint) + "</span>" : "");
+      s.appendChild(h);
+      return s;
+    }
+    function note(html, cls) {
+      const d = document.createElement("div"); d.className = cls || "note"; d.innerHTML = html; return d;
+    }
+    function h3(t) { const h = document.createElement("h3"); h.className = "sub"; h.id = "s-" + slug(t); h.textContent = t; return h; }
+    function table(head, rows, wrapText) {
+      const t = document.createElement("table");
+      t.className = "grid" + (wrapText ? " wrap" : "");
+      t.innerHTML = "<thead><tr>" + head.map(h => "<th>" + esc(h) + "</th>").join("") + "</tr></thead><tbody>" +
+        rows.map(r => "<tr>" + r.map(c => "<td>" + c + "</td>").join("") + "</tr>").join("") + "</tbody>";
+      return t;
+    }
+    function codeBlock(src, lang) {
+      const wrap = document.createElement("div"); wrap.className = "codewrap";
+      wrap.innerHTML = '<div class="codebar"><span class="dot" style="background:#ff5f56"></span>' +
+        '<span class="dot" style="background:#ffbd2e"></span><span class="dot" style="background:#27c93f"></span>' +
+        '<span class="lang">' + esc(lang || "text") + "</span></div>";
+      const pre = document.createElement("pre"); pre.className = "code";
+      const code = document.createElement("code");
+      code.className = "language-" + (lang === "python" || lang === "java" ? lang : "plaintext");
+      code.textContent = src;
+      pre.appendChild(code); wrap.appendChild(pre);
+      if (window.hljs) { try { hljs.highlightElement(code); } catch (e) {} }
+      return wrap;
+    }
+    const srcClass = s => {
+      const u = String(s).toUpperCase();
+      return { GFG: " gfg", EDU: " edu", HI: " hi", GH: " gh", BB: " bb", DG: " dg", CWA: " cwa",
+               ENG: " eng", GO: " go", LIST: " gh" }[u] || "";
+    };
+    function problems(list) {
+      const w = document.createElement("div"); w.className = "qwrap";
+      const hd = document.createElement("div"); hd.className = "qhead"; hd.textContent = "Read further, then try it closed book";
+      w.appendChild(hd);
+      const pr = document.createElement("div"); pr.className = "probs";
+      list.forEach(p => {
+        const [num, href, title, diff] = p;
+        const isNum = typeof num === "number";
+        const a = document.createElement("a");
+        a.className = "prob"; a.href = LC(href); a.target = "_blank"; a.rel = "noopener";
+        a.innerHTML = '<span class="tag ' + diff + '">' + diff + '</span><span class="pn' +
+          (isNum ? "" : srcClass(num)) + '">' + esc(isNum ? "#" + num : num) + '</span><span>' + esc(title) + "</span>";
+        pr.appendChild(a);
+      });
+      w.appendChild(pr);
+      return w;
+    }
+
+    /* ================= page ================= */
+    const main = $("#main");
+    const snav = $("#sectionNav");
+    let secs = [];
+    function mount(sec) { main.appendChild(sec); secs.push(sec.querySelector("h2.pat")); }
+
+    // stage/box selection lives outside render() so a language toggle redraws
+    // the reader back to the same stage instead of resetting to stage 0
+    let stageIdx = Math.min(Math.max(parseInt(params.get("stage"), 10) || 0, 0), cur.stages.length - 1);
+    let selId = null;
+    let doPaint = () => {};
+    document.addEventListener("keydown", ev => {
+      if (ev.target.tagName === "INPUT") return;
+      if (ev.key === "ArrowLeft" && stageIdx > 0) { stageIdx--; selId = null; doPaint(); }
+      if (ev.key === "ArrowRight" && stageIdx < cur.stages.length - 1) { stageIdx++; selId = null; doPaint(); }
+    });
+
+    function render() {
+    main.innerHTML = "";
+    secs = [];
+    const u = U[L === "hi" ? "hi" : "en"];
+    document.documentElement.lang = L === "hi" ? "hi-Latn" : "en";
+    // cur's Hinglish mirror, field for field; missing pieces read as English
+    const h = (L === "hi" && cur.hi) ? cur.hi : {};
+    const hb = h.brief || {};
+    const hStages = h.stages || [];
+    const hBoxes = h.boxes || [];
+    const hFlows = h.flows || [];
+    const hTrades = h.tradeoffs || [];
+
+    const h1 = document.createElement("h1"); h1.className = "topic"; h1.textContent = cur.n;
+    main.appendChild(h1);
+    const st = document.createElement("div"); st.className = "subtitle"; st.textContent = cur.sub;
+    main.appendChild(st);
+    const chips = document.createElement("div"); chips.className = "chips";
+    chips.innerHTML = '<span class="chip ' + cur.kind + '">' + (cur.kind === "hld" ? "High level design" : "Low level design") + "</span>" +
+      (cur.tags || []).map(tg => '<span class="chip">' + esc(tg) + "</span>").join("");
+    main.appendChild(chips);
+    main.appendChild(note("💡 " + t(cur.one, h.one), "intro"));
+
+    /* ---- 1. the brief ---- */
+    {
+      const s = card(u.brief, u.briefHint);
+      s.appendChild(note(t(cur.brief.why, hb.why)));
+      s.appendChild(h3(u.must));
+      const ul = document.createElement("ul"); ul.className = "tight";
+      cur.brief.functional.forEach((f, i) => { const li = document.createElement("li"); li.innerHTML = t(f, hb.functional && hb.functional[i]); ul.appendChild(li); });
+      s.appendChild(ul);
+      s.appendChild(note("<b>" + u.outOf + "</b> " + t(cur.brief.out.join(", "), hb.out && hb.out.join(", ")) + ". " + u.outOfWhy));
+      s.appendChild(h3(u.wrong));
+      s.appendChild(table([u.prop, u.target, u.whyNum], cur.brief.nfr.map((r, i) => {
+        const hr = hb.nfr && hb.nfr[i];
+        return [esc(r[0]), "<code>" + esc(r[1]) + "</code>", t(r[2], hr && hr[2])];
+      }), true));
+      if (cur.brief.numbers && cur.brief.numbers.length) {
+        s.appendChild(h3(u.envelope));
+        s.appendChild(table([u.qty, u.answer, u.how], cur.brief.numbers.map((r, i) => {
+          const hr = hb.numbers && hb.numbers[i];
+          return [esc(r[0]), "<code>" + esc(r[1]) + "</code>", t(r[2], hr && hr[2])];
+        }), true));
+        if (cur.brief.numbersNote) s.appendChild(note(t(cur.brief.numbersNote, hb.numbersNote)));
+      }
+      mount(s);
+    }
+
+    /* ---- 2. the stepper ---- */
+    {
+      const s = card(cur.kind === "hld" ? u.grewHld : u.grewLld, u.grewHint);
+      s.appendChild(note(t(cur.stagesIntro, h.stagesIntro)));
+
+      const bar = document.createElement("div"); bar.className = "stagebar";
+      const prev = document.createElement("button"); prev.className = "btn"; prev.textContent = u.back;
+      const next = document.createElement("button"); next.className = "btn"; next.textContent = u.nextBtn;
+      const count = document.createElement("span"); count.className = "count";
+      const dots = document.createElement("div"); dots.className = "dots";
+      cur.stages.forEach((_, i) => {
+        const b = document.createElement("button");
+        b.textContent = i; b.title = t(cur.stages[i].t, hStages[i] && hStages[i].t);
+        b.addEventListener("click", () => { stageIdx = i; selId = null; doPaint(); });
+        dots.appendChild(b);
+      });
+      bar.append(prev, next, count, dots);
+      s.appendChild(bar);
+
+      const title = document.createElement("div"); title.className = "stage-t"; s.appendChild(title);
+      const pressure = note("", "pressure"); s.appendChild(pressure);
+      const box = document.createElement("div"); box.className = "stage";
+      const svgHost = document.createElement("div"); svgHost.className = "stagesvg";
+      const legend = document.createElement("div"); legend.className = "legend";
+      const pick = document.createElement("div"); pick.className = "pick";
+      box.append(svgHost, legend, pick);
+      s.appendChild(box);
+      const say = note("", "saysay"); s.appendChild(say);
+      const breaks = note("", "breaks"); s.appendChild(breaks);
+
+      const boxById = {}, hBoxById = {};
+      cur.boxes.forEach((b, i) => { boxById[b.id] = b; hBoxById[b.id] = hBoxes[i]; });
+
+      function paintPick() {
+        const b = selId ? boxById[selId] : null;
+        if (!b) {
+          pick.innerHTML = '<span class="ptip">' + u.tip + '</span>';
+          return;
+        }
+        const hbx = hBoxById[selId] || {};
+        pick.innerHTML =
+          "<h5>" + esc(b.n) + "</h5><div class=\"pjob\">" + t(b.job, hbx.job) + "</div><dl>" +
+          "<dt>" + u.why + "</dt><dd>" + t(b.why, hbx.why) + "</dd>" +
+          "<dt>" + u.forced + "</dt><dd>" + t(b.forced, hbx.forced) + "</dd>" +
+          "<dt>" + u.instead + "</dt><dd>" + b.alts.map((a, i) => {
+            const ha = hbx.alts && hbx.alts[i];
+            return "<b>" + esc(a[0]) + "</b>, " + t(a[1], ha && ha[1]);
+          }).join("<br>") + "</dd>" +
+          "<dt>" + u.cost + "</dt><dd>" + t(b.cost, hbx.cost) + "</dd>" +
+          "<dt>" + u.fails + "</dt><dd>" + t(b.fails, hbx.fails) + "</dd></dl>" +
+          '<a class="more" href="#c-' + slug(b.id) + '">' + u.more + '</a>';
+      }
+
+      function paint() {
+        const stage = cur.stages[stageIdx], hs = hStages[stageIdx] || {};
+        title.textContent = t(stage.t, hs.t);
+        pressure.innerHTML = '<span class="plabel">' + u.pressureLabel + '</span>' + t(stage.pressure, hs.pressure);
+        svgHost.innerHTML = drawStage(stage, selId);
+        const roles = [...new Set(stage.nodes.map(n => n.r || "svc"))];
+        legend.innerHTML = roles.map(r => '<span class="lg-' + r + '">' + chipIcon(r) + ROLE_NAME[r] + "</span>").join("");
+        say.innerHTML = '<span class="plabel">' + u.sayLabel + '</span>' + t(stage.say, hs.say);
+        if (stage.breaks) { breaks.style.display = ""; breaks.innerHTML = '<span class="plabel">' + u.breaksLabel + '</span>' + t(stage.breaks, hs.breaks); }
+        else breaks.style.display = "none";
+        count.textContent = u.stageOf + " " + stageIdx + " " + u.of + " " + (cur.stages.length - 1);
+        [...dots.children].forEach((d, i) => d.classList.toggle("on", i === stageIdx));
+        prev.disabled = stageIdx === 0; next.disabled = stageIdx === cur.stages.length - 1;
+        svgHost.querySelectorAll(".dnode").forEach(g => {
+          const act = () => { selId = (selId === g.dataset.id) ? null : g.dataset.id; doPaint(); };
+          g.addEventListener("click", act);
+          g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); act(); } });
+        });
+        paintPick();
+      }
+      prev.addEventListener("click", () => { if (stageIdx > 0) { stageIdx--; selId = null; doPaint(); } });
+      next.addEventListener("click", () => { if (stageIdx < cur.stages.length - 1) { stageIdx++; selId = null; doPaint(); } });
+      doPaint = paint;
+      paint();
+      mount(s);
+    }
+
+    /* ---- 3. every box ---- */
+    {
+      const s = card(cur.kind === "hld" ? u.boxesHld : u.boxesLld,
+                     cur.boxes.length + " " + u.components);
+      s.appendChild(note(t(cur.boxesIntro, h.boxesIntro)));
+      cur.boxes.forEach((b, i) => {
+        const hbx = hBoxes[i] || {};
+        const d = document.createElement("div"); d.className = "comp"; d.id = "c-" + slug(b.id);
+        const role = b.r || "svc";
+        d.innerHTML =
+          '<div class="comp-head"><h3>' + esc(b.n) + '</h3>' +
+          '<span class="role lg-' + role + '">' + chipIcon(role) + ROLE_NAME[role] + "</span></div>" +
+          '<div class="job">' + t(b.job, hbx.job) + "</div><dl>" +
+          "<dt>" + u.why + "</dt><dd>" + t(b.why, hbx.why) + "</dd>" +
+          "<dt>" + u.forced + "</dt><dd>" + t(b.forced, hbx.forced) + "</dd>" +
+          '<dt>' + u.considered + '</dt><dd class="alts">' + b.alts.map((a, i) => {
+            const ha = hbx.alts && hbx.alts[i];
+            return "<span><i>" + esc(a[0]) + "</i>, " + t(a[1], ha && ha[1]) + "</span>";
+          }).join("") + "</dd>" +
+          "<dt>" + u.pros + "</dt><dd><ul>" + b.pros.map((p, i) => "<li>" + t(p, hbx.pros && hbx.pros[i]) + "</li>").join("") + "</ul></dd>" +
+          "<dt>" + u.cons + "</dt><dd><ul>" + b.cons.map((p, i) => "<li>" + t(p, hbx.cons && hbx.cons[i]) + "</li>").join("") + "</ul></dd>" +
+          "<dt>" + u.cost + "</dt><dd>" + t(b.cost, hbx.cost) + "</dd>" +
+          "<dt>" + u.fails + "</dt><dd>" + t(b.fails, hbx.fails) + "</dd>" +
+          "</dl>" + (b.say ? '<div class="say">' + t(b.say, hbx.say) + "</div>" : "");
+        s.appendChild(d);
+      });
+      mount(s);
+    }
+
+    /* ---- 4. patterns, LLD only ---- */
+    if (cur.patterns) {
+      const hPatterns = h.patterns || [];
+      const s = card(u.patterns, u.patternsHint);
+      s.appendChild(note(t(cur.patternsIntro, h.patternsIntro)));
+      cur.patterns.forEach((p, i) => {
+        const hp = hPatterns[i] || {};
+        const d = document.createElement("div"); d.className = "comp";
+        d.innerHTML = '<div class="comp-head"><h3>' + esc(p.n) + "</h3>" +
+          '<span class="role lg-' + (p.used ? "work" : "ext") + '">' + chipIcon(p.used ? "impl" : "ext") + (p.used ? u.used : u.rejected) + "</span></div>" +
+          '<div class="job">' + t(p.what, hp.what) + "</div><dl>" +
+          "<dt>" + u.varies + "</dt><dd>" + t(p.varies, hp.varies) + "</dd>" +
+          "<dt>" + u.without + "</dt><dd>" + t(p.without, hp.without) + "</dd>" +
+          "<dt>" + u.theCost + "</dt><dd>" + t(p.cost, hp.cost) + "</dd></dl>";
+        s.appendChild(d);
+      });
+      mount(s);
+    }
+
+    /* ---- 5. flows ---- */
+    {
+      const s = card(cur.kind === "hld" ? u.walk : u.trace, u.walkHint);
+      s.appendChild(note(t(cur.flowsIntro, h.flowsIntro)));
+      cur.flows.forEach((f, i) => {
+        const hf = hFlows[i] || {};
+        const w = document.createElement("div"); w.className = "flow";
+        w.appendChild(h3(t(f.n, hf.n)));
+        if (f.note) w.appendChild(note(t(f.note, hf.note)));
+        const ol = document.createElement("ol");
+        f.steps.forEach((step, i) => {
+          const hstep = hf.steps && hf.steps[i];
+          const li = document.createElement("li");
+          const mode = step[1] ? '<span class="sync ' + (step[1] === "async" ? "async" : "") + '">' + step[1] + "</span>" : "";
+          li.innerHTML = t(step[0], hstep && hstep[0]) + mode;
+          ol.appendChild(li);
+        });
+        w.appendChild(ol);
+        s.appendChild(w);
+      });
+      mount(s);
+    }
+
+    /* ---- 6. api and schema ---- */
+    if (cur.api || cur.schema) {
+      const s = card(cur.kind === "hld" ? u.apiData : u.apiPublic, u.apiHint);
+      if (cur.api) {
+        s.appendChild(table([u.call, u.returns, u.decision],
+          cur.api.map((r, i) => {
+            const hr = h.api && h.api[i];
+            return ["<code>" + esc(r[0]) + "</code>", "<code>" + esc(r[1]) + "</code>", t(r[2], hr && hr[2])];
+          }), true));
+        if (cur.apiNote) s.appendChild(note(t(cur.apiNote, h.apiNote)));
+      }
+      if (cur.schema) {
+        s.appendChild(h3(t(cur.schema.n, h.schema && h.schema.n)));
+        s.appendChild(note(t(cur.schema.note, h.schema && h.schema.note)));
+        if (cur.schema.code) s.appendChild(codeBlock(cur.schema.code, cur.schema.lang || "text"));
+      }
+      mount(s);
+    }
+
+    /* ---- 7. deep dives ---- */
+    if (cur.deep) {
+      const hDeep = h.deep || [];
+      const s = card(u.deep, u.deepHint);
+      cur.deep.forEach((d, i) => {
+        const hd = hDeep[i] || {};
+        s.appendChild(h3(t(d.n, hd.n)));
+        s.appendChild(note(t(d.note, hd.note)));
+        if (d.code) s.appendChild(codeBlock(d.code, d.lang || "text"));
+      });
+      mount(s);
+    }
+
+    /* ---- 8. trade-offs ---- */
+    {
+      const s = card(u.trade, u.tradeHint);
+      s.appendChild(note(t(cur.tradeoffsIntro, h.tradeoffsIntro)));
+      cur.tradeoffs.forEach((to, i) => {
+        const ht = hTrades[i] || {};
+        const d = document.createElement("div"); d.className = "to";
+        d.innerHTML =
+          '<div class="versus">' +
+          '<div class="opt' + (to.pick === "a" ? " win" : "") + '"><b>' + esc(to.a[0]) + "</b>" + t(to.a[1], ht.a && ht.a[1]) + "</div>" +
+          '<div class="opt' + (to.pick === "b" ? " win" : "") + '"><b>' + esc(to.b[0]) + "</b>" + t(to.b[1], ht.b && ht.b[1]) + "</div>" +
+          "</div><div class=\"flip\"><b>" + u.flip + "</b> " + t(to.flip, ht.flip) + "</div>";
+        s.appendChild(d);
+      });
+      mount(s);
+    }
+
+    /* ---- 9. next, and practice ---- */
+    {
+      const s = card(u.hour, u.hourHint);
+      const ul = document.createElement("ul"); ul.className = "tight";
+      cur.next.forEach((n, i) => { const li = document.createElement("li"); li.innerHTML = t(n, h.next && h.next[i]); ul.appendChild(li); });
+      s.appendChild(ul);
+      if (cur.p) s.appendChild(problems(cur.p));
+      mount(s);
+    }
+
+    /* ---- section nav + prev/next project ---- */
+    snav.innerHTML = "";
+    secs.forEach(hd => {
+      const a = document.createElement("a");
+      a.href = "#" + hd.id; a.textContent = hd.childNodes[0].textContent.trim();
+      snav.appendChild(a);
+    });
+
+    const idx = DESIGN.indexOf(cur);
+    const row = document.createElement("div"); row.className = "nav";
+    const pa = document.createElement("a"); pa.className = "btn";
+    if (idx > 0) { pa.href = "?p=" + DESIGN[idx - 1].id; pa.textContent = "← " + DESIGN[idx - 1].n; } else pa.style.visibility = "hidden";
+    const na = document.createElement("a"); na.className = "btn";
+    if (idx < DESIGN.length - 1) { na.href = "?p=" + DESIGN[idx + 1].id; na.textContent = DESIGN[idx + 1].n + " →"; } else na.style.visibility = "hidden";
+    row.append(pa, na); main.appendChild(row);
+
+    const lt = $("#langToggle");
+    lt.textContent = u.toggle;
+    lt.setAttribute("aria-label", u.toggleLabel);
+    }
+
+    render();
+
+    $("#langToggle").addEventListener("click", () => {
+      L = L === "hi" ? "en" : "hi";
+      try { localStorage.setItem("ms-read", L); } catch (e) {}
+      render();
+    });
+
+    function scrollToHash() {
+      if (!location.hash) return;
+      const el = document.getElementById(location.hash.slice(1));
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+    }
+    scrollToHash();
+    window.addEventListener("hashchange", scrollToHash);
+
+  })();
+  </script>
+  <script src="assets/js/theme.js"></script>
+</body>
+</html>

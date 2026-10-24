@@ -23,6 +23,17 @@ Interview prep notes. Two ways in:
   language AI engineering actually happens in. Every AI concept opens with "Why you need this"
   and every page, in the AI and DSA Design Labs too, has the English / Hinglish switch.
 
+- **Computer Networks** (`cn.html`) and **Operating Systems** (`os.html`), the AI Engineering
+  layout again for two core subjects. Each has a landing page, a Concept Lab
+  (`*-concept.html`, eight concepts in the ten-section format), Rapid Revision (`*-revise.html`)
+  and a Design Lab (`*-design.html`, two systems grown stage by stage). Networks covers layers,
+  IP and subnetting, DNS, TCP reliability and congestion control, HTTP/1.1 to 3, TLS and load
+  balancing, then a web request path and a realtime chat system. OS covers processes and threads,
+  scheduling, synchronization, deadlock, virtual memory, page replacement, file systems and system
+  calls, then a CPU scheduler and a virtual memory manager. Code is pseudocode plus Python, as
+  for AI. The English / Hinglish switch is present, but the Hinglish for these two sections is the
+  "In Hinglish" section of each concept for now, not a full translation of the page.
+
 Plus the original sheets: DSA notes, a one-day sheet, the patterns roadmap, and LLD / HLD /
 HR one-pagers.
 
@@ -56,6 +67,8 @@ Pages stay in the root so their URLs are stable; everything else is grouped by k
   ai-concept.html     the deep page for one AI concept
   ai-revise.html      AI recall lines and questions
   ai-design.html      AI Design Lab, systems grown stage by stage
+  cn.html cn-concept.html cn-revise.html cn-design.html   Computer Networks, same four pages as AI
+  os.html os-concept.html os-revise.html os-design.html   Operating Systems, same four pages as AI
   study.html dsa.html dsa-cheatsheet.html   redirects to the above
 assets/
   css/                tokens.css (the palette and the motion tokens), base
@@ -69,13 +82,14 @@ assets/
 data/                 *-data.js, the single source of content per section
 docs/                 CONTENT-GUIDE.md, how to write a new concept
 tools/check.js        build check for the DSA pages: run before every commit
-tools/check-ai.js      the same guard rails, pointed at the AI pages
+tools/check-ai.js      the same guard rails, pointed at the AI, Networks and OS pages
 ```
 
 Each page loads its matching `data/<name>-data.js`; `concept.html` and `revise.html`
 share `data/concept-data.js`, and `dsa-notes.html` and `dsa-patterns.html` share
 `data/dsa-data.js`. `ai-concept.html` and `ai-revise.html` share
-`data/ai-concept-data.js`; `ai-design.html` reads `data/ai-design-data.js`.
+`data/ai-concept-data.js`; `ai-design.html` reads `data/ai-design-data.js`. The `cn-` and `os-`
+pages follow the same pattern with `data/cn-*-data.js` and `data/os-*-data.js`.
 
 ## Deploy on GitHub Pages
 

@@ -290,3 +290,9 @@ more tabs with near-identical SDK calls would teach nothing extra. Everything el
 sections, the sentence-length ceiling, the math derivation width, no em-dash, the Design Lab
 stage/pressure/breaks discipline, applies exactly as written. Validate the AI pages with
 `node tools/check-ai.js` rather than `node tools/check.js`, which only looks at the DSA data.
+
+The Computer Networks (`cn-*`) and Operating Systems (`os-*`) pages make the same deviation
+and follow every other rule here. `tools/check-ai.js` checks all three sections in one pass,
+and the `cn-` and `os-` visuals live in their own labelled blocks at the end of `viz.js`.
+One limit worth knowing when you add a visual: a cell label over five characters spills its
+box, and the check fails the build. Use "big" and "a.css", not "big.js" and "a.stylesheet".
