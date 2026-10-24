@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-/* check-ai.js - the guard rails for the AI concept and design pages, the same
-   idea as check.js but pointed at data/ai-concept-data.js and
-   data/ai-design-data.js, with one deliberate difference: those concepts carry
+/* check-ai.js - the guard rails for the AI, Computer Networks and Operating
+   Systems concept and design pages, the same idea as check.js but pointed at
+   data/<ai|cn|os>-concept-data.js and data/<ai|cn|os>-design-data.js, with one
+   deliberate difference: those concepts carry
    `code: {pseudo, py}` only, not five languages, because AI engineering happens
    in Python. Every other bar (sentence length, math width, code width, no
    em-dash, design geometry) is identical to check.js.
@@ -18,11 +19,19 @@ const ok  = (name, detail) => console.log("  ok    " + name.padEnd(16) + detail)
 const bad = (name, detail) => { fails++; console.log("  FAIL  " + name.padEnd(16) + detail); };
 const test = (name, pass, detail) => (pass ? ok : bad)(name, detail);
 
+/* One section per prefix. Each data file declares the same global names, so
+   each is run in its own context and the results are merged, which also means
+   an id repeated across sections is caught by the duplicate-id check below. */
+const SECTIONS = ["ai", "cn", "os"];
 const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(P + "assets/js/viz.js", "utf8") + "\n;globalThis.V=VIZ;globalThis.D=DRAW;", ctx);
-vm.runInContext(fs.readFileSync(P + "data/ai-concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", ctx);
-const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
+const VIZ = ctx.V, DRAW = ctx.D;
+const CONCEPTS = SECTIONS.flatMap(pre => {
+  const c = {}; vm.createContext(c);
+  vm.runInContext(fs.readFileSync(P + "data/" + pre + "-concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", c);
+  return c.C;
+});
 
 /* ---------- 1. every concept has every field, and points at real visuals ---------- */
 {
@@ -82,7 +91,7 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
     }
   }
   test("visuals", broken.length === 0 && spills.length === 0,
-    Object.keys(VIZ).length + " visuals total (DSA + AI), " + frames + " frames, " + labels + " labels fitted" +
+    Object.keys(VIZ).length + " visuals total (DSA, AI, CN, OS), " + frames + " frames, " + labels + " labels fitted" +
     (spills.length ? "   <-- spilling: " + spills.slice(0,3).join(", ") : "") +
     (broken.length ? "   <-- broken: " + broken.join(", ") : ""));
 }
@@ -160,15 +169,15 @@ const CONCEPTS = ctx.C, VIZ = ctx.V, DRAW = ctx.D;
   }
   test("plain english", over.length === 0,
     counted + " sentences across plain, why, hing and the derivations, none over " + LIMIT + " words" +
-    (over.length ? "   <-- " + over.slice(0, 6).join(", ") : ""));
+    (over.length ? "   <-- " + over.slice(0, 20).join(", ") : ""));
 }
 
 /* ---------- 6. the Design Lab: shape, geometry, and labels that fit ---------- */
-const DESIGN = (() => {
+const DESIGN = SECTIONS.flatMap(pre => {
   const d = {}; vm.createContext(d);
-  vm.runInContext(fs.readFileSync(P + "data/ai-design-data.js", "utf8") + "\n;globalThis.D=DESIGN;", d);
+  vm.runInContext(fs.readFileSync(P + "data/" + pre + "-design-data.js", "utf8") + "\n;globalThis.D=DESIGN;", d);
   return d.D;
-})();
+});
 {
   const BW = 178, BH = 88, CG = 72, RG = 44, PAD = 22;
   const X = c => PAD + c * (BW + CG), Y = r => PAD + r * (BH + RG);

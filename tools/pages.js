@@ -28,6 +28,15 @@ const PAGES = [
   { file: "ai-revise.html",      path: "/ai-revise",     priority: "0.8", changefreq: "weekly",  index: true },
   { file: "ai-design.html",      path: "/ai-design",     priority: "0.8", changefreq: "weekly",  index: true },
 
+  { file: "cn.html",            path: "/cn",             priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "cn-concept.html",    path: "/cn-concept",     priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "cn-revise.html",     path: "/cn-revise",      priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "cn-design.html",     path: "/cn-design",      priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "os.html",            path: "/os",             priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "os-concept.html",    path: "/os-concept",     priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "os-revise.html",     path: "/os-revise",      priority: "0.8", changefreq: "weekly",  index: true },
+  { file: "os-design.html",     path: "/os-design",      priority: "0.8", changefreq: "weekly",  index: true },
+
   /* The three stubs kept alive for links published under the old names. Their
      canonical names the page they forward to, which is the whole job: pointing
      a stub at itself would ask a crawler to index the redirect. */

@@ -3786,3 +3786,379 @@ VIZ["regression-gate-runs"] = {
       cap: "After reverting the prompt change, run 5 lands back inside the noise band." },
   ],
 };
+
+/* ======================= Computer Networks visuals =======================
+   Back cn-concept.html's entries in data/cn-concept-data.js. Same renderers
+   as everything above; ids are prefixed cn- so they cannot collide. */
+
+VIZ["cn-encapsulation"] = {
+  kind: "cells",
+  arr: ["HTTP"],
+  frames: [
+    { arr: ["HTTP"], on: [0], out: "application data: GET / HTTP/1.1",
+      cap: "The browser hands the transport layer a message. To the layers below it is just opaque bytes." },
+    { arr: ["TCP", "HTTP"], on: [0], out: "segment = TCP header + data",
+      cap: "TCP adds source and destination <b>ports</b>, a sequence number and a checksum. This picks the program." },
+    { arr: ["IP", "TCP", "HTTP"], on: [0], out: "packet = IP header + segment",
+      cap: "IP adds the source and destination <b>addresses</b>. This is the only header a router reads." },
+    { arr: ["ETH", "IP", "TCP", "HTTP", "FCS"], on: [0, 4], out: "frame = Ethernet header + packet + trailer",
+      cap: "Ethernet adds the MAC address of the <b>next hop</b> and a checksum trailer. It is rewritten at every hop." },
+    { arr: ["ETH", "IP", "TCP", "HTTP", "FCS"], hot: [1], dim: [0, 2, 3, 4], out: "a router reads only the IP header",
+      cap: "The router strips the old Ethernet header, reads the IP header to choose a route, and builds a new frame." },
+    { arr: ["ETH", "IP", "TCP", "HTTP", "FCS"], hot: [2], dim: [0, 1, 3, 4], out: "the server's OS reads TCP next",
+      cap: "At the destination each layer strips its header on the way up: Ethernet, then IP, then TCP, then HTTP." },
+  ],
+};
+
+VIZ["cn-subnet-bits"] = {
+  kind: "cells",
+  arr: ["0", "1", "0", "0", "1", "1", "0", "1"],
+  frames: [
+    { on: [0, 1, 2, 3, 4, 5, 6, 7], out: "last octet of 192.168.10.77 = 77",
+      cap: "Take the final byte of the address in binary. 77 is 01001101." },
+    { band: [0, 1], out: "mask /26: first 26 bits are network",
+      cap: "A /26 covers 24 bits of the first three octets plus the first <b>2</b> bits of this one. Those 2 bits name the network." },
+    { band: [0, 1], hot: [2, 3, 4, 5, 6, 7], out: "6 host bits left: 2^6 = 64 addresses",
+      cap: "The remaining 6 bits number the hosts inside the subnet, so a /26 holds 64 addresses." },
+    { arr: ["0", "1", "0", "0", "0", "0", "0", "0"], band: [0, 1], bad: [2, 3, 4, 5, 6, 7], out: "host bits to zero = 64: the network address",
+      cap: "AND with the mask zeroes the host bits. 01000000 is 64, so the network is 192.168.10.64." },
+    { arr: ["0", "1", "1", "1", "1", "1", "1", "1"], band: [0, 1], bad: [2, 3, 4, 5, 6, 7], out: "host bits all one = 127: the broadcast address",
+      cap: "All ones in the host bits is 127. That address reaches every host in the subnet, so no device may own it." },
+    { arr: ["0", "1", "0", "0", "1", "1", "0", "1"], band: [0, 1], hot: [2, 3, 4, 5, 6, 7], out: "usable hosts: .65 to .126, 62 of them",
+      cap: "Everything strictly between network and broadcast is usable. 64 minus 2 is 62." },
+  ],
+};
+
+VIZ["cn-dns-tree"] = {
+  title: "Resolving www.example.com",
+  kind: "tree", w: 600, h: 300, arrows: true,
+  nodes: {
+    you:  { x: 70,  y: 150, t: "Browser", w: 96 },
+    res:  { x: 240, y: 150, t: "Resolver", w: 96 },
+    root: { x: 470, y: 50,  t: "Root (.)", w: 100 },
+    tld:  { x: 470, y: 150, t: "TLD .com", w: 100 },
+    auth: { x: 470, y: 250, t: "example.com", w: 110 },
+  },
+  edges: [["you", "res"], ["res", "root"], ["res", "tld"], ["res", "auth"]],
+  frames: [
+    { on: ["you", "res"], edge: [["you", "res"]], dim: ["root", "tld", "auth"],
+      cap: "The browser asks its recursive resolver one question. The resolver does all the legwork." },
+    { on: ["res", "root"], edge: [["res", "root"]], dim: ["you", "tld", "auth"],
+      cap: "Cache empty: the resolver asks a root server. The root does not know the address, but it knows who runs .com." },
+    { on: ["res", "tld"], edge: [["res", "tld"]], dim: ["you", "root", "auth"],
+      cap: "The .com servers do not know it either. They know which servers are authoritative for example.com." },
+    { on: ["res", "auth"], edge: [["res", "auth"]], dim: ["you", "root", "tld"], hot: ["auth"],
+      cap: "The domain's own server holds the real record and answers: 93.184.216.34, with a TTL of 300 seconds." },
+    { on: ["you", "res"], edge: [["you", "res"]], dim: ["root", "tld", "auth"], t: { res: "cached" },
+      out: "next lookup in 300 s: one hop, answered from memory",
+      cap: "The resolver caches the answer. For the next 300 seconds every user who asks gets it without leaving the resolver." },
+    { on: ["res"], bad: ["auth"], dim: ["you", "root", "tld"], t: { auth: "moved!" },
+      cap: "Trap: the owner changes the address, but resolvers keep serving the old one until the TTL expires." },
+  ],
+};
+
+VIZ["cn-tcp-segments"] = {
+  kind: "cells",
+  arr: ["1000", "1100", "1200", "1300", "1400"],
+  frames: [
+    { arr: ["1000", "1100", "1200", "1300", "1400"], on: [0],
+      out: "sender: seq 1000, 100 bytes",
+      cap: "Each segment is labelled with the sequence number of its first byte. The sender starts a timer for it." },
+    { arr: ["1000", "1100", "1200", "1300", "1400"], on: [0], hot: [1],
+      out: "receiver: ACK 1100 (next byte wanted)",
+      cap: "The receiver acknowledges with the next byte it expects. A cumulative ACK means everything before 1100 has arrived." },
+    { arr: ["1000", "1100", "1200", "1300", "1400"], on: [0], bad: [1],
+      out: "segment 1100 is LOST in the network",
+      cap: "The network drops the second segment. Neither side has been told yet." },
+    { arr: ["1000", "1100", "1200", "1300", "1400"], on: [0], bad: [1], hot: [2],
+      out: "seq 1200 arrives: ACK 1100 again",
+      cap: "Data beyond the gap arrives, so the receiver can only repeat its last ACK. This is a <b>duplicate ACK</b>." },
+    { arr: ["1000", "1100", "1200", "1300", "1400"], on: [0], bad: [1], hot: [2, 3, 4],
+      out: "3 duplicate ACKs for 1100",
+      cap: "After three duplicates the sender knows 1100 is missing, and resends it without waiting for the timer." },
+    { arr: ["1000", "1100", "1200", "1300", "1400"], on: [0, 1, 2, 3, 4],
+      out: "ACK 1500: everything delivered, in order",
+      cap: "The resent segment fills the gap, and one cumulative ACK covers all five. The application sees a clean stream." },
+  ],
+};
+
+VIZ["cn-cwnd-growth"] = {
+  kind: "cells",
+  arr: ["10", "20", "40", "80"],
+  frames: [
+    { arr: ["10"], on: [0], out: "RTT 1: cwnd = 10 segments",
+      cap: "A new connection starts with a window of about 10 segments. It cannot know the link's speed yet." },
+    { arr: ["10", "20"], on: [1], out: "RTT 2: cwnd = 20",
+      cap: "Every segment acknowledged adds one to the window, so the window <b>doubles</b> each round trip." },
+    { arr: ["10", "20", "40"], on: [2], out: "RTT 3: cwnd = 40",
+      cap: "Slow start is exponential. The name only means it begins small." },
+    { arr: ["10", "20", "40", "80"], on: [3], out: "RTT 4: cwnd = 80",
+      cap: "Four round trips take the sender from 10 to 80 segments in flight, about 117 KB." },
+    { arr: ["10", "20", "40", "80"], bad: [3], dim: [0, 1, 2], out: "loss! router queue overflowed",
+      cap: "Somewhere a queue filled and dropped a packet. For TCP, loss is the only signal that the pipe is full." },
+    { arr: ["40", "41", "42", "43"], on: [0, 1, 2, 3], out: "cwnd halved to 40, then +1 per RTT",
+      cap: "The window is cut in half, then grows by one per round trip. Add one, halve on loss: this is AIMD." },
+  ],
+};
+
+VIZ["cn-http-queue"] = {
+  kind: "cells",
+  arr: ["big", "a.css", "b.png", "c.png"],
+  frames: [
+    { on: [0], dim: [1, 2, 3], out: "HTTP/1.1: one reply at a time",
+      cap: "Four files are wanted on one connection. big.js was requested first, so its reply must finish first." },
+    { hot: [0], bad: [1, 2, 3], out: "a.css, b.png, c.png all wait",
+      cap: "While big.js is slow, three tiny files sit idle behind it. This is <b>head-of-line blocking</b> at the HTTP level." },
+    { arr: ["c1", "c2", "c3", "c4"], on: [0, 1, 2, 3], out: "workaround: open 6 connections",
+      cap: "Browsers open about 6 parallel connections per host. Each pays its own handshake and slow start." },
+    { arr: ["s1", "s3", "s5", "s7"], on: [0, 1, 2, 3], out: "HTTP/2: four streams, one connection",
+      cap: "HTTP/2 tags each frame with a stream number and interleaves them. A slow file no longer blocks the others." },
+    { arr: ["s1", "s3", "s5", "s7"], bad: [0, 1, 2, 3], out: "one lost TCP segment stalls every stream",
+      cap: "But TCP delivers a single ordered byte stream. One lost packet holds back all four streams until it is resent." },
+    { arr: ["s1", "s3", "s5", "s7"], bad: [1], on: [0, 2, 3], out: "HTTP/3: only the affected stream waits",
+      cap: "QUIC recovers loss per stream. A drop in stream 3 delays stream 3 alone, and the rest keep flowing." },
+  ],
+};
+
+VIZ["cn-cert-chain"] = {
+  title: "The chain of trust",
+  kind: "tree", w: 560, h: 300, arrows: true,
+  nodes: {
+    root: { x: 280, y: 40,  t: "Root CA", w: 130 },
+    mid:  { x: 280, y: 130, t: "Intermediate CA", w: 160 },
+    leaf: { x: 280, y: 220, t: "example.com cert", w: 170 },
+    dev:  { x: 70,  y: 40,  t: "Your device", w: 110 },
+  },
+  edges: [["root", "mid"], ["mid", "leaf"], ["dev", "root"]],
+  frames: [
+    { on: ["dev", "root"], edge: [["dev", "root"]], dim: ["mid", "leaf"],
+      cap: "Your device ships with a list of root CAs it already trusts. That list is the anchor for everything else." },
+    { on: ["leaf"], dim: ["dev", "root", "mid"], t: { leaf: "public key + name" },
+      cap: "The server presents a certificate: its name and its public key, signed by someone." },
+    { on: ["leaf", "mid"], edge: [["mid", "leaf"]], dim: ["dev", "root"],
+      cap: "The signer is an intermediate CA. The server sends that certificate as well, so the chain can be followed." },
+    { on: ["mid", "root"], edge: [["root", "mid"]], dim: ["dev", "leaf"],
+      cap: "The intermediate is signed by a root. The device checks each signature up the chain." },
+    { on: ["dev", "root", "mid", "leaf"], edge: [["dev", "root"], ["root", "mid"], ["mid", "leaf"]], hot: ["leaf"],
+      out: "chain valid, name matches, not expired",
+      cap: "The chain reaches a trusted root, so the key really belongs to example.com. Now the key exchange can be trusted." },
+    { on: ["dev", "root"], bad: ["leaf"], dim: ["mid"], t: { leaf: "unknown signer" },
+      cap: "Trap: a certificate that does not chain to a trusted root fails. Clicking past that warning removes the whole protection." },
+  ],
+};
+
+VIZ["cn-lb-tree"] = {
+  title: "One address, many servers",
+  kind: "tree", w: 600, h: 300, arrows: true,
+  nodes: {
+    cl: { x: 70,  y: 150, t: "Clients", w: 90 },
+    lb: { x: 250, y: 150, t: "Balancer", w: 96 },
+    s1: { x: 480, y: 50,  t: "Server 1", w: 100 },
+    s2: { x: 480, y: 150, t: "Server 2", w: 100 },
+    s3: { x: 480, y: 250, t: "Server 3", w: 100 },
+  },
+  edges: [["cl", "lb"], ["lb", "s1"], ["lb", "s2"], ["lb", "s3"]],
+  frames: [
+    { on: ["cl", "lb"], edge: [["cl", "lb"]], dim: ["s1", "s2", "s3"],
+      cap: "Clients know one address. They never learn how many servers sit behind it." },
+    { on: ["lb", "s1"], edge: [["lb", "s1"]], dim: ["cl", "s2", "s3"],
+      cap: "Request 1 goes to server 1. With round robin the balancer simply takes the next backend in turn." },
+    { on: ["lb", "s2"], edge: [["lb", "s2"]], dim: ["cl", "s1", "s3"],
+      cap: "Request 2 goes to server 2, request 3 to server 3, request 4 back to server 1." },
+    { on: ["lb"], bad: ["s2"], dim: ["cl"], t: { s2: "down" },
+      cap: "Server 2 dies. Until something notices, one request in three goes to a machine that cannot answer." },
+    { on: ["lb", "s1", "s3"], edge: [["lb", "s1"], ["lb", "s3"]], bad: ["s2"], dim: ["cl"], t: { s2: "removed" },
+      cap: "The health check fails twice, so the balancer takes server 2 out of the rotation. Clients see no error." },
+    { on: ["lb", "s1", "s2", "s3"], edge: [["lb", "s1"], ["lb", "s2"], ["lb", "s3"]], dim: ["cl"], t: { s2: "healthy" },
+      cap: "When server 2 passes its checks again it rejoins. Servers come and go, and the address never changes." },
+  ],
+};
+
+/* ======================= Operating Systems visuals ======================= */
+
+VIZ["os-process-threads"] = {
+  title: "One process, three threads",
+  kind: "tree", w: 600, h: 300, arrows: true,
+  nodes: {
+    proc: { x: 300, y: 40,  t: "Process", w: 110 },
+    heap: { x: 120, y: 130, t: "Heap + code", w: 130 },
+    t1:   { x: 120, y: 240, t: "Thread 1", w: 100 },
+    t2:   { x: 300, y: 240, t: "Thread 2", w: 100 },
+    t3:   { x: 480, y: 240, t: "Thread 3", w: 100 },
+    fd:   { x: 480, y: 130, t: "Open files", w: 120 },
+  },
+  edges: [["proc", "heap"], ["proc", "fd"], ["proc", "t1"], ["proc", "t2"], ["proc", "t3"]],
+  frames: [
+    { on: ["proc"], dim: ["heap", "fd", "t1", "t2", "t3"],
+      cap: "A process is the unit of isolation: it owns an address space and a table of open files, and the kernel keeps a record of it." },
+    { on: ["proc", "heap", "fd"], dim: ["t1", "t2", "t3"], hot: ["heap"],
+      cap: "Code, heap, globals and open files belong to the process. Everything inside it can see them." },
+    { on: ["proc", "t1"], dim: ["heap", "fd", "t2", "t3"],
+      cap: "A thread is a flow of execution. It has its own stack, registers and program counter, and nothing else." },
+    { on: ["proc", "t1", "t2", "t3"], dim: ["heap", "fd"],
+      cap: "Add two more. All three can run on different cores at the same time, working on the same data." },
+    { on: ["heap", "t1", "t2", "t3"], bad: ["heap"], dim: ["proc", "fd"],
+      cap: "Trap: all three share the heap, so two writing the same variable without a lock is a race. Sharing is the point and the danger." },
+    { on: ["t2"], bad: ["t2"], t: { t2: "segfault" }, dim: ["heap", "fd", "t1", "t3"],
+      cap: "A crash in one thread kills the whole process. Separate processes would have contained it." },
+  ],
+};
+
+VIZ["os-gantt"] = {
+  kind: "cells",
+  arr: ["P1", "P1", "P1", "P1", "P2", "P2", "P2", "P3", "P3", "P3"],
+  frames: [
+    { arr: ["P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1"], on: [0, 1, 2, 3, 4, 5, 6, 7], dim: [],
+      out: "FCFS: P1 (24 ms) first, then P2, P3",
+      cap: "Every cell here is 3 ms. FCFS runs P1 for all 24 ms (8 cells) before the two small jobs get any CPU." },
+    { arr: ["P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P2", "P3"], on: [8, 9], bad: [0, 1, 2, 3, 4, 5, 6, 7],
+      out: "waits: P1 0, P2 24, P3 27 = avg 17 ms",
+      cap: "P2 and P3 wait 24 and 27 ms for a 3 ms job each. This is the convoy effect." },
+    { arr: ["P2", "P3", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1"], on: [0, 1], dim: [2, 3, 4, 5, 6, 7, 8, 9],
+      out: "SJF: shortest first. waits 0, 3, 6 = avg 3 ms",
+      cap: "Shortest job first runs the two 3 ms jobs at once. The same work, reordered, cuts the average wait from 17 to 3." },
+    { arr: ["P1", "P1", "P2", "P3", "P1", "P1", "P1", "P1", "P1", "P1"], on: [0, 1], hot: [2, 3],
+      out: "round robin, 4 ms quantum (rounded to cells)",
+      cap: "Round robin gives each job a turn. P2 and P3 get the CPU almost at once instead of waiting 24 ms." },
+    { arr: ["P1", "P1", "P2", "P3", "P1", "P1", "P1", "P1", "P1", "P1"], hot: [2, 3], out: "response time: P2 4 ms, P3 7 ms",
+      cap: "The price: P1 is interrupted, and its total finishing time slips by the 6 ms it spent waiting. Fair, not fastest." },
+    { arr: ["P1", "P2", "P1", "P3", "P1", "P2", "P1", "P3", "P1", "P2"], bad: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      out: "quantum too small: time lost to switching",
+      cap: "Trap: shrink the quantum toward the cost of a context switch and the CPU does little else but switch." },
+  ],
+};
+
+VIZ["os-race"] = {
+  kind: "cells",
+  arr: ["T1 rd", "T2 rd", "T1 wr", "T2 wr"],
+  frames: [
+    { arr: ["T1 rd"], on: [0], out: "count = 0 in memory; T1 reads 0",
+      cap: "count += 1 is read, add, write. Thread 1 reads the value 0 into a register." },
+    { arr: ["T1 rd", "T2 rd"], on: [0], hot: [1], out: "T2 also reads 0",
+      cap: "The scheduler switches before thread 1 writes back. Thread 2 reads the same, stale 0." },
+    { arr: ["T1 rd", "T2 rd", "T1 wr"], on: [0, 2], out: "T1 writes 1",
+      cap: "Thread 1 finishes: 0 plus 1, and it writes 1 to memory." },
+    { arr: ["T1 rd", "T2 rd", "T1 wr", "T2 wr"], bad: [3], out: "T2 writes 1: expected 2, got 1",
+      cap: "Thread 2 adds 1 to its stale 0 and writes 1. It overwrote thread 1's work. One increment is lost." },
+    { arr: ["lock", "T1 rd", "T1 wr", "free"], on: [0, 1, 2, 3], out: "with a mutex: T1 holds it throughout",
+      cap: "Now thread 1 takes the lock before reading and releases it after writing. The three steps become one atomic unit." },
+    { arr: ["lock", "T2 rd", "T2 wr", "free"], on: [0, 1, 2, 3], out: "T2 waited, then read 1, wrote 2",
+      cap: "Thread 2 blocked at lock until thread 1 was done, then read 1 and wrote 2. The answer is right." },
+  ],
+};
+
+VIZ["os-deadlock-cycle"] = {
+  title: "A cycle of waiting",
+  kind: "tree", w: 560, h: 300, arrows: true,
+  nodes: {
+    A:  { x: 120, y: 60,  t: "Thread A", w: 110 },
+    L2: { x: 440, y: 60,  t: "Lock 2", w: 90 },
+    B:  { x: 440, y: 240, t: "Thread B", w: 110 },
+    L1: { x: 120, y: 240, t: "Lock 1", w: 90 },
+  },
+  edges: [],
+  frames: [
+    { edges: [["L1", "A"]], on: ["A", "L1"], dim: ["B", "L2"],
+      cap: "Thread A takes lock 1. The arrow shows who holds what." },
+    { edges: [["L1", "A"], ["L2", "B"]], on: ["A", "L1", "B", "L2"],
+      cap: "Thread B takes lock 2. So far nobody has done anything wrong." },
+    { edges: [["L1", "A"], ["L2", "B"], ["A", "L2"]], on: ["A", "L2"], hot: ["L2"],
+      cap: "A now wants lock 2, which B holds, and starts to wait. A is still holding lock 1." },
+    { edges: [["L1", "A"], ["L2", "B"], ["A", "L2"], ["B", "L1"]], bad: ["A", "B", "L1", "L2"],
+      out: "cycle: A -> L2 -> B -> L1 -> A",
+      cap: "B wants lock 1, which A holds. The arrows now form a closed loop, and nothing can ever move again." },
+    { edges: [["L1", "A"], ["A", "L2"], ["L2", "B"]], on: ["A", "L1", "L2", "B"],
+      out: "fix: everyone takes lock 1, then lock 2",
+      cap: "With a global order, B asks for lock 1 first and waits there. No arrow ever points backward, so no loop can form." },
+  ],
+};
+
+VIZ["os-page-translate"] = {
+  kind: "cells",
+  arr: ["0", "0", "4", "0", "3", "A", "7", "C"],
+  frames: [
+    { on: [0, 1, 2, 3, 4, 5, 6, 7], out: "virtual address 0x00403A7C",
+      cap: "The program uses this address. It has no idea where in RAM the data really sits." },
+    { band: [0, 4], hot: [5, 6, 7], out: "page number 0x00403 | offset 0xA7C",
+      cap: "With 4 KB pages the low 12 bits (three hex digits) are the offset. The upper 20 bits are the page number." },
+    { band: [0, 4], out: "look up page 0x403 in the page table",
+      cap: "The MMU checks the TLB first. On a miss it walks the page table. Either way it needs the frame for page 0x403." },
+    { arr: ["0", "0", "1", "A", "2", "A", "7", "C"], band: [0, 4], hot: [5, 6, 7], out: "table says frame 0x1A2",
+      cap: "Page 0x403 lives in physical frame 0x1A2. The offset is not translated at all: it is copied straight across." },
+    { arr: ["0", "0", "1", "A", "2", "A", "7", "C"], on: [0, 1, 2, 3, 4, 5, 6, 7], out: "physical address 0x001A2A7C",
+      cap: "Frame number joined to the offset gives the real address. This happens on every memory access." },
+    { arr: ["0", "0", "4", "0", "3", "A", "7", "C"], bad: [0, 1, 2, 3, 4], hot: [5, 6, 7], out: "present bit = 0: PAGE FAULT",
+      cap: "If the entry says the page is not in RAM, the CPU traps to the OS, which loads it from disk and retries the instruction." },
+  ],
+};
+
+VIZ["os-frames"] = {
+  kind: "cells",
+  arr: ["7", "0", "1", "2", "0", "3", "0", "4"],
+  frames: [
+    { on: [0], out: "frames: [7]            fault 1",
+      cap: "Three frames, an empty start. The first reference to 7 is a compulsory fault." },
+    { on: [0, 1, 2], out: "frames: [7 0 1]        faults 3",
+      cap: "References 0 and 1 also fault. Memory is now full." },
+    { on: [3], bad: [3], out: "ref 2: evict 7, frames [0 1 2]",
+      cap: "Page 2 needs a frame. FIFO and LRU both evict 7, which is the oldest and the least recently used." },
+    { on: [4], out: "ref 0: hit, no fault",
+      cap: "0 is resident, so this is a hit. LRU notes 0 as just used. FIFO does not care, and will still evict it soon." },
+    { on: [5], bad: [5], out: "ref 3: FIFO evicts 0, LRU evicts 1",
+      cap: "Here they differ. FIFO throws out 0, the oldest arrival. LRU keeps 0, since it was just used, and evicts 1." },
+    { on: [6], hot: [6], out: "ref 0: LRU hit, FIFO FAULT",
+      cap: "The next reference is 0 again. LRU still has it. FIFO just evicted it and must fault to bring it back." },
+    { on: [0, 1, 2, 3, 4, 5, 6, 7], out: "13 refs: FIFO 10 faults, LRU 9, OPT 7",
+      cap: "Over the whole string recency beats arrival order. OPT, which sees the future, sets the floor at 7." },
+  ],
+};
+
+VIZ["os-inode-tree"] = {
+  title: "Name to inode to blocks",
+  kind: "tree", w: 600, h: 300, arrows: true,
+  nodes: {
+    dir:  { x: 76,  y: 150, t: "Directory", w: 120 },
+    ino:  { x: 250, y: 150, t: "Inode 42", w: 120 },
+    d0:   { x: 450, y: 40,  t: "Data blk 0", w: 110 },
+    d11:  { x: 450, y: 110, t: "Data blk 11", w: 116 },
+    ind:  { x: 450, y: 190, t: "Indirect blk", w: 116 },
+    d12:  { x: 450, y: 260, t: "Data blk 12+", w: 116 },
+  },
+  edges: [["dir", "ino"], ["ino", "d0"], ["ino", "d11"], ["ino", "ind"], ["ind", "d12"]],
+  frames: [
+    { on: ["dir"], dim: ["ino", "d0", "d11", "ind", "d12"], t: { dir: "notes.txt:42" },
+      cap: "A directory is a file of name to inode-number pairs. The name lives here and nowhere else." },
+    { on: ["dir", "ino"], edge: [["dir", "ino"]], dim: ["d0", "d11", "ind", "d12"],
+      cap: "Inode 42 holds the size, owner, permissions and timestamps, plus pointers to the data blocks. It has no name." },
+    { on: ["ino", "d0", "d11"], edge: [["ino", "d0"], ["ino", "d11"]], dim: ["dir", "ind", "d12"],
+      cap: "Twelve direct pointers cover the first 48 KB. Most files are small, so they never need anything else." },
+    { on: ["ino", "ind", "d12"], edge: [["ino", "ind"], ["ind", "d12"]], dim: ["dir", "d0", "d11"],
+      cap: "For larger files one pointer leads to a block that is itself full of pointers: 1024 more blocks, about 4 MB." },
+    { on: ["dir", "ino"], t: { dir: "alias.txt:42" }, hot: ["ino"],
+      out: "hard link: second name, same inode",
+      cap: "A hard link is a second directory entry with the same inode number. Delete one name and the file survives." },
+    { on: ["dir"], bad: ["ino"], t: { ino: "link count 0" }, dim: ["d0", "d11", "ind", "d12"],
+      cap: "Only when the last name goes and no process holds the file open does the inode count hit 0 and its blocks get freed." },
+  ],
+};
+
+VIZ["os-syscall-path"] = {
+  kind: "cells",
+  arr: ["app", "libc", "trap", "OS", "disk"],
+  frames: [
+    { on: [0], out: "user mode: read(fd, buf, 4096)",
+      cap: "The program calls read. It runs in user mode and cannot touch the disk or any hardware." },
+    { on: [0, 1], out: "libc wraps it in a system call",
+      cap: "The C library puts the call number and arguments in registers. A library call is not yet a system call." },
+    { on: [2], hot: [2], out: "TRAP: CPU switches to kernel mode",
+      cap: "A special instruction raises the privilege level and jumps to a fixed kernel entry. The program cannot choose where it lands." },
+    { on: [3], out: "kernel checks fd, buffer and permissions",
+      cap: "The kernel never trusts its caller. It validates every argument before doing any work on the program's behalf." },
+    { on: [3, 4], hot: [4], out: "disk is slow: the process sleeps",
+      cap: "The request goes to the disk. The process blocks and the scheduler runs something else until the disk is done." },
+    { on: [4, 3], hot: [3], out: "INTERRUPT: disk signals completion",
+      cap: "The disk raises an interrupt. The CPU saves its state, runs the handler, and marks the sleeping process ready again." },
+    { on: [0], out: "back in user mode with the data",
+      cap: "The kernel copies the data, drops back to user mode, and read returns. Each of these trips has a fixed cost." },
+  ],
+};
