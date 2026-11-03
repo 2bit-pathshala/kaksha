@@ -636,3 +636,28 @@ var{
   font-style:italic;font-weight:600;color:var(--accent-ink);padding:0 .06em;
 }
 .chain li>b var,.tries li>b var{font-family:"Source Serif 4","Source Serif Fallback",Georgia,serif}
+
+/* small hands-on tasks between the sections */
+.task{
+  max-width:66ch;margin:6px 0 10px;padding:16px 20px 14px;
+  border:1px dashed var(--accent);border-radius:12px;background:var(--accent-soft);
+}
+.task-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.task-tag{
+  font-family:"Inter","Inter Fallback",sans-serif;font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--accent-ink);
+}
+.task-h b{font-family:"Inter","Inter Fallback",sans-serif;font-size:.98rem;color:var(--text)}
+.task-d,.task-hint,.task-a{font-size:1rem;line-height:1.65}
+.task-d p,.task-hint p,.task-a p{margin:0 0 8px}
+.task-d p:last-child,.task-hint p:last-child,.task-a p:last-child{margin:0}
+.task-hint{margin-top:10px;padding-left:12px;border-left:2px solid var(--accent);color:var(--text-2)}
+.task-a{margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--bg);border:1px solid var(--rule)}
+.task pre{margin:6px 0;padding:8px 10px;overflow-x:auto;font-size:.82rem;background:var(--bg);border-radius:6px}
+.task-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.task-btns button{
+  font:600 .8rem "Inter","Inter Fallback",sans-serif;cursor:pointer;
+  padding:6px 12px;border-radius:999px;border:1px solid var(--accent);
+  background:transparent;color:var(--accent-ink);
+}
+.task-btns button:hover{background:var(--accent);color:#fff}

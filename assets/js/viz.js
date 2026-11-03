@@ -3787,6 +3787,156 @@ VIZ["regression-gate-runs"] = {
   ],
 };
 
+/* ---- frontier topics: reasoning, mixture of experts, RL post-training,
+   structured outputs, skills and agent protocols, computer use ---- */
+
+VIZ["think-budget"] = {
+  title: "Spending tokens to think",
+  kind: "cells",
+  arr: ["Q", "T1", "T2", "T3", "A"],
+  frames: [
+    { arr: ["Q"], on: [0],
+      out: "answer straight away: 1 pass",
+      cap: "A normal model reads the question and starts the answer. For a hard problem, the first guess is often wrong." },
+    { arr: ["Q", "T1"], on: [1],
+      out: "thinking tokens: 200",
+      cap: "A reasoning model first writes a scratchpad of thinking tokens. Each one is a full forward pass, so thinking costs real compute." },
+    { arr: ["Q", "T1", "T2", "T3"], on: [1, 2, 3],
+      out: "thinking tokens: 3,000",
+      cap: "It tries an idea, checks it, backs up and tries another. This is a longer chain of small, checkable steps." },
+    { arr: ["Q", "T1", "T2", "T3", "A"], on: [4], dim: [1, 2, 3],
+      out: "answer written after the thinking",
+      cap: "Only then does it write the answer. The thinking is billed as output tokens, even when the product hides it." },
+    { arr: ["A1", "A2", "A3", "A4", "A5"], on: [0, 2, 3], bad: [1, 4],
+      out: "5 tries, 3 agree: majority wins",
+      cap: "Spending more at answer time can also mean sampling several tries and voting. More compute at test time buys accuracy." },
+    { arr: ["Q", "T1", "T2", "T3", "A"], bad: [1, 2, 3],
+      out: "easy question, 3,000 tokens burned",
+      cap: "The trap: an easy question does not need a long think. Over-thinking is slow and expensive for no gain." },
+  ],
+};
+
+VIZ["moe-router"] = {
+  title: "A router picks two experts",
+  kind: "tree", w: 560, h: 280, arrows: true,
+  nodes: {
+    t:  { x: 70,  y: 140, t: "Token", w: 80 },
+    r:  { x: 230, y: 140, t: "Router", w: 90 },
+    e1: { x: 450, y: 40,  t: "Expert 1", w: 100 },
+    e2: { x: 450, y: 110, t: "Expert 2", w: 100 },
+    e3: { x: 450, y: 180, t: "Expert 3", w: 100 },
+    e4: { x: 450, y: 250, t: "Expert 4", w: 100 },
+  },
+  edges: [["t", "r"], ["r", "e1"], ["r", "e2"], ["r", "e3"], ["r", "e4"]],
+  frames: [
+    { on: ["t"], dim: ["r", "e1", "e2", "e3", "e4"],
+      cap: "In a dense model every token goes through every weight. A mixture of experts replaces one big block with several smaller experts." },
+    { on: ["t", "r"], edge: [["t", "r"]], dim: ["e1", "e2", "e3", "e4"],
+      cap: "A tiny router scores the token against each expert. It is a small layer, trained along with everything else." },
+    { on: ["t", "r", "e2", "e4"], edge: [["r", "e2"], ["r", "e4"]], dim: ["e1", "e3"],
+      cap: "The top two scores win. Only experts 2 and 4 run for this token, and the other two do no work." },
+    { on: ["t", "r", "e1", "e3"], edge: [["r", "e1"], ["r", "e3"]], dim: ["e2", "e4"],
+      cap: "The next token may pick different experts. Over a whole text, all experts get used." },
+    { on: ["r", "e1", "e2", "e3", "e4"], hot: ["e2"], dim: ["t"],
+      cap: "The trap: if the router sends everything to one favourite, the others never learn. Training adds a balancing term to prevent it." },
+    { on: ["e1", "e2", "e3", "e4"], dim: ["t", "r"], t: { e1: "In RAM", e2: "In RAM", e3: "In RAM", e4: "In RAM" },
+      cap: "All experts must still sit in memory. Compute per token is small, but the memory bill is for the whole model." },
+  ],
+};
+
+VIZ["rl-group"] = {
+  title: "Score a group, reward the better half",
+  kind: "cells",
+  arr: ["s1", "s2", "s3", "s4"],
+  frames: [
+    { out: "one prompt, four sampled answers",
+      cap: "For one maths problem the model writes four different answers. This group is the unit the method learns from." },
+    { on: [0, 3], bad: [1, 2], out: "checker: s1 and s4 right (1), s2 and s3 wrong (0)",
+      cap: "A program checks each final answer. No human and no reward model is needed, because maths and code have a checkable result." },
+    { hot: [0, 3], out: "mean 0.5: s1, s4 above, s2, s3 below",
+      cap: "Compare each answer with the group average. Those above the mean get a positive advantage, those below get a negative one." },
+    { on: [0, 3], dim: [1, 2], out: "raise the odds of s1 and s4",
+      cap: "The update makes the winning answers, and the steps inside them, more likely next time." },
+    { bad: [1, 2], out: "lower the odds of s2 and s3",
+      cap: "The losing answers become less likely. Repeat over thousands of problems and checking and backtracking habits appear." },
+    { arr: ["s1", "s2", "s3", "s4"], bad: [0, 1, 2, 3], out: "all four wrong: reward 0, no signal",
+      cap: "The trap: if every answer in the group scores the same, nothing is above average, so nothing is learned. Problems must be hard enough, not impossible." },
+  ],
+};
+
+VIZ["json-mask"] = {
+  title: "Only legal tokens are allowed",
+  kind: "cells",
+  arr: ["{", "name", ":", "?"],
+  frames: [
+    { arr: ["{", "\"", "?"], on: [0],
+      out: "so far: {",
+      cap: "A schema says the output must be an object with a string field called name. The model is about to choose the next token." },
+    { arr: ["Sure", "\"", "{", "["], hot: [1], bad: [0, 2, 3],
+      out: "only the quote is legal here",
+      cap: "The server checks the grammar. After an open brace, only a quote can start a key, so every other token is ruled out." },
+    { arr: ["{", "\"", "na", "me"], on: [1, 2, 3],
+      out: "{\"name",
+      cap: "The model picks freely among what is left. Here the legal path spells the key name." },
+    { arr: ["\"", "Ana", "42", "}"], hot: [1], bad: [2],
+      out: "string required: 42 is masked",
+      cap: "The schema wants a string, so a number token gets probability zero. The reply cannot break the format." },
+    { arr: ["{", "\"", "name", "}"], band: [0, 3],
+      out: "{\"name\": \"Ana\"} always parses",
+      cap: "The result is valid by construction, with no retry loop. The model still chooses the content." },
+    { arr: ["{", "\"", "name", "}"], bad: [2],
+      out: "valid shape, wrong fact",
+      cap: "The trap: valid JSON is not true JSON. The schema guarantees the shape. It says nothing about whether Ana is the right name." },
+  ],
+};
+
+VIZ["skills-load"] = {
+  title: "Skills load on demand",
+  kind: "tree", w: 580, h: 260, arrows: true,
+  nodes: {
+    a:  { x: 80,  y: 130, t: "Agent", w: 90 },
+    s1: { x: 330, y: 40,  t: "pdf skill", w: 120 },
+    s2: { x: 330, y: 130, t: "sql skill", w: 120 },
+    s3: { x: 330, y: 220, t: "brand skill", w: 130 },
+    f:  { x: 510, y: 130, t: "Full text", w: 100 },
+  },
+  edges: [["a", "s1"], ["a", "s2"], ["a", "s3"], ["s2", "f"]],
+  frames: [
+    { on: ["a"], dim: ["s1", "s2", "s3", "f"],
+      cap: "An agent needs many skills: PDFs, SQL, brand rules. Pasting all of their instructions into every prompt would waste the window." },
+    { on: ["a", "s1", "s2", "s3"], dim: ["f"], t: { s1: "pdf: 1 line", s2: "sql: 1 line", s3: "brand: 1 line" },
+      cap: "At the start the agent sees only the name and one-line description of each skill. About 100 tokens each." },
+    { on: ["a", "s2"], edge: [["a", "s2"]], dim: ["s1", "s3", "f"],
+      cap: "The user asks for a database query. The agent matches the request to the sql skill by its description." },
+    { on: ["a", "s2", "f"], edge: [["a", "s2"], ["s2", "f"]], dim: ["s1", "s3"],
+      cap: "Only now is the full SKILL.md loaded, with its steps and rules. Scripts and reference files load later still, only if needed." },
+    { on: ["a", "s1", "s3"], dim: ["s2", "f"], hot: ["s1"],
+      cap: "The other skills cost almost nothing while unused. This layered loading is called progressive disclosure." },
+    { on: ["a", "s3"], hot: ["s3"], t: { s3: "vague line" }, dim: ["s1", "s2", "f"],
+      cap: "The trap: if the one-line description is vague, the agent never picks the skill. The description is the part that matters most." },
+  ],
+};
+
+VIZ["gui-loop"] = {
+  title: "The screenshot loop",
+  kind: "cells",
+  arr: ["shot", "think", "act", "check"],
+  frames: [
+    { on: [0], out: "step 1: take a screenshot",
+      cap: "A computer-use agent has no API. It sees the screen as an image, the way a person does." },
+    { on: [1], dim: [0], out: "the model reads the pixels",
+      cap: "The model finds the button it needs and works out where it is, as coordinates on the screen." },
+    { on: [2], dim: [0, 1], out: "click (412, 308)",
+      cap: "It emits an action: a click, a key press or a scroll. The harness performs it on a real or virtual machine." },
+    { on: [3], dim: [0, 1, 2], out: "did the page change as expected?",
+      cap: "It takes a new screenshot and checks. Pages load late, pop-ups appear, and buttons move, so every step needs a check." },
+    { band: [0, 3], out: "30 steps at 97% each = 40% success",
+      cap: "Small errors compound over a long task. This is why long GUI tasks fail more often than short ones." },
+    { bad: [0], out: "the screen says: ignore your task",
+      cap: "The trap: text on the screen is untrusted input. A web page can carry an injected instruction, so run these agents in a sandbox with limited access." },
+  ],
+};
+
 /* ======================= Computer Networks visuals =======================
    Back cn-concept.html's entries in data/cn-concept-data.js. Same renderers
    as everything above; ids are prefixed cn- so they cannot collide. */

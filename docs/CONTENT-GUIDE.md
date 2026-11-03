@@ -296,3 +296,14 @@ and follow every other rule here. `tools/check-ai.js` checks all three sections 
 and the `cn-` and `os-` visuals live in their own labelled blocks at the end of `viz.js`.
 One limit worth knowing when you add a visual: a cell label over five characters spills its
 box, and the check fails the build. Use "big" and "a.css", not "big.js" and "a.stylesheet".
+
+## AI pages: `tasks` and `deeper`
+
+Two extra fields on every AI concept. `tasks` is `[{ after, t, d, hint, a }]`: small hands-on
+exercises that render as a dashed "Try it" card straight after the section named in `after`
+(`need`, `one`, `viz`, `plain`, `why`, `math`, `deeper`, `costs` or `code`). Give each one real numbers
+and an answer the reader can reach from the page above it, at least two per concept.
+`deeper` is `[{ t, d }]`, three or more steps shown as "Going deeper" after the maths: the
+internals, edge cases and follow-up questions that the ten-section core leaves out. Both
+follow the 28-word sentence limit, and both fall back to English when `hi` has no copy.
+The `The Frontier` group holds topics that date quickly, so name the idea before the product.
