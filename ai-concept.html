@@ -35,7 +35,7 @@
   <script src="assets/js/scroll-focus.js" defer></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="print" onload="this.media='all'" />
   <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="document.querySelectorAll('pre code[class*=language-]:not([data-highlighted])').forEach(function (c) { try { hljs.highlightElement(c); } catch (e) {} })"></script>
-  <link rel="stylesheet" href="assets/css/learn.css?v=6" />
+  <link rel="stylesheet" href="assets/css/learn.css?v=7" />
 </head>
 <body>
   <header class="bar">
@@ -115,6 +115,7 @@
       { k: "variants", id: "family", t: "Which one, and when",    h: "Kaunsa, aur kab" },
       { k: "hing",  id: "hinglish", t: "In Hinglish",             h: "Hinglish mein" },
       { k: "math",  id: "maths",    t: "The maths, step by step", h: "Maths, step by step" },
+      { k: "deeper", id: "deeper",  t: "Going deeper",            h: "Aur gehraai mein" },
       { k: "costs", id: "costs",    t: "Costs and traps",         h: "Cost aur traps" },
       { k: "code",  id: "code",     t: "The template",            h: "Template" },
       { k: "q",     id: "check",    t: "Check yourself",          h: "Khud check karo" },
@@ -127,11 +128,13 @@
             op: "Operation", cost: "Cost", why: "Why", lang: "Language", called: "What it is called",
             watchFor: "What to watch for", reach: "Reach for it when", watch: "Watch out",
             problem: "The problem", tries: "Why not the obvious fixes?", so: "So the idea is",
+            task: "Try it", hint: "Show a hint", answer: "Show the answer", hide: "Hide",
             prev: "Previous", next: "Next", toggle: "Hinglish", toggleLabel: "Switch explanations to Hinglish" },
       hi: { elsewhere: "Aur kahan padhein", traps: "⚠️ Traps", yours: "Aapki language mein",
             op: "Operation", cost: "Cost", why: "Kyun", lang: "Language", called: "Kya naam hai",
             watchFor: "Kis cheez ka dhyan rakhein", reach: "Kab use karein", watch: "Dhyan rahe",
             problem: "Problem kya hai", tries: "Seedhe tareeke kyun fail hote hain?", so: "Isliye yeh idea",
+            task: "Khud karke dekho", hint: "Hint dikhao", answer: "Jawab dikhao", hide: "Chhupao",
             prev: "Pichhla", next: "Agla", toggle: "English", toggleLabel: "Switch explanations to English" },
     };
 
@@ -186,7 +189,31 @@
       main.appendChild(sec);
     }
 
+    // small hands-on tasks sit between the sections, right after the one they drill
+    const tasks = tx("tasks") || [];
+    const addTasks = key => tasks.forEach((t, i) => {
+      if (t.after !== key) return;
+      const card = el("aside", "task",
+        `<div class="task-h"><span class="task-tag">${u.task}</span><b>${t.t}</b></div>` +
+        `<div class="task-d">${t.d}</div>` +
+        (t.hint ? `<div class="task-hint" hidden>${t.hint}</div>` : "") +
+        `<div class="task-a" hidden>${t.a}</div>` +
+        `<div class="task-btns">` +
+          (t.hint ? `<button type="button" data-w="hint">${u.hint}</button>` : "") +
+          `<button type="button" data-w="a">${u.answer}</button></div>`);
+      card.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => {
+        const box = card.querySelector(btn.dataset.w === "a" ? ".task-a" : ".task-hint");
+        box.hidden = !box.hidden;
+        btn.textContent = box.hidden ? (btn.dataset.w === "a" ? u.answer : u.hint) : u.hide;
+      }));
+      main.appendChild(card);
+    });
+
     present.forEach(s => {
+      buildSection(s);
+      addTasks(s.k);
+    });
+    function buildSection(s) {
       const v = tx(s.k);
       // the reason the idea exists, before any of its mechanics
       if (s.k === "need") return section(s, b => {
@@ -239,6 +266,10 @@
           (step.d ? `<div>${step.d}</div>` : "") +
           (step.w ? `<pre class="derive">${esc(step.w)}</pre>` : "") +
           `</li>`).join("")));
+      });
+
+      if (s.k === "deeper") return section(s, b => {
+        b.appendChild(el("ol", "chain", v.map(step => `<li><b>${step.t}</b><div>${step.d}</div></li>`).join("")));
       });
 
       if (s.k === "costs") return section(s, b => {
@@ -309,7 +340,7 @@
                  `<span class="diff ${diff}">${diff}</span></li>`;
         }).join("")));
       });
-    });
+    }
 
     /* ---------------- previous / next ---------------- */
     const i = CONCEPTS.indexOf(current);

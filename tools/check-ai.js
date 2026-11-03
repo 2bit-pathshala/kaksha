@@ -30,6 +30,7 @@ const VIZ = ctx.V, DRAW = ctx.D;
 const CONCEPTS = SECTIONS.flatMap(pre => {
   const c = {}; vm.createContext(c);
   vm.runInContext(fs.readFileSync(P + "data/" + pre + "-concept-data.js", "utf8") + "\n;globalThis.C=CONCEPTS;", c);
+  c.C.forEach(x => { x.sec = pre; });
   return c.C;
 });
 
@@ -59,6 +60,20 @@ const CONCEPTS = SECTIONS.flatMap(pre => {
       problems.push(c.id + " has a thin 'why you need this'");
     if (c.hi && c.hi.need && c.need && (c.hi.need.tries || []).length !== (c.need.tries || []).length)
       problems.push(c.id + " hi.need.tries out of step with the English");
+    // small tasks between the sections, and the extra depth after the maths
+    const AFTER = ["need", "one", "viz", "plain", "why", "math", "deeper", "costs", "code"];
+    // the new teaching fields are rolled out on the AI section first
+    if (c.sec === "ai" && (c.tasks || []).length < 2) problems.push(c.id + " needs at least 2 tasks");
+    (c.tasks || []).forEach((t, i) => {
+      if (!t.t || !t.d || !t.a) problems.push(c.id + " task " + (i + 1) + " needs t, d and a");
+      if (!AFTER.includes(t.after) || (t.after !== "viz" && t.after !== "code" && !c[t.after]))
+        problems.push(c.id + " task " + (i + 1) + " sits after a section it does not have: " + t.after);
+    });
+    if (c.sec === "ai" && (c.deeper || []).length < 3) problems.push(c.id + " needs 3 'going deeper' steps");
+    if (c.hi && c.hi.tasks && c.hi.tasks.length !== (c.tasks || []).length)
+      problems.push(c.id + " hi.tasks out of step with the English");
+    if (c.hi && c.hi.deeper && c.hi.deeper.length !== (c.deeper || []).length)
+      problems.push(c.id + " hi.deeper out of step with the English");
     // the Hinglish mirrors the English one for one, or the switch shows a mismatch
     if (c.hi) for (const k of ["why", "math", "costs", "traps", "impl", "q", "variants"]) {
       if (c.hi[k] && c.hi[k].length !== (c[k] || []).length)
@@ -149,6 +164,8 @@ const CONCEPTS = SECTIONS.flatMap(pre => {
   for (const c of CONCEPTS) {
     const parts = [["plain", c.plain], ["hing", c.hing]];
     c.why.forEach((w, i) => parts.push(["why" + i, w.d]));
+    (c.deeper || []).forEach((w, i) => parts.push(["deeper" + i, w.d]));
+    (c.tasks || []).forEach((t, i) => parts.push(["task" + i, t.d], ["task-a" + i, t.a], ["task-h" + i, t.hint || ""]));
     (c.math || []).forEach((m, i) => parts.push(["math" + i, m.d || ""]));
     for (const [pre, n] of [["", c.need], ["hi.", c.hi && c.hi.need]]) if (n) {
       parts.push([pre + "need.ask", n.ask], [pre + "need.so", n.so]);
