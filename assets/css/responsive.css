@@ -1,0 +1,84 @@
+/* responsive.css - loaded LAST on every page, so it wins over each page's own
+   <style> block. One place for what makes the site hold together from a 320px
+   phone to a wide desktop: headers that stay one row tall, tab strips that scroll
+   instead of wrapping into a wall of pills, drawers that are properly hidden when
+   closed, and touch-sized targets. The sticky offsets elsewhere (scroll-padding,
+   .side top) assume a fixed header height, so the header must never wrap. */
+
+img,video{max-width:100%;height:auto}
+pre{max-width:100%}
+main,.wrap,.pcard,section.card{min-width:0}
+.bar-in,.top-row,.nav-in{scrollbar-width:none}
+.bar-in::-webkit-scrollbar,.top-row::-webkit-scrollbar,.nav-in::-webkit-scrollbar,.toc::-webkit-scrollbar{display:none}
+
+/* ---- drawers (hld, lld, hr, dsa-notes, design): hidden means unreachable ---- */
+@media(max-width:860px){
+  .side{width:min(280px,86vw);visibility:hidden;overscroll-behavior:contain;
+    transition:transform .25s,visibility 0s .25s}
+  .side.open{visibility:visible;transition:transform .25s,visibility 0s}
+  .search-results{max-height:40vh}
+}
+@media(max-width:900px){.side{width:min(280px,86vw)}}
+
+/* ---- headers: one row, scrolls sideways if the actions don't fit ---- */
+@media(max-width:720px){
+  header.bar .bar-in,header.top .top-row{
+    flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:8px;
+    padding:9px 14px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  header.bar .bar-in>*,header.top .top-row>*{flex:0 0 auto}
+  header.bar .sp,header.top .spacer,header.bar .sub,header.bar .here,.bl-divider{display:none}
+  /* keep the way into the drawer on screen however far the row is scrolled */
+  header.bar .menu-btn{position:sticky;left:0;z-index:2;background:var(--bg);box-shadow:8px 0 8px -4px var(--bg)}
+  header.bar .btn,header.top .btn,header.bar a.nav,header.bar button.nav{white-space:nowrap}
+  header.bar .logo,header.top .brand{font-size:1rem;white-space:nowrap}
+
+  /* dsa-sheet: the section tabs become one swipeable strip, not 7 rows of pills */
+  .toc{flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:4px 14px 10px;
+    -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+  .toc a{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start}
+  header.bar .toc{border-top:1px solid var(--border)}
+  html{scroll-padding-top:112px}
+
+  /* dsa-patterns: the search needs room, so its header scrolls away with the page */
+  header.top{position:static}
+  header.top .top-row{flex-wrap:wrap;overflow:visible}
+  header.top .search{flex:1 1 100%;order:5;min-width:0}
+  header.top .top-title{flex:1 1 auto;min-width:0}
+  header.top .credit{display:none}
+  header.top .top-row{gap:8px}
+  header.top .top-row .btn{padding:8px 12px;font-size:.8rem}
+  header.top .top-row .btn{flex:0 0 auto}
+  .study-link{padding:6px 12px}
+}
+/* learn.css pages keep their own wrap rules, but the toc is a tab strip there too */
+@media(max-width:519px){
+  header.bar .bar-in{padding:9px 14px}
+}
+
+/* ---- concept / revise: contents strip scrolls rather than stacking ---- */
+@media(max-width:600px){
+  .toc{row-gap:0}
+}
+
+/* ---- landscape phones and other short windows: a sticky header eats the page ---- */
+@media(max-height:480px) and (orientation:landscape){
+  header.bar,header.top,.nav{position:static}
+  .side{position:static;max-height:none}
+  html{scroll-padding-top:12px}
+}
+
+/* ---- touch: 40px is the smallest target that doesn't get mis-tapped ---- */
+@media(pointer:coarse){
+  .btn,.menu-btn,.theme-btn,button.nav,a.nav{min-height:40px;display:inline-flex;align-items:center}
+  .toc a{padding-top:8px;padding-bottom:8px}
+  .nav-list a,#topicNav a{padding-top:9px;padding-bottom:9px}
+  .study-link{min-height:36px;display:inline-flex;align-items:center}
+  details>summary{min-height:44px}
+}
+
+/* ---- wide screens: let the shared container breathe a little ---- */
+@media(min-width:1536px){
+  .wide,.landing .nav-in{max-width:1240px}
+  .bar-in,.layout{max-width:1280px}
+  .layout{gap:64px}
+}
